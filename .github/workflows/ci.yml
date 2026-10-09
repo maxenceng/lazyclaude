@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only by default; widen per job, never for the whole workflow.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      # The Makefile holds the list, so a guard added to `ci` runs here with no second edit.
+      - name: Lint, guards, tests and duplication
+        run: make ci
+
+      - name: Nothing was skipped
+        run: make no-skipped-tests
+
+      - name: Runnable jar builds
+        run: make package

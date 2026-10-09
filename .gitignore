@@ -1,0 +1,17 @@
+target/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### VS Code ###
+.vscode/
+
+### Claude Code ###
+# Personal, machine-specific permission overrides. settings.json is shared; this is not.
+.claude/settings.local.json
+
+### Python ###
+__pycache__/
