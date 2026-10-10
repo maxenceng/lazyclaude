@@ -3,14 +3,16 @@ package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.domain.Board;
+import dev.maxenceng.lazyclaude.board.published.ProjectRoot;
 
-/** A board as the shell reads it: one group per status in lifecycle order, then the unreadable files. */
-public record BoardView(List<StatusGroupView> groups, List<UnreadableTicketView> unreadable) {
+/** A board as the shell reads it: one group per status in lifecycle order, then the unreadable files, and the project root it was read from. */
+public record BoardView(List<StatusGroupView> groups, List<UnreadableTicketView> unreadable, ProjectRoot root) {
 
     static BoardView from(Board board) {
         return builder()
                 .groups(board.groups().stream().map(StatusGroupView::from).toList())
                 .unreadable(board.unreadable().stream().map(UnreadableTicketView::from).toList())
+                .root(new ProjectRoot(board.project().root()))
                 .build();
     }
 
@@ -21,6 +23,7 @@ public record BoardView(List<StatusGroupView> groups, List<UnreadableTicketView>
     public static final class BoardViewBuilder {
         private List<StatusGroupView> groups;
         private List<UnreadableTicketView> unreadable;
+        private ProjectRoot root;
 
         private BoardViewBuilder() {}
 
@@ -34,8 +37,13 @@ public record BoardView(List<StatusGroupView> groups, List<UnreadableTicketView>
             return this;
         }
 
+        public BoardViewBuilder root(ProjectRoot root) {
+            this.root = root;
+            return this;
+        }
+
         public BoardView build() {
-            return new BoardView(groups, unreadable);
+            return new BoardView(groups, unreadable, root);
         }
     }
 }

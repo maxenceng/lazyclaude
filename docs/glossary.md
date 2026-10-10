@@ -21,7 +21,7 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Main view | The right column's top pane, which shows whatever the selection points at; for a ticket, its frontmatter and its body rendered as markdown. | `shell` |
+| Main view | The right column's top pane, which shows the selection of whichever left panel last had focus; for a ticket, its frontmatter and its body rendered as markdown, for a document, its markdown rendered. | `shell` |
 | Ticket detail | What the main view shows for a ticket: its facts line, its other frontmatter keys, a rule, then its body rendered as markdown. It scrolls as one unit. | `shell` |
 
 ## board
@@ -75,7 +75,8 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Document | One markdown file under the project's `docs/`, outside `docs/backlog/`, shown read-only. | `docs` (expected) |
+| Document | One markdown file under the project's `docs/`, outside `docs/backlog/`, shown read-only. | `docs` |
+| Docs tree | The project's documents grouped by folder, as the Docs panel shows them: the files directly under `docs/` first, then one header per folder with the count of documents beneath it, each level sorted by name. | `docs` |
 
 ## Words we deliberately avoid
 

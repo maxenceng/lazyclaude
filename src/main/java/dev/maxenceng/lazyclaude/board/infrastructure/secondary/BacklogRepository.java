@@ -1,8 +1,6 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +22,7 @@ import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
+import dev.maxenceng.lazyclaude.shared.domain.Utf8Text;
 
 /**
  * Reads `docs/backlog/*.md`: YAML frontmatter for the fields, everything after the closing `---` for the body.
@@ -36,7 +35,6 @@ public final class BacklogRepository implements BacklogPort {
     private static final String HIDDEN_PREFIX = "_";
     private static final String FENCE = "---";
     private static final String LINE_BREAK = "\n";
-    private static final String BYTE_ORDER_MARK = "﻿";
     private static final Pattern ID_LINE = Pattern.compile("(?m)^id:[ \\t]*\\S");
     private static final String NO_DETAIL = "unreadable";
 
@@ -73,7 +71,7 @@ public final class BacklogRepository implements BacklogPort {
         } catch (IOException e) {
             return refused(name, "cannot be read: %s".formatted(e.getClass().getSimpleName()));
         }
-        Optional<String> decoded = utf8(bytes);
+        Optional<String> decoded = Utf8Text.decode(bytes);
         List<String> lines = decoded.orElseGet(() -> new String(bytes, StandardCharsets.ISO_8859_1))
                 .lines()
                 .toList();
@@ -125,15 +123,6 @@ public final class BacklogRepository implements BacklogPort {
 
     private static String name(Path file) {
         return file.getFileName().toString();
-    }
-
-    private static Optional<String> utf8(byte[] bytes) {
-        try {
-            String text = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString();
-            return Optional.of(text.startsWith(BYTE_ORDER_MARK) ? text.substring(BYTE_ORDER_MARK.length()) : text);
-        } catch (CharacterCodingException e) {
-            return Optional.empty();
-        }
     }
 
     private static int closingFence(List<String> lines) {

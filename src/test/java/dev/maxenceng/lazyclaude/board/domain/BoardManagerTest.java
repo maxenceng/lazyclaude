@@ -49,6 +49,14 @@ class BoardManagerTest {
     }
 
     @Test
+    void shouldCarryTheProjectItWasReadFrom() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of());
+
+        assertThat(manager.boardFor(workingDirectory()).project()).isEqualTo(project());
+    }
+
+    @Test
     void shouldGroupTicketsByStatus() {
         Ticket done = ticketBuilder().id(secondTicketId()).status(Status.DONE).build();
         when(locator.locate(workingDirectory())).thenReturn(project());

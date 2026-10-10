@@ -1,40 +1,32 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.IntFunction;
 
-import dev.maxenceng.lazyclaude.board.published.Body;
-import dev.maxenceng.lazyclaude.board.published.NoBody;
-import dev.maxenceng.lazyclaude.board.published.TicketBody;
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.markdown.MarkdownView;
-import dev.tamboui.style.Style;
 import dev.tamboui.terminal.Frame;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
 
 /**
- * Draws a ticket's detail as one scrolling column: the facts line, the other frontmatter keys and a
- * rule, then the body as markdown. It reports its height to the {@link MainViewScroll} on every
- * render, so the scroll limit is the height it actually drew.
+ * Draws the main view's detail as one scrolling column: some plain head rows, then markdown. It
+ * reports its height to the {@link MainViewScroll} on every render, so the scroll limit is the
+ * height it actually drew.
  */
 final class DetailElement implements Element {
 
-    private static final String RULE = "─";
-    private static final String NO_BODY = "no body";
-
-    private final String facts;
-    private final List<String> keys;
-    private final TicketBody body;
+    private final IntFunction<List<DetailRow>> head;
+    private final Optional<String> markdown;
     private final MainViewScroll scroll;
 
-    DetailElement(String facts, List<String> keys, TicketBody body, MainViewScroll scroll) {
-        this.facts = facts;
-        this.keys = keys;
-        this.body = body;
+    /** {@code head} says which rows precede the markdown, given the width they are drawn at. */
+    DetailElement(IntFunction<List<DetailRow>> head, Optional<String> markdown, MainViewScroll scroll) {
+        this.head = head;
+        this.markdown = markdown;
         this.scroll = scroll;
     }
 
@@ -43,8 +35,7 @@ final class DetailElement implements Element {
         if (area.width() <= 0 || area.height() <= 0) {
             return;
         }
-        List<DetailRow> head = head(area.width());
-        Optional<String> markdown = markdown();
+        List<DetailRow> head = this.head.apply(area.width());
         int bodyHeight = markdown.map(source -> view(source, 0).computeHeight(area.width())).orElse(0);
         scroll.observe(head.size() + bodyHeight, area.height());
         int offset = scroll.offset();
@@ -61,24 +52,6 @@ final class DetailElement implements Element {
             Rect bodyArea = new Rect(area.x(), area.y() + shown, area.width(), area.height() - shown);
             markdown.ifPresent(source -> view(source, Math.max(0, -bodyTop)).render(bodyArea, frame.buffer()));
         }
-    }
-
-    private List<DetailRow> head(int width) {
-        List<DetailRow> head = new ArrayList<>();
-        head.add(new DetailRow(facts, Style.EMPTY.bold()));
-        keys.forEach(key -> head.add(new DetailRow(key, Style.EMPTY)));
-        head.add(new DetailRow(RULE.repeat(width), Style.EMPTY.dim()));
-        if (body instanceof NoBody) {
-            head.add(new DetailRow(NO_BODY, Style.EMPTY.dim()));
-        }
-        return head;
-    }
-
-    private Optional<String> markdown() {
-        return switch (body) {
-            case Body text -> Optional.of(text.value());
-            case NoBody none -> Optional.empty();
-        };
     }
 
     private static MarkdownView view(String source, int scrolled) {

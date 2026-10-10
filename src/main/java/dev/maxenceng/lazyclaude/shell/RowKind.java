@@ -1,8 +1,10 @@
 package dev.maxenceng.lazyclaude.shell;
 
-/** What a Board panel row stands for. */
+/** What a row of the Board or Docs panel stands for. */
 enum RowKind {
     GROUP,
     TICKET,
-    UNREADABLE
+    UNREADABLE,
+    FOLDER,
+    DOCUMENT
 }

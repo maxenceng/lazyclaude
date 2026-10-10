@@ -49,6 +49,16 @@ class BoardQueryTest {
     }
 
     @Test
+    void shouldViewTheRootOfTheProjectTheBoardWasReadFrom() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of());
+
+        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).root())
+                .as("the shell hands it on to the contexts that work in the same project")
+                .isEqualTo(BoardViewFixture.projectRoot());
+    }
+
+    @Test
     void shouldViewATicketsFields() {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketFile()));

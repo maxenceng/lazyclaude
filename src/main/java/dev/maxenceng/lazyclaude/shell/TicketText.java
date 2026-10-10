@@ -2,15 +2,19 @@ package dev.maxenceng.lazyclaude.shell;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.ContextName;
+import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoContext;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.NoType;
 import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.board.published.TypeName;
+import dev.tamboui.style.Style;
 
 /**
  * How the shell words a ticket: a ticket with no title is shown under its id, a missing field is left
@@ -20,6 +24,8 @@ final class TicketText {
 
     private static final String FACT_SEPARATOR = " · ";
     private static final String KEY_GAP = "  ";
+    private static final String RULE = "─";
+    private static final String NO_BODY = "no body";
 
     private TicketText() {}
 
@@ -27,6 +33,25 @@ final class TicketText {
         return switch (ticket.title()) {
             case Title title -> title.value();
             case NoTitle noTitle -> ticket.id().value();
+        };
+    }
+
+    /** The rows above a ticket's body: the facts line, the other frontmatter keys, a rule across {@code width}, and "no body" when it has none. */
+    static List<DetailRow> head(TicketView ticket, int width) {
+        List<DetailRow> head = new ArrayList<>();
+        head.add(new DetailRow(facts(ticket), Style.EMPTY.bold()));
+        keyRows(ticket).forEach(key -> head.add(new DetailRow(key, Style.EMPTY)));
+        head.add(new DetailRow(RULE.repeat(width), Style.EMPTY.dim()));
+        if (ticket.body() instanceof NoBody) {
+            head.add(new DetailRow(NO_BODY, Style.EMPTY.dim()));
+        }
+        return head;
+    }
+
+    static Optional<String> markdown(TicketView ticket) {
+        return switch (ticket.body()) {
+            case Body text -> Optional.of(text.value());
+            case NoBody none -> Optional.empty();
         };
     }
 
