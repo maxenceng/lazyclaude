@@ -200,6 +200,16 @@ class ArchitectureTest {
             .should(beBuiltOnlyByTheirOwnBuilderWhenTheyHoldMoreThanOne())
             .allowEmptyShould(true);
 
+    // A view is a read model as wide as the domain type it shows, so it is built the same way.
+    @ArchTest
+    static final ArchRule views_are_built_through_their_own_builder = classes()
+            .that()
+            .resideInAPackage("..infrastructure.primary..")
+            .and()
+            .haveSimpleNameEndingWith("View")
+            .should(beBuiltOnlyByTheirOwnBuilderEvenFromWithin())
+            .allowEmptyShould(true);
+
     // The start-up reports a DomainException's message; any other exception escapes as a stack trace.
     @ArchTest
     static final ArchRule business_failures_extend_domain_exception = classes()
@@ -336,10 +346,34 @@ class ArchitectureTest {
         };
     }
 
+    private static ArchCondition<JavaClass> beBuiltOnlyByTheirOwnBuilderEvenFromWithin() {
+        return new ArchCondition<>("be built only by their own builder, even from their own factory") {
+            @Override
+            public void check(JavaClass type, ConditionEvents events) {
+                if (nonStaticFields(type).size() < 2) {
+                    return;
+                }
+                Stream.<JavaCodeUnitAccess<?>>concat(
+                                type.getConstructorCallsToSelf().stream(), type.getConstructorReferencesToSelf().stream())
+                        .filter(construction -> !isOwnBuilder(type, construction.getOriginOwner()))
+                        .forEach(construction -> events.add(SimpleConditionEvent.violated(
+                                construction,
+                                "%s constructs %s directly; build it through %sBuilder"
+                                        .formatted(
+                                                construction.getOriginOwner().getSimpleName(),
+                                                type.getSimpleName(),
+                                                type.getSimpleName()))));
+            }
+        };
+    }
+
+    private static boolean isOwnBuilder(JavaClass type, JavaClass origin) {
+        return origin.getSimpleName().equals(type.getSimpleName() + "Builder")
+                && origin.getEnclosingClass().filter(type::equals).isPresent();
+    }
+
     private static boolean isBuiltThroughItsBuilder(JavaClass type, JavaClass origin) {
-        return origin.equals(type)
-                || origin.getSimpleName().equals(type.getSimpleName() + "Builder")
-                        && origin.getEnclosingClass().filter(type::equals).isPresent();
+        return origin.equals(type) || isOwnBuilder(type, origin);
     }
 
     private static ArchCondition<JavaClass> takeNoOtherManagerAsAConstructorParameter() {

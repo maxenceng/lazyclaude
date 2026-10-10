@@ -1,13 +1,14 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.linkedWorktree;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.repositoryWithBacklog;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.repositoryWithoutBacklog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -17,87 +18,66 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 class ProjectLocatorRepositoryTest {
 
+    private final ProjectLocatorRepository locator = new ProjectLocatorRepository();
+
     @TempDir
     Path sandbox;
 
-    private Path repo;
+    @Test
+    void shouldLocateTheProjectFromItsRoot() throws Exception {
+        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
 
-    private final ProjectLocatorRepository locator = new ProjectLocatorRepository();
-
-    @BeforeEach
-    void createRepository() throws Exception {
-        repo = Files.createDirectories(sandbox.resolve("app")).toRealPath();
-        git(repo, "init", "-q", "-b", "main");
-        Files.createDirectories(repo.resolve("docs/backlog"));
-        Files.writeString(repo.resolve("docs/backlog/A-1.md"), "---\nid: A-1\nstatus: todo\n---\n");
-        git(repo, "add", ".");
-        git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init");
-    }
-
-    private static void git(Path in, String... args) throws Exception {
-        String[] command = new String[args.length + 3];
-        command[0] = "git";
-        command[1] = "-C";
-        command[2] = in.toString();
-        System.arraycopy(args, 0, command, 3, args.length);
-        Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
-        String output = new String(process.getInputStream().readAllBytes());
-        assertThat(process.waitFor()).as(output).isZero();
+        assertThat(locator.locate(new WorkingDirectory(repository))).isEqualTo(new Project(repository));
     }
 
     @Test
-    void shouldLocateTheProjectFromItsRoot() {
-        assertThat(locator.locate(new WorkingDirectory(repo))).isEqualTo(new Project(repo));
-    }
+    void shouldLocateTheProjectFromASubdirectory() throws Exception {
+        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
 
-    @Test
-    void shouldLocateTheProjectFromASubdirectory() throws IOException {
-        Path sub = Files.createDirectories(repo.resolve("src/main"));
-
-        assertThat(locator.locate(new WorkingDirectory(sub))).isEqualTo(new Project(repo));
+        assertThat(locator.locate(new WorkingDirectory(Files.createDirectories(repository.resolve("src/main")))))
+                .isEqualTo(new Project(repository));
     }
 
     @Test
     void shouldLocateTheMainWorktreeFromALinkedWorktree() throws Exception {
-        Path worktree = sandbox.resolve("app.worktrees/A-1-ticket");
-        git(repo, "worktree", "add", "-q", "-b", "A-1-ticket", worktree.toString());
+        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
+        Path worktree = linkedWorktree(repository, sandbox.resolve("app.worktrees/PROJ-1-ticket"));
 
-        assertThat(locator.locate(new WorkingDirectory(worktree.toRealPath()))).isEqualTo(new Project(repo));
+        assertThat(locator.locate(new WorkingDirectory(worktree))).isEqualTo(new Project(repository));
     }
 
     @Test
     void shouldLocateTheMainWorktreeFromASubdirectoryOfALinkedWorktree() throws Exception {
-        Path worktree = sandbox.resolve("app.worktrees/A-1-ticket");
-        git(repo, "worktree", "add", "-q", "-b", "A-1-ticket", worktree.toString());
+        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
+        Path worktree = linkedWorktree(repository, sandbox.resolve("app.worktrees/PROJ-1-ticket"));
 
-        assertThat(locator.locate(new WorkingDirectory(worktree.resolve("docs").toRealPath()))).isEqualTo(new Project(repo));
+        assertThat(locator.locate(new WorkingDirectory(worktree.resolve("docs")))).isEqualTo(new Project(repository));
     }
 
     @Test
     void shouldLocateTheProjectFromADirectoryGivenThroughASymlink() throws Exception {
-        Path link = Files.createSymbolicLink(sandbox.resolve("link"), repo);
+        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
+        Path link = Files.createSymbolicLink(sandbox.resolve("link"), repository);
 
-        assertThat(locator.locate(new WorkingDirectory(link))).isEqualTo(new Project(repo));
-    }
-
-    @Test
-    void shouldSayItIsNotAGitRepositoryOutsideOne() throws IOException {
-        Path outside = Files.createDirectories(sandbox.resolve("plain"));
-
-        assertThatThrownBy(() -> locator.locate(new WorkingDirectory(outside)))
-                .isInstanceOf(ProjectNotFoundException.class)
-                .hasMessageContaining("not inside a git repository")
-                .hasMessageContaining(outside.toString());
+        assertThat(locator.locate(new WorkingDirectory(link))).isEqualTo(new Project(repository));
     }
 
     @Test
     void shouldLocateARepositoryWithoutABacklog() throws Exception {
-        Path other = Files.createDirectories(sandbox.resolve("bare-app"));
-        git(other, "init", "-q", "-b", "main");
+        Path repository = repositoryWithoutBacklog(sandbox.resolve("bare-app"));
 
-        assertThat(locator.locate(new WorkingDirectory(other)))
+        assertThat(locator.locate(new WorkingDirectory(repository)))
                 .as("whether a project has a backlog is the board's question, not the locator's")
-                .isEqualTo(new Project(other.toRealPath()));
+                .isEqualTo(new Project(repository));
+    }
+
+    @Test
+    void shouldSayItIsNotAGitRepositoryOutsideOne() throws Exception {
+        Path outside = Files.createDirectories(sandbox.resolve("plain"));
+
+        assertThatThrownBy(() -> locator.locate(new WorkingDirectory(outside)))
+                .isExactlyInstanceOf(ProjectNotFoundException.class)
+                .hasMessage("%s is not inside a git repository".formatted(outside));
     }
 
     @Test
@@ -105,7 +85,7 @@ class ProjectLocatorRepositoryTest {
         Path missing = sandbox.resolve("gone");
 
         assertThatThrownBy(() -> locator.locate(new WorkingDirectory(missing)))
-                .isInstanceOf(ProjectNotFoundException.class)
-                .hasMessageContaining(missing.toString());
+                .isExactlyInstanceOf(ProjectNotFoundException.class)
+                .hasMessage("%s is not a directory".formatted(missing));
     }
 }

@@ -11,6 +11,55 @@ import dev.maxenceng.lazyclaude.board.published.TicketType;
 public record TicketView(TicketId id, TicketTitle title, Status status, TicketContext context, TicketType type) {
 
     static TicketView from(Ticket ticket) {
-        return new TicketView(ticket.id(), ticket.title(), ticket.status(), ticket.context(), ticket.type());
+        return builder()
+                .id(ticket.id())
+                .title(ticket.title())
+                .status(ticket.status())
+                .context(ticket.context())
+                .type(ticket.type())
+                .build();
+    }
+
+    public static TicketViewBuilder builder() {
+        return new TicketViewBuilder();
+    }
+
+    public static final class TicketViewBuilder {
+        private TicketId id;
+        private TicketTitle title;
+        private Status status;
+        private TicketContext context;
+        private TicketType type;
+
+        private TicketViewBuilder() {}
+
+        public TicketViewBuilder id(TicketId id) {
+            this.id = id;
+            return this;
+        }
+
+        public TicketViewBuilder title(TicketTitle title) {
+            this.title = title;
+            return this;
+        }
+
+        public TicketViewBuilder status(Status status) {
+            this.status = status;
+            return this;
+        }
+
+        public TicketViewBuilder context(TicketContext context) {
+            this.context = context;
+            return this;
+        }
+
+        public TicketViewBuilder type(TicketType type) {
+            this.type = type;
+            return this;
+        }
+
+        public TicketView build() {
+            return new TicketView(id, title, status, context, type);
+        }
     }
 }

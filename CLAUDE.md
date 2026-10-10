@@ -75,6 +75,8 @@ an ADR.
 - A domain failure is a `DomainException`; an input check goes through `Assert`.
 - A screen is tested by rendering it into a buffer (`Screen` in the shell's tests) and
   asserting on its text, not by driving a real terminal.
+- A `*Test` class holds tests only; values come from the `<Type>Fixture` beside the type, and
+  ports are mocked with Mockito (ADR 0013). `TestConventionsTest` enforces the first part.
 - The `ddd-backend` skill describes a Spring project; its aggregate, value-object and
   port/adapter guidance applies here, its Spring, HTTP and persistence parts do not.
 

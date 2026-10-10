@@ -1,102 +1,43 @@
 package dev.maxenceng.lazyclaude.shell;
 
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.bareTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.untitledTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketViewFixture.unreadableTicketView;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.pressed;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOn;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketView;
-import dev.maxenceng.lazyclaude.board.published.ContextName;
-import dev.maxenceng.lazyclaude.board.published.FileName;
-import dev.maxenceng.lazyclaude.board.published.NoContext;
-import dev.maxenceng.lazyclaude.board.published.NoTitle;
-import dev.maxenceng.lazyclaude.board.published.NoType;
-import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.Title;
-import dev.maxenceng.lazyclaude.board.published.TypeName;
-import dev.tamboui.tui.event.KeyCode;
-import dev.tamboui.tui.event.KeyEvent;
-import dev.tamboui.tui.event.KeyModifiers;
 
 class ShellTest {
-
-    private static final int WIDTH = 80;
-    private static final int HEIGHT = 24;
-
-    private static TicketView ticket(String id, String status, String title) {
-        return new TicketView(
-                new TicketId(id),
-                title == null ? new NoTitle() : new Title(title),
-                Status.parse(status),
-                new ContextName("board"),
-                new TypeName("feature"));
-    }
-
-    private static UnreadableTicketView unreadable(String file, String reason) {
-        return new UnreadableTicketView(new FileName(file), new Reason(reason));
-    }
-
-    private static BoardView board(List<TicketView> tickets, List<UnreadableTicketView> unreadable) {
-        List<StatusGroupView> groups = Arrays.stream(Status.values())
-                .map(status -> new StatusGroupView(
-                        status,
-                        tickets.stream().filter(ticket -> ticket.status() == status).toList()))
-                .toList();
-        return new BoardView(groups, unreadable);
-    }
-
-    private static Shell shellOn(BoardView board) {
-        return new Shell(board);
-    }
-
-    private static Shell shellOn(TicketView... tickets) {
-        return shellOn(board(List.of(tickets), List.of()));
-    }
-
-    private static KeyEvent key(char c) {
-        return KeyEvent.ofChar(c);
-    }
-
-    private static KeyEvent alt(char c) {
-        return KeyEvent.ofChar(c, KeyModifiers.ALT);
-    }
-
-    private static Screen screen(Shell shell) {
-        return Screen.of(shell.render(), WIDTH, HEIGHT);
-    }
-
-    private static List<String> boardPanelLines(Screen screen) {
-        List<String> found = new ArrayList<>();
-        for (String line : screen.lines()) {
-            int bar = line.indexOf('│');
-            if (bar >= 0 && line.indexOf('│', bar + 1) >= 0) {
-                found.add(line.substring(bar + 1, line.indexOf('│', bar + 1)).stripTrailing());
-            }
-        }
-        return found;
-    }
 
     @Test
     void shouldGroupTicketsByStatusInLifecycleOrderWithCounts() {
         Shell shell = shellOn(
-                ticket("A-1", "done", "Old"),
-                ticket("A-2", "in-review", "Review"),
-                ticket("A-3", "todo", "Todo"),
-                ticket("A-4", "draft", "Draft one"),
-                ticket("A-5", "draft", "Draft two"),
-                ticket("A-6", "in-progress", "Working"));
+                ticketViewBuilder().id(new TicketId("A-1")).status(Status.DONE).build(),
+                ticketViewBuilder().id(new TicketId("A-2")).status(Status.IN_REVIEW).build(),
+                ticketViewBuilder().id(new TicketId("A-3")).status(Status.TODO).build(),
+                ticketViewBuilder().id(new TicketId("A-4")).status(Status.DRAFT).build(),
+                ticketViewBuilder().id(new TicketId("A-5")).status(Status.DRAFT).build(),
+                ticketViewBuilder().id(new TicketId("A-6")).status(Status.IN_PROGRESS).build());
 
-        String board = String.join("\n", boardPanelLines(screen(shell)));
-
-        assertThat(board)
+        assertThat(Screen.of(shell).boardPanelText())
                 .containsSubsequence(
                         "▾ draft (2)", "A-4", "A-5", "▾ todo (1)", "A-3", "▾ in-progress (1)", "A-6", "▾ in-review (1)",
                         "A-2", "▸ done (1)");
@@ -104,200 +45,178 @@ class ShellTest {
 
     @Test
     void shouldShowAnEmptyGroupAtZero() {
-        Shell shell = shellOn(ticket("A-1", "draft", "Only"));
-
-        assertThat(screen(shell).text()).contains("▾ todo (0)", "▾ in-progress (0)", "▾ in-review (0)", "▸ done (0)");
+        assertThat(Screen.of(shellOn(ticketView())).text())
+                .contains("▾ todo (0)", "▾ in-progress (0)", "▾ in-review (0)", "▸ done (0)");
     }
 
     @Test
     void shouldStartWithDoneFolded() {
-        Shell shell = shellOn(ticket("A-1", "done", "Shipped"));
-
-        assertThat(screen(shell).text()).contains("▸ done (1)").doesNotContain("A-1");
+        assertThat(Screen.of(shellOn(doneTicketView())).text())
+                .contains("▸ done (1)")
+                .doesNotContain(doneTicketView().id().value());
     }
 
     @Test
     void shouldUnfoldDoneWithEnterOnItsHeader() {
-        Shell shell = shellOn(ticket("A-1", "done", "Shipped"));
-        for (int i = 0; i < 4; i++) {
-            shell.press(key('j'));
-        }
+        Shell shell = pressed(shellOn(doneTicketView()), key('j'), 4);
 
-        shell.press(KeyEvent.ofKey(KeyCode.ENTER));
+        shell.press(enter());
 
-        assertThat(screen(shell).text()).contains("▾ done (1)", "A-1");
+        assertThat(Screen.of(shell).text()).contains("▾ done (1)", doneTicketView().id().value());
     }
 
     @Test
     void shouldFoldAnOpenGroupWithEnterOnItsHeader() {
-        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
+        Shell shell = shellOn(ticketView());
 
-        shell.press(KeyEvent.ofKey(KeyCode.ENTER));
+        shell.press(enter());
 
-        assertThat(screen(shell).text()).contains("▸ draft (1)").doesNotContain("A-1");
+        assertThat(Screen.of(shell).text()).contains("▸ draft (1)").doesNotContain(ticketView().id().value());
     }
 
     @Test
     void shouldFoldAGroupThatIsEmpty() {
-        Shell shell = shellOn();
-        shell.press(key('j'));
+        Shell shell = pressed(shellOn(), key('j'), 1);
 
-        shell.press(KeyEvent.ofKey(KeyCode.ENTER));
+        shell.press(enter());
 
-        assertThat(screen(shell).text()).contains("▸ todo (0)");
+        assertThat(Screen.of(shell).text()).contains("▸ todo (0)");
     }
 
     @Test
     void shouldLeaveATicketRowAloneOnEnter() {
-        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
-        shell.press(key('j'));
+        Shell shell = pressed(shellOn(ticketView()), key('j'), 1);
 
-        shell.press(KeyEvent.ofKey(KeyCode.ENTER));
+        shell.press(enter());
 
-        assertThat(screen(shell).text()).contains("▾ draft (1)", "A-1");
+        assertThat(Screen.of(shell).text()).contains("▾ draft (1)", ticketView().id().value());
     }
 
     @Test
     void shouldListUnreadableTicketsLastWithTheirReason() {
-        BoardView board = board(
-                List.of(ticket("A-1", "draft", "Fine")),
-                List.of(unreadable("A-2.md", "bad")));
+        Shell shell = shellOn(boardViewOf(List.of(ticketView()), List.of(unreadableTicketView())));
 
-        String boardText = String.join("\n", boardPanelLines(screen(shellOn(board))));
-
-        assertThat(boardText).containsSubsequence("▸ done (0)", "▾ unreadable (1)", "A-2.md — bad");
+        assertThat(Screen.of(shell).boardPanelText())
+                .containsSubsequence("▸ done (0)", "▾ unreadable (1)", "PROJ-2.md — status is");
     }
 
     @Test
     void shouldHideTheUnreadableGroupWhenNothingIsUnreadable() {
-        assertThat(screen(shellOn()).text()).doesNotContain("unreadable");
+        assertThat(Screen.of(shellOn()).text()).doesNotContain("unreadable");
     }
 
     @Test
     void shouldShowATicketWithoutATitleUnderItsId() {
-        Shell shell = shellOn(ticket("A-1", "draft", null));
-
-        assertThat(String.join("\n", boardPanelLines(screen(shell)))).contains("A-1 A-1");
+        assertThat(Screen.of(shellOn(untitledTicketView())).boardPanelText()).contains("PROJ-1 PROJ-1");
     }
 
     @Test
     void shouldMoveTheSelectionDownWithJ() {
-        Shell shell = shellOn(ticket("A-1", "draft", "Idea"), ticket("A-2", "draft", "Plan"));
+        Shell shell = shellOn(ticketView(), secondTicketView());
 
-        shell.press(key('j'));
-        shell.press(key('j'));
+        pressed(shell, key('j'), 2);
 
-        assertThat(screen(shell).reversedText()).singleElement().asString().contains("A-2");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-2");
     }
 
     @Test
     void shouldMoveTheSelectionUpWithK() {
-        Shell shell = shellOn(ticket("A-1", "draft", "Idea"), ticket("A-2", "draft", "Plan"));
-        shell.press(key('j'));
-        shell.press(key('j'));
+        Shell shell = pressed(shellOn(ticketView(), secondTicketView()), key('j'), 2);
 
         shell.press(key('k'));
 
-        assertThat(screen(shell).reversedText()).singleElement().asString().contains("A-1");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1");
     }
 
     @Test
     void shouldStayOnTheFirstRowWhenKIsPressedThere() {
-        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
+        Shell shell = shellOn(ticketView());
 
         shell.press(key('k'));
 
-        assertThat(screen(shell).reversedText()).singleElement().asString().contains("draft (1)");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("draft (1)");
     }
 
     @Test
     void shouldStayOnTheLastRowWhenJIsPressedThere() {
-        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
-        for (int i = 0; i < 20; i++) {
-            shell.press(key('j'));
-        }
+        Shell shell = shellOn(ticketView());
 
-        assertThat(screen(shell).reversedText()).singleElement().asString().contains("done (0)");
+        pressed(shell, key('j'), 20);
+
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("done (0)");
     }
 
     @Test
     void shouldKeepTheSelectionVisibleWhenTheBoardIsLongerThanThePanel() {
-        List<TicketView> tickets = new ArrayList<>();
-        for (int i = 1; i <= 40; i++) {
-            tickets.add(ticket("A-" + i, "draft", "Ticket " + i));
-        }
-        Shell shell = shellOn(board(tickets, List.of()));
+        List<TicketView> forty = IntStream.rangeClosed(1, 40)
+                .mapToObj(number -> ticketViewBuilder()
+                        .id(new TicketId("A-%d".formatted(number)))
+                        .title(new Title("Ticket %d".formatted(number)))
+                        .build())
+                .toList();
+        Shell shell = shellOn(forty.toArray(TicketView[]::new));
 
-        for (int i = 0; i < 30; i++) {
-            shell.press(key('j'));
-        }
+        pressed(shell, key('j'), 30);
 
-        assertThat(screen(shell).reversedText()).singleElement().asString().contains("A-30");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("A-30");
     }
 
     @Test
     void shouldShowTheSelectedTicketInTheMainView() {
-        Shell shell = shellOn(ticket("A-1", "in-review", "A fine idea"));
-        shell.press(key('j'));
-        shell.press(key('j'));
-        shell.press(key('j'));
-        shell.press(key('j'));
+        Shell shell = pressed(shellOn(ticketViewBuilder().status(Status.IN_REVIEW).build()), key('j'), 4);
 
-        String text = screen(shell).text();
-
-        assertThat(text).contains("A-1", "A fine idea", "status in-review · board · feature");
+        assertThat(Screen.of(shell).text())
+                .contains("PROJ-1", "A board from the backlog", "status in-review · board · feature");
     }
 
     @Test
     void shouldShowTheSelectedTicketsDetailRightOfTheBoard() {
-        Shell shell = shellOn(ticket("A-1", "draft", "A fine idea"));
-        shell.press(key('j'));
+        Shell shell = pressed(shellOn(ticketView()), key('j'), 1);
 
-        List<String> lines = screen(shell).lines();
-
-        assertThat(lines).anySatisfy(line -> assertThat(line.substring(28)).contains("A fine idea"));
+        assertThat(Screen.of(shell).rightColumnLines()).anySatisfy(line -> assertThat(line).contains("A board from the backlog"));
     }
 
     @Test
     void shouldLeaveTheMainViewEmptyOnAGroupHeader() {
-        Shell shell = shellOn(ticket("A-1", "draft", "A fine idea"));
-
-        List<String> lines = screen(shell).lines();
-
-        assertThat(lines).noneSatisfy(line -> assertThat(line.substring(28)).contains("A fine idea"));
+        assertThat(Screen.of(shellOn(ticketView())).rightColumnLines())
+                .noneSatisfy(line -> assertThat(line).contains("A board from the backlog"));
     }
 
     @Test
     void shouldShowAnUnreadableFilesReasonInTheMainViewWhenItIsSelected() {
-        BoardView board = board(List.of(), List.of(unreadable("A-2.md", "status is missing")));
-        Shell shell = shellOn(board);
-        for (int i = 0; i < 6; i++) {
-            shell.press(key('j'));
-        }
+        Shell shell = pressed(shellOn(boardViewOf(List.of(), List.of(unreadableTicketView()))), key('j'), 6);
 
-        assertThat(screen(shell).lines()).anySatisfy(line -> assertThat(line.substring(28)).contains("status is missing"));
+        assertThat(Screen.of(shell).rightColumnLines()).anySatisfy(line -> assertThat(line).contains("status is missing"));
+    }
+
+    @Test
+    void shouldLeaveAMissingContextAndTypeOutOfTheMainView() {
+        Shell shell = pressed(shellOn(bareTicketView()), key('j'), 1);
+
+        assertThat(Screen.of(shell).text())
+                .as("an absent field is left out, never shown as a blank between separators")
+                .contains("status draft")
+                .doesNotContain("·");
     }
 
     @Test
     void shouldTitleTheOtherPanelsAndLeaveThemEmpty() {
-        String text = screen(shellOn()).text();
-
-        assertThat(text).contains("Board", "Sessions", "Docs", "Elsewhere", "dock", "main view");
+        assertThat(Screen.of(shellOn()).text()).contains("Board", "Sessions", "Docs", "Elsewhere", "dock", "main view");
     }
 
     @Test
     void shouldSayThereIsNoHostedSession() {
-        assertThat(screen(shellOn()).text()).contains("no hosted session");
+        assertThat(Screen.of(shellOn()).text()).contains("no hosted session");
     }
 
     @Test
     void shouldLeaveTheStatusLineEmpty() {
-        assertThat(screen(shellOn()).lines().getFirst()).isBlank();
+        assertThat(Screen.of(shellOn()).lines().getFirst()).isBlank();
     }
 
     @Test
     void shouldStartWithFocusOnTheBoard() {
-        assertThat(screen(shellOn()).cyanText()).anySatisfy(text -> assertThat(text).contains("Board"));
+        assertThat(Screen.of(shellOn()).cyanText()).anySatisfy(text -> assertThat(text).contains("Board"));
     }
 
     @Test
@@ -307,13 +226,12 @@ class ShellTest {
         shell.press(key('l'));
 
         assertThat(shell.focus()).isEqualTo(Focus.MAIN);
-        assertThat(screen(shell).cyanText()).anySatisfy(text -> assertThat(text).contains("main view"));
+        assertThat(Screen.of(shell).cyanText()).anySatisfy(text -> assertThat(text).contains("main view"));
     }
 
     @Test
     void shouldMoveFocusBackToTheBoardWithH() {
-        Shell shell = shellOn();
-        shell.press(key('l'));
+        Shell shell = pressed(shellOn(), key('l'), 1);
 
         shell.press(key('h'));
 
@@ -322,9 +240,7 @@ class ShellTest {
 
     @Test
     void shouldReturnToTheLeftPanelFocusWasLastOn() {
-        Shell shell = shellOn();
-        shell.press(alt('j'));
-        shell.press(key('l'));
+        Shell shell = pressed(pressed(shellOn(), alt('j'), 1), key('l'), 1);
 
         shell.press(key('h'));
 
@@ -347,19 +263,16 @@ class ShellTest {
 
     @Test
     void shouldMoveFocusUpTheLeftPanelsWithAltK() {
-        Shell shell = shellOn();
-        shell.press(alt('j'));
+        Shell shell = pressed(shellOn(), alt('j'), 1);
 
-        shell.press(alt('k'));
-        shell.press(alt('k'));
+        pressed(shell, alt('k'), 2);
 
         assertThat(shell.focus()).as("focus does not wrap").isEqualTo(Focus.BOARD);
     }
 
     @Test
     void shouldMoveFocusBetweenMainViewAndDockWithAltJAndAltK() {
-        Shell shell = shellOn();
-        shell.press(alt('l'));
+        Shell shell = pressed(shellOn(), alt('l'), 1);
 
         shell.press(alt('j'));
         assertThat(shell.focus()).isEqualTo(Focus.DOCK);
@@ -381,19 +294,17 @@ class ShellTest {
 
     @Test
     void shouldNotMoveTheBoardSelectionWhileAnotherPanelHasFocus() {
-        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
-        shell.press(key('l'));
+        Shell shell = pressed(shellOn(ticketView()), key('l'), 1);
 
         shell.press(key('j'));
         shell.press(key('h'));
 
-        assertThat(screen(shell).reversedText()).singleElement().asString().contains("draft (1)");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("draft (1)");
     }
 
     @Test
     void shouldReserveJAndKForTheBoardOnlyWhenItHasFocus() {
-        Shell shell = shellOn();
-        shell.press(key('l'));
+        Shell shell = pressed(shellOn(), key('l'), 1);
 
         shell.press(key('j'));
 
@@ -411,9 +322,7 @@ class ShellTest {
 
     @Test
     void shouldQuitOnQFromAnyPanel() {
-        Shell shell = shellOn();
-        shell.press(alt('l'));
-        shell.press(alt('j'));
+        Shell shell = pressed(pressed(shellOn(), alt('l'), 1), alt('j'), 1);
 
         shell.press(key('q'));
 
@@ -431,47 +340,29 @@ class ShellTest {
 
     @Test
     void shouldIgnoreKeysItHasNoMeaningFor() {
-        Shell shell = shellOn();
-
-        boolean handled = shell.press(key('x'));
-
-        assertThat(handled).as("an unhandled key falls through to the runner").isFalse();
+        assertThat(shellOn().press(key('x'))).as("an unhandled key falls through to the runner").isFalse();
     }
 
     @Test
     void shouldListTheBoardKeysOnAGroupHeader() {
-        assertThat(screen(shellOn()).lines().getLast())
+        assertThat(Screen.of(shellOn()).lines().getLast())
                 .contains("j/k move", "enter fold", "h/l panel", "alt+h/j/k/l focus", "q quit");
     }
 
     @Test
     void shouldNotOfferFoldOnATicketRow() {
-        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
-        shell.press(key('j'));
+        Shell shell = pressed(shellOn(ticketView()), key('j'), 1);
 
-        assertThat(screen(shell).lines().getLast()).contains("j/k move", "q quit").doesNotContain("enter fold");
+        assertThat(Screen.of(shell).lines().getLast()).contains("j/k move", "q quit").doesNotContain("enter fold");
     }
 
     @Test
     void shouldListNoBoardKeysWhenAnotherPanelHasFocus() {
-        Shell shell = shellOn();
-        shell.press(key('l'));
+        Shell shell = pressed(shellOn(), key('l'), 1);
 
-        assertThat(screen(shell).lines().getLast())
+        assertThat(Screen.of(shell).lines().getLast())
                 .contains("h/l panel", "alt+h/j/k/l focus", "q quit")
                 .doesNotContain("j/k move")
                 .doesNotContain("enter fold");
-    }
-
-    @Test
-    void shouldLeaveAMissingContextAndTypeOutOfTheMainView() {
-        TicketView bare = new TicketView(new TicketId("A-1"), new Title("Bare"), Status.DRAFT, new NoContext(), new NoType());
-        Shell shell = shellOn(bare);
-        shell.press(key('j'));
-
-        assertThat(screen(shell).text())
-                .as("an absent field is left out, never shown as a blank between separators")
-                .contains("status draft")
-                .doesNotContain("·");
     }
 }

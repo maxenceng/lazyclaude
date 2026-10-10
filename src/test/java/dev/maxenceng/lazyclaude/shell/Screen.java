@@ -16,12 +16,21 @@ import dev.tamboui.tui.RenderThreadForTests;
 
 final class Screen {
 
+    private static final int WIDTH = 80;
+    private static final int HEIGHT = 24;
+    private static final int LEFT_COLUMN_WIDTH = 28;
+    private static final char BORDER = '│';
+
     private final List<String> lines;
     private final Buffer buffer;
 
     private Screen(List<String> lines, Buffer buffer) {
         this.lines = lines;
         this.buffer = buffer;
+    }
+
+    static Screen of(Shell shell) {
+        return of(shell.render(), WIDTH, HEIGHT);
     }
 
     static Screen of(Element element, int width, int height) {
@@ -38,6 +47,26 @@ final class Screen {
             lines.add(line.toString());
         }
         return new Screen(lines, buffer);
+    }
+
+    List<String> boardPanelLines() {
+        List<String> found = new ArrayList<>();
+        for (String line : lines) {
+            int open = line.indexOf(BORDER);
+            int close = open < 0 ? -1 : line.indexOf(BORDER, open + 1);
+            if (close >= 0) {
+                found.add(line.substring(open + 1, close).stripTrailing());
+            }
+        }
+        return found;
+    }
+
+    String boardPanelText() {
+        return String.join("\n", boardPanelLines());
+    }
+
+    List<String> rightColumnLines() {
+        return lines.stream().map(line -> line.substring(LEFT_COLUMN_WIDTH)).toList();
     }
 
     String text() {

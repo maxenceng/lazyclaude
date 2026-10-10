@@ -1,58 +1,62 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketFile;
+import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFile;
+import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicket;
+import static dev.maxenceng.lazyclaude.board.domain.WorkingDirectoryFixture.workingDirectory;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.boardQuery;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketViewFixture.unreadableTicketView;
+import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
-import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
-import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
-import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
-import dev.maxenceng.lazyclaude.board.published.ContextName;
-import dev.maxenceng.lazyclaude.board.published.FileName;
-import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
+import dev.maxenceng.lazyclaude.board.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.board.published.Status;
-import dev.maxenceng.lazyclaude.board.published.TicketId;
-import dev.maxenceng.lazyclaude.board.published.Title;
-import dev.maxenceng.lazyclaude.board.published.TypeName;
-import dev.maxenceng.lazyclaude.shared.domain.Project;
 
+@ExtendWith(MockitoExtension.class)
 class BoardQueryTest {
 
-    private static BoardView boardOf(BacklogEntry... entries) {
-        return new BoardQuery(new BoardApplicationService(from -> new Project(from.path()), project -> List.of(entries)))
-                .boardFor(new BoardPayload(Path.of("/work/app")));
-    }
+    private static final BoardPayload FROM_THE_PROJECT = new BoardPayload(workingDirectory().path());
+
+    @Mock
+    private ProjectLocatorPort locator;
+
+    @Mock
+    private BacklogPort backlog;
 
     @Test
     void shouldViewEveryStatusGroupInLifecycleOrder() {
-        assertThat(boardOf().groups()).extracting(StatusGroupView::status).containsExactly(Status.values());
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of());
+
+        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups())
+                .extracting(StatusGroupView::status)
+                .containsExactly(Status.values());
     }
 
     @Test
     void shouldViewATicketsFields() {
-        BoardView board = boardOf(ticketFile("A-1.md", "A-1", Status.IN_REVIEW));
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
 
-        assertThat(board.groups().get(Status.IN_REVIEW.ordinal()).tickets())
-                .containsExactly(new TicketView(
-                        new TicketId("A-1"),
-                        new Title("Ticket A-1"),
-                        Status.IN_REVIEW,
-                        new ContextName("board"),
-                        new TypeName("feature")));
+        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets())
+                .containsExactly(ticketViewBuilder().status(Status.TODO).build());
     }
 
     @Test
     void shouldViewAnUnreadableFileWithItsReason() {
-        UnreadableTicket unreadable = UnreadableTicket.builder()
-                .file(new FileName("A-2.md"))
-                .reason(new Reason("status is missing"))
-                .build();
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(unreadableTicket()));
 
-        assertThat(boardOf(unreadable).unreadable())
-                .containsExactly(new UnreadableTicketView(new FileName("A-2.md"), new Reason("status is missing")));
+        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).unreadable())
+                .containsExactly(unreadableTicketView());
     }
 }
