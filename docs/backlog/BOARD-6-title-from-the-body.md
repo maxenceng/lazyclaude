@@ -1,6 +1,6 @@
 ---
 id: BOARD-6
-status: in-review
+status: done
 context: board
 type: chore
 tracker_id: 90
@@ -37,3 +37,7 @@ none — *Ticket* already reads "frontmatter plus body", and the title is part o
 ## Notes
 
 Raised in review of [BOARD-2](BOARD-2-ticket-detail.md) and deferred there: `BacklogRepository` reads the title and the body from the same lines, so they cannot disagree today, but the rule (first `#` heading outside a code fence) is a domain rule living in a secondary adapter.
+
+*Glossary impact* above says none; review overturned that, and *Title* was added to `docs/glossary.md` in the same PR — a title is a rule over the body, not a field of it, so it earned its own entry.
+
+Fence matching is unchanged: any fence marker closes an open fence, not only its own. That limit is carried as a `deferred:` comment on `Ticket.titleIn`, not here.
