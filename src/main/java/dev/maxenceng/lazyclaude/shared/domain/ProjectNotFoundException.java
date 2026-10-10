@@ -9,8 +9,4 @@ public final class ProjectNotFoundException extends DomainException {
     public ProjectNotFoundException(String reason) {
         super(DomainErrorStatus.NOT_FOUND, reason);
     }
-
-    public ProjectNotFoundException(String reason, Throwable cause) {
-        super(DomainErrorStatus.NOT_FOUND, reason, cause);
-    }
 }

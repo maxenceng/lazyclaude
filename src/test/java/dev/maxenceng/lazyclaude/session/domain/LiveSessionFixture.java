@@ -1,24 +1,24 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.earlierStartedAt;
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.laterStartedAt;
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.startedAt;
 import static dev.maxenceng.lazyclaude.session.published.ClaudeVersionFixture.version;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.thirdProcessId;
-import static dev.maxenceng.lazyclaude.session.published.SessionDirectoryFixture.sessionDirectory;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.thirdSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.secondSessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.sessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.thirdSessionName;
-import static dev.maxenceng.lazyclaude.session.published.StartedAtFixture.earlierStartedAt;
-import static dev.maxenceng.lazyclaude.session.published.StartedAtFixture.laterStartedAt;
-import static dev.maxenceng.lazyclaude.session.published.StartedAtFixture.startedAt;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 
 import dev.maxenceng.lazyclaude.session.published.Busy;
-import dev.maxenceng.lazyclaude.session.published.SessionDirectory;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class LiveSessionFixture {
 
@@ -29,11 +29,10 @@ public final class LiveSessionFixture {
                 .id(sessionId())
                 .pid(processId())
                 .name(sessionName())
-                .directory(sessionDirectory())
+                .directory(projectRootDirectory())
                 .startedAt(startedAt())
                 .version(version())
-                .state(new Busy())
-                .entrypoint(new OtherEntrypoint());
+                .state(new Busy());
     }
 
     public static LiveSession liveSession() {
@@ -59,19 +58,11 @@ public final class LiveSessionFixture {
                 .build();
     }
 
-    public static LiveSession sessionIn(SessionDirectory directory) {
+    public static LiveSession sessionIn(WorkingDirectory directory) {
         return liveSessionBuilder().directory(directory).build();
     }
 
     public static LiveSession sessionWith(SessionState state) {
         return liveSessionBuilder().state(state).build();
-    }
-
-    public static LiveSession sdkCliSession() {
-        return liveSessionBuilder().entrypoint(new SdkCliEntrypoint()).build();
-    }
-
-    public static LiveSession sessionWithoutEntrypoint() {
-        return liveSessionBuilder().entrypoint(new NoEntrypoint()).state(new YourTurn()).build();
     }
 }

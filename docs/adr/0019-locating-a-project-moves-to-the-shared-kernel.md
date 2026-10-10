@@ -25,12 +25,17 @@ project than the board.
 - `board` and `session` each take the port in their application service and ask it; neither
   decides what "the project of this path" means. `session` asks for each distinct `cwd` and
   reads a `ProjectNotFoundException` as "this path belongs to no project here".
+- **A lookup that failed is not an answer.** When `git` cannot be run or the wait for it is
+  interrupted, the port throws `ProjectUnavailableException`, not `ProjectNotFoundException`.
+  `session` shows *sessions unavailable* for that read instead of dropping the session as
+  nobody's, and the board's start-up reports the failure as itself. A `git` that runs and
+  exits non-zero still means "not in a repository".
 - The architecture rules stay as they are: the domain rule already admits `shared.domain`, and
   the adapter sits where the side-effect rule wants `git` to run.
 
 ## Consequences
 
-- The kernel grows by two domain types, a port, an exception and one adapter; every context
+- The kernel grows by two domain types, a port, two exceptions and one adapter; every context
   that locates a path is coupled to them.
 - A change to how a project is located (a submodule, a bare repository) is made once and
   reaches the board and the sessions together.

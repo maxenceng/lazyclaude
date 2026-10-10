@@ -5,7 +5,6 @@ import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.proces
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.thirdProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
-import static dev.maxenceng.lazyclaude.session.published.SessionDirectoryFixture.sessionDirectory;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.thirdSessionId;
@@ -13,6 +12,7 @@ import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.seco
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.sessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.thirdSessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -24,6 +24,7 @@ import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
+import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 
@@ -36,7 +37,7 @@ public final class SessionViewFixture {
                 .id(sessionId())
                 .pid(processId())
                 .name(sessionName())
-                .directory(sessionDirectory())
+                .directory(projectRootDirectory())
                 .startedAt(LocalDateTime.of(2026, 10, 10, 12, 0))
                 .age(new SessionAge(Duration.ofHours(2)))
                 .version(version())
@@ -93,7 +94,8 @@ public final class SessionViewFixture {
                 namedSessionView(sessionIdOf(1), "busy-one", new Busy()),
                 namedSessionView(sessionIdOf(2), "your-turn-one", new YourTurn()),
                 namedSessionView(sessionIdOf(3), "permission-one", new WaitingForPermission()),
-                namedSessionView(sessionIdOf(4), "input-one", waitingForInput()));
+                namedSessionView(sessionIdOf(4), "input-one", waitingForInput()),
+                namedSessionView(sessionIdOf(5), "unknown-one", new Unknown()));
     }
 
     public static SessionView inputSessionView() {

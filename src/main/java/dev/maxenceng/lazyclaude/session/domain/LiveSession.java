@@ -3,22 +3,20 @@ package dev.maxenceng.lazyclaude.session.domain;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
-import dev.maxenceng.lazyclaude.session.published.SessionDirectory;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
-import dev.maxenceng.lazyclaude.session.published.StartedAt;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
-/** A Claude Code session whose process runs, as its source reported it after the liveness check. */
+/** A live session of the project, with the state lazyclaude draws from what Claude Code reported. */
 public record LiveSession(
         SessionId id,
         ProcessId pid,
         SessionName name,
-        SessionDirectory directory,
+        WorkingDirectory directory,
         StartedAt startedAt,
         ClaudeVersion version,
-        SessionState state,
-        Entrypoint entrypoint) {
+        SessionState state) {
 
     public LiveSession {
         Assert.notNull("id", id);
@@ -28,11 +26,6 @@ public record LiveSession(
         Assert.notNull("started at", startedAt);
         Assert.notNull("version", version);
         Assert.notNull("state", state);
-        Assert.notNull("entrypoint", entrypoint);
-    }
-
-    boolean isSdkCli() {
-        return entrypoint instanceof SdkCliEntrypoint;
     }
 
     public static LiveSessionBuilder builder() {
@@ -43,11 +36,10 @@ public record LiveSession(
         private SessionId id;
         private ProcessId pid;
         private SessionName name;
-        private SessionDirectory directory;
+        private WorkingDirectory directory;
         private StartedAt startedAt;
         private ClaudeVersion version;
         private SessionState state;
-        private Entrypoint entrypoint;
 
         private LiveSessionBuilder() {}
 
@@ -66,7 +58,7 @@ public record LiveSession(
             return this;
         }
 
-        public LiveSessionBuilder directory(SessionDirectory directory) {
+        public LiveSessionBuilder directory(WorkingDirectory directory) {
             this.directory = directory;
             return this;
         }
@@ -86,13 +78,8 @@ public record LiveSession(
             return this;
         }
 
-        public LiveSessionBuilder entrypoint(Entrypoint entrypoint) {
-            this.entrypoint = entrypoint;
-            return this;
-        }
-
         public LiveSession build() {
-            return new LiveSession(id, pid, name, directory, startedAt, version, state, entrypoint);
+            return new LiveSession(id, pid, name, directory, startedAt, version, state);
         }
     }
 }

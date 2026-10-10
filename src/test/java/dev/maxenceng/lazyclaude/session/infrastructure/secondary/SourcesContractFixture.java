@@ -4,7 +4,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
-import dev.maxenceng.lazyclaude.session.domain.LiveSession;
+import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
 
 public final class SourcesContractFixture {
 
@@ -22,15 +22,16 @@ public final class SourcesContractFixture {
         return compared(new ClaudeAgentsRepository(List.of("claude", "agents", "--json"), Duration.ofSeconds(30)).liveSessions());
     }
 
-    private static List<String> compared(List<LiveSession> sessions) {
+    private static List<String> compared(List<ReportedSession> sessions) {
         return sessions.stream()
-                .map(session -> "pid=%d id=%s cwd=%s name=%s state=%s"
+                .map(session -> "pid=%d id=%s cwd=%s name=%s status=%s waitingFor=%s"
                         .formatted(
                                 session.pid().value(),
                                 session.id().value(),
-                                session.directory().value(),
+                                session.directory().path(),
                                 session.name().value(),
-                                session.state()))
+                                session.status(),
+                                session.waitingFor()))
                 .toList();
     }
 }

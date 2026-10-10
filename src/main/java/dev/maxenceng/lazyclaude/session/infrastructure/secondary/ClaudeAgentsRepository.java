@@ -1,7 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -9,8 +8,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import dev.maxenceng.lazyclaude.session.domain.LiveSession;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
 
 /**
@@ -31,7 +30,7 @@ public final class ClaudeAgentsRepository implements LiveSessionPort {
     }
 
     @Override
-    public List<LiveSession> liveSessions() {
+    public List<ReportedSession> liveSessions() {
         byte[] output = run();
         return SessionRecords.records(output, SOURCE).stream()
                 .map(record -> SessionRecords.session(record, SOURCE))
@@ -72,7 +71,7 @@ public final class ClaudeAgentsRepository implements LiveSessionPort {
         try {
             return process.getInputStream().readAllBytes();
         } catch (IOException e) {
-            throw new UncheckedIOException(e);
+            throw new SessionsUnavailableException("cannot read the answer of %s: %s".formatted(SOURCE, e.getMessage()), e);
         }
     }
 }

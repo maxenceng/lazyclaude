@@ -236,6 +236,19 @@ class ArchitectureTest {
             .beAssignableTo(DomainException.class)
             .allowEmptyShould(true);
 
+    // A failure is named for what went wrong; a bare JDK exception says only where it was thrown.
+    @ArchTest
+    static final ArchRule failures_are_named_exceptions = noClasses()
+            .that()
+            .areNotAssignableTo(Throwable.class)
+            .should()
+            .callConstructor(java.io.UncheckedIOException.class, java.io.IOException.class)
+            .orShould()
+            .callConstructor(java.io.UncheckedIOException.class, String.class, java.io.IOException.class)
+            .orShould()
+            .callConstructorWhere(target(owner(nameMatching("java\\.lang\\.(Runtime|IllegalState|IllegalArgument)Exception"))))
+            .allowEmptyShould(true);
+
     // A domain object that can change after construction cannot hold an invariant.
     @ArchTest
     static final ArchRule domain_state_is_final = fields()

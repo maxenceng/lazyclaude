@@ -132,10 +132,7 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
     }
 
     private static boolean process(WatchKey key) {
-        boolean relevant = false;
-        for (WatchEvent<?> event : key.pollEvents()) {
-            relevant |= event.kind() == OVERFLOW || isRecord(event);
-        }
+        boolean relevant = key.pollEvents().stream().anyMatch(event -> event.kind() == OVERFLOW || isRecord(event));
         key.reset();
         return relevant;
     }

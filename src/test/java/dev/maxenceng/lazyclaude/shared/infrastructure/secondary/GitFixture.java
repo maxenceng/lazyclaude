@@ -29,6 +29,10 @@ public final class GitFixture {
         return repository;
     }
 
+    public static String missingGit() {
+        return "lazyclaude-no-such-git";
+    }
+
     public static Path linkedWorktree(Path repository, Path at) throws Exception {
         git(repository, "worktree", "add", "-q", "-b", "PROJ-1-ticket", at.toString());
         return at.toRealPath();

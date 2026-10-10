@@ -20,8 +20,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
-import dev.maxenceng.lazyclaude.session.published.Busy;
 
 class ClaudeAgentsRepositoryTest {
 
@@ -36,7 +36,7 @@ class ClaudeAgentsRepositoryTest {
         Path claude = claudePrinting(root, agentsJson(List.of(agent(registeredPid(), registeredSessionId(), CWD, "busy"))));
 
         assertThat(new ClaudeAgentsRepository(List.of(claude.toString(), "agents", "--json"), PATIENCE).liveSessions())
-                .containsExactly(reportedByAgents(CWD, new Busy()));
+                .containsExactly(reportedByAgents(CWD, ReportedStatus.BUSY));
     }
 
     @Test

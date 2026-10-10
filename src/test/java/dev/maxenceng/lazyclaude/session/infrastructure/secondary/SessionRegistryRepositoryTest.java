@@ -14,6 +14,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.Registry
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.RegistryFixture.waitingRecord;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.RegistryFixture.writeRecord;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
+import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.permissionPrompt;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -25,10 +26,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SdkCliEntrypoint;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
-import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
-import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
+import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 
 class SessionRegistryRepositoryTest {
 
@@ -116,22 +117,22 @@ class SessionRegistryRepositoryTest {
     }
 
     @Test
-    void shouldWaitForPermissionOnAPermissionPrompt() throws IOException {
+    void shouldCarryAPermissionPromptAsTheReasonItWaitsFor() throws IOException {
         writeRecord(
                 sessions,
                 registeredPid() + ".json",
                 waitingRecord(registeredPid(), registeredSessionId(), CWD, "permission prompt"));
         runningProcess(proc, registeredPid(), "claude", PROC_START);
 
-        assertThat(registry.liveSessions()).containsExactly(registered(CWD, new WaitingForPermission()));
+        assertThat(registry.liveSessions()).containsExactly(registered(CWD, ReportedStatus.WAITING, permissionPrompt()));
     }
 
     @Test
-    void shouldWaitForInputOnAnyOtherReason() throws IOException {
+    void shouldCarryAnyOtherReasonItWaitsFor() throws IOException {
         writeRecord(sessions, registeredPid() + ".json", waitingRecord(registeredPid(), registeredSessionId(), CWD, "input needed"));
         runningProcess(proc, registeredPid(), "claude", PROC_START);
 
-        assertThat(registry.liveSessions()).containsExactly(registered(CWD, new WaitingForInput(inputNeeded())));
+        assertThat(registry.liveSessions()).containsExactly(registered(CWD, ReportedStatus.WAITING, inputNeeded()));
     }
 
     @Test
@@ -184,13 +185,21 @@ class SessionRegistryRepositoryTest {
     }
 
     @Test
-    void shouldBeUnavailableOnAStatusItDoesNotKnow() throws IOException {
+    void shouldReportAStatusItDoesNotKnowAsUnknown() throws IOException {
         writeRecord(sessions, "17234.json", record(registeredPid(), registeredSessionId(), CWD, "napping"));
         runningProcess(proc, registeredPid(), "claude", PROC_START);
 
-        assertThatThrownBy(() -> registry.liveSessions())
-                .isInstanceOf(SessionsUnavailableException.class)
-                .hasMessageContaining("napping");
+        assertThat(registry.liveSessions())
+                .as("one session's status from a newer Claude Code must not make every session unavailable")
+                .containsExactly(registered(CWD, ReportedStatus.UNKNOWN, new NoWaitingReason()));
+    }
+
+    @Test
+    void shouldReportAMissingStatusAsUnknown() throws IOException {
+        writeRecord(sessions, "17234.json", record(registeredPid(), registeredSessionId(), CWD, "busy").replace("\"status\":\"busy\",", ""));
+        runningProcess(proc, registeredPid(), "claude", PROC_START);
+
+        assertThat(registry.liveSessions()).containsExactly(registered(CWD, ReportedStatus.UNKNOWN, new NoWaitingReason()));
     }
 
     @Test

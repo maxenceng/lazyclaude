@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionView;
 import dev.tamboui.layout.Constraint;
@@ -36,10 +37,8 @@ final class SessionRowsElement implements Element {
             return;
         }
         int first = Math.max(0, Math.min(selected - height + 1, sessions.size() - height));
-        for (int row = 0; row < height && first + row < sessions.size(); row++) {
-            int index = first + row;
-            draw(frame, area, row, sessions.get(index), index == selected && highlighted);
-        }
+        IntStream.range(0, Math.min(height, sessions.size() - first))
+                .forEach(row -> draw(frame, area, row, sessions.get(first + row), first + row == selected && highlighted));
     }
 
     private static void draw(Frame frame, Rect area, int row, SessionView session, boolean reversed) {

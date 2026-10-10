@@ -9,6 +9,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionVie
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.newestSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.oldestSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.sessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.sessionViewWith;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.sessionViewWithoutVersion;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.unavailableSessionsView;
@@ -24,6 +25,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.tamboui.style.Color;
 
 class ShellSessionsTest {
@@ -53,6 +55,7 @@ class ShellSessionsTest {
         assertThat(screen.foregroundText(Color.RED)).containsExactly("!");
         assertThat(screen.foregroundText(Color.YELLOW)).containsExactly("?");
         assertThat(screen.foregroundText(Color.GREEN)).containsExactly("∼");
+        assertThat(screen.foregroundText(Color.GRAY)).containsExactly("·");
         assertThat(screen.foregroundText(Color.CYAN))
                 .as("the focused border is cyan too, so the bullet shows up between its edges")
                 .anySatisfy(line -> assertThat(line).contains("•"));
@@ -161,6 +164,13 @@ class ShellSessionsTest {
         Shell shell = shellOnSessions(sessionsViewOf(List.of(inputSessionView())));
 
         assertThat(Screen.of(shell).mainViewRows()).contains("lazyclaude-b6  ? waiting for input: input needed");
+    }
+
+    @Test
+    void shouldSayLazyclaudeDoesNotKnowTheStatusOfASessionInAnUnknownState() {
+        Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionViewWith(new Unknown()))));
+
+        assertThat(Screen.of(shell).mainViewRows()).contains("lazyclaude-b6  · status unknown to lazyclaude");
     }
 
     @Test

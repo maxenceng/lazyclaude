@@ -6,9 +6,10 @@ import java.util.List;
 public interface LiveSessionPort {
 
     /**
-     * Every session whose process runs on this machine, whatever project it belongs to, liveness already checked.
+     * Every session whose process runs on this machine, whatever project it belongs to, liveness already
+     * checked, with its status as Claude Code reported it.
      *
      * @throws SessionsUnavailableException when no source answers, with the reason
      */
-    List<LiveSession> liveSessions();
+    List<ReportedSession> liveSessions();
 }

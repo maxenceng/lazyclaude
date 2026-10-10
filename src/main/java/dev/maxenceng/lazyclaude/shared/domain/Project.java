@@ -8,9 +8,6 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 public record Project(Path root) {
 
     public Project {
-        Assert.notNull("root", root);
-        if (!root.isAbsolute()) {
-            throw new IllegalArgumentException("a project root is absolute, got %s".formatted(root));
-        }
+        Assert.absolute("project root", root);
     }
 }

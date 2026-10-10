@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.application;
 
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.clock;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
@@ -39,8 +40,8 @@ class SessionApplicationServiceTest {
 
     @Test
     void shouldReadTheLiveSessionsOfTheProject() {
-        when(sessions.liveSessions()).thenReturn(List.of(liveSession()));
-        when(locator.locate(workingDirectoryOf(liveSession())))
+        when(sessions.liveSessions()).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession())))
                 .thenReturn(project());
 
         assertThat(new SessionApplicationService(sessions, locator, watch, clock()).sessionsFor(project()))

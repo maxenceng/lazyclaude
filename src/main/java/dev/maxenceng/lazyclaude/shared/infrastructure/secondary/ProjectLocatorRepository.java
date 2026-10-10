@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /** Finds the main worktree through `git`, so a ticket worktree or subdirectory leads to the same project. */
@@ -20,6 +21,16 @@ public final class ProjectLocatorRepository implements ProjectLocatorPort {
     private static final String ABSOLUTE_PATHS = "--path-format=absolute";
     private static final String COMMON_DIR = "--git-common-dir";
     private static final int SUCCESS = 0;
+
+    private final String git;
+
+    public ProjectLocatorRepository() {
+        this(GIT);
+    }
+
+    ProjectLocatorRepository(String git) {
+        this.git = git;
+    }
 
     @Override
     public Project locate(WorkingDirectory from) {
@@ -39,9 +50,9 @@ public final class ProjectLocatorRepository implements ProjectLocatorPort {
         return commonDir.getParent();
     }
 
-    private static Path commonDir(Path start) {
+    private Path commonDir(Path start) {
         try {
-            Process process = new ProcessBuilder(GIT, IN_DIRECTORY, start.toString(), REV_PARSE, ABSOLUTE_PATHS, COMMON_DIR)
+            Process process = new ProcessBuilder(git, IN_DIRECTORY, start.toString(), REV_PARSE, ABSOLUTE_PATHS, COMMON_DIR)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start();
             String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).strip();
@@ -50,10 +61,10 @@ public final class ProjectLocatorRepository implements ProjectLocatorPort {
             }
             return Path.of(output);
         } catch (IOException e) {
-            throw new ProjectNotFoundException("git could not be run: %s".formatted(e.getMessage()), e);
+            throw new ProjectUnavailableException("%s could not be run: %s".formatted(git, e.getMessage()), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new ProjectNotFoundException("interrupted while asking git for the repository", e);
+            throw new ProjectUnavailableException("interrupted while asking %s for the repository".formatted(git), e);
         }
     }
 }

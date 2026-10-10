@@ -31,8 +31,13 @@ dead processes, but it reports no version and no `entrypoint`, and costs a proce
   missing or unreadable, a record whose pid has a process does not parse, a live record lacks a
   field the domain needs, or the host's identity cannot be read. One warning names why. The
   registry is tried again on every read, so it is used again as soon as it works.
-- **Both sources sit behind `LiveSessionPort`.** When neither answers, the domain returns
-  `UnavailableSessions` with both reasons and lazyclaude starts anyway.
+- **Both sources sit behind `LiveSessionPort`, and report what Claude Code said.** The port
+  hands over a `ReportedSession` whose `status` is still Claude Code's word; `SessionManager`
+  draws lazyclaude's state from it only after the project filter. A status this code does not
+  know, or none, is `ReportedStatus.UNKNOWN` and shows as the `Unknown` state, so a newer
+  Claude Code on any session, here or in another project, neither hides it nor makes the
+  others unavailable. When neither source answers, the domain returns `UnavailableSessions`
+  with both reasons and lazyclaude starts anyway.
 - **`session` owns its watcher** (`SessionWatchRepository`, behind `SessionWatchPort`), as `docs`
   owns its own (ADR 0016): a `WatchService` on `~/.claude/sessions/` reports a rewritten `.json`
   record at once, and a sweep every 2 s carries the rest, because a dead process never rewrites
@@ -50,7 +55,12 @@ dead processes, but it reports no version and no `entrypoint`, and costs a proce
 ## Consequences
 
 - A registry written by a Claude Code version this code does not understand degrades to the
-  fallback with a warning, rather than showing wrong sessions.
+  fallback with a warning, rather than showing wrong sessions. A new `status` value is the
+  exception: it is listed as `Unknown` instead, because one session's state is not worth
+  every session.
+- A live record with a blank `name` still counts as one that lacks a field, so it switches to
+  the fallback, which shares the check; a session anywhere on the machine can still make the
+  panel unavailable that way.
 - The fallback costs one `claude` process every 2 s while it is in use.
 - Each refresh runs `git` once per distinct `cwd` to find its project, about every 2 s; the
   `deferred:` note in `SessionManager` records what closes that.

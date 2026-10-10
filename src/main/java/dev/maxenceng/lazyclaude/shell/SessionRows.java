@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionView;
@@ -93,11 +94,9 @@ final class SessionRows {
     }
 
     private static int indexOf(List<SessionView> rows, SessionId id) {
-        for (int index = 0; index < rows.size(); index++) {
-            if (rows.get(index).id().equals(id)) {
-                return index;
-            }
-        }
-        throw new SelectedSessionNotVisibleException(id);
+        return IntStream.range(0, rows.size())
+                .filter(index -> rows.get(index).id().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new SelectedSessionNotVisibleException(id));
     }
 }

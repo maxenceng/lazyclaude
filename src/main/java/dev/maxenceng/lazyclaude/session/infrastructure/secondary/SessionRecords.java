@@ -5,7 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
-import dev.maxenceng.lazyclaude.session.domain.LiveSession;
+import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
 
 import tools.jackson.core.JacksonException;
@@ -37,11 +37,9 @@ final class SessionRecords {
     }
 
     /** @throws SessionsUnavailableException saying which {@code source} held the record that was refused */
-    static LiveSession session(SessionRecord record, String source) {
+    static ReportedSession session(SessionRecord record, String source) {
         try {
-            return record.toLiveSession();
-        } catch (SessionsUnavailableException unavailable) {
-            throw new SessionsUnavailableException("%s: %s".formatted(source, unavailable.getMessage()), unavailable);
+            return record.toReportedSession();
         } catch (DomainException | InvalidPathException refused) {
             throw new SessionsUnavailableException("%s is not a session record: %s".formatted(source, refused.getMessage()), refused);
         }

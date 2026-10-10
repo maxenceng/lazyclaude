@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.error.domain;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.file.Path;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
@@ -65,5 +66,22 @@ class AssertTest {
     @Test
     void shouldAcceptAValueWithText() {
         assertThatCode(() -> Assert.notBlank("title", "A board")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void shouldRefuseARelativePathNamingItsField() {
+        assertThatThrownBy(() -> Assert.absolute("root", Path.of("app")))
+                .isInstanceOf(RelativePathException.class)
+                .hasMessage("root is absolute, got app");
+    }
+
+    @Test
+    void shouldRefuseANullPathBeforeCheckingItIsAbsolute() {
+        assertThatThrownBy(() -> Assert.absolute("root", null)).isInstanceOf(MissingMandatoryValueException.class);
+    }
+
+    @Test
+    void shouldAcceptAnAbsolutePath() {
+        assertThatCode(() -> Assert.absolute("root", Path.of("/work/app"))).doesNotThrowAnyException();
     }
 }

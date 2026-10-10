@@ -1,7 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionClock;
-import static dev.maxenceng.lazyclaude.session.published.StartedAtFixture.startedAt;
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.startedAt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;

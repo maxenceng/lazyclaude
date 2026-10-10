@@ -1,17 +1,16 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import java.io.IOException;
-import java.nio.file.DirectoryIteratorException;
-import java.nio.file.DirectoryStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
-import dev.maxenceng.lazyclaude.session.domain.LiveSession;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
 
 /**
@@ -23,7 +22,6 @@ import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
  */
 public final class SessionRegistryRepository implements LiveSessionPort {
 
-    private static final String RECORD_GLOB = "*.json";
     private static final String RECORD_SUFFIX = ".json";
 
     private final Path sessions;
@@ -35,27 +33,23 @@ public final class SessionRegistryRepository implements LiveSessionPort {
     }
 
     @Override
-    public List<LiveSession> liveSessions() {
+    public List<ReportedSession> liveSessions() {
         List<Path> files = recordFiles();
         String domain = liveness.thisMachinesDomain();
-        List<LiveSession> live = new ArrayList<>();
-        for (Path file : files) {
-            Optional<SessionRecord> record = read(file);
-            if (record.isPresent() && liveness.isLive(record.get(), domain)) {
-                live.add(SessionRecords.session(record.get(), file.getFileName().toString()));
-            }
-        }
-        return live;
+        return files.stream()
+                .flatMap(file -> read(file)
+                        .filter(record -> liveness.isLive(record, domain))
+                        .map(record -> SessionRecords.session(record, file.getFileName().toString()))
+                        .stream())
+                .toList();
     }
 
     private List<Path> recordFiles() {
-        try (DirectoryStream<Path> files = Files.newDirectoryStream(sessions, RECORD_GLOB)) {
-            List<Path> found = new ArrayList<>();
-            files.forEach(found::add);
-            return found;
+        try (Stream<Path> files = Files.list(sessions)) {
+            return files.filter(file -> file.getFileName().toString().endsWith(RECORD_SUFFIX)).toList();
         } catch (IOException e) {
             throw unreadableRegistry(e);
-        } catch (DirectoryIteratorException e) {
+        } catch (UncheckedIOException e) {
             throw unreadableRegistry(e.getCause());
         }
     }

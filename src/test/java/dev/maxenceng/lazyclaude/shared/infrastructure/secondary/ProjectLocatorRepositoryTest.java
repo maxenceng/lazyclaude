@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.linkedWorktree;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.missingGit;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithBacklog;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithoutBacklog;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 class ProjectLocatorRepositoryTest {
@@ -87,5 +89,13 @@ class ProjectLocatorRepositoryTest {
         assertThatThrownBy(() -> locator.locate(new WorkingDirectory(missing)))
                 .isExactlyInstanceOf(ProjectNotFoundException.class)
                 .hasMessage("%s is not a directory".formatted(missing));
+    }
+
+    @Test
+    void shouldSayTheLookupFailedRatherThanThatThereIsNoProjectWhenGitCannotRun() {
+        assertThatThrownBy(() -> new ProjectLocatorRepository(missingGit()).locate(new WorkingDirectory(sandbox)))
+                .as("a git that cannot run says nothing about whether the directory is in a repository")
+                .isExactlyInstanceOf(ProjectUnavailableException.class)
+                .hasMessageContaining(missingGit());
     }
 }

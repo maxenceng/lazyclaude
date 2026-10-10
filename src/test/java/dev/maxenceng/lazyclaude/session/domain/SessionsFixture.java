@@ -1,7 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
-import static dev.maxenceng.lazyclaude.session.published.StartedAtFixture.now;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -53,7 +53,7 @@ public final class SessionsFixture {
         return new SessionManager(sessions, locator, watch, sessionClock());
     }
 
-    public static WorkingDirectory workingDirectoryOf(LiveSession session) {
-        return new WorkingDirectory(session.directory().value());
+    public static WorkingDirectory workingDirectoryOf(ReportedSession session) {
+        return session.directory();
     }
 }

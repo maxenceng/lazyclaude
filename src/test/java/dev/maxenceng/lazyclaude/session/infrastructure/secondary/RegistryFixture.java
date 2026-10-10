@@ -10,18 +10,19 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
-import dev.maxenceng.lazyclaude.session.domain.LiveSession;
 import dev.maxenceng.lazyclaude.session.domain.NoEntrypoint;
 import dev.maxenceng.lazyclaude.session.domain.OtherEntrypoint;
-import dev.maxenceng.lazyclaude.session.published.Busy;
+import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
+import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
+import dev.maxenceng.lazyclaude.session.domain.StartedAt;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
+import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
-import dev.maxenceng.lazyclaude.session.published.SessionDirectory;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
-import dev.maxenceng.lazyclaude.session.published.SessionState;
-import dev.maxenceng.lazyclaude.session.published.StartedAt;
 import dev.maxenceng.lazyclaude.session.published.Version;
+import dev.maxenceng.lazyclaude.session.published.WaitingFor;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class RegistryFixture {
 
@@ -104,33 +105,34 @@ public final class RegistryFixture {
                 .formatted(pid, cwd, sessionId, status);
     }
 
-
-    public static LiveSession registered(Path cwd, SessionState state) {
-        return LiveSession.builder()
+    public static ReportedSession registered(Path cwd, ReportedStatus status, WaitingFor waitingFor) {
+        return ReportedSession.builder()
                 .id(new SessionId(SESSION_ID))
                 .pid(new ProcessId(SESSION_PID))
                 .name(new SessionName("lazyclaude-b6"))
-                .directory(new SessionDirectory(cwd))
+                .directory(new WorkingDirectory(cwd))
                 .startedAt(new StartedAt(Instant.ofEpochMilli(1791662734987L)))
                 .version(new Version("2.1.296"))
-                .state(state)
+                .status(status)
+                .waitingFor(waitingFor)
                 .entrypoint(new OtherEntrypoint())
                 .build();
     }
 
-    public static LiveSession registeredBusy(Path cwd) {
-        return registered(cwd, new Busy());
+    public static ReportedSession registeredBusy(Path cwd) {
+        return registered(cwd, ReportedStatus.BUSY, new NoWaitingReason());
     }
 
-    public static LiveSession reportedByAgents(Path cwd, SessionState state) {
-        return LiveSession.builder()
+    public static ReportedSession reportedByAgents(Path cwd, ReportedStatus status) {
+        return ReportedSession.builder()
                 .id(new SessionId(SESSION_ID))
                 .pid(new ProcessId(SESSION_PID))
                 .name(new SessionName("lazyclaude-b6"))
-                .directory(new SessionDirectory(cwd))
+                .directory(new WorkingDirectory(cwd))
                 .startedAt(new StartedAt(Instant.ofEpochMilli(1791662734987L)))
                 .version(new NoVersion())
-                .state(state)
+                .status(status)
+                .waitingFor(new NoWaitingReason())
                 .entrypoint(new NoEntrypoint())
                 .build();
     }

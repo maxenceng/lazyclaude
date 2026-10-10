@@ -1,8 +1,8 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.newestSession;
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.oldestSession;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.newestReportedSession;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.oldestReportedSession;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.emptySessionsView;
@@ -53,7 +53,7 @@ class SessionQueryTest {
 
     @Test
     void shouldViewEachSessionWithItsAgeNewestFirst() {
-        when(sessions.liveSessions()).thenReturn(List.of(oldestSession(), liveSession(), newestSession()));
+        when(sessions.liveSessions()).thenReturn(List.of(oldestReportedSession(), reportedSession(), newestReportedSession()));
         when(locator.locate(any())).thenReturn(project());
 
         assertThat(sessionQuery(sessions, locator, watch).sessionsFor(OF_THE_PROJECT))

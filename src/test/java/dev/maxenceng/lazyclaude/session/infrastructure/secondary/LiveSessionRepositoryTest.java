@@ -28,8 +28,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
-import dev.maxenceng.lazyclaude.session.published.Busy;
 
 class LiveSessionRepositoryTest {
 
@@ -66,8 +66,8 @@ class LiveSessionRepositoryTest {
         Path claude = claudePrinting(root, agentsJson(List.of(agent(registeredPid(), registeredSessionId(), CWD, "busy"))));
         LiveSessionRepository repository = repositoryOver(registry, said, new ClaudeAgentsRepository(List.of(claude.toString()), PATIENCE));
 
-        assertThat(repository.liveSessions()).containsExactly(reportedByAgents(CWD, new Busy()));
-        assertThat(repository.liveSessions()).containsExactly(reportedByAgents(CWD, new Busy()));
+        assertThat(repository.liveSessions()).containsExactly(reportedByAgents(CWD, ReportedStatus.BUSY));
+        assertThat(repository.liveSessions()).containsExactly(reportedByAgents(CWD, ReportedStatus.BUSY));
 
         assertThat(said.toString(StandardCharsets.UTF_8))
                 .contains(sessions.toString(), "claude agents --json", "2 s")

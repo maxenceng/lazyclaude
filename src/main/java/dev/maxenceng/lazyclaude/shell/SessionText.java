@@ -9,6 +9,7 @@ import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
+import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.Version;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
@@ -24,8 +25,20 @@ final class SessionText {
     private static final String YOUR_TURN_GLYPH = "•";
     private static final String PERMISSION_GLYPH = "!";
     private static final String INPUT_GLYPH = "?";
-    private static final String NAME_GAP = "  ";
+    private static final String UNKNOWN_GLYPH = "·";
+    private static final String BUSY_LABEL = "busy";
+    private static final String YOUR_TURN_LABEL = "your turn";
+    private static final String PERMISSION_LABEL = "waiting for permission";
+    private static final String INPUT_LABEL = "waiting for input";
+    private static final String INPUT_REASON_FORMAT = "waiting for input: %s";
+    private static final String UNKNOWN_LABEL = "status unknown to lazyclaude";
+    private static final String HEADING_FORMAT = "%s  %s %s";
+    private static final String STARTED_FORMAT = "%s (%s ago)";
     private static final String FACT_FORMAT = "%-9s%s";
+    private static final String CWD = "cwd";
+    private static final String PID = "pid";
+    private static final String STARTED_FACT = "started";
+    private static final String VERSION = "version";
     private static final DateTimeFormatter STARTED = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private SessionText() {}
@@ -36,6 +49,7 @@ final class SessionText {
             case YourTurn yourTurn -> YOUR_TURN_GLYPH;
             case WaitingForPermission permission -> PERMISSION_GLYPH;
             case WaitingForInput input -> INPUT_GLYPH;
+            case Unknown unknown -> UNKNOWN_GLYPH;
         };
     }
 
@@ -45,15 +59,17 @@ final class SessionText {
             case YourTurn yourTurn -> Color.CYAN;
             case WaitingForPermission permission -> Color.RED;
             case WaitingForInput input -> Color.YELLOW;
+            case Unknown unknown -> Color.GRAY;
         };
     }
 
     static String label(SessionState state) {
         return switch (state) {
-            case Busy busy -> "busy";
-            case YourTurn yourTurn -> "your turn";
-            case WaitingForPermission permission -> "waiting for permission";
+            case Busy busy -> BUSY_LABEL;
+            case YourTurn yourTurn -> YOUR_TURN_LABEL;
+            case WaitingForPermission permission -> PERMISSION_LABEL;
             case WaitingForInput input -> waitingForInput(input);
+            case Unknown unknown -> UNKNOWN_LABEL;
         };
     }
 
@@ -61,15 +77,13 @@ final class SessionText {
     static List<DetailRow> facts(SessionView session) {
         List<DetailRow> rows = new ArrayList<>();
         rows.add(new DetailRow(
-                session.name().value() + NAME_GAP + glyph(session.state()) + " " + label(session.state()),
+                HEADING_FORMAT.formatted(session.name().value(), glyph(session.state()), label(session.state())),
                 Style.EMPTY.bold()));
-        rows.add(fact("cwd", session.directory().value().toString()));
-        rows.add(fact("pid", Long.toString(session.pid().value())));
-        rows.add(fact(
-                "started",
-                "%s (%s ago)".formatted(STARTED.format(session.startedAt()), session.age().label())));
+        rows.add(fact(CWD, session.directory().path().toString()));
+        rows.add(fact(PID, Long.toString(session.pid().value())));
+        rows.add(fact(STARTED_FACT, STARTED_FORMAT.formatted(STARTED.format(session.startedAt()), session.age().label())));
         switch (session.version()) {
-            case Version version -> rows.add(fact("version", version.value()));
+            case Version version -> rows.add(fact(VERSION, version.value()));
             case NoVersion none -> {}
         }
         return rows;
@@ -81,8 +95,8 @@ final class SessionText {
 
     private static String waitingForInput(WaitingForInput input) {
         return switch (input.reason()) {
-            case WaitingReason reason -> "waiting for input: " + reason.value();
-            case NoWaitingReason none -> "waiting for input";
+            case WaitingReason reason -> INPUT_REASON_FORMAT.formatted(reason.value());
+            case NoWaitingReason none -> INPUT_LABEL;
         };
     }
 }

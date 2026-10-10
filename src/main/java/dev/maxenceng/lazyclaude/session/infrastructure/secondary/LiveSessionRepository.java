@@ -5,8 +5,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import dev.maxenceng.lazyclaude.session.domain.LiveSession;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
 
 /**
@@ -33,7 +33,7 @@ public final class LiveSessionRepository implements LiveSessionPort {
     }
 
     @Override
-    public List<LiveSession> liveSessions() {
+    public List<ReportedSession> liveSessions() {
         SessionsUnavailableException unusable;
         try {
             return registry.liveSessions();
@@ -41,7 +41,7 @@ public final class LiveSessionRepository implements LiveSessionPort {
             unusable = registryFailure;
         }
         try {
-            List<LiveSession> live = agents.liveSessions();
+            List<ReportedSession> live = agents.liveSessions();
             warnOnce(unusable);
             return live;
         } catch (SessionsUnavailableException agentsFailure) {

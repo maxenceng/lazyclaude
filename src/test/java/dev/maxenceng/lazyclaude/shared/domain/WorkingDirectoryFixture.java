@@ -9,4 +9,20 @@ public final class WorkingDirectoryFixture {
     public static WorkingDirectory workingDirectory() {
         return new WorkingDirectory(Path.of("/work/app/src"));
     }
+
+    public static WorkingDirectory projectRootDirectory() {
+        return new WorkingDirectory(Path.of("/work/app"));
+    }
+
+    public static WorkingDirectory worktreeDirectory() {
+        return new WorkingDirectory(Path.of("/work/app.worktrees/SESSION-1-live-sessions"));
+    }
+
+    public static WorkingDirectory otherProjectDirectory() {
+        return new WorkingDirectory(Path.of("/work/other"));
+    }
+
+    public static WorkingDirectory outsideGitDirectory() {
+        return new WorkingDirectory(Path.of("/tmp/scratch"));
+    }
 }
