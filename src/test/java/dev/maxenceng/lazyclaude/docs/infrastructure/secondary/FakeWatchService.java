@@ -35,6 +35,10 @@ final class FakeWatchService implements WatchService {
         return keys.poll(timeout, unit);
     }
 
+    boolean isClosed() {
+        return closed;
+    }
+
     @Override
     public void close() {
         closed = true;

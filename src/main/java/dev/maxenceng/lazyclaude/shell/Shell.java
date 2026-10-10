@@ -71,7 +71,7 @@ public final class Shell extends ToolkitApp {
     private Focus focus = Focus.BOARD;
     private Focus lastLeft = Focus.BOARD;
     private Focus lastRight = Focus.MAIN;
-    private Focus lastList = Focus.BOARD;
+    private Focus mainViewOwner = Focus.BOARD;
     private boolean quitRequested;
 
     public Shell(BoardView board, DocsView docs) {
@@ -93,7 +93,7 @@ public final class Shell extends ToolkitApp {
 
     private void applyPendingDocs() {
         DocsView next = pendingDocs.getAndSet(null);
-        if (next != null && docs.replace(next) && lastList == Focus.DOCS) {
+        if (next != null && docs.replace(next) && mainViewOwner == Focus.DOCS) {
             mainViewScroll.reset();
         }
     }
@@ -233,8 +233,8 @@ public final class Shell extends ToolkitApp {
         } else {
             lastRight = target;
         }
-        if ((target == Focus.BOARD || target == Focus.DOCS) && target != lastList) {
-            lastList = target;
+        if ((target == Focus.BOARD || target == Focus.DOCS) && target != mainViewOwner) {
+            mainViewOwner = target;
             mainViewScroll.reset();
         }
         return true;
@@ -272,7 +272,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element sized(Panel panel, Focus owner) {
-        return lastList == owner ? panel.fill() : panel.length(SHRUNK_PANEL_HEIGHT);
+        return mainViewOwner == owner ? panel.fill() : panel.length(SHRUNK_PANEL_HEIGHT);
     }
 
     private Element small(String title, Focus owner) {
@@ -293,7 +293,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element detail() {
-        return lastList == Focus.BOARD ? boardDetail() : docsDetail();
+        return mainViewOwner == Focus.BOARD ? boardDetail() : docsDetail();
     }
 
     private Element docsDetail() {

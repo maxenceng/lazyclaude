@@ -7,13 +7,15 @@ import java.util.stream.Stream;
 import dev.maxenceng.lazyclaude.docs.published.FolderName;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** A folder of the docs tree: the documents directly in it by name, then its folders by name. */
+/** A folder of the docs tree: the documents directly in it by name, then its folders by name, whatever order they came in. */
 public record Folder(FolderName name, List<Document> documents, List<Folder> folders) {
 
     public Folder {
         Assert.notNull("name", name);
         Assert.notNull("documents", documents);
         Assert.notNull("folders", folders);
+        documents = documents.stream().sorted(Comparator.comparing(Document::path)).toList();
+        folders = folders.stream().sorted(Comparator.comparing(Folder::name)).toList();
     }
 
     /** The folder {@code name} at {@code path}, made of the {@code listed} documents that are beneath that path. */
@@ -23,14 +25,12 @@ public record Folder(FolderName name, List<Document> documents, List<Folder> fol
                 .name(name)
                 .documents(beneath.stream()
                         .filter(document -> document.path().segments().size() == path.size() + 1)
-                        .sorted(Comparator.comparing(Document::path))
                         .toList())
                 .folders(beneath.stream()
                         .map(document -> document.path().segments())
                         .filter(segments -> segments.size() > path.size() + 1)
                         .map(segments -> segments.get(path.size()))
                         .distinct()
-                        .sorted()
                         .map(folder -> Folder.at(new FolderName(folder), child(path, folder), beneath))
                         .toList())
                 .build();
@@ -45,7 +45,7 @@ public record Folder(FolderName name, List<Document> documents, List<Folder> fol
         return Stream.concat(path.stream(), Stream.of(folder)).toList();
     }
 
-    public static FolderBuilder builder() {
+    static FolderBuilder builder() {
         return new FolderBuilder();
     }
 

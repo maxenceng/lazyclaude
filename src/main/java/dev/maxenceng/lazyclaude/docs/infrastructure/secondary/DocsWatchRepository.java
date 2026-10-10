@@ -21,15 +21,18 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
+import dev.maxenceng.lazyclaude.docs.published.DocumentPath;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
@@ -47,7 +50,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
 
     private static final Path DOCS = Path.of("docs");
     private static final String BACKLOG = "backlog";
-    private static final String MARKDOWN = ".md";
+    private static final String SEPARATOR = "/";
     private static final String WARNING =
             "lazyclaude: cannot watch %s (%s); checking it every %d s instead. If the cause is the watch limit, raise the fs.inotify.max_user_watches sysctl.";
     private static final String WORKER_NAME = "docs-watch";
@@ -60,6 +63,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     private final AtomicBoolean warned = new AtomicBoolean();
     private final List<WatchService> open = new CopyOnWriteArrayList<>();
     private final List<Thread> workers = new CopyOnWriteArrayList<>();
+    private final Map<Path, WatchKey> watched = new ConcurrentHashMap<>();
 
     public DocsWatchRepository(PrintStream warnings) {
         this(
@@ -94,12 +98,17 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         try {
             WatchService service = services.create();
             open.add(service);
-            register(service, docs, backlog);
+            try {
+                register(service, docs, backlog);
+            } catch (IOException e) {
+                closeQuietly(service);
+                throw e;
+            }
             start(() -> watchLoop(service, backlog, docs, changed));
         } catch (IOException e) {
             giveUpWatching(docs, e);
-            Map<String, String> seen = snapshot(docs, backlog, Map.of());
-            start(() -> pollLoop(docs, backlog, seen, changed));
+            Map<String, String> seen = snapshot(docs, Map.of());
+            start(() -> pollLoop(docs, seen, changed));
         }
     }
 
@@ -131,7 +140,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         } catch (IOException e) {
             closeQuietly(service);
             giveUpWatching(docs, e);
-            pollLoop(docs, backlog, snapshot(docs, backlog, Map.of()), changed);
+            pollLoop(docs, snapshot(docs, Map.of()), changed);
         }
     }
 
@@ -151,7 +160,10 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
             if (event.kind() == ENTRY_CREATE && Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS)) {
                 register(service, entry, backlog);
                 relevant = true;
-            } else if (entry.getFileName().toString().endsWith(MARKDOWN)) {
+            } else if (event.kind() == ENTRY_DELETE && watched.containsKey(entry)) {
+                forget(entry);
+                relevant = true;
+            } else if (listed(docs, entry)) {
                 relevant = true;
             }
         }
@@ -167,7 +179,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
                 try {
-                    registrar.register(service, directory);
+                    watched.put(directory, registrar.register(service, directory));
                 } catch (NoSuchFileException vanished) {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
@@ -184,12 +196,27 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         });
     }
 
-    private void pollLoop(Path docs, Path backlog, Map<String, String> first, Runnable changed) {
+    /**
+     * Cancels the watches on a folder that left its path and on everything beneath it: Linux keeps a
+     * moved folder's watch, and a later register of its new path would hand back that key, still
+     * naming the old one.
+     */
+    private void forget(Path folder) {
+        watched.entrySet().removeIf(watch -> {
+            boolean gone = watch.getKey().startsWith(folder);
+            if (gone) {
+                watch.getValue().cancel();
+            }
+            return gone;
+        });
+    }
+
+    private void pollLoop(Path docs, Map<String, String> first, Runnable changed) {
         Map<String, String> seen = first;
         try {
             while (true) {
                 Thread.sleep(pollInterval.toMillis());
-                Map<String, String> now = snapshot(docs, backlog, seen);
+                Map<String, String> now = snapshot(docs, seen);
                 if (!now.equals(seen)) {
                     seen = now;
                     changed.run();
@@ -200,11 +227,11 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         }
     }
 
-    private static Map<String, String> snapshot(Path docs, Path backlog, Map<String, String> previous) {
+    private static Map<String, String> snapshot(Path docs, Map<String, String> previous) {
         Map<String, String> found = new HashMap<>();
         try (Stream<Path> files = Files.walk(docs)) {
-            for (Path file : files.filter(path -> !path.startsWith(backlog))
-                    .filter(path -> path.getFileName().toString().endsWith(MARKDOWN))
+            for (Path file : files.filter(path -> !path.equals(docs))
+                    .filter(path -> listed(docs, path))
                     .toList()) {
                 found.put(file.toString(), stamp(file));
             }
@@ -212,6 +239,12 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
             return previous;
         }
         return found;
+    }
+
+    private static boolean listed(Path docs, Path file) {
+        List<String> segments = new ArrayList<>();
+        docs.relativize(file).forEach(segment -> segments.add(segment.toString()));
+        return new DocumentPath(String.join(SEPARATOR, segments)).listed();
     }
 
     private static String stamp(Path file) {

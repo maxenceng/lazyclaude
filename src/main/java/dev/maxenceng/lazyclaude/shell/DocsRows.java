@@ -100,15 +100,11 @@ final class DocsRows {
         for (FolderView child : folder.folders()) {
             String path = parent + child.name().value();
             boolean isFolded = folded.contains(new RowKey(RowKind.FOLDER, path));
-            rows.add(new FolderRow(path, child.name().value(), count(child), isFolded, depth));
+            rows.add(new FolderRow(path, child.name().value(), child.count(), isFolded, depth));
             if (!isFolded) {
                 list(rows, child, path + PATH_SEPARATOR, depth + 1);
             }
         }
-    }
-
-    private static int count(FolderView folder) {
-        return folder.documents().size() + folder.folders().stream().mapToInt(DocsRows::count).sum();
     }
 
     private static boolean contains(List<DocsRow> rows, RowKey key) {

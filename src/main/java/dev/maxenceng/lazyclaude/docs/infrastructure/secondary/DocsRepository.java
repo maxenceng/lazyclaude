@@ -1,11 +1,14 @@
 package dev.maxenceng.lazyclaude.docs.infrastructure.secondary;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.docs.domain.DocsPort;
 import dev.maxenceng.lazyclaude.docs.domain.DocsUnavailableException;
@@ -32,13 +35,29 @@ public final class DocsRepository implements DocsPort {
         if (!Files.isDirectory(docs)) {
             return List.of();
         }
-        try (Stream<Path> files = Files.walk(docs)) {
-            return files.filter(Files::isRegularFile)
-                    .map(file -> new DocumentPath(relative(docs, file)))
-                    .toList();
-        } catch (IOException | UncheckedIOException e) {
-            throw new DocsUnavailableException(docs, e instanceof UncheckedIOException wrapped ? wrapped.getCause() : e);
+        List<DocumentPath> paths = new ArrayList<>();
+        try {
+            Files.walkFileTree(docs, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+                    if (attributes.isRegularFile()) {
+                        paths.add(new DocumentPath(relative(docs, file)));
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
+                    if (failure instanceof NoSuchFileException) {
+                        return FileVisitResult.CONTINUE;
+                    }
+                    throw failure;
+                }
+            });
+        } catch (IOException e) {
+            throw new DocsUnavailableException(docs, e);
         }
+        return List.copyOf(paths);
     }
 
     @Override

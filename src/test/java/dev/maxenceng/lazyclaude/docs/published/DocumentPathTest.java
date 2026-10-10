@@ -33,6 +33,25 @@ class DocumentPathTest {
     }
 
     @Test
+    void shouldRefuseAPathThatClimbsOutOfDocs() {
+        assertThatThrownBy(() -> new DocumentPath("adr/../../secret.md"))
+                .as("a document's place is under docs/, and reading it resolves this path")
+                .isInstanceOf(DomainException.class);
+    }
+
+    @Test
+    void shouldRefuseAPathWithACurrentFolderSegment() {
+        assertThatThrownBy(() -> new DocumentPath("./a.md"))
+                .as("a path is identity, so one spelling per file")
+                .isInstanceOf(DomainException.class);
+    }
+
+    @Test
+    void shouldAcceptAFileNameStartingWithADot() {
+        assertThat(new DocumentPath("adr/.draft.md").fileName()).isEqualTo(".draft.md");
+    }
+
+    @Test
     void shouldRefuseABlankPath() {
         assertThatThrownBy(() -> new DocumentPath(" ")).isInstanceOf(DomainException.class);
     }

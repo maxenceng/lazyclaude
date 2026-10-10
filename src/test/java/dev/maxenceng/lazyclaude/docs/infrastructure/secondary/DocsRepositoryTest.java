@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.docs.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.allow;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.churning;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.docsIn;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.forbid;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.markdown;
@@ -46,6 +47,22 @@ class DocsRepositoryTest {
         Files.delete(docs);
 
         assertThat(repository.paths(new Project(root))).isEmpty();
+    }
+
+    @Test
+    void shouldListThePathsWhileFilesComeAndGoBesideThem() throws Exception {
+        write(docs, "glossary.md", markdown());
+        Thread churn = churning(docs.resolve("backlog"));
+        try {
+            for (int read = 0; read < 300; read++) {
+                assertThat(repository.paths(new Project(root)))
+                        .as("a file deleted between listing a folder and looking at it is gone, not a failed read")
+                        .contains(new DocumentPath("glossary.md"));
+            }
+        } finally {
+            churn.interrupt();
+            churn.join();
+        }
     }
 
     @Test

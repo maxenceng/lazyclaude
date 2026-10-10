@@ -1,6 +1,6 @@
 ---
 id: DOCS-1
-status: in-progress
+status: in-review
 context: docs
 type: feature
 tracker_id: 77
@@ -11,18 +11,18 @@ created: 2026-10-10
 
 ## Acceptance criteria
 
-- [ ] The Docs panel lists every `*.md` under the project's `docs/`, at any depth, except `docs/backlog/`: the files directly under `docs/` first, then one header per folder (`▾ adr (14)`, counting the documents beneath it), each level sorted by name and nested folders indented. Files other than `.md` are not listed.
-- [ ] Every folder starts unfolded. `enter` on a folder header folds it (`▸`) or unfolds it, and `j`/`k` move the selection while the Docs panel has focus.
-- [ ] On a document row, the main view shows that document rendered as markdown. It scrolls with the ticket detail's keys (`j`/`k`, `ctrl+d`/`ctrl+u`, `g`/`G`), stops at both ends, and goes back to the top when another document is selected. On a folder header, the main view shows nothing.
-- [ ] The main view follows the selection of whichever left panel last had focus. Moving from Docs back to Board shows the selected ticket again, and moving back to Docs shows the selected document again.
-- [ ] Whichever of Board and Docs has focus, or last had it, takes the left column's remaining height. The other shrinks to a few rows, and its selected row stays in view.
-- [ ] A document whose file is empty or whitespace shows a dim `empty document`, not a blank.
-- [ ] A document whose file cannot be read stays listed, and the main view shows its path and the reason, not a blank or a crash.
-- [ ] A project whose `docs/` holds nothing but `docs/backlog/` shows a dim `no docs` in the panel, and lazyclaude still starts.
-- [ ] Saving, adding or deleting a document, or adding a folder under `docs/`, shows up without a key press. The selection follows the document's path, never the row number, and the folds are kept. An open document is redrawn at its scroll position. Nothing flashes or says "refreshed".
-- [ ] If the selected document is deleted, the cursor lands on the row that took its place.
-- [ ] Changes under `docs/backlog/` never change the Docs panel.
-- [ ] If a watch cannot be set up (`max_user_watches` used up, or no inotify), the docs tree is polled every 5 s instead. One warning names the tree and the sysctl, and lazyclaude still starts.
+- [x] The Docs panel lists every `*.md` under the project's `docs/`, at any depth, except `docs/backlog/`: the files directly under `docs/` first, then one header per folder (`▾ adr (14)`, counting the documents beneath it), each level sorted by name and nested folders indented. Files other than `.md` are not listed.
+- [x] Every folder starts unfolded. `enter` on a folder header folds it (`▸`) or unfolds it, and `j`/`k` move the selection while the Docs panel has focus.
+- [x] On a document row, the main view shows that document rendered as markdown. It scrolls with the ticket detail's keys (`j`/`k`, `ctrl+d`/`ctrl+u`, `g`/`G`), stops at both ends, and goes back to the top when another document is selected. On a folder header, the main view shows nothing.
+- [x] The main view follows the selection of whichever left panel last had focus. Moving from Docs back to Board shows the selected ticket again, and moving back to Docs shows the selected document again.
+- [x] Whichever of Board and Docs has focus, or last had it, takes the left column's remaining height. The other shrinks to a few rows, and its selected row stays in view.
+- [x] A document whose file is empty or whitespace shows a dim `empty document`, not a blank.
+- [x] A document whose file cannot be read stays listed, and the main view shows its path and the reason, not a blank or a crash.
+- [x] A project whose `docs/` holds nothing but `docs/backlog/` shows a dim `no docs` in the panel, and lazyclaude still starts.
+- [x] Saving, adding or deleting a document, or adding a folder under `docs/`, shows up without a key press. The selection follows the document's path, never the row number, and the folds are kept. An open document is redrawn at its scroll position. Nothing flashes or says "refreshed".
+- [x] If the selected document is deleted, the cursor lands on the row that took its place.
+- [x] Changes under `docs/backlog/` never change the Docs panel.
+- [x] If a watch cannot be set up (`max_user_watches` used up, or no inotify), the docs tree is polled every 5 s instead. One warning names the tree and the sysctl, and lazyclaude still starts.
 
 ## Model decision
 

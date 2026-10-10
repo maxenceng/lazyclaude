@@ -16,6 +16,11 @@ public record FolderView(FolderName name, List<DocumentView> documents, List<Fol
                 .build();
     }
 
+    /** The documents beneath it, at any depth: what its header counts. */
+    public int count() {
+        return documents.size() + folders.stream().mapToInt(FolderView::count).sum();
+    }
+
     public static FolderViewBuilder builder() {
         return new FolderViewBuilder();
     }

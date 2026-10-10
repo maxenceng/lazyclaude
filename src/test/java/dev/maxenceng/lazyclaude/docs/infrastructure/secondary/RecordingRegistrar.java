@@ -6,13 +6,14 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 final class RecordingRegistrar implements DirectoryRegistrar {
 
-    private static final DirectoryRegistrar RECORD_ONLY = (service, directory) -> {};
+    private static final DirectoryRegistrar RECORD_ONLY = (service, directory) -> new IdleKey(directory);
     private static final DirectoryRegistrar REAL = (service, directory) ->
             directory.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
 
@@ -38,11 +39,11 @@ final class RecordingRegistrar implements DirectoryRegistrar {
     }
 
     @Override
-    public void register(WatchService service, Path directory) throws IOException {
+    public WatchKey register(WatchService service, Path directory) throws IOException {
         registered.add(directory);
         if (registered.size() == failingCall) {
             throw new IOException("User limit of inotify watches reached");
         }
-        delegate.register(service, directory);
+        return delegate.register(service, directory);
     }
 }

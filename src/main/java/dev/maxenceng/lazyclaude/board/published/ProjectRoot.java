@@ -4,7 +4,7 @@ import java.nio.file.Path;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** The root of the project a board was read from, absolute; the shell hands it to the other contexts. */
+/** The root of the project a board was read from; the shell hands it to the other contexts. */
 public record ProjectRoot(Path value) {
 
     public ProjectRoot {

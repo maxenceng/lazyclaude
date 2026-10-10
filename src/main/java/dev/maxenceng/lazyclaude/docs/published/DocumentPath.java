@@ -11,8 +11,8 @@ public record DocumentPath(String value) implements Comparable<DocumentPath> {
     private static final String SEPARATOR = "/";
     private static final String MARKDOWN = ".md";
     private static final String BACKLOG = "backlog";
-    private static final Pattern SHAPE = Pattern.compile("[^/]+(/[^/]+)*");
-    private static final String SHAPE_IN_WORDS = "folder/folder/file";
+    private static final Pattern SHAPE = Pattern.compile("(?!\\.\\.?(/|$))[^/]+(/(?!\\.\\.?(/|$))[^/]+)*");
+    private static final String SHAPE_IN_WORDS = "folder/folder/file, without . or ..";
 
     public DocumentPath {
         Assert.notBlank("document path", value);
@@ -27,7 +27,7 @@ public record DocumentPath(String value) implements Comparable<DocumentPath> {
         return segments().getLast();
     }
 
-    /** Whether the Docs panel shows it: a markdown file that is not under `docs/backlog/`, which the board owns. */
+    /** Whether the docs tree holds it: a markdown file that is not under `docs/backlog/`, which the board owns. */
     public boolean listed() {
         return fileName().endsWith(MARKDOWN) && !segments().getFirst().equals(BACKLOG);
     }

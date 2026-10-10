@@ -39,6 +39,22 @@ public final class DocsFixture {
         }
     }
 
+    public static Thread churning(Path folder) throws IOException {
+        Files.createDirectories(folder);
+        return Thread.ofPlatform().daemon().start(() -> {
+            int file = 0;
+            while (!Thread.currentThread().isInterrupted()) {
+                Path written = folder.resolve("churn-%d.md".formatted(file++ % 50));
+                try {
+                    Files.writeString(written, "x");
+                    Files.deleteIfExists(written);
+                } catch (IOException ignored) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+    }
+
     public static String markdown() {
         return "# Context map\n\nEach context is a package.\n";
     }

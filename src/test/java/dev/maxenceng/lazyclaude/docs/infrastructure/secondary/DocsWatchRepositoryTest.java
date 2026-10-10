@@ -76,6 +76,17 @@ class DocsWatchRepositoryTest {
     }
 
     @Test
+    void shouldReportAFolderMovedOutOfTheTree() throws Exception {
+        watcher = watching(watcher(said), root, probe);
+
+        Files.move(docs.resolve("adr"), root.resolve("adr"));
+
+        assertThat(probe.changedWithin(within()))
+                .as("a folder moved away fires one delete for the folder and none for the documents in it")
+                .isTrue();
+    }
+
+    @Test
     void shouldReportOnceForABurstOfSaves() throws Exception {
         watcher = watching(watcher(said), root, probe);
 
@@ -113,6 +124,23 @@ class DocsWatchRepositoryTest {
         write(docs, "research/old/a.md", markdown());
 
         assertThat(probe.changedWithin(within())).isTrue();
+    }
+
+    @Test
+    void shouldWatchAFolderAddedInsideARenamedFolder() throws Exception {
+        watcher = watching(watcher(said), root, probe);
+
+        Files.move(docs.resolve("adr"), docs.resolve("decisions"));
+        assertThat(probe.changedWithin(within())).isTrue();
+        assertThat(probe.quietFor(settled())).isTrue();
+        Files.createDirectories(docs.resolve("decisions/drafts"));
+        assertThat(probe.changedWithin(within())).isTrue();
+        assertThat(probe.quietFor(settled())).isTrue();
+        write(docs, "decisions/drafts/a.md", markdown());
+
+        assertThat(probe.changedWithin(within()))
+                .as("the renamed folder's watch still names its old path, so the folder added in it was never watched")
+                .isTrue();
     }
 
     @Test
@@ -235,6 +263,16 @@ class DocsWatchRepositoryTest {
                 .contains(docs.toString())
                 .contains("fs.inotify.max_user_watches")
                 .hasLineCount(1);
+    }
+
+    @Test
+    void shouldLetGoOfTheWatchWhenItCannotBeSetUp() throws Exception {
+        FakeWatchService service = new FakeWatchService();
+        watcher = watching(watcherOver(service, RecordingRegistrar.failingOnCall(1), said), root, probe);
+
+        assertThat(service.isClosed())
+                .as("the watches registered before the failure count against the limit polling was chosen to spare")
+                .isTrue();
     }
 
     @Test
