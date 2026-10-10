@@ -13,13 +13,13 @@ public final class DocsQuery {
         this.docs = docs;
     }
 
-    /** @throws dev.maxenceng.lazyclaude.error.domain.DomainException when the project's docs cannot be listed, saying why */
+    /** The project's docs tree, or why its {@code docs/} cannot be listed; never a failure. */
     public DocsView docsFor(DocsPayload payload) {
         return DocsView.from(docs.docsFor(payload.toDomain()));
     }
 
     /** Hands {@code listener} a view after each change, on a thread of the watcher's own, not the caller's. */
     public void subscribe(DocsPayload payload, Consumer<DocsView> listener) {
-        docs.subscribe(payload.toDomain(), tree -> listener.accept(DocsView.from(tree)));
+        docs.subscribe(payload.toDomain(), read -> listener.accept(DocsView.from(read)));
     }
 }

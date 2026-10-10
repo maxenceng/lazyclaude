@@ -2,12 +2,14 @@ package dev.maxenceng.lazyclaude.docs.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.docs.domain.ReadDocumentFixture.readDocument;
 import static dev.maxenceng.lazyclaude.docs.domain.ReadDocumentFixture.readDocumentAt;
+import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.docsUnavailable;
 import static dev.maxenceng.lazyclaude.docs.domain.UnreadableDocumentFixture.unreadableDocument;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQueryFixture.docsQuery;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.adrFolderView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.docsViewOf;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.documentView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.unavailableDocsView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.unreadableDocumentView;
 import static dev.maxenceng.lazyclaude.docs.published.DocumentPathFixture.adrPath;
 import static dev.maxenceng.lazyclaude.docs.published.DocumentPathFixture.secondAdrPath;
@@ -57,6 +59,13 @@ class DocsQueryTest {
 
         assertThat(docsQuery(docs, watch).docsFor(OF_THE_PROJECT))
                 .isEqualTo(docsViewOf(List.of(documentView(), unreadableDocumentView()), List.of(adrFolderView())));
+    }
+
+    @Test
+    void shouldViewWhyWhenTheDocsCannotBeListed() {
+        when(docs.paths(project())).thenThrow(docsUnavailable());
+
+        assertThat(docsQuery(docs, watch).docsFor(OF_THE_PROJECT)).isEqualTo(unavailableDocsView());
     }
 
     @Test

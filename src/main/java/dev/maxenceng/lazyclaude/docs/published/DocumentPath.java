@@ -5,14 +5,17 @@ import java.util.regex.Pattern;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** A document's place under {@code docs/}, `/`-separated; it is the document's identity across reads. */
+/**
+ * A file's place under {@code docs/}, `/`-separated; it is a document's identity across reads. The
+ * port names every file it finds this way, and {@link #listed()} decides which of them are documents.
+ */
 public record DocumentPath(String value) implements Comparable<DocumentPath> {
 
     private static final String SEPARATOR = "/";
     private static final String MARKDOWN = ".md";
     private static final String BACKLOG = "backlog";
-    private static final Pattern SHAPE = Pattern.compile("(?!\\.\\.?(/|$))[^/]+(/(?!\\.\\.?(/|$))[^/]+)*");
-    private static final String SHAPE_IN_WORDS = "folder/folder/file, without . or ..";
+    static final Pattern SHAPE = Pattern.compile("(?!\\.\\.?(/|$))[^/]+(/(?!\\.\\.?(/|$))[^/]+)*");
+    static final String SHAPE_IN_WORDS = "folder/folder/file, without . or ..";
 
     public DocumentPath {
         Assert.notBlank("document path", value);
@@ -32,8 +35,17 @@ public record DocumentPath(String value) implements Comparable<DocumentPath> {
         return fileName().endsWith(MARKDOWN) && !segments().getFirst().equals(BACKLOG);
     }
 
+    /** Orders as the tree does, segment by segment: {@code adr/x.md} before {@code adr-old/y.md}, because {@code adr} comes before {@code adr-old}. */
     @Override
     public int compareTo(DocumentPath other) {
-        return value.compareTo(other.value);
+        List<String> mine = segments();
+        List<String> theirs = other.segments();
+        for (int index = 0; index < Math.min(mine.size(), theirs.size()); index++) {
+            int order = mine.get(index).compareTo(theirs.get(index));
+            if (order != 0) {
+                return order;
+            }
+        }
+        return Integer.compare(mine.size(), theirs.size());
     }
 }

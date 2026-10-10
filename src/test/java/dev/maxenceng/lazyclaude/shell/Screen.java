@@ -14,7 +14,7 @@ import dev.tamboui.toolkit.element.DefaultRenderContext;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.tui.RenderThreadForTests;
 
-final class Screen {
+public final class Screen {
 
     private static final int WIDTH = 80;
     private static final int HEIGHT = 24;
@@ -30,7 +30,7 @@ final class Screen {
         this.buffer = buffer;
     }
 
-    static Screen of(Shell shell) {
+    public static Screen of(Shell shell) {
         return of(shell.render(), WIDTH, HEIGHT);
     }
 
@@ -62,7 +62,7 @@ final class Screen {
         return found;
     }
 
-    String boardPanelText() {
+    public String boardPanelText() {
         return String.join("\n", boardPanelLines());
     }
 
@@ -92,7 +92,7 @@ final class Screen {
         return textOfCells(LEFT_COLUMN_WIDTH, cell -> cell.style().effectiveModifiers().contains(Modifier.REVERSED));
     }
 
-    List<String> dimText() {
+    public List<String> dimText() {
         return textOfCells(WIDTH, cell -> cell.style().effectiveModifiers().contains(Modifier.DIM));
     }
 

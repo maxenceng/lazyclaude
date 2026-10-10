@@ -8,9 +8,9 @@ import static dev.maxenceng.lazyclaude.docs.published.DocumentPathFixture.second
 import static dev.maxenceng.lazyclaude.docs.published.DocumentPathFixture.secondDocumentPath;
 import static dev.maxenceng.lazyclaude.docs.published.DocumentTextFixture.content;
 import static dev.maxenceng.lazyclaude.docs.published.DocumentTextFixture.secondContent;
-import static dev.maxenceng.lazyclaude.docs.published.FolderNameFixture.adr;
-import static dev.maxenceng.lazyclaude.docs.published.FolderNameFixture.research;
-import static dev.maxenceng.lazyclaude.docs.published.FolderNameFixture.superseded;
+import static dev.maxenceng.lazyclaude.docs.published.FolderPathFixture.adrFolderPath;
+import static dev.maxenceng.lazyclaude.docs.published.FolderPathFixture.researchFolderPath;
+import static dev.maxenceng.lazyclaude.docs.published.FolderPathFixture.supersededFolderPath;
 import static dev.maxenceng.lazyclaude.docs.published.ReasonFixture.reason;
 
 import java.util.List;
@@ -21,11 +21,10 @@ import dev.maxenceng.lazyclaude.docs.published.Content;
 import dev.maxenceng.lazyclaude.docs.published.DocumentPath;
 import dev.maxenceng.lazyclaude.docs.published.DocumentText;
 import dev.maxenceng.lazyclaude.docs.published.EmptyDocument;
-import dev.maxenceng.lazyclaude.docs.published.FolderName;
+import dev.maxenceng.lazyclaude.docs.published.FolderPath;
+import dev.maxenceng.lazyclaude.docs.published.Reason;
 
 public final class DocsViewFixture {
-
-    private static final FolderName DOCS = new FolderName("docs");
 
     private DocsViewFixture() {}
 
@@ -46,15 +45,21 @@ public final class DocsViewFixture {
     }
 
     public static FolderView adrFolderView() {
-        return folderView(adr(), List.of(documentViewAt(adrPath(), content()), documentViewAt(secondAdrPath(), content())), List.of());
+        return folderView(adrFolderPath(), List.of(documentViewAt(adrPath(), content()), documentViewAt(secondAdrPath(), content())), List.of());
     }
 
-    public static FolderView folderView(FolderName name, List<DocumentView> documents, List<FolderView> folders) {
-        return FolderView.builder().name(name).documents(documents).folders(folders).build();
+    public static FolderView folderView(FolderPath path, List<DocumentView> documents, List<FolderView> folders) {
+        return FolderView.builder().path(path).documents(documents).folders(folders).build();
     }
 
     public static DocsView docsViewOf(List<DocumentView> documents, List<FolderView> folders) {
-        return DocsView.builder().root(folderView(DOCS, documents, folders)).build();
+        return DocsTreeView.builder().documents(documents).folders(folders).build();
+    }
+
+    public static DocsView unavailableDocsView() {
+        return UnavailableDocsView.builder()
+                .reason(new Reason("cannot list /work/app/docs: denied"))
+                .build();
     }
 
     public static DocsView emptyDocsView() {
@@ -62,7 +67,7 @@ public final class DocsViewFixture {
     }
 
     public static FolderView researchFolderView() {
-        return folderView(research(), List.of(documentViewAt(researchPath(), content())), List.of());
+        return folderView(researchFolderPath(), List.of(documentViewAt(researchPath(), content())), List.of());
     }
 
     public static DocsView docsView() {
@@ -70,8 +75,8 @@ public final class DocsViewFixture {
     }
 
     public static DocsView nestedDocsView() {
-        FolderView superseded = folderView(superseded(), List.of(documentViewAt(deepPath(), content())), List.of());
-        FolderView adrWithOld = folderView(adr(), List.of(documentViewAt(adrPath(), content())), List.of(superseded));
+        FolderView superseded = folderView(supersededFolderPath(), List.of(documentViewAt(deepPath(), content())), List.of());
+        FolderView adrWithOld = folderView(adrFolderPath(), List.of(documentViewAt(adrPath(), content())), List.of(superseded));
         return docsViewOf(List.of(), List.of(adrWithOld));
     }
 

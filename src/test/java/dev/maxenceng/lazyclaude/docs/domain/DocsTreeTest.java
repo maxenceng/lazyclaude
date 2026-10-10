@@ -9,7 +9,8 @@ import static dev.maxenceng.lazyclaude.docs.published.DocumentPathFixture.resear
 import static dev.maxenceng.lazyclaude.docs.published.DocumentPathFixture.secondAdrPath;
 import static dev.maxenceng.lazyclaude.docs.published.FolderNameFixture.adr;
 import static dev.maxenceng.lazyclaude.docs.published.FolderNameFixture.research;
-import static dev.maxenceng.lazyclaude.docs.published.FolderNameFixture.superseded;
+import static dev.maxenceng.lazyclaude.docs.published.FolderPathFixture.adrFolderPath;
+import static dev.maxenceng.lazyclaude.docs.published.FolderPathFixture.supersededFolderPath;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -24,57 +25,57 @@ class DocsTreeTest {
     void shouldBeEmptyWhenThereAreNoDocuments() {
         DocsTree tree = DocsTree.of(List.of());
 
-        assertThat(tree.root().documents()).isEmpty();
-        assertThat(tree.root().folders()).isEmpty();
+        assertThat(tree.documents()).isEmpty();
+        assertThat(tree.folders()).isEmpty();
     }
 
     @Test
-    void shouldListTheFilesDirectlyUnderDocsAtTheRootByName() {
+    void shouldKeepTheFilesDirectlyUnderDocsInTheOrderTheyWereListed() {
         DocsTree tree = DocsTree.of(List.of(unreadableDocument(), readDocument()));
 
-        assertThat(tree.root().documents())
+        assertThat(tree.documents())
+                .as("ordering is the adapter's, before the domain")
                 .extracting(Document::path)
-                .containsExactly(readDocument().path(), unreadableDocument().path());
+                .containsExactly(unreadableDocument().path(), readDocument().path());
     }
 
     @Test
-    void shouldGroupDocumentsUnderTheirFolderSortedByName() {
-        DocsTree tree = DocsTree.of(List.of(readDocumentAt(secondAdrPath()), readDocumentAt(adrPath())));
+    void shouldGroupDocumentsUnderTheirFolder() {
+        DocsTree tree = DocsTree.of(List.of(readDocumentAt(adrPath()), readDocumentAt(secondAdrPath())));
 
-        assertThat(tree.root().documents()).isEmpty();
-        assertThat(tree.root().folders()).singleElement().satisfies(folder -> {
+        assertThat(tree.documents()).isEmpty();
+        assertThat(tree.folders()).singleElement().satisfies(folder -> {
+            assertThat(folder.path()).isEqualTo(adrFolderPath());
             assertThat(folder.name()).isEqualTo(adr());
-            assertThat(folder.documents())
-                    .extracting(Document::path)
-                    .containsExactly(adrPath(), secondAdrPath());
+            assertThat(folder.documents()).extracting(Document::path).containsExactly(adrPath(), secondAdrPath());
         });
     }
 
     @Test
-    void shouldSortFoldersByName() {
+    void shouldPlaceAFolderWhereItsFirstDocumentWasListed() {
         DocsTree tree = DocsTree.of(List.of(readDocumentAt(researchPath()), readDocumentAt(adrPath())));
 
-        assertThat(tree.root().folders()).extracting(Folder::name).containsExactly(adr(), research());
+        assertThat(tree.folders()).extracting(Folder::name).containsExactly(research(), adr());
     }
 
     @Test
-    void shouldNestFoldersAnyDepth() {
-        DocsTree tree = DocsTree.of(List.of(readDocumentAt(deepPath()), readDocumentAt(adrPath())));
+    void shouldNestFoldersAnyDepthEachKnownByItsPath() {
+        DocsTree tree = DocsTree.of(List.of(readDocumentAt(adrPath()), readDocumentAt(deepPath())));
 
-        Folder adrFolder = tree.root().folders().getFirst();
+        Folder adrFolder = tree.folders().getFirst();
         assertThat(adrFolder.documents()).extracting(Document::path).containsExactly(adrPath());
         assertThat(adrFolder.folders()).singleElement().satisfies(folder -> {
-            assertThat(folder.name()).isEqualTo(superseded());
+            assertThat(folder.path()).isEqualTo(supersededFolderPath());
             assertThat(folder.documents()).extracting(Document::path).containsExactly(deepPath());
         });
     }
 
     @Test
-    void shouldPlaceFilesBeforeFoldersAtEveryLevel() {
+    void shouldHoldAFoldersOwnFilesApartFromItsFolders() {
         DocsTree tree = DocsTree.of(List.of(readDocumentAt(adrPath()), readDocument()));
 
-        assertThat(tree.root().documents()).extracting(Document::path).containsExactly(readDocument().path());
-        assertThat(tree.root().folders()).hasSize(1);
+        assertThat(tree.documents()).extracting(Document::path).containsExactly(readDocument().path());
+        assertThat(tree.folders()).hasSize(1);
     }
 
     @Test
@@ -84,8 +85,7 @@ class DocsTreeTest {
                 .reason(unreadableDocument().reason())
                 .build();
 
-        assertThat(DocsTree.of(List.of(unreadable)).root().folders().getFirst().documents())
-                .containsExactly(unreadable);
+        assertThat(DocsTree.of(List.of(unreadable)).folders().getFirst().documents()).containsExactly(unreadable);
     }
 
     @Test
@@ -95,7 +95,7 @@ class DocsTreeTest {
 
         DocsTree tree = DocsTree.of(List.of(readDocumentAt(backlog), readDocumentAt(image)));
 
-        assertThat(tree.root().documents()).isEmpty();
-        assertThat(tree.root().folders()).as("a folder with nothing listed is not a folder").isEmpty();
+        assertThat(tree.documents()).isEmpty();
+        assertThat(tree.folders()).as("a folder with nothing listed is not a folder").isEmpty();
     }
 }

@@ -100,4 +100,19 @@ class DocumentPathTest {
     void shouldOrderByPath() {
         assertThat(adrPath()).isLessThan(DocumentPathFixture.secondAdrPath());
     }
+
+    @Test
+    void shouldOrderSegmentBySegment() {
+        DocumentPath inAdr = new DocumentPath("adr/0001-record.md");
+        DocumentPath inAdrOld = new DocumentPath("adr-old/0000-first.md");
+
+        assertThat(inAdr)
+                .as("a folder's documents sort under its name, whatever comes after it in a longer one")
+                .isLessThan(inAdrOld);
+    }
+
+    @Test
+    void shouldOrderAFolderBeforeTheFolderItStartsWith() {
+        assertThat(adrPath()).isLessThan(deepPath());
+    }
 }

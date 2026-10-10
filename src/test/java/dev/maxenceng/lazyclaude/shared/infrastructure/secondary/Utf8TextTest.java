@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.shared.domain;
+package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

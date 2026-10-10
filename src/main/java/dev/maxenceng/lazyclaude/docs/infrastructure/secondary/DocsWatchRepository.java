@@ -10,16 +10,12 @@ import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,7 +48,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     private static final String BACKLOG = "backlog";
     private static final String SEPARATOR = "/";
     private static final String WARNING =
-            "lazyclaude: cannot watch %s (%s); checking it every %d s instead. If the cause is the watch limit, raise the fs.inotify.max_user_watches sysctl.";
+            "lazyclaude: %s; checking it every %d s instead. If the cause is the watch limit, raise the fs.inotify.max_user_watches sysctl.";
     private static final String WORKER_NAME = "docs-watch";
 
     private final WatchServiceFactory services;
@@ -96,17 +92,10 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         }
         Path backlog = docs.resolve(BACKLOG);
         try {
-            WatchService service = services.create();
-            open.add(service);
-            try {
-                register(service, docs, backlog);
-            } catch (IOException e) {
-                closeQuietly(service);
-                throw e;
-            }
+            WatchService service = watchOver(docs, backlog);
             start(() -> watchLoop(service, backlog, docs, changed));
-        } catch (IOException e) {
-            giveUpWatching(docs, e);
+        } catch (WatchUnavailableException unavailable) {
+            giveUpWatching(unavailable);
             Map<String, String> seen = snapshot(docs, Map.of());
             start(() -> pollLoop(docs, seen, changed));
         }
@@ -118,10 +107,30 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         open.forEach(DocsWatchRepository::closeQuietly);
     }
 
+    /** A watch service with the whole tree registered on it; one that fails partway is closed, not left holding watches. */
+    private WatchService watchOver(Path docs, Path backlog) {
+        WatchService service;
+        try {
+            service = services.create();
+        } catch (IOException e) {
+            throw new WatchUnavailableException(docs, e);
+        }
+        open.add(service);
+        try {
+            register(service, docs, backlog, docs);
+        } catch (WatchUnavailableException e) {
+            closeQuietly(service);
+            throw e;
+        }
+        return service;
+    }
+
     private void start(Runnable work) {
         workers.add(Thread.ofPlatform().daemon().name(WORKER_NAME).start(work));
     }
 
+    // deferred: docs/ deleted and created again while running is not watched again until a restart — close it when a checkout that swaps docs/ wholesale is used day to day.
+    // deferred: an exception other than a closed or interrupted watch ends this thread without a word — close it when a re-read can fail in a way the domain does not turn into a value.
     private void watchLoop(WatchService service, Path backlog, Path docs, Runnable changed) {
         try {
             while (true) {
@@ -137,19 +146,19 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
             }
         } catch (InterruptedException | ClosedWatchServiceException stopped) {
             Thread.currentThread().interrupt();
-        } catch (IOException e) {
+        } catch (WatchUnavailableException unavailable) {
             closeQuietly(service);
-            giveUpWatching(docs, e);
+            giveUpWatching(unavailable);
             pollLoop(docs, snapshot(docs, Map.of()), changed);
         }
     }
 
-    private boolean process(WatchService service, WatchKey key, Path backlog, Path docs) throws IOException {
+    private boolean process(WatchService service, WatchKey key, Path backlog, Path docs) {
         boolean relevant = false;
         Path directory = (Path) key.watchable();
         for (WatchEvent<?> event : key.pollEvents()) {
             if (event.kind() == OVERFLOW) {
-                register(service, docs, backlog);
+                register(service, docs, backlog, docs);
                 relevant = true;
                 continue;
             }
@@ -158,7 +167,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
                 continue;
             }
             if (event.kind() == ENTRY_CREATE && Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS)) {
-                register(service, entry, backlog);
+                register(service, entry, backlog, docs);
                 relevant = true;
             } else if (event.kind() == ENTRY_DELETE && watched.containsKey(entry)) {
                 forget(entry);
@@ -171,29 +180,12 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         return relevant;
     }
 
-    private void register(WatchService service, Path tree, Path backlog) throws IOException {
-        Files.walkFileTree(tree, new SimpleFileVisitor<>() {
-            @Override
-            public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes) throws IOException {
-                if (directory.equals(backlog)) {
-                    return FileVisitResult.SKIP_SUBTREE;
-                }
-                try {
-                    watched.put(directory, registrar.register(service, directory));
-                } catch (NoSuchFileException vanished) {
-                    return FileVisitResult.SKIP_SUBTREE;
-                }
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
-                if (failure instanceof NoSuchFileException) {
-                    return FileVisitResult.CONTINUE;
-                }
-                throw failure;
-            }
-        });
+    private void register(WatchService service, Path tree, Path backlog, Path docs) {
+        try {
+            Files.walkFileTree(tree, new TreeRegistration(service, registrar, backlog, watched));
+        } catch (IOException e) {
+            throw new WatchUnavailableException(docs, e);
+        }
     }
 
     /**
@@ -255,9 +247,9 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         }
     }
 
-    private void giveUpWatching(Path docs, IOException cause) {
+    private void giveUpWatching(WatchUnavailableException unavailable) {
         if (warned.compareAndSet(false, true)) {
-            warnings.println(WARNING.formatted(docs, cause.getMessage(), pollInterval.toSeconds()));
+            warnings.println(WARNING.formatted(unavailable.getMessage(), pollInterval.toSeconds()));
         }
     }
 

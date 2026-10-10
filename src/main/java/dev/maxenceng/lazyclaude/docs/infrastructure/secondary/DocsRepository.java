@@ -1,13 +1,8 @@
 package dev.maxenceng.lazyclaude.docs.infrastructure.secondary;
 
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.docs.domain.DocsPort;
@@ -19,13 +14,12 @@ import dev.maxenceng.lazyclaude.docs.published.DocumentPath;
 import dev.maxenceng.lazyclaude.docs.published.DocumentText;
 import dev.maxenceng.lazyclaude.docs.published.Reason;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
-import dev.maxenceng.lazyclaude.shared.domain.Utf8Text;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Utf8Text;
 
 /** Reads {@code docs/**}: every file's path, and a document's text as UTF-8 without a byte order mark. */
 public final class DocsRepository implements DocsPort {
 
     private static final Path DOCS = Path.of("docs");
-    private static final String SEPARATOR = "/";
     private static final String UNREADABLE = "cannot be read: %s";
     private static final String NOT_UTF8 = "not valid UTF-8";
 
@@ -35,29 +29,13 @@ public final class DocsRepository implements DocsPort {
         if (!Files.isDirectory(docs)) {
             return List.of();
         }
-        List<DocumentPath> paths = new ArrayList<>();
+        DocumentPathCollector collector = new DocumentPathCollector(docs);
         try {
-            Files.walkFileTree(docs, new SimpleFileVisitor<>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
-                    if (attributes.isRegularFile()) {
-                        paths.add(new DocumentPath(relative(docs, file)));
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
-                    if (failure instanceof NoSuchFileException) {
-                        return FileVisitResult.CONTINUE;
-                    }
-                    throw failure;
-                }
-            });
+            Files.walkFileTree(docs, collector);
         } catch (IOException e) {
             throw new DocsUnavailableException(docs, e);
         }
-        return List.copyOf(paths);
+        return collector.collected();
     }
 
     @Override
@@ -74,10 +52,6 @@ public final class DocsRepository implements DocsPort {
                         .text(DocumentText.of(text))
                         .build())
                 .orElseGet(() -> unreadable(path, UNREADABLE.formatted(NOT_UTF8)));
-    }
-
-    private static String relative(Path docs, Path file) {
-        return docs.relativize(file).normalize().toString().replace(file.getFileSystem().getSeparator(), SEPARATOR);
     }
 
     private static UnreadableDocument unreadable(DocumentPath path, String reason) {

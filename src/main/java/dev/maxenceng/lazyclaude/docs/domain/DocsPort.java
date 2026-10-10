@@ -9,8 +9,8 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 public interface DocsPort {
 
     /**
-     * Every file under the project's {@code docs/}, whatever it is; empty when the project has no
-     * {@code docs/}.
+     * Every file under the project's {@code docs/}, whatever it is, in the order the tree shows them
+     * ({@link DocumentPath}'s); empty when the project has no {@code docs/}.
      *
      * @throws DocsUnavailableException when {@code docs/} exists but cannot be listed
      */

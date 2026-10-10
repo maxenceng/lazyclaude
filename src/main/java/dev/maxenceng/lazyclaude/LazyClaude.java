@@ -38,7 +38,8 @@ public final class LazyClaude {
 
     /**
      * Opens the shell on the board of the project {@code from} belongs to and that project's docs, or
-     * says why there is no board or no docs to show and returns non-zero without opening it.
+     * says why there is no board and returns non-zero without opening it. Docs that cannot be listed
+     * do not stop it: the Docs panel says why.
      */
     static int start(Path from, BoardQuery board, DocsQuery docs, PrintStream err, ShellOpener shell)
             throws Exception {
@@ -56,8 +57,14 @@ public final class LazyClaude {
     }
 
     private static void run(BoardView view, DocsView tree, DocsQuery docs) throws Exception {
+        shellOn(view, tree, docs).run();
+    }
+
+    /** The shell on {@code view} and {@code tree}, handed the project's docs again after each change from now on. */
+    // deferred: a change between the first read and the watch starting is shown only at the next change — close it when a doc edited during start-up is seen stale.
+    static Shell shellOn(BoardView view, DocsView tree, DocsQuery docs) {
         Shell shell = new Shell(view, tree);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
-        shell.run();
+        return shell;
     }
 }

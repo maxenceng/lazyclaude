@@ -79,6 +79,24 @@ class DocsRepositoryTest {
     }
 
     @Test
+    void shouldListThePathsInTreeOrder() throws IOException {
+        write(docs, "glossary.md", markdown());
+        write(docs, "adr-old/0000-first.md", markdown());
+        write(docs, "adr/superseded/0000-old.md", markdown());
+        write(docs, "adr/0001-record.md", markdown());
+        write(docs, "context-map.md", markdown());
+
+        assertThat(repository.paths(new Project(root)))
+                .as("ordering is done before the domain, which keeps it")
+                .containsExactly(
+                        new DocumentPath("adr/0001-record.md"),
+                        new DocumentPath("adr/superseded/0000-old.md"),
+                        new DocumentPath("adr-old/0000-first.md"),
+                        new DocumentPath("context-map.md"),
+                        new DocumentPath("glossary.md"));
+    }
+
+    @Test
     void shouldListFilesThatAreNotMarkdownAndLeaveTheTreeToDropThem() throws IOException {
         write(docs, "openapi.json", "{}");
 

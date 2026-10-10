@@ -22,7 +22,7 @@ import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
-import dev.maxenceng.lazyclaude.shared.domain.Utf8Text;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Utf8Text;
 
 /**
  * Reads `docs/backlog/*.md`: YAML frontmatter for the fields, everything after the closing `---` for the body.

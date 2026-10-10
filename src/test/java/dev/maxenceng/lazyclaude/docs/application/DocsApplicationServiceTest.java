@@ -1,14 +1,14 @@
 package dev.maxenceng.lazyclaude.docs.application;
 
 import static dev.maxenceng.lazyclaude.docs.domain.ReadDocumentFixture.readDocument;
+import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.docsUnavailable;
+import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.unavailableDocs;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,9 +19,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.docs.domain.Docs;
 import dev.maxenceng.lazyclaude.docs.domain.DocsPort;
 import dev.maxenceng.lazyclaude.docs.domain.DocsTree;
-import dev.maxenceng.lazyclaude.docs.domain.DocsUnavailableException;
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,7 +48,7 @@ class DocsApplicationServiceTest {
     void shouldHandTheListenerAFreshTreeWheneverTheWatcherReportsAChange() {
         when(docs.paths(project())).thenReturn(List.of(readDocument().path()));
         when(docs.read(project(), readDocument().path())).thenReturn(readDocument());
-        List<DocsTree> received = new ArrayList<>();
+        List<Docs> received = new ArrayList<>();
 
         service.subscribe(project(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
@@ -60,11 +60,11 @@ class DocsApplicationServiceTest {
     }
 
     @Test
-    void shouldKeepWatchingWhenARereadFails() {
+    void shouldHandTheListenerWhyAndKeepWatchingWhenARereadCannotList() {
         when(docs.paths(project()))
-                .thenThrow(new DocsUnavailableException(Path.of("/work/app/docs"), new IOException("denied")))
+                .thenThrow(docsUnavailable())
                 .thenReturn(List.of());
-        List<DocsTree> received = new ArrayList<>();
+        List<Docs> received = new ArrayList<>();
 
         service.subscribe(project(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
@@ -73,7 +73,7 @@ class DocsApplicationServiceTest {
         changed.getValue().run();
 
         assertThat(received)
-                .as("a failed read leaves the previous tree on screen, and the next change is read again")
-                .containsExactly(DocsTree.of(List.of()));
+                .as("the panel says why, and the next change is read again")
+                .containsExactly(unavailableDocs(), DocsTree.of(List.of()));
     }
 }

@@ -1,15 +1,25 @@
 package dev.maxenceng.lazyclaude;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.boardQuery;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.linkedWorktree;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.removeBacklog;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.repositoryWithBacklog;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.repositoryWithoutBacklog;
+import static dev.maxenceng.lazyclaude.docs.domain.ReadDocumentFixture.readDocument;
+import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.docsUnavailable;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQueryFixture.docsQuery;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.unavailableDocsView;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.docsIn;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.markdown;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.write;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watcherWithoutInotify;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
@@ -23,6 +33,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -34,9 +45,13 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.ProjectLocatorRepository;
 import dev.maxenceng.lazyclaude.docs.domain.DocsPort;
-import dev.maxenceng.lazyclaude.docs.domain.DocsUnavailableException;
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
+import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsRepository;
+import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchRepository;
+import dev.maxenceng.lazyclaude.shell.Screen;
+import dev.maxenceng.lazyclaude.shell.Shell;
 
 @ExtendWith(MockitoExtension.class)
 class LazyClaudeTest {
@@ -131,18 +146,53 @@ class LazyClaudeTest {
     }
 
     @Test
-    void shouldSayWhyAndExitNonZeroWithoutOpeningTheShellWhenTheDocsCannotBeListed() throws Exception {
-        Path listed = project().root().resolve("docs");
+    void shouldOpenTheShellSayingWhyWhenTheDocsCannotBeListed() throws Exception {
         when(locator.locate(any())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
-        when(docs.paths(project())).thenThrow(new DocsUnavailableException(listed, new IOException("denied")));
+        when(docs.paths(project())).thenThrow(docsUnavailable());
 
-        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), err, (view, docsView) -> opened.add(view));
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), err, (view, docsView) -> {
+                    opened.add(view);
+                    openedDocs.add(docsView);
+                });
 
-        assertThat(exit).isNotZero();
-        assertThat(said.toString(StandardCharsets.UTF_8))
-                .as("an unlistable docs directory is reported, not a stack trace")
-                .isEqualTo("lazyclaude: cannot list %s: denied%n".formatted(listed));
-        assertThat(opened).isEmpty();
+        assertThat(exit).as("the docs stand alone; the board still opens").isZero();
+        assertThat(openedDocs).containsExactly(unavailableDocsView());
+        assertThat(said.size()).as("the Docs panel says why, not the terminal").isZero();
+    }
+
+    @Test
+    void shouldHandTheShellTheDocsAgainWhenTheWatcherReportsAChange() {
+        when(docs.paths(project())).thenReturn(List.of());
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), docsQuery(docs, watch));
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).watch(eq(project()), changed.capture());
+        when(docs.paths(project())).thenReturn(List.of(readDocument().path()));
+        when(docs.read(project(), readDocument().path())).thenReturn(readDocument());
+
+        changed.getValue().run();
+
+        assertThat(Screen.of(shell).boardPanelText())
+                .as("watcher, application and shell are joined for the project the board was read from")
+                .contains(readDocument().path().fileName());
+    }
+
+    @Test
+    void shouldStartWatchingWithOneWarningWhenTheWatchCannotBeSetUp() throws Exception {
+        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
+        write(docsIn(repository), "glossary.md", markdown());
+        ByteArrayOutputStream warned = new ByteArrayOutputStream();
+        List<Shell> shells = new ArrayList<>();
+
+        try (DocsWatchRepository watcher = watcherWithoutInotify(warned)) {
+            DocsQuery realDocs = docsQuery(new DocsRepository(), watcher);
+            int exit = LazyClaude.start(repository, realBoard, realDocs, err, (view, docsView) -> shells.add(LazyClaude.shellOn(view, docsView, realDocs)));
+
+            assertThat(exit).isZero();
+        }
+        assertThat(warned.toString(StandardCharsets.UTF_8))
+                .as("a watch that cannot be set up costs a warning, not the start")
+                .contains("fs.inotify.max_user_watches");
+        assertThat(Screen.of(shells.getFirst()).boardPanelText()).contains("glossary.md");
     }
 }

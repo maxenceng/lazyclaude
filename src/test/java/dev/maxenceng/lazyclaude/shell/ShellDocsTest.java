@@ -14,6 +14,7 @@ import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixtu
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.namedDocumentView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.nestedDocsView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.secondDocumentView;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.unavailableDocsView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.unreadableDocumentView;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
@@ -276,6 +277,49 @@ class ShellDocsTest {
         shell.press(key('k'));
 
         assertThat(Screen.of(shell).dimText()).contains("no docs");
+    }
+
+    @Test
+    void shouldShowADimDocsUnavailableAndTheReasonWhenTheDocsCannotBeListed() {
+        Shell shell = shellOnDocs(unavailableDocsView());
+
+        assertThat(Screen.of(shell).dimText())
+                .as("lazyclaude starts, and the panel says why there is no tree")
+                .contains("docs unavailable")
+                .anySatisfy(line -> assertThat(line).startsWith("cannot list"));
+    }
+
+    @Test
+    void shouldIgnoreMovementAndEnterWhileTheDocsAreUnavailable() {
+        Shell shell = shellOnDocs(unavailableDocsView());
+
+        pressed(shell, key('j'), 2);
+        shell.press(enter());
+
+        assertThat(Screen.of(shell).dimText()).contains("docs unavailable");
+        assertThat(Screen.of(shell).mainViewRows()).allSatisfy(row -> assertThat(row).isBlank());
+    }
+
+    @Test
+    void shouldSayWhyWhenTheDocsBecomeUnavailableWhileRunning() {
+        Shell shell = shellOnDocs(docsView());
+
+        shell.docsChanged(unavailableDocsView());
+
+        assertThat(Screen.of(shell).dimText()).contains("docs unavailable");
+        assertThat(Screen.of(shell).boardPanelText()).doesNotContain("context-map.md");
+    }
+
+    @Test
+    void shouldShowTheTreeAgainOnceTheDocsCanBeListed() {
+        Shell shell = shellOnDocs(unavailableDocsView());
+
+        shell.docsChanged(docsView());
+
+        assertThat(Screen.of(shell).boardPanelText()).contains("context-map.md").doesNotContain("docs unavailable");
+        assertThat(Screen.of(shell).reversedText())
+                .as("the first row is selected, as at start")
+                .anySatisfy(line -> assertThat(line).contains("context-map.md"));
     }
 
     @Test

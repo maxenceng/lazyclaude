@@ -1,16 +1,15 @@
 package dev.maxenceng.lazyclaude.docs.domain;
 
 import static dev.maxenceng.lazyclaude.docs.domain.ReadDocumentFixture.readDocument;
+import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.docsUnavailable;
+import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.unavailableDocs;
 import static dev.maxenceng.lazyclaude.docs.domain.UnreadableDocumentFixture.unreadableDocument;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -60,15 +59,16 @@ class DocsManagerTest {
     void shouldBeAnEmptyTreeWhenTheProjectHoldsOnlyTheBacklog() {
         when(docs.paths(project())).thenReturn(List.of(new DocumentPath("backlog/DOCS-1.md")));
 
-        assertThat(manager.docsFor(project()).root().documents()).isEmpty();
-        assertThat(manager.docsFor(project()).root().folders()).isEmpty();
+        assertThat(manager.docsFor(project())).isEqualTo(DocsTree.of(List.of()));
     }
 
     @Test
-    void shouldLetTheListingsFailureThrough() {
-        when(docs.paths(project())).thenThrow(new DocsUnavailableException(Path.of("/work/app/docs"), new IOException("denied")));
+    void shouldSayWhyWhenTheDocsCannotBeListed() {
+        when(docs.paths(project())).thenThrow(docsUnavailable());
 
-        assertThatThrownBy(() -> manager.docsFor(project())).isExactlyInstanceOf(DocsUnavailableException.class);
+        assertThat(manager.docsFor(project()))
+                .as("docs that cannot be listed are shown as such, not a failed start")
+                .isEqualTo(unavailableDocs());
     }
 
     @Test

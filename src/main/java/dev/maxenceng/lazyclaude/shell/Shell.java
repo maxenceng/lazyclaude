@@ -43,6 +43,7 @@ public final class Shell extends ToolkitApp {
     private static final String DOCK_TITLE = "dock";
     private static final String NO_HOSTED_SESSION = "no hosted session";
     private static final String NO_DOCS = "no docs";
+    private static final String DOCS_UNAVAILABLE = "docs unavailable";
     private static final String EMPTY = "";
 
     private static final char QUIT = 'q';
@@ -80,7 +81,7 @@ public final class Shell extends ToolkitApp {
     }
 
     /**
-     * A new docs tree has been read. Callable from any thread: the tree is applied on the UI thread,
+     * The docs have been read again: a new tree, or why there is none. Callable from any thread: the tree is applied on the UI thread,
      * at the next render or key press, so no row changes under a frame being drawn.
      */
     public void docsChanged(DocsView view) {
@@ -265,9 +266,11 @@ public final class Shell extends ToolkitApp {
 
     private Element docsPanel() {
         List<String> lines = docs.visible().stream().map(DocsRow::text).toList();
-        Element body = docs.isEmpty()
-                ? text(NO_DOCS).dim()
-                : new RowsElement(lines, docs.selectedIndex(), focus == Focus.DOCS);
+        Element body = docs.unavailable()
+                .<Element>map(reason -> column(text(DOCS_UNAVAILABLE).dim(), text(reason.value()).dim()))
+                .orElseGet(() -> docs.isEmpty()
+                        ? text(NO_DOCS).dim()
+                        : new RowsElement(lines, docs.selectedIndex(), focus == Focus.DOCS));
         return sized(framed(DOCS_TITLE, Focus.DOCS, body), Focus.DOCS);
     }
 

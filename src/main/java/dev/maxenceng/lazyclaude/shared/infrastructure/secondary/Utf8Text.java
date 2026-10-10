@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.shared.domain;
+package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;

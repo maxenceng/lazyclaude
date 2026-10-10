@@ -33,5 +33,7 @@ of documents that the board watches would make `board` know about a tree it does
 
 - `board` and `docs` each hold a watcher with no shared code. If `session` and `board` grow
   the same machinery, the shared part is a kernel type of its own, and that is a new decision.
-- A re-read that fails (a directory that cannot be listed) leaves the previous tree on screen.
+- A `docs/` that cannot be listed, at start or on a re-read, is shown as a dim "docs unavailable"
+  and the reason in the Docs panel. lazyclaude starts anyway, and the tree comes back on the next
+  change that can be read.
 - A `docs/` created after start shows up only after a restart.

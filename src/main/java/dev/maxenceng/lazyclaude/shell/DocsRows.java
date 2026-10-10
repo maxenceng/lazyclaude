@@ -6,8 +6,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsTreeView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.FolderView;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.UnavailableDocsView;
+import dev.maxenceng.lazyclaude.docs.published.Reason;
 
 /**
  * The Docs panel's rows and what the shell remembers about them: the selection and the folded
@@ -15,7 +19,6 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.FolderView;
  */
 final class DocsRows {
 
-    private static final String PATH_SEPARATOR = "/";
     private static final int DOWN = 1;
     private static final int UP = -1;
 
@@ -30,8 +33,16 @@ final class DocsRows {
 
     List<DocsRow> visible() {
         List<DocsRow> rows = new ArrayList<>();
-        list(rows, docs.root(), "", 0);
+        switch (docs) {
+            case DocsTreeView tree -> list(rows, tree.documents(), tree.folders(), 0);
+            case UnavailableDocsView unavailable -> {}
+        }
         return rows;
+    }
+
+    /** Why there is no tree to show, when {@code docs/} could not be listed. */
+    Optional<Reason> unavailable() {
+        return docs instanceof UnavailableDocsView unavailable ? Optional.of(unavailable.reason()) : Optional.empty();
     }
 
     boolean isEmpty() {
@@ -95,14 +106,14 @@ final class DocsRows {
         selected = Optional.of(rows.get(target).key());
     }
 
-    private void list(List<DocsRow> rows, FolderView folder, String parent, int depth) {
-        folder.documents().forEach(document -> rows.add(new DocumentRow(document, depth)));
-        for (FolderView child : folder.folders()) {
-            String path = parent + child.name().value();
+    private void list(List<DocsRow> rows, List<DocumentView> documents, List<FolderView> folders, int depth) {
+        documents.forEach(document -> rows.add(new DocumentRow(document, depth)));
+        for (FolderView folder : folders) {
+            String path = folder.path().value();
             boolean isFolded = folded.contains(new RowKey(RowKind.FOLDER, path));
-            rows.add(new FolderRow(path, child.name().value(), child.count(), isFolded, depth));
+            rows.add(new FolderRow(path, folder.name().value(), folder.count(), isFolded, depth));
             if (!isFolded) {
-                list(rows, child, path + PATH_SEPARATOR, depth + 1);
+                list(rows, folder.documents(), folder.folders(), depth + 1);
             }
         }
     }

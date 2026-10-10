@@ -1,30 +1,16 @@
 package dev.maxenceng.lazyclaude.docs.infrastructure.primary;
 
+import dev.maxenceng.lazyclaude.docs.domain.Docs;
 import dev.maxenceng.lazyclaude.docs.domain.DocsTree;
+import dev.maxenceng.lazyclaude.docs.domain.UnavailableDocs;
 
-/** The docs tree as the shell reads it: the folder {@code docs/} itself, its files first, then its folders. */
-public record DocsView(FolderView root) {
+/** A project's docs as the shell reads them: the tree, or why there is none. */
+public sealed interface DocsView permits DocsTreeView, UnavailableDocsView {
 
-    static DocsView from(DocsTree tree) {
-        return builder().root(FolderView.from(tree.root())).build();
-    }
-
-    public static DocsViewBuilder builder() {
-        return new DocsViewBuilder();
-    }
-
-    public static final class DocsViewBuilder {
-        private FolderView root;
-
-        private DocsViewBuilder() {}
-
-        public DocsViewBuilder root(FolderView root) {
-            this.root = root;
-            return this;
-        }
-
-        public DocsView build() {
-            return new DocsView(root);
-        }
+    static DocsView from(Docs docs) {
+        return switch (docs) {
+            case DocsTree tree -> DocsTreeView.from(tree);
+            case UnavailableDocs unavailable -> UnavailableDocsView.from(unavailable);
+        };
     }
 }
