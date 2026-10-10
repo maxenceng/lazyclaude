@@ -3,14 +3,25 @@ package dev.maxenceng.lazyclaude.shell;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import dev.maxenceng.lazyclaude.board.published.BoardView;
-import dev.maxenceng.lazyclaude.board.published.StatusGroupView;
-import dev.maxenceng.lazyclaude.board.published.TicketView;
-import dev.maxenceng.lazyclaude.board.published.UnreadableTicketView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketView;
+import dev.maxenceng.lazyclaude.board.published.ContextName;
+import dev.maxenceng.lazyclaude.board.published.FileName;
+import dev.maxenceng.lazyclaude.board.published.NoContext;
+import dev.maxenceng.lazyclaude.board.published.NoTitle;
+import dev.maxenceng.lazyclaude.board.published.NoType;
+import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
+import dev.maxenceng.lazyclaude.board.published.Title;
+import dev.maxenceng.lazyclaude.board.published.TypeName;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
@@ -20,19 +31,24 @@ class ShellTest {
     private static final int WIDTH = 80;
     private static final int HEIGHT = 24;
 
-    private static final List<String> LIFECYCLE = List.of("draft", "todo", "in-progress", "in-review", "done");
-    private static final String FINISHED = "done";
-
     private static TicketView ticket(String id, String status, String title) {
-        return new TicketView(id, title == null ? id : title, status, "board", "feature");
+        return new TicketView(
+                new TicketId(id),
+                title == null ? new NoTitle() : new Title(title),
+                Status.parse(status),
+                new ContextName("board"),
+                new TypeName("feature"));
+    }
+
+    private static UnreadableTicketView unreadable(String file, String reason) {
+        return new UnreadableTicketView(new FileName(file), new Reason(reason));
     }
 
     private static BoardView board(List<TicketView> tickets, List<UnreadableTicketView> unreadable) {
-        List<StatusGroupView> groups = LIFECYCLE.stream()
+        List<StatusGroupView> groups = Arrays.stream(Status.values())
                 .map(status -> new StatusGroupView(
                         status,
-                        status.equals(FINISHED),
-                        tickets.stream().filter(ticket -> ticket.status().equals(status)).toList()))
+                        tickets.stream().filter(ticket -> ticket.status() == status).toList()))
                 .toList();
         return new BoardView(groups, unreadable);
     }
@@ -145,7 +161,7 @@ class ShellTest {
     void shouldListUnreadableTicketsLastWithTheirReason() {
         BoardView board = board(
                 List.of(ticket("A-1", "draft", "Fine")),
-                List.of(new UnreadableTicketView("A-2.md", "bad")));
+                List.of(unreadable("A-2.md", "bad")));
 
         String boardText = String.join("\n", boardPanelLines(screen(shellOn(board))));
 
@@ -253,7 +269,7 @@ class ShellTest {
 
     @Test
     void shouldShowAnUnreadableFilesReasonInTheMainViewWhenItIsSelected() {
-        BoardView board = board(List.of(), List.of(new UnreadableTicketView("A-2.md", "status is missing")));
+        BoardView board = board(List.of(), List.of(unreadable("A-2.md", "status is missing")));
         Shell shell = shellOn(board);
         for (int i = 0; i < 6; i++) {
             shell.press(key('j'));
@@ -445,5 +461,17 @@ class ShellTest {
                 .contains("h/l panel", "alt+h/j/k/l focus", "q quit")
                 .doesNotContain("j/k move")
                 .doesNotContain("enter fold");
+    }
+
+    @Test
+    void shouldLeaveAMissingContextAndTypeOutOfTheMainView() {
+        TicketView bare = new TicketView(new TicketId("A-1"), new Title("Bare"), Status.DRAFT, new NoContext(), new NoType());
+        Shell shell = shellOn(bare);
+        shell.press(key('j'));
+
+        assertThat(screen(shell).text())
+                .as("an absent field is left out, never shown as a blank between separators")
+                .contains("status draft")
+                .doesNotContain("·");
     }
 }

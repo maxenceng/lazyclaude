@@ -16,10 +16,17 @@ import org.junit.jupiter.api.io.TempDir;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
 import dev.maxenceng.lazyclaude.board.domain.BacklogNotFoundException;
-import dev.maxenceng.lazyclaude.board.domain.Status;
 import dev.maxenceng.lazyclaude.board.domain.Ticket;
 import dev.maxenceng.lazyclaude.board.domain.TicketFile;
 import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
+import dev.maxenceng.lazyclaude.board.published.ContextName;
+import dev.maxenceng.lazyclaude.board.published.FileName;
+import dev.maxenceng.lazyclaude.board.published.NoContext;
+import dev.maxenceng.lazyclaude.board.published.NoTitle;
+import dev.maxenceng.lazyclaude.board.published.NoType;
+import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.Title;
+import dev.maxenceng.lazyclaude.board.published.TypeName;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 class BacklogRepositoryTest {
@@ -67,9 +74,9 @@ class BacklogRepositoryTest {
 
         assertThat(ticket.id().value()).isEqualTo("PROJ-1");
         assertThat(ticket.status()).isEqualTo(Status.IN_PROGRESS);
-        assertThat(ticket.title()).isEqualTo("A board from the backlog");
-        assertThat(ticket.context()).isEqualTo("board");
-        assertThat(ticket.type()).isEqualTo("feature");
+        assertThat(ticket.title()).isEqualTo(new Title("A board from the backlog"));
+        assertThat(ticket.context()).isEqualTo(new ContextName("board"));
+        assertThat(ticket.type()).isEqualTo(new TypeName("feature"));
     }
 
     @Test
@@ -101,11 +108,10 @@ class BacklogRepositoryTest {
     }
 
     @Test
-    void shouldShowTheIdAsTitleWhenThereIsNoHeading() throws IOException {
+    void shouldReadATicketWithNoHeadingAsHavingNoTitle() throws IOException {
         file("PROJ-1.md", "---\nid: PROJ-1\nstatus: draft\n---\n\nJust prose.\n");
 
-        assertThat(tickets()).singleElement().satisfies(ticket -> assertThat(ticket.title())
-                .isEqualTo("PROJ-1"));
+        assertThat(tickets()).singleElement().satisfies(ticket -> assertThat(ticket.title()).isEqualTo(new NoTitle()));
         assertThat(unreadable()).isEmpty();
     }
 
@@ -113,7 +119,7 @@ class BacklogRepositoryTest {
     void shouldNotTakeAHeadingInsideACodeFenceForTheTitle() throws IOException {
         file("PROJ-1.md", "---\nid: PROJ-1\nstatus: draft\n---\n\n```\n# not a title\n```\n");
 
-        assertThat(tickets().getFirst().title()).isEqualTo("PROJ-1");
+        assertThat(tickets().getFirst().title()).isEqualTo(new NoTitle());
     }
 
     @Test
@@ -123,8 +129,8 @@ class BacklogRepositoryTest {
 
         assertThat(tickets()).hasSize(1);
         assertThat(unreadable()).singleElement().satisfies(unreadable -> {
-            assertThat(unreadable.file()).isEqualTo("PROJ-2.md");
-            assertThat(unreadable.reason()).contains("blocked");
+            assertThat(unreadable.file()).isEqualTo(new FileName("PROJ-2.md"));
+            assertThat(unreadable.reason().value()).contains("blocked");
         });
     }
 
@@ -134,8 +140,8 @@ class BacklogRepositoryTest {
         ticket("PROJ-2.md", "PROJ-2", "todo", "Fine");
 
         assertThat(unreadable()).singleElement().satisfies(unreadable -> {
-            assertThat(unreadable.file()).isEqualTo("PROJ-1.md");
-            assertThat(unreadable.reason()).isNotBlank();
+            assertThat(unreadable.file()).isEqualTo(new FileName("PROJ-1.md"));
+            assertThat(unreadable.reason().value()).isNotBlank();
         });
         assertThat(tickets()).hasSize(1);
     }
@@ -144,7 +150,7 @@ class BacklogRepositoryTest {
     void shouldListAFileWhoseFrontmatterNeverEndsAsUnreadable() throws IOException {
         file("PROJ-1.md", "---\nid: PROJ-1\nstatus: todo\n\n# No closing line\n");
 
-        assertThat(unreadable()).singleElement().satisfies(unreadable -> assertThat(unreadable.reason())
+        assertThat(unreadable()).singleElement().satisfies(unreadable -> assertThat(unreadable.reason().value())
                 .contains("closing"));
     }
 
@@ -159,7 +165,7 @@ class BacklogRepositoryTest {
     void shouldListAnIdThatIsNotATicketIdAsUnreadable() throws IOException {
         ticket("odd.md", "odd", "todo", "Odd");
 
-        assertThat(unreadable()).singleElement().satisfies(unreadable -> assertThat(unreadable.reason())
+        assertThat(unreadable()).singleElement().satisfies(unreadable -> assertThat(unreadable.reason().value())
                 .contains("odd"));
     }
 
@@ -167,7 +173,7 @@ class BacklogRepositoryTest {
     void shouldListAFileWithAnIdAndNoStatusAsUnreadable() throws IOException {
         file("PROJ-1.md", "---\nid: PROJ-1\n---\n\n# No status\n");
 
-        assertThat(unreadable()).singleElement().satisfies(unreadable -> assertThat(unreadable.reason())
+        assertThat(unreadable()).singleElement().satisfies(unreadable -> assertThat(unreadable.reason().value())
                 .contains("status"));
     }
 
@@ -179,14 +185,14 @@ class BacklogRepositoryTest {
         assertThat(read())
                 .extracting(BacklogEntry::file)
                 .as("file order decides which claim on an id the board keeps")
-                .containsExactly("PROJ-1-a.md", "PROJ-1-b.md");
+                .containsExactly(new FileName("PROJ-1-a.md"), new FileName("PROJ-1-b.md"));
     }
 
     @Test
     void shouldListANumericIdAsUnreadable() throws IOException {
         file("odd.md", "---\nid: 12\nstatus: todo\n---\n");
 
-        assertThat(unreadable()).singleElement().satisfies(unreadable -> assertThat(unreadable.reason())
+        assertThat(unreadable()).singleElement().satisfies(unreadable -> assertThat(unreadable.reason().value())
                 .contains("12"));
     }
 
@@ -196,8 +202,8 @@ class BacklogRepositoryTest {
                 .getBytes(StandardCharsets.ISO_8859_1));
 
         assertThat(unreadable()).singleElement().satisfies(unreadable -> {
-            assertThat(unreadable.file()).isEqualTo("PROJ-1.md");
-            assertThat(unreadable.reason()).contains("not valid UTF-8");
+            assertThat(unreadable.file()).isEqualTo(new FileName("PROJ-1.md"));
+            assertThat(unreadable.reason().value()).contains("not valid UTF-8");
         });
     }
 
@@ -215,7 +221,7 @@ class BacklogRepositoryTest {
         assertThat(tickets())
                 .extracting(Ticket::title)
                 .as("a byte-order mark is an encoding detail, not content")
-                .containsExactly("Marked");
+                .containsExactly(new Title("Marked"));
     }
 
     @Test
@@ -237,5 +243,34 @@ class BacklogRepositoryTest {
         assertThatThrownBy(this::read)
                 .isInstanceOf(BacklogNotFoundException.class)
                 .hasMessage("the main worktree has no %s".formatted(backlog));
+    }
+
+    @Test
+    void shouldReadAMissingContextAndTypeAsAbsent() throws IOException {
+        file("PROJ-1.md", "---\nid: PROJ-1\nstatus: draft\n---\n# Bare\n");
+
+        assertThat(tickets()).singleElement().satisfies(ticket -> {
+            assertThat(ticket.context()).isEqualTo(new NoContext());
+            assertThat(ticket.type()).isEqualTo(new NoType());
+        });
+    }
+
+    @Test
+    void shouldReadABlankContextAndTypeAsAbsent() throws IOException {
+        file("PROJ-1.md", "---\nid: PROJ-1\nstatus: draft\ncontext: ' '\ntype: ''\n---\n");
+
+        assertThat(tickets()).singleElement().satisfies(ticket -> {
+            assertThat(ticket.context()).isEqualTo(new NoContext());
+            assertThat(ticket.type()).isEqualTo(new NoType());
+        });
+    }
+
+    @Test
+    void shouldReadAnEmptyHeadingAsNoTitle() throws IOException {
+        file("PROJ-1.md", "---\nid: PROJ-1\nstatus: draft\n---\n# \n# Later\n");
+
+        assertThat(tickets()).singleElement().satisfies(ticket -> assertThat(ticket.title())
+                .as("the first heading is the title, even when it is empty")
+                .isEqualTo(new NoTitle()));
     }
 }

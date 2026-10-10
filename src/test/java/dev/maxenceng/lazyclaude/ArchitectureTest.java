@@ -1,13 +1,27 @@
 package dev.maxenceng.lazyclaude;
 
+import static com.tngtech.archunit.core.domain.JavaCall.Predicates.target;
+import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
+import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.nameMatching;
+import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaCodeUnitAccess;
+import com.tngtech.archunit.core.domain.JavaField;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.JavaPackage;
+import com.tngtech.archunit.core.domain.JavaParameterizedType;
+import com.tngtech.archunit.core.domain.JavaType;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -15,6 +29,8 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+
+import dev.maxenceng.lazyclaude.error.domain.DomainException;
 
 /*
  * The architecture, as rules that fail the build. Each direct subpackage of
@@ -138,6 +154,209 @@ class ArchitectureTest {
             .should()
             .haveSimpleNameEndingWith("Builder")
             .allowEmptyShould(true);
+
+    // An aggregate hands back the list it was built from; a copy in one type reads as a guarantee the others do not give.
+    @ArchTest
+    static final ArchRule domain_classes_do_not_copy_collections_defensively = noClasses()
+            .that()
+            .resideInAnyPackage("..domain..", "..published..")
+            .and()
+            .resideOutsideOfPackage(ROOT + ".error..")
+            .should()
+            .callMethodWhere(target(name("copyOf")).and(target(owner(nameMatching("java\\.util\\.(List|Set|Map)")))))
+            .allowEmptyShould(true);
+
+    // A raw value belongs in the value object that names it, not spread across the types that use it.
+    @ArchTest
+    static final ArchRule composite_domain_types_hold_value_objects = classes()
+            .that()
+            .resideInAnyPackage("..domain..", "..published..")
+            .and()
+            .resideOutsideOfPackage(ROOT + ".error..")
+            .and()
+            .areNotEnums()
+            .and()
+            .areNotAssignableTo(Throwable.class)
+            .and()
+            .haveSimpleNameNotEndingWith("Builder")
+            .should(holdOnlyDomainTypesWhenTheyHoldMoreThanOne())
+            .allowEmptyShould(true);
+
+    // With two fields or more, a builder names each argument; a reordered constructor call would compile and lie.
+    @ArchTest
+    static final ArchRule composite_domain_types_are_built_through_their_own_builder = classes()
+            .that()
+            .resideInAnyPackage("..domain..", "..published..")
+            .and()
+            .resideOutsideOfPackage(ROOT + ".error..")
+            .and()
+            .areNotEnums()
+            .and()
+            .areNotAssignableTo(Throwable.class)
+            .and()
+            .haveSimpleNameNotEndingWith("Builder")
+            .and()
+            .haveSimpleNameNotEndingWith("Manager")
+            .should(beBuiltOnlyByTheirOwnBuilderWhenTheyHoldMoreThanOne())
+            .allowEmptyShould(true);
+
+    // The start-up reports a DomainException's message; any other exception escapes as a stack trace.
+    @ArchTest
+    static final ArchRule business_failures_extend_domain_exception = classes()
+            .that()
+            .resideInAnyPackage("..domain..", "..published..")
+            .and()
+            .resideOutsideOfPackage(ROOT + ".error..")
+            .and()
+            .haveSimpleNameEndingWith("Exception")
+            .should()
+            .beAssignableTo(DomainException.class)
+            .allowEmptyShould(true);
+
+    // A domain object that can change after construction cannot hold an invariant.
+    @ArchTest
+    static final ArchRule domain_state_is_final = fields()
+            .that()
+            .areDeclaredInClassesThat()
+            .resideInAnyPackage("..domain..", "..published..")
+            .and()
+            .areDeclaredInClassesThat()
+            .haveSimpleNameNotEndingWith("Builder")
+            .should()
+            .beFinal()
+            .allowEmptyShould(true);
+
+    // Domain types say what they do; a setter says only that a field changes.
+    @ArchTest
+    static final ArchRule domain_types_expose_no_setters = noMethods()
+            .that()
+            .areDeclaredInClassesThat()
+            .resideInAnyPackage("..domain..", "..published..")
+            .should()
+            .haveNameMatching("set[A-Z].*")
+            .allowEmptyShould(true);
+
+    // A manager orders its rules and raises its own context's exceptions; asserting is second-guessing what it was handed.
+    @ArchTest
+    static final ArchRule managers_assert_nothing = noClasses()
+            .that()
+            .haveSimpleNameEndingWith("Manager")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage(ROOT + ".error..")
+            .allowEmptyShould(true);
+
+    // A port is held by the domain service that needs it, not by an adapter or a use case.
+    @ArchTest
+    static final ArchRule ports_are_held_only_by_the_domain = fields()
+            .that()
+            .haveRawType(nameMatching(".*Port"))
+            .should()
+            .beDeclaredInClassesThat()
+            .resideInAPackage("..domain..")
+            .allowEmptyShould(true);
+
+    // A manager wired into another is a second place deciding what that one's use case means.
+    @ArchTest
+    static final ArchRule managers_are_wired_with_ports_not_other_managers = classes()
+            .that()
+            .resideInAnyPackage("..domain..", "..published..")
+            .should(takeNoOtherManagerAsAConstructorParameter())
+            .allowEmptyShould(true);
+
+    // A list, a map and a pair are shapes rather than values; what they carry must still be a domain type.
+    private static final List<String> CARRIERS = List.of(List.class.getName(), Map.class.getName());
+    private static final String PAIR = "Pair";
+
+    private static List<JavaField> nonStaticFields(JavaClass type) {
+        return type.getAllFields().stream()
+                .filter(field -> !field.getModifiers().contains(JavaModifier.STATIC))
+                .toList();
+    }
+
+    private static ArchCondition<JavaClass> holdOnlyDomainTypesWhenTheyHoldMoreThanOne() {
+        return new ArchCondition<>("hold only domain types when they hold more than one") {
+            @Override
+            public void check(JavaClass owner, ConditionEvents events) {
+                List<JavaField> components = nonStaticFields(owner);
+                if (components.size() < 2) {
+                    return;
+                }
+                for (JavaField component : components) {
+                    JavaClass type = component.getRawType();
+                    if (CARRIERS.contains(type.getName()) || type.getSimpleName().equals(PAIR)) {
+                        carriedTypes(component)
+                                .filter(ArchitectureTest::isRawValue)
+                                .forEach(carried -> events.add(SimpleConditionEvent.violated(
+                                        component,
+                                        "%s holds %s<%s>; the carrier is fine, what it carries is a raw value"
+                                                .formatted(owner.getSimpleName(), type.getSimpleName(), carried.getSimpleName()))));
+                    } else if (isRawValue(type)) {
+                        events.add(SimpleConditionEvent.violated(
+                                component,
+                                "%s holds %s directly; wrap it in a value object"
+                                        .formatted(owner.getSimpleName(), type.getSimpleName())));
+                    }
+                }
+            }
+        };
+    }
+
+    private static Stream<JavaClass> carriedTypes(JavaField component) {
+        return component.getType() instanceof JavaParameterizedType parameterized
+                ? parameterized.getActualTypeArguments().stream().map(JavaType::toErasure)
+                : Stream.empty();
+    }
+
+    private static boolean isRawValue(JavaClass type) {
+        if (type.getName().equals(boolean.class.getName())) {
+            return false;
+        }
+        return type.isPrimitive() || type.getPackageName().startsWith("java.");
+    }
+
+    private static ArchCondition<JavaClass> beBuiltOnlyByTheirOwnBuilderWhenTheyHoldMoreThanOne() {
+        return new ArchCondition<>("be built only by their own builder when they hold more than one field") {
+            @Override
+            public void check(JavaClass type, ConditionEvents events) {
+                if (nonStaticFields(type).size() < 2) {
+                    return;
+                }
+                Stream.<JavaCodeUnitAccess<?>>concat(
+                                type.getConstructorCallsToSelf().stream(), type.getConstructorReferencesToSelf().stream())
+                        .filter(construction -> !isBuiltThroughItsBuilder(type, construction.getOriginOwner()))
+                        .forEach(construction -> events.add(SimpleConditionEvent.violated(
+                                construction,
+                                "%s constructs %s directly; build it through %sBuilder"
+                                        .formatted(
+                                                construction.getOriginOwner().getSimpleName(),
+                                                type.getSimpleName(),
+                                                type.getSimpleName()))));
+            }
+        };
+    }
+
+    private static boolean isBuiltThroughItsBuilder(JavaClass type, JavaClass origin) {
+        return origin.equals(type)
+                || origin.getSimpleName().equals(type.getSimpleName() + "Builder")
+                        && origin.getEnclosingClass().filter(type::equals).isPresent();
+    }
+
+    private static ArchCondition<JavaClass> takeNoOtherManagerAsAConstructorParameter() {
+        return new ArchCondition<>("take no other manager as a constructor parameter") {
+            @Override
+            public void check(JavaClass type, ConditionEvents events) {
+                type.getConstructors()
+                        .forEach(wiring -> wiring.getRawParameterTypes().stream()
+                                .filter(collaborator -> collaborator.getSimpleName().endsWith("Manager"))
+                                .filter(collaborator -> !collaborator.equals(type))
+                                .forEach(collaborator -> events.add(SimpleConditionEvent.violated(
+                                        wiring,
+                                        "%s is wired with %s; a manager depends on ports only"
+                                                .formatted(type.getSimpleName(), collaborator.getSimpleName())))));
+            }
+        };
+    }
 
     private static ArchCondition<JavaClass> beInAModuleThatDeclaresItsKind() {
         return new ArchCondition<>("be in a module whose package-info declares its kind") {

@@ -1,6 +1,6 @@
 package dev.maxenceng.lazyclaude;
 
-import dev.maxenceng.lazyclaude.board.published.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 
 /** Opens the shell on a board; a seam so the start-up can be tested without a terminal. */
 @FunctionalInterface

@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
+import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -9,6 +10,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.board.published.FileName;
+import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 class BoardManagerTest {
@@ -17,8 +21,11 @@ class BoardManagerTest {
     private static final WorkingDirectory FROM = new WorkingDirectory(Path.of("/work/app/src"));
 
     private static TicketFile ticket(String id, Status status) {
-        return new TicketFile(
-                id + ".md", Ticket.builder().id(new TicketId(id)).status(status).build());
+        return ticketFile(id + ".md", id, status);
+    }
+
+    private static UnreadableTicket unreadable(String file, String reason) {
+        return UnreadableTicket.builder().file(new FileName(file)).reason(new Reason(reason)).build();
     }
 
     private static Board board(BacklogEntry... entries) {
@@ -34,12 +41,10 @@ class BoardManagerTest {
     @Test
     void shouldReadTheBacklogOfTheProjectTheWorkingDirectoryBelongsTo() {
         List<Project> asked = new ArrayList<>();
-        BoardManager manager = new BoardManager(
-                from -> from.equals(FROM) ? PROJECT : null,
-                project -> {
-                    asked.add(project);
-                    return List.of();
-                });
+        BoardManager manager = new BoardManager(from -> from.equals(FROM) ? PROJECT : null, project -> {
+            asked.add(project);
+            return List.of();
+        });
 
         manager.boardFor(FROM);
 
@@ -73,21 +78,20 @@ class BoardManagerTest {
 
     @Test
     void shouldOrderUnreadableTicketsByFile() {
-        Board board = board(new UnreadableTicket("b.md", "broken"), new UnreadableTicket("a.md", "broken too"));
+        Board board = board(unreadable("b.md", "broken"), unreadable("a.md", "broken too"));
 
-        assertThat(board.unreadable()).extracting(UnreadableTicket::file).containsExactly("a.md", "b.md");
+        assertThat(board.unreadable())
+                .extracting(UnreadableTicket::file)
+                .containsExactly(new FileName("a.md"), new FileName("b.md"));
     }
 
     @Test
     void shouldListALaterFileClaimingAnIdAsUnreadable() {
-        TicketFile first = new TicketFile("PROJ-1-a.md", Ticket.builder().id(new TicketId("PROJ-1")).status(Status.TODO).build());
-        TicketFile second = new TicketFile("PROJ-1-b.md", Ticket.builder().id(new TicketId("PROJ-1")).status(Status.DONE).build());
-
-        Board board = board(first, second);
+        Board board = board(ticketFile("PROJ-1-a.md", "PROJ-1", Status.TODO), ticketFile("PROJ-1-b.md", "PROJ-1", Status.DONE));
 
         assertThat(ids(board, Status.TODO)).containsExactly("PROJ-1");
         assertThat(ids(board, Status.DONE)).as("one id is one ticket, so selection by id stays unambiguous").isEmpty();
-        assertThat(board.unreadable()).containsExactly(new UnreadableTicket("PROJ-1-b.md", "id PROJ-1 is already used"));
+        assertThat(board.unreadable()).containsExactly(unreadable("PROJ-1-b.md", "id PROJ-1 is already used"));
     }
 
     @Test

@@ -10,7 +10,30 @@ public record Board(List<StatusGroup> groups, List<UnreadableTicket> unreadable)
     public Board {
         Assert.notNull("groups", groups);
         Assert.notNull("unreadable", unreadable);
-        groups = List.copyOf(groups);
-        unreadable = List.copyOf(unreadable);
+    }
+
+    public static BoardBuilder builder() {
+        return new BoardBuilder();
+    }
+
+    public static final class BoardBuilder {
+        private List<StatusGroup> groups;
+        private List<UnreadableTicket> unreadable;
+
+        private BoardBuilder() {}
+
+        public BoardBuilder groups(List<StatusGroup> groups) {
+            this.groups = groups;
+            return this;
+        }
+
+        public BoardBuilder unreadable(List<UnreadableTicket> unreadable) {
+            this.unreadable = unreadable;
+            return this;
+        }
+
+        public Board build() {
+            return new Board(groups, unreadable);
+        }
     }
 }

@@ -68,7 +68,10 @@ an ADR.
 - Wiring is constructor injection, done by hand in `LazyClaude.main`. No service locator, no
   static singletons.
 - Roles are named alike in every context (ADR 0011): `*ApplicationService` → domain `*Manager`
-  → `*Port`, implemented by a `*Repository`; the shell's entry is a primary `*Controller`.
+  → `*Port`, implemented by a `*Repository`; the shell asks through a primary `*Query` (reads)
+  or `*Command` (writes), with a `*Payload` in and a `*View` out (ADR 0012).
+- A value a file may lack is a sealed value object with an explicit absent shape (`Title | NoTitle`),
+  never `null` or a stand-in.
 - A domain failure is a `DomainException`; an input check goes through `Assert`.
 - A screen is tested by rendering it into a buffer (`Screen` in the shell's tests) and
   asserting on its text, not by driving a real terminal.

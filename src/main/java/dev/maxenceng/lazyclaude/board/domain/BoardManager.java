@@ -7,6 +7,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
@@ -32,22 +35,30 @@ public record BoardManager(ProjectLocatorPort locator, BacklogPort backlog) {
                 case TicketFile read -> tickets.add(read.ticket());
             }
         }
-        unreadable.sort(Comparator.comparing(UnreadableTicket::file));
-        return new Board(groups(tickets), unreadable);
+        return Board.builder()
+                .groups(groups(tickets))
+                .unreadable(unreadable.stream()
+                        .sorted(Comparator.comparing(UnreadableTicket::file))
+                        .toList())
+                .build();
     }
 
     private static UnreadableTicket alreadyClaimed(TicketFile read) {
-        return new UnreadableTicket(read.file(), "id %s is already used".formatted(read.ticket().id().value()));
+        return UnreadableTicket.builder()
+                .file(read.file())
+                .reason(new Reason("id %s is already used".formatted(read.ticket().id().value())))
+                .build();
     }
 
     private static List<StatusGroup> groups(List<Ticket> tickets) {
         return Arrays.stream(Status.values())
-                .map(status -> new StatusGroup(
-                        status,
-                        tickets.stream()
+                .map(status -> StatusGroup.builder()
+                        .status(status)
+                        .tickets(tickets.stream()
                                 .filter(ticket -> ticket.status() == status)
                                 .sorted(Comparator.comparing(Ticket::id))
-                                .toList()))
+                                .toList())
+                        .build())
                 .toList();
     }
 }

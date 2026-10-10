@@ -18,10 +18,10 @@ import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.ProjectLocatorPort;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardController;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.ProjectLocatorRepository;
-import dev.maxenceng.lazyclaude.board.published.BoardView;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 class LazyClaudeTest {
@@ -29,11 +29,11 @@ class LazyClaudeTest {
     private final ByteArrayOutputStream err = new ByteArrayOutputStream();
     private final List<BoardView> opened = new ArrayList<>();
 
-    private static BoardController board(ProjectLocatorPort locator, BacklogPort backlog) {
-        return new BoardController(new BoardApplicationService(locator, backlog));
+    private static BoardQuery board(ProjectLocatorPort locator, BacklogPort backlog) {
+        return new BoardQuery(new BoardApplicationService(locator, backlog));
     }
 
-    private int start(Path from, BoardController board) throws Exception {
+    private int start(Path from, BoardQuery board) throws Exception {
         return LazyClaude.start(from, board, new PrintStream(err, true, StandardCharsets.UTF_8), opened::add);
     }
 

@@ -5,63 +5,59 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.board.published.NoContext;
+import dev.maxenceng.lazyclaude.board.published.NoTitle;
+import dev.maxenceng.lazyclaude.board.published.NoType;
+import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.error.domain.MissingMandatoryValueException;
 
 class TicketTest {
 
-    @Test
-    void shouldCarryWhatItWasBuiltWith() {
-        Ticket ticket = Ticket.builder()
+    private static Ticket.TicketBuilder bare() {
+        return Ticket.builder()
                 .id(new TicketId("PROJ-1"))
-                .title("A board")
-                .status(Status.TODO)
-                .context("board")
-                .type("feature")
-                .build();
-
-        assertThat(ticket.title()).isEqualTo("A board");
-        assertThat(ticket.status()).isEqualTo(Status.TODO);
-        assertThat(ticket.context()).isEqualTo("board");
-        assertThat(ticket.type()).isEqualTo("feature");
-    }
-
-    @Test
-    void shouldShowItsIdAsTitleWhenItHasNone() {
-        Ticket ticket = Ticket.builder()
-                .id(new TicketId("PROJ-1"))
+                .title(new NoTitle())
                 .status(Status.DRAFT)
-                .build();
-
-        assertThat(ticket.title()).as("a ticket without a heading is still a ticket").isEqualTo("PROJ-1");
+                .context(new NoContext())
+                .type(new NoType());
     }
 
     @Test
-    void shouldShowItsIdAsTitleWhenTheTitleIsBlank() {
-        Ticket ticket = Ticket.builder()
-                .id(new TicketId("PROJ-1"))
-                .title("  ")
-                .status(Status.DRAFT)
-                .build();
+    void shouldKeepAnAbsentTitleContextAndTypeAsAbsent() {
+        Ticket ticket = bare().build();
 
-        assertThat(ticket.title()).isEqualTo("PROJ-1");
-    }
-
-    @Test
-    void shouldHaveEmptyContextAndTypeWhenFrontmatterLacksThem() {
-        Ticket ticket = Ticket.builder().id(new TicketId("PROJ-1")).status(Status.DRAFT).build();
-
-        assertThat(ticket.context()).isEmpty();
-        assertThat(ticket.type()).isEmpty();
+        assertThat(ticket.title()).as("the domain no longer stands the id in for a missing title").isEqualTo(new NoTitle());
+        assertThat(ticket.context()).isEqualTo(new NoContext());
+        assertThat(ticket.type()).isEqualTo(new NoType());
     }
 
     @Test
     void shouldRefuseATicketWithoutAnId() {
-        assertThatThrownBy(() -> Ticket.builder().status(Status.DRAFT).build()).isInstanceOf(MissingMandatoryValueException.class);
+        assertThatThrownBy(() -> bare().id(null).build())
+                .isInstanceOf(MissingMandatoryValueException.class)
+                .hasMessageContaining("id");
     }
 
     @Test
     void shouldRefuseATicketWithoutAStatus() {
-        assertThatThrownBy(() -> Ticket.builder().id(new TicketId("PROJ-1")).build())
+        assertThatThrownBy(() -> bare().status(null).build()).isInstanceOf(MissingMandatoryValueException.class);
+    }
+
+    @Test
+    void shouldRefuseATicketWhoseTitleIsNullRatherThanAbsent() {
+        assertThatThrownBy(() -> bare().title(null).build())
+                .as("absence is NoTitle, never null")
                 .isInstanceOf(MissingMandatoryValueException.class);
+    }
+
+    @Test
+    void shouldRefuseATicketWhoseContextIsNullRatherThanAbsent() {
+        assertThatThrownBy(() -> bare().context(null).build()).isInstanceOf(MissingMandatoryValueException.class);
+    }
+
+    @Test
+    void shouldRefuseATicketWhoseTypeIsNullRatherThanAbsent() {
+        assertThatThrownBy(() -> bare().type(null).build()).isInstanceOf(MissingMandatoryValueException.class);
     }
 }

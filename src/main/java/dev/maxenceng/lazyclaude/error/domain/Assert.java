@@ -16,6 +16,13 @@ public final class Assert {
         }
     }
 
+    public static void notBlank(String field, String input) {
+        notNull(field, input);
+        if (input.isBlank()) {
+            throw new BlankValueException(field);
+        }
+    }
+
     /** {@code shape} says in words what {@code pattern} accepts, for a message a person reads. */
     public static void matchesPattern(String field, String input, Pattern pattern, String shape) {
         notNull(field, input);

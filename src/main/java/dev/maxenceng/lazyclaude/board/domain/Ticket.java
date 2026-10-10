@@ -1,52 +1,57 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
+import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.TicketContext;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
+import dev.maxenceng.lazyclaude.board.published.TicketTitle;
+import dev.maxenceng.lazyclaude.board.published.TicketType;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** One backlog ticket as the board shows it. */
-public record Ticket(TicketId id, String title, Status status, String context, String type) {
+/** One backlog ticket as the board shows it; a field the file lacks is an explicit absence, never a stand-in. */
+public record Ticket(TicketId id, TicketTitle title, Status status, TicketContext context, TicketType type) {
 
     public Ticket {
         Assert.notNull("id", id);
+        Assert.notNull("title", title);
         Assert.notNull("status", status);
-        title = title == null || title.isBlank() ? id.value() : title.strip();
-        context = context == null ? "" : context;
-        type = type == null ? "" : type;
+        Assert.notNull("context", context);
+        Assert.notNull("type", type);
     }
 
-    public static Builder builder() {
-        return new Builder();
+    public static TicketBuilder builder() {
+        return new TicketBuilder();
     }
 
-    public static final class Builder {
+    public static final class TicketBuilder {
         private TicketId id;
-        private String title;
+        private TicketTitle title;
         private Status status;
-        private String context;
-        private String type;
+        private TicketContext context;
+        private TicketType type;
 
-        private Builder() {}
+        private TicketBuilder() {}
 
-        public Builder id(TicketId id) {
+        public TicketBuilder id(TicketId id) {
             this.id = id;
             return this;
         }
 
-        public Builder title(String title) {
+        public TicketBuilder title(TicketTitle title) {
             this.title = title;
             return this;
         }
 
-        public Builder status(Status status) {
+        public TicketBuilder status(Status status) {
             this.status = status;
             return this;
         }
 
-        public Builder context(String context) {
+        public TicketBuilder context(TicketContext context) {
             this.context = context;
             return this;
         }
 
-        public Builder type(String type) {
+        public TicketBuilder type(TicketType type) {
             this.type = type;
             return this;
         }

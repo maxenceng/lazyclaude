@@ -7,24 +7,23 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import org.snakeyaml.engine.v2.api.Load;
-import org.snakeyaml.engine.v2.api.LoadSettings;
 import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
 import dev.maxenceng.lazyclaude.board.domain.BacklogNotFoundException;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
-import dev.maxenceng.lazyclaude.board.domain.Status;
-import dev.maxenceng.lazyclaude.board.domain.Ticket;
 import dev.maxenceng.lazyclaude.board.domain.TicketFile;
-import dev.maxenceng.lazyclaude.board.domain.TicketId;
 import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
+import dev.maxenceng.lazyclaude.board.published.FileName;
+import dev.maxenceng.lazyclaude.board.published.NoTitle;
+import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.board.published.TicketTitle;
+import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
@@ -42,16 +41,14 @@ public final class BacklogRepository implements BacklogPort {
     private static final List<String> CODE_FENCES = List.of("```", "~~~");
     private static final String BYTE_ORDER_MARK = "﻿";
     private static final Pattern ID_LINE = Pattern.compile("(?m)^id:[ \\t]*\\S");
-    private static final String ID = "id";
-    private static final String STATUS = "status";
-    private static final String CONTEXT = "context";
-    private static final String TYPE = "type";
     private static final String NO_DETAIL = "unreadable";
+
+    private final TicketFrontmatterMapper frontmatterMapper = new TicketFrontmatterMapper();
 
     @Override
     public List<BacklogEntry> entries(Project project) {
         return markdownFiles(project.root().resolve(BACKLOG)).stream()
-                .map(BacklogRepository::entry)
+                .map(this::entry)
                 .flatMap(Optional::stream)
                 .toList();
     }
@@ -71,8 +68,8 @@ public final class BacklogRepository implements BacklogPort {
         }
     }
 
-    private static Optional<BacklogEntry> entry(Path file) {
-        String name = name(file);
+    private Optional<BacklogEntry> entry(Path file) {
+        FileName name = new FileName(name(file));
         byte[] bytes;
         try {
             bytes = Files.readAllBytes(file);
@@ -94,47 +91,37 @@ public final class BacklogRepository implements BacklogPort {
         if (closing < 0) {
             return refusedIfClaimed(name, frontmatter, "frontmatter has no closing %s".formatted(FENCE));
         }
-        Map<?, ?> fields;
+        TicketFrontmatter fields;
         try {
-            fields = new Load(LoadSettings.builder().build()).loadFromString(frontmatter) instanceof Map<?, ?> loaded
-                    ? loaded
-                    : Map.of();
+            fields = frontmatterMapper.read(frontmatter);
         } catch (YamlEngineException e) {
             return refusedIfClaimed(
                     name, frontmatter, "frontmatter is not valid YAML: %s".formatted(firstLine(e.getMessage())));
         }
-        if (fields.get(ID) == null) {
+        if (!fields.claimsATicket()) {
             return Optional.empty();
         }
-        return Optional.of(ticket(name, fields, lines.subList(closing + 1, lines.size())));
+        return Optional.of(entry(name, fields, title(lines.subList(closing + 1, lines.size()))));
     }
 
-    private static BacklogEntry ticket(String name, Map<?, ?> fields, List<String> body) {
-        Object status = fields.get(STATUS);
-        if (status == null) {
-            return new UnreadableTicket(name, "status is missing");
-        }
+    private static BacklogEntry entry(FileName name, TicketFrontmatter fields, TicketTitle title) {
         try {
-            return new TicketFile(
-                    name,
-                    Ticket.builder()
-                            .id(new TicketId(String.valueOf(fields.get(ID))))
-                            .title(title(body).orElse(null))
-                            .status(Status.parse(String.valueOf(status)))
-                            .context(text(fields.get(CONTEXT)))
-                            .type(text(fields.get(TYPE)))
-                            .build());
+            return TicketFile.builder().file(name).ticket(fields.toDomain(title)).build();
         } catch (DomainException e) {
-            return new UnreadableTicket(name, e.getMessage());
+            return unreadable(name, e.getMessage());
         }
     }
 
-    private static Optional<BacklogEntry> refused(String name, String reason) {
-        return Optional.of(new UnreadableTicket(name, reason));
+    private static Optional<BacklogEntry> refused(FileName name, String reason) {
+        return Optional.of(unreadable(name, reason));
+    }
+
+    private static UnreadableTicket unreadable(FileName name, String reason) {
+        return UnreadableTicket.builder().file(name).reason(new Reason(reason)).build();
     }
 
     /** Frontmatter that cannot be parsed is only an entry when a line of it still claims an `id`. */
-    private static Optional<BacklogEntry> refusedIfClaimed(String name, String frontmatter, String reason) {
+    private static Optional<BacklogEntry> refusedIfClaimed(FileName name, String frontmatter, String reason) {
         return ID_LINE.matcher(frontmatter).find() ? refused(name, reason) : Optional.empty();
     }
 
@@ -160,20 +147,17 @@ public final class BacklogRepository implements BacklogPort {
         return -1;
     }
 
-    private static Optional<String> title(List<String> body) {
+    private static TicketTitle title(List<String> body) {
         boolean inCode = false;
         for (String line : body) {
             if (CODE_FENCES.stream().anyMatch(line::startsWith)) {
                 inCode = !inCode;
             } else if (!inCode && line.startsWith(TITLE_PREFIX)) {
-                return Optional.of(line.substring(TITLE_PREFIX.length()));
+                String heading = line.substring(TITLE_PREFIX.length()).strip();
+                return heading.isEmpty() ? new NoTitle() : new Title(heading);
             }
         }
-        return Optional.empty();
-    }
-
-    private static String text(Object value) {
-        return value == null ? "" : String.valueOf(value);
+        return new NoTitle();
     }
 
     private static String firstLine(String message) {

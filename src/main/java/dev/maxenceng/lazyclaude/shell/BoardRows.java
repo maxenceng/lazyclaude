@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import dev.maxenceng.lazyclaude.board.published.BoardView;
-import dev.maxenceng.lazyclaude.board.published.StatusGroupView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
 
 /** The Board panel's rows and the two things the shell remembers about them: the selection and the folded groups. */
 final class BoardRows {
@@ -23,16 +23,16 @@ final class BoardRows {
     BoardRows(BoardView board) {
         this.board = board;
         board.groups().stream()
-                .filter(StatusGroupView::finished)
-                .forEach(group -> folded.add(groupKey(group.status())));
+                .filter(group -> group.status().finished())
+                .forEach(group -> folded.add(groupKey(group.status().label())));
         this.selected = visible().getFirst().key();
     }
 
     List<Row> visible() {
         List<Row> rows = new ArrayList<>();
         for (StatusGroupView group : board.groups()) {
-            boolean isFolded = folded.contains(groupKey(group.status()));
-            rows.add(new HeaderRow(group.status(), group.tickets().size(), isFolded));
+            boolean isFolded = folded.contains(groupKey(group.status().label()));
+            rows.add(new HeaderRow(group.status().label(), group.tickets().size(), isFolded));
             if (!isFolded) {
                 group.tickets().forEach(ticket -> rows.add(new TicketRow(ticket)));
             }
@@ -88,7 +88,7 @@ final class BoardRows {
                 return index;
             }
         }
-        throw new IllegalStateException("the selected row %s is not visible".formatted(selected));
+        throw new SelectedRowNotVisibleException(selected);
     }
 
     private static RowKey groupKey(String group) {

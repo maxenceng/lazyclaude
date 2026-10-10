@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.board.domain;
+package dev.maxenceng.lazyclaude.board.published;
 
 import java.util.Arrays;
 

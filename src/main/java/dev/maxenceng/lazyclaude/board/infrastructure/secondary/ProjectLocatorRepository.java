@@ -14,6 +14,12 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 public final class ProjectLocatorRepository implements ProjectLocatorPort {
 
     private static final String GIT_DIRECTORY = ".git";
+    private static final String GIT = "git";
+    private static final String IN_DIRECTORY = "-C";
+    private static final String REV_PARSE = "rev-parse";
+    private static final String ABSOLUTE_PATHS = "--path-format=absolute";
+    private static final String COMMON_DIR = "--git-common-dir";
+    private static final int SUCCESS = 0;
 
     @Override
     public Project locate(WorkingDirectory from) {
@@ -35,12 +41,11 @@ public final class ProjectLocatorRepository implements ProjectLocatorPort {
 
     private static Path commonDir(Path start) {
         try {
-            Process process = new ProcessBuilder(
-                            "git", "-C", start.toString(), "rev-parse", "--path-format=absolute", "--git-common-dir")
+            Process process = new ProcessBuilder(GIT, IN_DIRECTORY, start.toString(), REV_PARSE, ABSOLUTE_PATHS, COMMON_DIR)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start();
             String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).strip();
-            if (process.waitFor() != 0) {
+            if (process.waitFor() != SUCCESS) {
                 throw new ProjectNotFoundException("%s is not inside a git repository".formatted(start));
             }
             return Path.of(output);

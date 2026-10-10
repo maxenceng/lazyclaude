@@ -8,8 +8,8 @@ import static dev.tamboui.toolkit.Toolkit.text;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.maxenceng.lazyclaude.board.published.BoardView;
-import dev.maxenceng.lazyclaude.board.published.TicketView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.element.Element;
@@ -51,9 +51,6 @@ public final class Shell extends ToolkitApp {
     private static final String QUIT_KEY = "q quit";
     private static final String KEY_BAR_INDENT = " ";
     private static final String KEY_SEPARATOR = "  ";
-
-    private static final String STATUS_PREFIX = "status ";
-    private static final String DETAIL_SEPARATOR = " · ";
 
     private final BoardRows board;
     private Focus focus = Focus.BOARD;
@@ -189,20 +186,13 @@ public final class Shell extends ToolkitApp {
             case HeaderRow header -> new Element[0];
             case TicketRow row -> ticketDetail(row.ticket());
             case UnreadableRow row ->
-                new Element[] {text(row.unreadable().file()).bold(), text(row.unreadable().reason())};
+                new Element[] {text(row.unreadable().file().value()).bold(), text(row.unreadable().reason().value())};
         };
     }
 
     private static Element[] ticketDetail(TicketView ticket) {
-        List<String> facts = new ArrayList<>(List.of(STATUS_PREFIX + ticket.status()));
-        if (!ticket.context().isBlank()) {
-            facts.add(ticket.context());
-        }
-        if (!ticket.type().isBlank()) {
-            facts.add(ticket.type());
-        }
         return new Element[] {
-            text(ticket.id()).bold(), text(ticket.title()), text(String.join(DETAIL_SEPARATOR, facts))
+            text(ticket.id().value()).bold(), text(TicketText.title(ticket)), text(TicketText.facts(ticket))
         };
     }
 

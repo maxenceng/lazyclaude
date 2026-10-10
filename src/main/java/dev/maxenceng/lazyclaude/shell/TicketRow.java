@@ -1,17 +1,17 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import dev.maxenceng.lazyclaude.board.published.TicketView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 
 /** A ticket under its status's header: id, then title. */
 record TicketRow(TicketView ticket) implements Row {
 
     @Override
     public RowKey key() {
-        return new RowKey(RowKind.TICKET, ticket.id());
+        return new RowKey(RowKind.TICKET, ticket.id().value());
     }
 
     @Override
     public String text() {
-        return "%s%s %s".formatted(INDENT, ticket.id(), ticket.title());
+        return "%s%s %s".formatted(INDENT, ticket.id().value(), TicketText.title(ticket));
     }
 }

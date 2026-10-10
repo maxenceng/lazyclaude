@@ -49,4 +49,21 @@ class AssertTest {
                 .extracting(e -> ((DomainException) e).status())
                 .isEqualTo(DomainErrorStatus.INVALID);
     }
+
+    @Test
+    void shouldRefuseABlankValueNamingItsField() {
+        assertThatThrownBy(() -> Assert.notBlank("title", "  "))
+                .isInstanceOf(BlankValueException.class)
+                .hasMessage("title is blank");
+    }
+
+    @Test
+    void shouldRefuseANullValueBeforeCheckingItIsBlank() {
+        assertThatThrownBy(() -> Assert.notBlank("title", null)).isInstanceOf(MissingMandatoryValueException.class);
+    }
+
+    @Test
+    void shouldAcceptAValueWithText() {
+        assertThatCode(() -> Assert.notBlank("title", "A board")).doesNotThrowAnyException();
+    }
 }

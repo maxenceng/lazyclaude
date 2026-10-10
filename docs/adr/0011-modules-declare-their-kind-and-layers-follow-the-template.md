@@ -4,7 +4,7 @@ Date: 2026-10-10
 
 ## Status
 
-Accepted. Extends ADR 0010.
+Accepted. Extends ADR 0010. The primary-adapter naming and what `published` holds are amended by ADR 0012.
 
 ## Context
 

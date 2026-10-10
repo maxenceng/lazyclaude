@@ -20,7 +20,7 @@ Not contexts:
 
 | Package | Role |
 |---|---|
-| `shell` | The TamboUI application. Asks each context through its `infrastructure.primary` adapter and reads its `published` views (ADR 0011), composing them into screens and keys, and joins them: a ticket's marker is the strongest state among its linked sessions. |
+| `shell` | The TamboUI application. Asks each context through the `*Query` in its `infrastructure.primary`, which answers `*View`s made of the context's `published` value objects (ADR 0011, ADR 0012), composing them into screens and keys, and joins them: a ticket's marker is the strongest state among its linked sessions. |
 | `shared` | Shared kernel. Its first type is `Project` (in `shared.domain`, ADR 0010), the main worktree's root that `board`, `session` and `review` all work in. |
 | `error` | Error kernel: `DomainException`, its status, and `Assert` (in `error.domain`, ADR 0011). |
 
