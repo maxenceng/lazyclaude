@@ -5,13 +5,13 @@ verified by `ArchitectureTest`, so this document describes intent while the test
 
 ## Contexts
 
-None exists in code yet. Each becomes real — package, glossary section and all — in the
-change that implements the first ticket refined into it. Their words are already in
+`board` exists in code. The others become real — package, glossary section and all — in the
+change that implements the first ticket refined into them. Their words are already in
 `docs/glossary.md`, marked *expected*.
 
 | Context | Responsibility | Status |
 |---|---|---|
-| `board` | A project's backlog: its tickets, their status read from each ticket branch's copy, and the verbs `/ticket` allows for that status. Read-only. | expected |
+| `board` | A project's backlog: its tickets, their status read from each ticket branch's copy, and the verbs `/ticket` allows for that status. Read-only. Today it reads each ticket from the project's working tree; branch copies and verbs come later. | in code |
 | `session` | Claude Code sessions: which exist and their state (busy, your turn, waiting), linking them to tickets, the preselected verb, ticket worktrees, hosting sessions on a pty, desktop notifications. | expected |
 | `review` | A ticket's pull request: its diff and threads, your pending review on GitHub, submitting it, and whether it is merged. | expected |
 | `docs` | The project's `docs/**/*.md` outside `docs/backlog/`, as a tree of documents, read-only. | expected |
@@ -21,7 +21,7 @@ Not contexts:
 | Package | Role |
 |---|---|
 | `shell` | The TamboUI application. Composes contexts' application services into screens and keys, and joins them: a ticket's marker is the strongest state among its linked sessions. |
-| `shared` | Shared kernel. Its first type is `Project`, the main worktree's root that `board`, `session` and `review` all work in. |
+| `shared` | Shared kernel. Its first type is `Project` (in `shared.domain`, ADR 0010), the main worktree's root that `board`, `session` and `review` all work in. |
 
 ## Relationships
 

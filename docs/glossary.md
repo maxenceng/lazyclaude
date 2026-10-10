@@ -15,16 +15,18 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Project | The root of a git repository's main worktree. lazyclaude runs in one; sessions group under the one their `cwd` belongs to, so a ticket worktree's sessions sit under its project. A `cwd` outside git is its own project. | `shared` (expected) |
+| Project | The root of a git repository's main worktree. lazyclaude runs in one; sessions group under the one their `cwd` belongs to, so a ticket worktree's sessions sit under its project. A `cwd` outside git is its own project. | `shared` |
 
 ## board
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Ticket | One `docs/backlog/*.md` file: frontmatter plus body. | `board` (expected) |
+| Ticket | One `docs/backlog/*.md` file: frontmatter plus body. | `board` |
+| Board | A project's tickets grouped by status, as the Board panel shows them. | `board` |
+| Unreadable ticket | A backlog file with an `id` whose frontmatter or status is refused, or whose `id` another file already claims; listed with its reason, never dropped silently. | `board` |
 | Ticket branch | The branch `<id>-<slug>` a ticket's work happens on, named from the ticket. | `board` (expected) |
 | Branch copy | The ticket's file as its ticket branch has it: the ticket worktree's file, whatever branch the worktree is on, else `git show <branch>:<file>` while the branch's pull request is not merged. | `board` (expected) |
-| Status | A ticket's `status`, read from its branch copy whenever there is one, and from the root checkout otherwise: no ticket branch, or a ticket branch whose pull request is merged and no ticket worktree. There is no separate root status. | `board` (expected) |
+| Status | A ticket's `status`, read from its branch copy whenever there is one, and from the root checkout otherwise: no ticket branch, or a ticket branch whose pull request is merged and no ticket worktree. There is no separate root status. | `board` |
 | Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` (expected) |
 
 ## session

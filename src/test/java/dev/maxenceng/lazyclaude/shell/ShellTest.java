@@ -2,21 +2,449 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
+
+import dev.maxenceng.lazyclaude.board.domain.Board;
+import dev.maxenceng.lazyclaude.board.domain.Status;
+import dev.maxenceng.lazyclaude.board.domain.Ticket;
+import dev.maxenceng.lazyclaude.board.domain.TicketId;
+import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
+import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.KeyModifiers;
 
 class ShellTest {
 
-    @Test
-    void shouldTitleTheScreenWithTheAppName() {
-        Screen screen = Screen.of(new Shell().render(), 60, 8);
+    private static final int WIDTH = 80;
+    private static final int HEIGHT = 24;
 
-        assertThat(screen.text()).contains(Shell.TITLE);
+    private static Ticket ticket(String id, Status status, String title) {
+        return Ticket.builder()
+                .id(TicketId.of(id))
+                .title(title)
+                .status(status)
+                .context("board")
+                .type("feature")
+                .build();
+    }
+
+    private static Shell shellOn(Board board) {
+        return new Shell(board);
+    }
+
+    private static Shell shellOn(Ticket... tickets) {
+        return shellOn(Board.of(List.of(tickets), List.of()));
+    }
+
+    private static KeyEvent key(char c) {
+        return KeyEvent.ofChar(c);
+    }
+
+    private static KeyEvent alt(char c) {
+        return KeyEvent.ofChar(c, KeyModifiers.ALT);
+    }
+
+    private static Screen screen(Shell shell) {
+        return Screen.of(shell.render(), WIDTH, HEIGHT);
+    }
+
+    private static List<String> boardPanelLines(Screen screen) {
+        List<String> found = new ArrayList<>();
+        for (String line : screen.lines()) {
+            int bar = line.indexOf('│');
+            if (bar >= 0 && line.indexOf('│', bar + 1) >= 0) {
+                found.add(line.substring(bar + 1, line.indexOf('│', bar + 1)).stripTrailing());
+            }
+        }
+        return found;
     }
 
     @Test
-    void shouldTellTheUserHowToQuit() {
-        Screen screen = Screen.of(new Shell().render(), 60, 8);
+    void shouldGroupTicketsByStatusInLifecycleOrderWithCounts() {
+        Shell shell = shellOn(
+                ticket("A-1", Status.DONE, "Old"),
+                ticket("A-2", Status.IN_REVIEW, "Review"),
+                ticket("A-3", Status.TODO, "Todo"),
+                ticket("A-4", Status.DRAFT, "Draft one"),
+                ticket("A-5", Status.DRAFT, "Draft two"),
+                ticket("A-6", Status.IN_PROGRESS, "Working"));
 
-        assertThat(screen.text()).as("a TUI with no visible way out traps whoever opened it").contains("q quit");
+        String board = String.join("\n", boardPanelLines(screen(shell)));
+
+        assertThat(board)
+                .containsSubsequence(
+                        "▾ draft (2)", "A-4", "A-5", "▾ todo (1)", "A-3", "▾ in-progress (1)", "A-6", "▾ in-review (1)",
+                        "A-2", "▸ done (1)");
+    }
+
+    @Test
+    void shouldShowAnEmptyGroupAtZero() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Only"));
+
+        assertThat(screen(shell).text()).contains("▾ todo (0)", "▾ in-progress (0)", "▾ in-review (0)", "▸ done (0)");
+    }
+
+    @Test
+    void shouldOrderTicketsWithinAGroupNumerically() {
+        Shell shell = shellOn(ticket("PROJ-10", Status.DRAFT, "Ten"), ticket("PROJ-2", Status.DRAFT, "Two"));
+
+        assertThat(String.join("\n", boardPanelLines(screen(shell)))).containsSubsequence("PROJ-2", "PROJ-10");
+    }
+
+    @Test
+    void shouldStartWithDoneFolded() {
+        Shell shell = shellOn(ticket("A-1", Status.DONE, "Shipped"));
+
+        assertThat(screen(shell).text()).contains("▸ done (1)").doesNotContain("A-1");
+    }
+
+    @Test
+    void shouldUnfoldDoneWithEnterOnItsHeader() {
+        Shell shell = shellOn(ticket("A-1", Status.DONE, "Shipped"));
+        for (int i = 0; i < 4; i++) {
+            shell.press(key('j'));
+        }
+
+        shell.press(KeyEvent.ofKey(KeyCode.ENTER));
+
+        assertThat(screen(shell).text()).contains("▾ done (1)", "A-1");
+    }
+
+    @Test
+    void shouldFoldAnOpenGroupWithEnterOnItsHeader() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+
+        shell.press(KeyEvent.ofKey(KeyCode.ENTER));
+
+        assertThat(screen(shell).text()).contains("▸ draft (1)").doesNotContain("A-1");
+    }
+
+    @Test
+    void shouldFoldAGroupThatIsEmpty() {
+        Shell shell = shellOn();
+        shell.press(key('j'));
+
+        shell.press(KeyEvent.ofKey(KeyCode.ENTER));
+
+        assertThat(screen(shell).text()).contains("▸ todo (0)");
+    }
+
+    @Test
+    void shouldLeaveATicketRowAloneOnEnter() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+        shell.press(key('j'));
+
+        shell.press(KeyEvent.ofKey(KeyCode.ENTER));
+
+        assertThat(screen(shell).text()).contains("▾ draft (1)", "A-1");
+    }
+
+    @Test
+    void shouldListUnreadableTicketsLastWithTheirReason() {
+        Board board = Board.of(
+                List.of(ticket("A-1", Status.DRAFT, "Fine")),
+                List.of(new UnreadableTicket("A-2.md", "bad")));
+
+        String boardText = String.join("\n", boardPanelLines(screen(shellOn(board))));
+
+        assertThat(boardText).containsSubsequence("▸ done (0)", "▾ unreadable (1)", "A-2.md — bad");
+    }
+
+    @Test
+    void shouldHideTheUnreadableGroupWhenNothingIsUnreadable() {
+        assertThat(screen(shellOn()).text()).doesNotContain("unreadable");
+    }
+
+    @Test
+    void shouldShowATicketWithoutATitleUnderItsId() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, null));
+
+        assertThat(String.join("\n", boardPanelLines(screen(shell)))).contains("A-1 A-1");
+    }
+
+    @Test
+    void shouldMoveTheSelectionDownWithJ() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"), ticket("A-2", Status.DRAFT, "Plan"));
+
+        shell.press(key('j'));
+        shell.press(key('j'));
+
+        assertThat(screen(shell).reversedText()).singleElement().asString().contains("A-2");
+    }
+
+    @Test
+    void shouldMoveTheSelectionUpWithK() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"), ticket("A-2", Status.DRAFT, "Plan"));
+        shell.press(key('j'));
+        shell.press(key('j'));
+
+        shell.press(key('k'));
+
+        assertThat(screen(shell).reversedText()).singleElement().asString().contains("A-1");
+    }
+
+    @Test
+    void shouldStayOnTheFirstRowWhenKIsPressedThere() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+
+        shell.press(key('k'));
+
+        assertThat(screen(shell).reversedText()).singleElement().asString().contains("draft (1)");
+    }
+
+    @Test
+    void shouldStayOnTheLastRowWhenJIsPressedThere() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+        for (int i = 0; i < 20; i++) {
+            shell.press(key('j'));
+        }
+
+        assertThat(screen(shell).reversedText()).singleElement().asString().contains("done (0)");
+    }
+
+    @Test
+    void shouldKeepTheSelectionVisibleWhenTheBoardIsLongerThanThePanel() {
+        List<Ticket> tickets = new ArrayList<>();
+        for (int i = 1; i <= 40; i++) {
+            tickets.add(ticket("A-" + i, Status.DRAFT, "Ticket " + i));
+        }
+        Shell shell = shellOn(Board.of(tickets, List.of()));
+
+        for (int i = 0; i < 30; i++) {
+            shell.press(key('j'));
+        }
+
+        assertThat(screen(shell).reversedText()).singleElement().asString().contains("A-30");
+    }
+
+    @Test
+    void shouldShowTheSelectedTicketInTheMainView() {
+        Shell shell = shellOn(ticket("A-1", Status.IN_REVIEW, "A fine idea"));
+        shell.press(key('j'));
+        shell.press(key('j'));
+        shell.press(key('j'));
+        shell.press(key('j'));
+
+        String text = screen(shell).text();
+
+        assertThat(text).contains("A-1", "A fine idea", "status in-review · board · feature");
+    }
+
+    @Test
+    void shouldShowTheSelectedTicketsDetailRightOfTheBoard() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "A fine idea"));
+        shell.press(key('j'));
+
+        List<String> lines = screen(shell).lines();
+
+        assertThat(lines).anySatisfy(line -> assertThat(line.substring(28)).contains("A fine idea"));
+    }
+
+    @Test
+    void shouldLeaveTheMainViewEmptyOnAGroupHeader() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "A fine idea"));
+
+        List<String> lines = screen(shell).lines();
+
+        assertThat(lines).noneSatisfy(line -> assertThat(line.substring(28)).contains("A fine idea"));
+    }
+
+    @Test
+    void shouldShowAnUnreadableFilesReasonInTheMainViewWhenItIsSelected() {
+        Board board = Board.of(List.of(), List.of(new UnreadableTicket("A-2.md", "status is missing")));
+        Shell shell = shellOn(board);
+        for (int i = 0; i < 6; i++) {
+            shell.press(key('j'));
+        }
+
+        assertThat(screen(shell).lines()).anySatisfy(line -> assertThat(line.substring(28)).contains("status is missing"));
+    }
+
+    @Test
+    void shouldTitleTheOtherPanelsAndLeaveThemEmpty() {
+        String text = screen(shellOn()).text();
+
+        assertThat(text).contains("Board", "Sessions", "Docs", "Elsewhere", "dock", "main view");
+    }
+
+    @Test
+    void shouldSayThereIsNoHostedSession() {
+        assertThat(screen(shellOn()).text()).contains("no hosted session");
+    }
+
+    @Test
+    void shouldLeaveTheStatusLineEmpty() {
+        assertThat(screen(shellOn()).lines().getFirst()).isBlank();
+    }
+
+    @Test
+    void shouldStartWithFocusOnTheBoard() {
+        assertThat(screen(shellOn()).cyanText()).anySatisfy(text -> assertThat(text).contains("Board"));
+    }
+
+    @Test
+    void shouldMoveFocusToTheMainViewWithL() {
+        Shell shell = shellOn();
+
+        shell.press(key('l'));
+
+        assertThat(shell.focus()).isEqualTo(Focus.MAIN);
+        assertThat(screen(shell).cyanText()).anySatisfy(text -> assertThat(text).contains("main view"));
+    }
+
+    @Test
+    void shouldMoveFocusBackToTheBoardWithH() {
+        Shell shell = shellOn();
+        shell.press(key('l'));
+
+        shell.press(key('h'));
+
+        assertThat(shell.focus()).isEqualTo(Focus.BOARD);
+    }
+
+    @Test
+    void shouldReturnToTheLeftPanelFocusWasLastOn() {
+        Shell shell = shellOn();
+        shell.press(alt('j'));
+        shell.press(key('l'));
+
+        shell.press(key('h'));
+
+        assertThat(shell.focus()).isEqualTo(Focus.SESSIONS);
+    }
+
+    @Test
+    void shouldMoveFocusDownTheLeftPanelsWithAltJ() {
+        Shell shell = shellOn();
+
+        shell.press(alt('j'));
+        assertThat(shell.focus()).isEqualTo(Focus.SESSIONS);
+        shell.press(alt('j'));
+        assertThat(shell.focus()).isEqualTo(Focus.DOCS);
+        shell.press(alt('j'));
+        assertThat(shell.focus()).isEqualTo(Focus.ELSEWHERE);
+        shell.press(alt('j'));
+        assertThat(shell.focus()).as("focus does not wrap").isEqualTo(Focus.ELSEWHERE);
+    }
+
+    @Test
+    void shouldMoveFocusUpTheLeftPanelsWithAltK() {
+        Shell shell = shellOn();
+        shell.press(alt('j'));
+
+        shell.press(alt('k'));
+        shell.press(alt('k'));
+
+        assertThat(shell.focus()).as("focus does not wrap").isEqualTo(Focus.BOARD);
+    }
+
+    @Test
+    void shouldMoveFocusBetweenMainViewAndDockWithAltJAndAltK() {
+        Shell shell = shellOn();
+        shell.press(alt('l'));
+
+        shell.press(alt('j'));
+        assertThat(shell.focus()).isEqualTo(Focus.DOCK);
+        shell.press(alt('j'));
+        assertThat(shell.focus()).isEqualTo(Focus.DOCK);
+        shell.press(alt('k'));
+        assertThat(shell.focus()).isEqualTo(Focus.MAIN);
+    }
+
+    @Test
+    void shouldMoveFocusAcrossColumnsWithAltLAndAltH() {
+        Shell shell = shellOn();
+
+        shell.press(alt('l'));
+        assertThat(shell.focus()).isEqualTo(Focus.MAIN);
+        shell.press(alt('h'));
+        assertThat(shell.focus()).isEqualTo(Focus.BOARD);
+    }
+
+    @Test
+    void shouldNotMoveTheBoardSelectionWhileAnotherPanelHasFocus() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+        shell.press(key('l'));
+
+        shell.press(key('j'));
+        shell.press(key('h'));
+
+        assertThat(screen(shell).reversedText()).singleElement().asString().contains("draft (1)");
+    }
+
+    @Test
+    void shouldReserveJAndKForTheBoardOnlyWhenItHasFocus() {
+        Shell shell = shellOn();
+        shell.press(key('l'));
+
+        shell.press(key('j'));
+
+        assertThat(shell.focus()).isEqualTo(Focus.MAIN);
+    }
+
+    @Test
+    void shouldQuitOnQWithoutConfirmation() {
+        Shell shell = shellOn();
+
+        shell.press(key('q'));
+
+        assertThat(shell.quitRequested()).isTrue();
+    }
+
+    @Test
+    void shouldQuitOnQFromAnyPanel() {
+        Shell shell = shellOn();
+        shell.press(alt('l'));
+        shell.press(alt('j'));
+
+        shell.press(key('q'));
+
+        assertThat(shell.quitRequested()).isTrue();
+    }
+
+    @Test
+    void shouldNotQuitOnAltQ() {
+        Shell shell = shellOn();
+
+        shell.press(alt('q'));
+
+        assertThat(shell.quitRequested()).isFalse();
+    }
+
+    @Test
+    void shouldIgnoreKeysItHasNoMeaningFor() {
+        Shell shell = shellOn();
+
+        boolean handled = shell.press(key('x'));
+
+        assertThat(handled).as("an unhandled key falls through to the runner").isFalse();
+    }
+
+    @Test
+    void shouldListTheBoardKeysOnAGroupHeader() {
+        assertThat(screen(shellOn()).lines().getLast())
+                .contains("j/k move", "enter fold", "h/l panel", "alt+h/j/k/l focus", "q quit");
+    }
+
+    @Test
+    void shouldNotOfferFoldOnATicketRow() {
+        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+        shell.press(key('j'));
+
+        assertThat(screen(shell).lines().getLast()).contains("j/k move", "q quit").doesNotContain("enter fold");
+    }
+
+    @Test
+    void shouldListNoBoardKeysWhenAnotherPanelHasFocus() {
+        Shell shell = shellOn();
+        shell.press(key('l'));
+
+        assertThat(screen(shell).lines().getLast())
+                .contains("h/l panel", "alt+h/j/k/l focus", "q quit")
+                .doesNotContain("j/k move")
+                .doesNotContain("enter fold");
     }
 }
