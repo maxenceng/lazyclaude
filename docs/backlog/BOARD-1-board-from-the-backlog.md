@@ -1,6 +1,6 @@
 ---
 id: BOARD-1
-status: in-review
+status: done
 context: board
 type: feature
 tracker_id: 72
@@ -80,3 +80,18 @@ created: 2026-10-10
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-10](LAZY-10-screen-layout-and-keys.md) and ADR 0008. The first runnable slice: it creates `board` and `shell`.
+
+Review reshaped *Model decision*'s names and placement, not its model; read it through the
+ADRs written under review. `ReadBoard` became `BoardApplicationService` → `BoardManager`, the
+`Backlog` port `BacklogPort` with `BacklogRepository`, and the project locator
+`ProjectLocatorPort` with `ProjectLocatorRepository` (ADR 0011). `TicketId` and `Status` moved
+to `board.published`, the shell asks through `BoardQuery`, and a ticket with no title is
+`NoTitle` in the domain, shown as its id only by the shell (ADR 0012). Tests build from
+fixtures and mock ports (ADR 0013).
+
+Found while building: a second file claiming an `id` already taken is unreadable too, not
+silently dropped or merged.
+
+It took three review rounds, each pulling the code toward the conventions of the author's
+other DDD project; the rules from those rounds are now in `ArchitectureTest`, so the next
+context starts from them rather than rediscovering them.
