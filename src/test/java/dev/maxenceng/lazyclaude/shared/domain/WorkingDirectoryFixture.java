@@ -15,7 +15,7 @@ public final class WorkingDirectoryFixture {
     }
 
     public static WorkingDirectory worktreeDirectory() {
-        return new WorkingDirectory(Path.of("/work/app.worktrees/SESSION-1-live-sessions"));
+        return new WorkingDirectory(Path.of("/work/app.worktrees/PROJ-1-ticket"));
     }
 
     public static WorkingDirectory otherProjectDirectory() {
