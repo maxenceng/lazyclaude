@@ -6,12 +6,15 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
 import java.time.Duration;
 
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 public final class DocsWatchFixture {
 
+    private static final DirectoryRegistrar REAL_REGISTRAR = (service, directory) ->
+            directory.register(service, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
     private static final Duration SHORT_BATCH = Duration.ofMillis(150);
     private static final Duration SHORT_POLL = Duration.ofMillis(200);
 
@@ -33,6 +36,7 @@ public final class DocsWatchFixture {
     public static DocsWatchRepository watcher(ByteArrayOutputStream said) {
         return new DocsWatchRepository(
                 () -> FileSystems.getDefault().newWatchService(),
+                REAL_REGISTRAR,
                 new PrintStream(said, true, StandardCharsets.UTF_8),
                 SHORT_BATCH,
                 SHORT_POLL);
@@ -43,6 +47,21 @@ public final class DocsWatchFixture {
                 () -> {
                     throw new IOException("User limit of inotify watches reached");
                 },
+                REAL_REGISTRAR,
+                new PrintStream(said, true, StandardCharsets.UTF_8),
+                SHORT_BATCH,
+                SHORT_POLL);
+    }
+
+    static DocsWatchRepository watcherOver(FakeWatchService service, DirectoryRegistrar registrar, ByteArrayOutputStream said) {
+        return new DocsWatchRepository(
+                () -> service, registrar, new PrintStream(said, true, StandardCharsets.UTF_8), SHORT_BATCH, SHORT_POLL);
+    }
+
+    static DocsWatchRepository watcherRegisteringWith(DirectoryRegistrar registrar, ByteArrayOutputStream said) {
+        return new DocsWatchRepository(
+                () -> FileSystems.getDefault().newWatchService(),
+                registrar,
                 new PrintStream(said, true, StandardCharsets.UTF_8),
                 SHORT_BATCH,
                 SHORT_POLL);

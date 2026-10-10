@@ -6,6 +6,8 @@ import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.write;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.settled;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watcher;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watcherOver;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watcherRegisteringWith;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watcherWithoutInotify;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watching;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.within;
@@ -203,5 +205,35 @@ class DocsWatchRepositoryTest {
         write(docs, "backlog/DOCS-1.md", markdown());
 
         assertThat(probe.quietFor(settled())).isTrue();
+    }
+
+    @Test
+    void shouldRegisterTheTreeAgainAndReportOnceOnOverflow() throws Exception {
+        FakeWatchService service = new FakeWatchService();
+        RecordingRegistrar registrar = RecordingRegistrar.neverFailing();
+        watcher = watching(watcherOver(service, registrar, said), root, probe);
+        assertThat(registrar.registered()).containsExactly(docs, docs.resolve("adr"));
+
+        service.offer(new OverflowKey(docs));
+
+        assertThat(probe.changedWithin(within())).isTrue();
+        assertThat(probe.quietFor(settled())).as("one overflow is one report").isTrue();
+        assertThat(registrar.registered())
+                .as("events were lost, so every directory is registered again")
+                .containsExactly(docs, docs.resolve("adr"), docs, docs.resolve("adr"));
+    }
+
+    @Test
+    void shouldPollWithOneWarningWhenRegistrationFailsOnTheSecondDirectory() throws Exception {
+        RecordingRegistrar registrar = RecordingRegistrar.failingOnCall(2);
+        watcher = watching(watcherRegisteringWith(registrar, said), root, probe);
+
+        write(docs, "glossary.md", "# Glossary, edited\n");
+
+        assertThat(probe.changedWithin(within())).isTrue();
+        assertThat(said.toString(StandardCharsets.UTF_8))
+                .contains(docs.toString())
+                .contains("fs.inotify.max_user_watches")
+                .hasLineCount(1);
     }
 }

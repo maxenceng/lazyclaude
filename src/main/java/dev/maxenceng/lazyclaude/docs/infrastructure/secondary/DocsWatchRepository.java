@@ -53,6 +53,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     private static final String WORKER_NAME = "docs-watch";
 
     private final WatchServiceFactory services;
+    private final DirectoryRegistrar registrar;
     private final PrintStream warnings;
     private final Duration batchWindow;
     private final Duration pollInterval;
@@ -61,11 +62,22 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     private final List<Thread> workers = new CopyOnWriteArrayList<>();
 
     public DocsWatchRepository(PrintStream warnings) {
-        this(() -> FileSystems.getDefault().newWatchService(), warnings, BATCH_WINDOW, POLL_INTERVAL);
+        this(
+                () -> FileSystems.getDefault().newWatchService(),
+                (service, directory) -> directory.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY),
+                warnings,
+                BATCH_WINDOW,
+                POLL_INTERVAL);
     }
 
-    DocsWatchRepository(WatchServiceFactory services, PrintStream warnings, Duration batchWindow, Duration pollInterval) {
+    DocsWatchRepository(
+            WatchServiceFactory services,
+            DirectoryRegistrar registrar,
+            PrintStream warnings,
+            Duration batchWindow,
+            Duration pollInterval) {
         this.services = services;
+        this.registrar = registrar;
         this.warnings = warnings;
         this.batchWindow = batchWindow;
         this.pollInterval = pollInterval;
@@ -147,7 +159,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         return relevant;
     }
 
-    private static void register(WatchService service, Path tree, Path backlog) throws IOException {
+    private void register(WatchService service, Path tree, Path backlog) throws IOException {
         Files.walkFileTree(tree, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes) throws IOException {
@@ -155,7 +167,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
                 try {
-                    directory.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
+                    registrar.register(service, directory);
                 } catch (NoSuchFileException vanished) {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
