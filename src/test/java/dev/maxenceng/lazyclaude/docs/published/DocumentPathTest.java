@@ -80,7 +80,7 @@ class DocumentPathTest {
 
     @Test
     void shouldNotBeListedWhenItIsUnderTheBacklog() {
-        assertThat(new DocumentPath("backlog/DOCS-1.md").listed()).isFalse();
+        assertThat(new DocumentPath("backlog/ticket.md").listed()).isFalse();
         assertThat(new DocumentPath("backlog/archive/DOCS-0.md").listed()).isFalse();
     }
 

@@ -90,7 +90,7 @@ class DocsTreeTest {
 
     @Test
     void shouldLeaveOutDocumentsThatAreNotListed() {
-        DocumentPath backlog = new DocumentPath("backlog/DOCS-1.md");
+        DocumentPath backlog = new DocumentPath("backlog/ticket.md");
         DocumentPath image = new DocumentPath("adr/diagram.png");
 
         DocsTree tree = DocsTree.of(List.of(readDocumentAt(backlog), readDocumentAt(image)));

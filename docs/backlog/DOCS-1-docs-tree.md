@@ -1,6 +1,6 @@
 ---
 id: DOCS-1
-status: in-review
+status: done
 context: docs
 type: feature
 tracker_id: 77
@@ -74,3 +74,7 @@ A new `docs` context, the first ticket refined into it. `docs/context-map.md` al
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-4](LAZY-4-tamboui-capabilities.md), [LAZY-10](LAZY-10-screen-layout-and-keys.md), [LAZY-21](LAZY-21-keeping-the-screen-current.md). Search across the docs is out of scope.
+
+*Model decision* above says sorting files before folders and by name is the tree's rule, tested without a file system. Review reversed that: `DocsPort.paths` hands paths over in tree order and the domain keeps it, as `BacklogRepository` does for the board — see [ADR 0018](../adr/0018-the-docs-adapter-orders-the-tree.md). Leaving out `docs/backlog/` stayed in the domain, on `DocumentPath`.
+
+Two shapes came out of review rather than refinement: a `docs/` that cannot be listed shows a dim "docs unavailable" with its reason instead of failing start-up ([ADR 0016](../adr/0016-docs-owns-the-docs-watcher.md)), and folders carry a published `FolderPath` so the shell keys its folds by path. The strict UTF-8 reading `board` and `docs` share moved to `shared.infrastructure.secondary` ([ADR 0017](../adr/0017-the-shared-kernel-has-an-adapter-package.md)).
