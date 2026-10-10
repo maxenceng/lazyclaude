@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,14 @@ class LazyClaudeTest {
         return LazyClaude.start(from, board, new PrintStream(err, true, StandardCharsets.UTF_8), opened::add);
     }
 
+    private static void git(Path in, String... args) throws Exception {
+        List<String> command = new ArrayList<>(List.of("git", "-C", in.toString()));
+        command.addAll(List.of(args));
+        Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertThat(process.waitFor()).as(output).isZero();
+    }
+
     private String said() {
         return err.toString(StandardCharsets.UTF_8);
     }
@@ -53,8 +62,7 @@ class LazyClaudeTest {
     @Test
     void shouldSayWhyAndExitNonZeroWithoutOpeningTheShellWhenTheMainWorktreeHasNoBacklog(@TempDir Path repo)
             throws Exception {
-        Process init = new ProcessBuilder("git", "init", "-q", repo.toString()).start();
-        assertThat(init.waitFor()).isZero();
+        git(repo, "init", "-q");
 
         int exit = start(repo, board(new ProjectLocatorRepository(), new BacklogRepository()));
 
@@ -62,6 +70,27 @@ class LazyClaudeTest {
         assertThat(said())
                 .startsWith("lazyclaude: the main worktree has no ")
                 .contains(repo.toRealPath().resolve("docs/backlog").toString());
+        assertThat(opened).isEmpty();
+    }
+
+    @Test
+    void shouldReadTheMainWorktreesBacklogEvenWhenStartedInALinkedWorktreeThatHasOne(@TempDir Path sandbox)
+            throws Exception {
+        Path repo = Files.createDirectories(sandbox.resolve("app")).toRealPath();
+        git(repo, "init", "-q", "-b", "main");
+        Files.createDirectories(repo.resolve("docs/backlog"));
+        Files.writeString(repo.resolve("docs/backlog/A-1.md"), "---\nid: A-1\nstatus: todo\n---\n");
+        git(repo, "add", ".");
+        git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init");
+        Path worktree = sandbox.resolve("app.worktrees/A-1-ticket");
+        git(repo, "worktree", "add", "-q", "-b", "A-1-ticket", worktree.toString());
+        Files.delete(repo.resolve("docs/backlog/A-1.md"));
+        Files.delete(repo.resolve("docs/backlog"));
+
+        int exit = start(worktree.toRealPath(), board(new ProjectLocatorRepository(), new BacklogRepository()));
+
+        assertThat(exit).as("the main worktree's backlog is the one that counts").isNotZero();
+        assertThat(said()).contains(repo.resolve("docs/backlog").toString());
         assertThat(opened).isEmpty();
     }
 
