@@ -3,13 +3,15 @@ package dev.maxenceng.lazyclaude.board.domain;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.shared.domain.Project;
 
-/** A project's tickets, one group per status in lifecycle order, plus the backlog files that could not be read. */
-public record Board(List<StatusGroup> groups, List<UnreadableTicket> unreadable) {
+/** A project's tickets, one group per status in lifecycle order, plus the backlog files that could not be read, and the project they were read from. */
+public record Board(List<StatusGroup> groups, List<UnreadableTicket> unreadable, Project project) {
 
     public Board {
         Assert.notNull("groups", groups);
         Assert.notNull("unreadable", unreadable);
+        Assert.notNull("project", project);
     }
 
     public static BoardBuilder builder() {
@@ -19,6 +21,7 @@ public record Board(List<StatusGroup> groups, List<UnreadableTicket> unreadable)
     public static final class BoardBuilder {
         private List<StatusGroup> groups;
         private List<UnreadableTicket> unreadable;
+        private Project project;
 
         private BoardBuilder() {}
 
@@ -32,8 +35,13 @@ public record Board(List<StatusGroup> groups, List<UnreadableTicket> unreadable)
             return this;
         }
 
+        public BoardBuilder project(Project project) {
+            this.project = project;
+            return this;
+        }
+
         public Board build() {
-            return new Board(groups, unreadable);
+            return new Board(groups, unreadable, project);
         }
     }
 }

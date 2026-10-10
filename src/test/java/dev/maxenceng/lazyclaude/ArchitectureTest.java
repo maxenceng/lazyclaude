@@ -89,7 +89,7 @@ class ArchitectureTest {
             .resideInAnyPackage("dev.tamboui..", "org.jline..")
             .allowEmptyShould(true);
 
-    // Processes, files and the network are side effects; they live behind a port, in a secondary adapter.
+    // Processes, files, watches and the network are side effects; they live behind a port, in a secondary adapter.
     @ArchTest
     static final ArchRule side_effects_live_in_secondary_adapters = noClasses()
             .that()
@@ -106,6 +106,9 @@ class ArchitectureTest {
             .orShould()
             .dependOnClassesThat()
             .resideInAPackage("java.net.http..")
+            .orShould()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName(java.nio.file.WatchService.class.getName())
             .allowEmptyShould(true);
 
     // A module's kind decides what the other rules allow it, so an undeclared one would escape them all.

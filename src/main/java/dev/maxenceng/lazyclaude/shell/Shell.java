@@ -7,11 +7,16 @@ import static dev.tamboui.toolkit.Toolkit.text;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.app.ToolkitApp;
+import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
@@ -26,6 +31,7 @@ public final class Shell extends ToolkitApp {
 
     private static final int LEFT_COLUMN_PERCENT = 35;
     private static final int SMALL_PANEL_HEIGHT = 3;
+    private static final int SHRUNK_PANEL_HEIGHT = 5;
     private static final int STATUS_LINE_HEIGHT = 1;
     private static final int KEY_BAR_HEIGHT = 1;
 
@@ -36,6 +42,8 @@ public final class Shell extends ToolkitApp {
     private static final String MAIN_VIEW_TITLE = "main view";
     private static final String DOCK_TITLE = "dock";
     private static final String NO_HOSTED_SESSION = "no hosted session";
+    private static final String NO_DOCS = "no docs";
+    private static final String DOCS_UNAVAILABLE = "docs unavailable";
     private static final String EMPTY = "";
 
     private static final char QUIT = 'q';
@@ -58,14 +66,37 @@ public final class Shell extends ToolkitApp {
     private static final String KEY_SEPARATOR = "  ";
 
     private final BoardRows board;
+    private final DocsRows docs;
+    private final AtomicReference<DocsView> pendingDocs = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private Focus focus = Focus.BOARD;
     private Focus lastLeft = Focus.BOARD;
     private Focus lastRight = Focus.MAIN;
+    private Focus mainViewOwner = Focus.BOARD;
     private boolean quitRequested;
 
-    public Shell(BoardView board) {
+    public Shell(BoardView board, DocsView docs) {
         this.board = new BoardRows(board);
+        this.docs = new DocsRows(docs);
+    }
+
+    /**
+     * The docs have been read again: a new tree, or why there is none. Callable from any thread: the tree is applied on the UI thread,
+     * at the next render or key press, so no row changes under a frame being drawn.
+     */
+    public void docsChanged(DocsView view) {
+        pendingDocs.set(view);
+        ToolkitRunner running = runner();
+        if (running != null) {
+            running.runOnRenderThread(this::applyPendingDocs);
+        }
+    }
+
+    private void applyPendingDocs() {
+        DocsView next = pendingDocs.getAndSet(null);
+        if (next != null && docs.replace(next) && mainViewOwner == Focus.DOCS) {
+            mainViewScroll.reset();
+        }
     }
 
     @Override
@@ -87,6 +118,7 @@ public final class Shell extends ToolkitApp {
     }
 
     boolean press(KeyEvent key) {
+        applyPendingDocs();
         if (key.hasCtrl()) {
             return focus == Focus.MAIN && pressWithCtrl(key);
         }
@@ -94,7 +126,7 @@ public final class Shell extends ToolkitApp {
             return pressWithAlt(key);
         }
         if (key.isKey(KeyCode.ENTER)) {
-            return focus == Focus.BOARD && board.selectedHeader().isPresent() && fold();
+            return fold();
         }
         if (key.isChar(QUIT)) {
             quitRequested = true;
@@ -112,6 +144,12 @@ public final class Shell extends ToolkitApp {
         }
         if (focus == Focus.BOARD && key.isChar(UP)) {
             return select(board::up);
+        }
+        if (focus == Focus.DOCS && key.isChar(DOWN)) {
+            return selectDoc(docs::down);
+        }
+        if (focus == Focus.DOCS && key.isChar(UP)) {
+            return selectDoc(docs::up);
         }
         return focus == Focus.MAIN && scrollMainView(key);
     }
@@ -152,6 +190,15 @@ public final class Shell extends ToolkitApp {
         return true;
     }
 
+    private boolean selectDoc(Runnable move) {
+        Optional<RowKey> before = docs.selectedKey();
+        move.run();
+        if (!docs.selectedKey().equals(before)) {
+            mainViewScroll.reset();
+        }
+        return true;
+    }
+
     private boolean pressWithAlt(KeyEvent key) {
         if (key.isChar(LEFT)) {
             return focusOn(lastLeft);
@@ -169,8 +216,15 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean fold() {
-        board.toggleFold();
-        return true;
+        if (focus == Focus.BOARD && board.selectedHeader().isPresent()) {
+            board.toggleFold();
+            return true;
+        }
+        if (focus == Focus.DOCS && docs.selectedFolder().isPresent()) {
+            docs.toggleFold();
+            return true;
+        }
+        return false;
     }
 
     private boolean focusOn(Focus target) {
@@ -180,18 +234,23 @@ public final class Shell extends ToolkitApp {
         } else {
             lastRight = target;
         }
+        if ((target == Focus.BOARD || target == Focus.DOCS) && target != mainViewOwner) {
+            mainViewOwner = target;
+            mainViewScroll.reset();
+        }
         return true;
     }
 
     @Override
     protected Element render() {
+        applyPendingDocs();
         return column(
                 text(EMPTY).length(STATUS_LINE_HEIGHT),
                 row(
                         column(
                                         boardPanel(),
                                         small(SESSIONS_TITLE, Focus.SESSIONS),
-                                        small(DOCS_TITLE, Focus.DOCS),
+                                        docsPanel(),
                                         small(ELSEWHERE_TITLE, Focus.ELSEWHERE))
                                 .percent(LEFT_COLUMN_PERCENT),
                         column(mainView(), dock()).fill()).fill(),
@@ -200,8 +259,23 @@ public final class Shell extends ToolkitApp {
 
     private Element boardPanel() {
         List<String> lines = board.visible().stream().map(Row::text).toList();
-        return framed(BOARD_TITLE, Focus.BOARD, new RowsElement(lines, board.selectedIndex(), focus == Focus.BOARD))
-                .fill();
+        return sized(
+                framed(BOARD_TITLE, Focus.BOARD, new RowsElement(lines, board.selectedIndex(), focus == Focus.BOARD)),
+                Focus.BOARD);
+    }
+
+    private Element docsPanel() {
+        List<String> lines = docs.visible().stream().map(DocsRow::text).toList();
+        Element body = docs.unavailable()
+                .<Element>map(reason -> column(text(DOCS_UNAVAILABLE).dim(), text(reason.value()).dim()))
+                .orElseGet(() -> docs.isEmpty()
+                        ? text(NO_DOCS).dim()
+                        : new RowsElement(lines, docs.selectedIndex(), focus == Focus.DOCS));
+        return sized(framed(DOCS_TITLE, Focus.DOCS, body), Focus.DOCS);
+    }
+
+    private Element sized(Panel panel, Focus owner) {
+        return mainViewOwner == owner ? panel.fill() : panel.length(SHRUNK_PANEL_HEIGHT);
     }
 
     private Element small(String title, Focus owner) {
@@ -222,6 +296,23 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element detail() {
+        return mainViewOwner == Focus.BOARD ? boardDetail() : docsDetail();
+    }
+
+    private Element docsDetail() {
+        return docs.selected()
+                .map(row -> switch (row) {
+                    case FolderRow folder -> column();
+                    case DocumentRow document -> documentDetail(document.document());
+                })
+                .orElseGet(() -> column());
+    }
+
+    private Element documentDetail(DocumentView document) {
+        return new DetailElement(width -> DocsText.head(document), DocsText.markdown(document), mainViewScroll);
+    }
+
+    private Element boardDetail() {
         return switch (board.selected()) {
             case HeaderRow header -> column();
             case TicketRow row -> ticketDetail(row.ticket());
@@ -231,23 +322,28 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element ticketDetail(TicketView ticket) {
-        return new DetailElement(TicketText.facts(ticket), TicketText.keyRows(ticket), ticket.body(), mainViewScroll);
+        return new DetailElement(width -> TicketText.head(ticket, width), TicketText.markdown(ticket), mainViewScroll);
     }
 
     private String keyBar() {
         List<String> keys = new ArrayList<>();
-        if (focus == Focus.BOARD) {
+        if (focus == Focus.BOARD || focus == Focus.DOCS) {
             keys.add(MOVE_KEYS);
         }
         if (focus == Focus.MAIN) {
             keys.add(SCROLL_KEYS);
         }
         keys.add(PANEL_KEYS);
-        if (focus == Focus.BOARD && board.selectedHeader().isPresent()) {
+        if (foldable()) {
             keys.add(FOLD_KEY);
         }
         keys.add(FOCUS_KEYS);
         keys.add(QUIT_KEY);
         return KEY_BAR_INDENT + String.join(KEY_SEPARATOR, keys);
+    }
+
+    private boolean foldable() {
+        return focus == Focus.BOARD && board.selectedHeader().isPresent()
+                || focus == Focus.DOCS && docs.selectedFolder().isPresent();
     }
 }

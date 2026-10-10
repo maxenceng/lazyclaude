@@ -1,9 +1,12 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
@@ -13,7 +16,18 @@ final class ShellFixture {
     private ShellFixture() {}
 
     static Shell shellOn(BoardView board) {
-        return new Shell(board);
+        return new Shell(board, emptyDocsView());
+    }
+
+    static Shell shellOnDocs(DocsView docs) {
+        return pressed(new Shell(boardViewOf(ticketView()), docs), alt('j'), 2);
+    }
+
+    static Shell shellFocusedOnMainViewOfDocs(DocsView docs) {
+        Shell shell = shellOnDocs(docs);
+        Screen.of(shell);
+        shell.press(key('l'));
+        return shell;
     }
 
     static Shell shellOn(TicketView... tickets) {

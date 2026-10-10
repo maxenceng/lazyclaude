@@ -47,7 +47,7 @@ class ShellTest {
                 ticketViewBuilder().id(new TicketId("A-5")).status(Status.DRAFT).build(),
                 ticketViewBuilder().id(new TicketId("A-6")).status(Status.IN_PROGRESS).build());
 
-        assertThat(Screen.of(shell).boardPanelText())
+        assertThat(Screen.of(shell.render(), 80, 30).boardPanelText())
                 .containsSubsequence(
                         "▾ draft (2)", "A-4", "A-5", "▾ todo (1)", "A-3", "▾ in-progress (1)", "A-6", "▾ in-review (1)",
                         "A-2", "▸ done (1)");

@@ -21,10 +21,10 @@ public record BoardManager(ProjectLocatorPort locator, BacklogPort backlog) {
 
     public Board boardFor(WorkingDirectory from) {
         Project project = locator.locate(from);
-        return board(backlog.entries(project));
+        return board(project, backlog.entries(project));
     }
 
-    private static Board board(List<BacklogEntry> entries) {
+    private static Board board(Project project, List<BacklogEntry> entries) {
         List<Ticket> tickets = new ArrayList<>();
         List<UnreadableTicket> unreadable = new ArrayList<>();
         Set<TicketId> claimed = new HashSet<>();
@@ -36,6 +36,7 @@ public record BoardManager(ProjectLocatorPort locator, BacklogPort backlog) {
             }
         }
         return Board.builder()
+                .project(project)
                 .groups(groups(tickets))
                 .unreadable(unreadable.stream()
                         .sorted(Comparator.comparing(UnreadableTicket::file))
