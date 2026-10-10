@@ -1,6 +1,6 @@
 ---
 id: SESSION-1
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 78
@@ -121,3 +121,12 @@ version  2.1.296
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-2](LAZY-2-session-discovery.md), [LAZY-8](LAZY-8-detecting-a-waiting-session.md), [LAZY-13](LAZY-13-claude-agents-spike.md). `sdk-cli` sessions are excluded. A session still on the trust dialog shows as *starting* ([LAZY-15](LAZY-15-trusting-ticket-worktrees.md)).
+
+Closed after [#10](https://github.com/maxenceng/lazyclaude/pull/10). Review changed the Model decision in two places. The ADRs record both, and the section above is left as decided:
+
+- `SessionState` has a fifth case, `Unknown` (grey `·`), for a status Claude Code reports that lazyclaude does not know. The port hands over the raw `ReportedStatus`, and `SessionManager` maps it after the project filter, so a new status in another project changes nothing here. See ADR 0021.
+- A failed `git` is `ProjectUnavailableException` in `shared`, distinct from "not a project". The panel shows *sessions unavailable* instead of *no live session*. See ADR 0019.
+- `SessionDirectory` was dropped for the shared `WorkingDirectory`.
+- A truncated record of a dead process is skipped rather than forcing the fallback, since nothing will ever rewrite it (ADR 0021).
+- A `DirectoryIteratorException` while listing the registry is mapped to *sessions unavailable* but has no test: no seam makes a directory stream fail mid-iteration.
+- The stderr warning drawn over the TUI is left to [LAZY-22](LAZY-22-warnings-on-the-status-line.md).
