@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.backlogIn;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.ticketMarkdown;
@@ -27,6 +27,10 @@ public final class GitFixture {
         git(repository, "add", ".");
         git(repository, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init");
         return repository;
+    }
+
+    public static String missingGit() {
+        return "lazyclaude-no-such-git";
     }
 
     public static Path linkedWorktree(Path repository, Path at) throws Exception {

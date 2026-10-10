@@ -2,10 +2,6 @@ package dev.maxenceng.lazyclaude;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.boardQuery;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.linkedWorktree;
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.removeBacklog;
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.repositoryWithBacklog;
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.repositoryWithoutBacklog;
 import static dev.maxenceng.lazyclaude.docs.domain.ReadDocumentFixture.readDocument;
 import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.docsUnavailable;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQueryFixture.docsQuery;
@@ -15,7 +11,15 @@ import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.markdown;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.write;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watcherWithoutInotify;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.emptySessionsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.unavailableSessionsView;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.linkedWorktree;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.removeBacklog;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithBacklog;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithoutBacklog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -39,17 +43,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
-import dev.maxenceng.lazyclaude.board.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogRepository;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.ProjectLocatorRepository;
 import dev.maxenceng.lazyclaude.docs.domain.DocsPort;
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsRepository;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchRepository;
+import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.ProjectLocatorRepository;
 import dev.maxenceng.lazyclaude.shell.Screen;
 import dev.maxenceng.lazyclaude.shell.Shell;
 
@@ -61,6 +68,7 @@ class LazyClaudeTest {
     private final PrintStream err = new PrintStream(said, true, StandardCharsets.UTF_8);
     private final List<BoardView> opened = new ArrayList<>();
     private final List<DocsView> openedDocs = new ArrayList<>();
+    private final List<SessionsView> openedSessions = new ArrayList<>();
 
     @Mock
     private ProjectLocatorPort locator;
@@ -74,12 +82,18 @@ class LazyClaudeTest {
     @Mock
     private DocsWatchPort watch;
 
+    @Mock
+    private LiveSessionPort sessions;
+
+    @Mock
+    private SessionWatchPort sessionWatch;
+
     @TempDir
     Path sandbox;
 
     @Test
     void shouldSayWhyAndExitNonZeroWithoutOpeningTheShellOutsideAGitRepository() throws Exception {
-        int exit = LazyClaude.start(sandbox, realBoard, docsQuery(docs, watch), err, (view, docsView) -> opened.add(view));
+        int exit = LazyClaude.start(sandbox, realBoard, docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> opened.add(view));
 
         assertThat(exit).as("a missing project is a failed start").isNotZero();
         assertThat(said.toString(StandardCharsets.UTF_8))
@@ -92,7 +106,7 @@ class LazyClaudeTest {
     void shouldSayWhyAndExitNonZeroWithoutOpeningTheShellWhenTheMainWorktreeHasNoBacklog() throws Exception {
         Path repository = repositoryWithoutBacklog(sandbox.resolve("app"));
 
-        int exit = LazyClaude.start(repository, realBoard, docsQuery(docs, watch), err, (view, docsView) -> opened.add(view));
+        int exit = LazyClaude.start(repository, realBoard, docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> opened.add(view));
 
         assertThat(exit).isNotZero();
         assertThat(said.toString(StandardCharsets.UTF_8))
@@ -106,7 +120,7 @@ class LazyClaudeTest {
         Path worktree = linkedWorktree(repository, sandbox.resolve("app.worktrees/PROJ-1-ticket"));
         removeBacklog(repository);
 
-        int exit = LazyClaude.start(worktree, realBoard, docsQuery(docs, watch), err, (view, docsView) -> opened.add(view));
+        int exit = LazyClaude.start(worktree, realBoard, docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> opened.add(view));
 
         assertThat(exit).as("the main worktree's backlog is the one that counts").isNotZero();
         assertThat(said.toString(StandardCharsets.UTF_8)).contains(repository.resolve("docs/backlog").toString());
@@ -119,7 +133,7 @@ class LazyClaudeTest {
         when(locator.locate(any())).thenReturn(project());
         when(backlog.entries(project())).thenThrow(new BacklogUnavailableException(listed, new IOException("denied")));
 
-        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), err, (view, docsView) -> opened.add(view));
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> opened.add(view));
 
         assertThat(exit).isNotZero();
         assertThat(said.toString(StandardCharsets.UTF_8))
@@ -134,7 +148,7 @@ class LazyClaudeTest {
         when(backlog.entries(project())).thenReturn(List.of());
         when(docs.paths(project())).thenReturn(List.of());
 
-        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), err, (view, docsView) -> {
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> {
                     opened.add(view);
                     openedDocs.add(docsView);
                 });
@@ -151,7 +165,7 @@ class LazyClaudeTest {
         when(backlog.entries(project())).thenReturn(List.of());
         when(docs.paths(project())).thenThrow(docsUnavailable());
 
-        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), err, (view, docsView) -> {
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> {
                     opened.add(view);
                     openedDocs.add(docsView);
                 });
@@ -164,7 +178,7 @@ class LazyClaudeTest {
     @Test
     void shouldHandTheShellTheDocsAgainWhenTheWatcherReportsAChange() {
         when(docs.paths(project())).thenReturn(List.of());
-        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), docsQuery(docs, watch));
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch));
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(eq(project()), changed.capture());
         when(docs.paths(project())).thenReturn(List.of(readDocument().path()));
@@ -186,7 +200,7 @@ class LazyClaudeTest {
 
         try (DocsWatchRepository watcher = watcherWithoutInotify(warned)) {
             DocsQuery realDocs = docsQuery(new DocsRepository(), watcher);
-            int exit = LazyClaude.start(repository, realBoard, realDocs, err, (view, docsView) -> shells.add(LazyClaude.shellOn(view, docsView, realDocs)));
+            int exit = LazyClaude.start(repository, realBoard, realDocs, sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> shells.add(LazyClaude.shellOn(view, docsView, sessionsView, realDocs, sessionQuery(sessions, locator, sessionWatch))));
 
             assertThat(exit).isZero();
         }
@@ -194,5 +208,46 @@ class LazyClaudeTest {
                 .as("a watch that cannot be set up costs a warning, not the start")
                 .contains("fs.inotify.max_user_watches");
         assertThat(Screen.of(shells.getFirst()).boardPanelText()).contains("glossary.md");
+    }
+
+    @Test
+    void shouldOpenTheShellOnTheLiveSessionsOfTheSameProject() throws Exception {
+        when(locator.locate(any())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of());
+        when(docs.paths(project())).thenReturn(List.of());
+        when(sessions.liveSessions()).thenReturn(List.of());
+
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> openedSessions.add(sessionsView));
+
+        assertThat(exit).isZero();
+        assertThat(openedSessions).containsExactly(emptySessionsView());
+    }
+
+    @Test
+    void shouldOpenTheShellSayingWhyWhenNoSourceOfSessionsAnswers() throws Exception {
+        when(locator.locate(any())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of());
+        when(docs.paths(project())).thenReturn(List.of());
+        when(sessions.liveSessions()).thenThrow(sessionsUnavailable());
+
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> openedSessions.add(sessionsView));
+
+        assertThat(exit).as("the sessions stand alone; the board still opens").isZero();
+        assertThat(openedSessions).containsExactly(unavailableSessionsView());
+        assertThat(said.size()).as("the Sessions panel says why, not the terminal").isZero();
+    }
+
+    @Test
+    void shouldHandTheShellTheSessionsAgainWhenTheWatcherReportsAChange() {
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch));
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(sessionWatch).watch(changed.capture());
+        when(sessions.liveSessions()).thenThrow(sessionsUnavailable());
+
+        changed.getValue().run();
+
+        assertThat(Screen.of(shell).dimText())
+                .as("watcher, application and shell are joined for the project the board was read from")
+                .anySatisfy(line -> assertThat(line).contains("sessions unavailable"));
     }
 }

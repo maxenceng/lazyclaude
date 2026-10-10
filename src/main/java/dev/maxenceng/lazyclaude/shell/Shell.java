@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static dev.tamboui.toolkit.Toolkit.column;
 import static dev.tamboui.toolkit.Toolkit.panel;
+import static dev.tamboui.toolkit.Toolkit.richText;
 import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.text;
 
@@ -14,6 +15,8 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
@@ -44,6 +47,8 @@ public final class Shell extends ToolkitApp {
     private static final String NO_HOSTED_SESSION = "no hosted session";
     private static final String NO_DOCS = "no docs";
     private static final String DOCS_UNAVAILABLE = "docs unavailable";
+    private static final String NO_LIVE_SESSION = "no live session";
+    private static final String SESSIONS_UNAVAILABLE = "sessions unavailable: ";
     private static final String EMPTY = "";
 
     private static final char QUIT = 'q';
@@ -67,7 +72,9 @@ public final class Shell extends ToolkitApp {
 
     private final BoardRows board;
     private final DocsRows docs;
+    private final SessionRows sessions;
     private final AtomicReference<DocsView> pendingDocs = new AtomicReference<>();
+    private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private Focus focus = Focus.BOARD;
     private Focus lastLeft = Focus.BOARD;
@@ -75,9 +82,10 @@ public final class Shell extends ToolkitApp {
     private Focus mainViewOwner = Focus.BOARD;
     private boolean quitRequested;
 
-    public Shell(BoardView board, DocsView docs) {
+    public Shell(BoardView board, DocsView docs, SessionsView sessions) {
         this.board = new BoardRows(board);
         this.docs = new DocsRows(docs);
+        this.sessions = new SessionRows(sessions);
     }
 
     /**
@@ -95,6 +103,25 @@ public final class Shell extends ToolkitApp {
     private void applyPendingDocs() {
         DocsView next = pendingDocs.getAndSet(null);
         if (next != null && docs.replace(next) && mainViewOwner == Focus.DOCS) {
+            mainViewScroll.reset();
+        }
+    }
+
+    /**
+     * The sessions have been read again: new ones, or why there are none. Callable from any thread: they are applied on the UI
+     * thread, at the next render or key press, so no row changes under a frame being drawn.
+     */
+    public void sessionsChanged(SessionsView view) {
+        pendingSessions.set(view);
+        ToolkitRunner running = runner();
+        if (running != null) {
+            running.runOnRenderThread(this::applyPendingSessions);
+        }
+    }
+
+    private void applyPendingSessions() {
+        SessionsView next = pendingSessions.getAndSet(null);
+        if (next != null && sessions.replace(next) && mainViewOwner == Focus.SESSIONS) {
             mainViewScroll.reset();
         }
     }
@@ -119,6 +146,7 @@ public final class Shell extends ToolkitApp {
 
     boolean press(KeyEvent key) {
         applyPendingDocs();
+        applyPendingSessions();
         if (key.hasCtrl()) {
             return focus == Focus.MAIN && pressWithCtrl(key);
         }
@@ -150,6 +178,12 @@ public final class Shell extends ToolkitApp {
         }
         if (focus == Focus.DOCS && key.isChar(UP)) {
             return selectDoc(docs::up);
+        }
+        if (focus == Focus.SESSIONS && key.isChar(DOWN)) {
+            return selectSession(sessions::down);
+        }
+        if (focus == Focus.SESSIONS && key.isChar(UP)) {
+            return selectSession(sessions::up);
         }
         return focus == Focus.MAIN && scrollMainView(key);
     }
@@ -199,6 +233,15 @@ public final class Shell extends ToolkitApp {
         return true;
     }
 
+    private boolean selectSession(Runnable move) {
+        Optional<SessionId> before = sessions.selectedId();
+        move.run();
+        if (!sessions.selectedId().equals(before)) {
+            mainViewScroll.reset();
+        }
+        return true;
+    }
+
     private boolean pressWithAlt(KeyEvent key) {
         if (key.isChar(LEFT)) {
             return focusOn(lastLeft);
@@ -234,7 +277,7 @@ public final class Shell extends ToolkitApp {
         } else {
             lastRight = target;
         }
-        if ((target == Focus.BOARD || target == Focus.DOCS) && target != mainViewOwner) {
+        if ((target == Focus.BOARD || target == Focus.SESSIONS || target == Focus.DOCS) && target != mainViewOwner) {
             mainViewOwner = target;
             mainViewScroll.reset();
         }
@@ -244,12 +287,13 @@ public final class Shell extends ToolkitApp {
     @Override
     protected Element render() {
         applyPendingDocs();
+        applyPendingSessions();
         return column(
                 text(EMPTY).length(STATUS_LINE_HEIGHT),
                 row(
                         column(
                                         boardPanel(),
-                                        small(SESSIONS_TITLE, Focus.SESSIONS),
+                                        sessionsPanel(),
                                         docsPanel(),
                                         small(ELSEWHERE_TITLE, Focus.ELSEWHERE))
                                 .percent(LEFT_COLUMN_PERCENT),
@@ -262,6 +306,15 @@ public final class Shell extends ToolkitApp {
         return sized(
                 framed(BOARD_TITLE, Focus.BOARD, new RowsElement(lines, board.selectedIndex(), focus == Focus.BOARD)),
                 Focus.BOARD);
+    }
+
+    private Element sessionsPanel() {
+        Element body = sessions.unavailable()
+                .<Element>map(reason -> richText(SESSIONS_UNAVAILABLE + reason.value()).wrapWord().dim())
+                .orElseGet(() -> sessions.isEmpty()
+                        ? text(NO_LIVE_SESSION).dim()
+                        : new SessionRowsElement(sessions.visible(), sessions.selectedIndex(), focus == Focus.SESSIONS));
+        return sized(framed(SESSIONS_TITLE, Focus.SESSIONS, body), Focus.SESSIONS);
     }
 
     private Element docsPanel() {
@@ -296,7 +349,17 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element detail() {
-        return mainViewOwner == Focus.BOARD ? boardDetail() : docsDetail();
+        return switch (mainViewOwner) {
+            case BOARD -> boardDetail();
+            case SESSIONS -> sessionsDetail();
+            default -> docsDetail();
+        };
+    }
+
+    private Element sessionsDetail() {
+        return sessions.selected()
+                .<Element>map(session -> new DetailElement(width -> SessionText.facts(session), Optional.empty(), mainViewScroll))
+                .orElseGet(() -> column());
     }
 
     private Element docsDetail() {
@@ -327,7 +390,7 @@ public final class Shell extends ToolkitApp {
 
     private String keyBar() {
         List<String> keys = new ArrayList<>();
-        if (focus == Focus.BOARD || focus == Focus.DOCS) {
+        if (focus == Focus.BOARD || focus == Focus.SESSIONS || focus == Focus.DOCS) {
             keys.add(MOVE_KEYS);
         }
         if (focus == Focus.MAIN) {

@@ -20,12 +20,15 @@
 		<mockito.version>5.20.0</mockito.version>
 		<dependency-plugin.version>3.9.0</dependency-plugin.version>
 		<snakeyaml-engine.version>3.2</snakeyaml-engine.version>
+		<jackson.version>3.2.3</jackson.version>
 		<compiler.version>3.16.0</compiler.version>
 		<surefire.version>3.6.0</surefire.version>
 		<shade.version>3.6.2</shade.version>
 		<spotless.version>3.10.4</spotless.version>
 		<pmd.version>3.28.0</pmd.version>
 		<cpd.minimumTokens>80</cpd.minimumTokens>
+		<!-- Contract tests need a live claude; `make contract` overrides this on the command line. -->
+		<excludedGroups>contract</excludedGroups>
 	</properties>
 
 	<dependencyManagement>
@@ -34,6 +37,13 @@
 				<groupId>dev.tamboui</groupId>
 				<artifactId>tamboui-bom</artifactId>
 				<version>${tamboui.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>tools.jackson</groupId>
+				<artifactId>jackson-bom</artifactId>
+				<version>${jackson.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -64,6 +74,10 @@
 			<groupId>org.snakeyaml</groupId>
 			<artifactId>snakeyaml-engine</artifactId>
 			<version>${snakeyaml-engine.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>tools.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
 		</dependency>
 
 		<dependency>

@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.error.domain;
 
+import java.nio.file.Path;
 import java.util.regex.Pattern;
 
 /**
@@ -28,6 +29,13 @@ public final class Assert {
         notNull(field, input);
         if (!pattern.matcher(input).matches()) {
             throw new NotMatchingExpectedPatternException(field, input, shape);
+        }
+    }
+
+    public static void absolute(String field, Path input) {
+        notNull(field, input);
+        if (!input.isAbsolute()) {
+            throw new RelativePathException(field, input);
         }
     }
 }

@@ -2,7 +2,7 @@ package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
-import dev.maxenceng.lazyclaude.board.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 
 public final class BoardQueryFixture {
 

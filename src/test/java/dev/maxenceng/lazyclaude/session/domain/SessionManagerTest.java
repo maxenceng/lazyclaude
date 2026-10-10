@@ -1,0 +1,262 @@
+package dev.maxenceng.lazyclaude.session.domain;
+
+import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
+import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.newestSession;
+import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.oldestSession;
+import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.sessionIn;
+import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.sessionWith;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.newestReportedSession;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.oldestReportedSession;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedIn;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSessionBuilder;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWaitingFor;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWith;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.sdkCliSession;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.sessionWithoutEntrypoint;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.advancingClock;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionManager;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.workingDirectoryOf;
+import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
+import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
+import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.permissionPrompt;
+import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.otherProjectDirectory;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.outsideGitDirectory;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.nio.file.Path;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import dev.maxenceng.lazyclaude.session.published.Busy;
+import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
+import dev.maxenceng.lazyclaude.session.published.Unknown;
+import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
+import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
+import dev.maxenceng.lazyclaude.session.published.YourTurn;
+import dev.maxenceng.lazyclaude.shared.domain.Project;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
+
+@ExtendWith(MockitoExtension.class)
+class SessionManagerTest {
+
+    @Mock
+    private LiveSessionPort sessions;
+
+    @Mock
+    private ProjectLocatorPort locator;
+
+    @Mock
+    private SessionWatchPort watch;
+
+    @Test
+    void shouldListASessionWhoseDirectoryBelongsToTheProject() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project())).isEqualTo(liveSessionsOf(List.of(liveSession())));
+    }
+
+    @Test
+    void shouldMeasureEveryAgeOfOneReadFromTheSameInstant() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+
+        LiveSessions read = (LiveSessions) new SessionManager(sessions, locator, watch, new SessionClock(advancingClock())).sessionsFor(project());
+
+        assertThat(read.ageOf(liveSession()))
+                .as("rows of one read drawn at different instants would disagree on how long ago they started")
+                .isEqualTo(read.ageOf(liveSession()));
+    }
+
+    @Test
+    void shouldListASessionInATicketWorktreeBecauseTheLocatorPointsItAtTheMainWorktree() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedIn(worktreeDirectory())));
+        when(locator.locate(worktreeDirectory())).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .isEqualTo(liveSessionsOf(List.of(sessionIn(worktreeDirectory()))));
+    }
+
+    @Test
+    void shouldNotListASessionOfAnotherProject() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedIn(otherProjectDirectory())));
+        when(locator.locate(otherProjectDirectory())).thenReturn(new Project(Path.of("/work/other")));
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project())).isEqualTo(liveSessionsOf(List.of()));
+    }
+
+    @Test
+    void shouldNotListASessionWhoseDirectoryBelongsToNoProject() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedIn(outsideGitDirectory()), reportedSession()));
+        when(locator.locate(outsideGitDirectory())).thenThrow(new ProjectNotFoundException("not inside a git repository"));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project())).isEqualTo(liveSessionsOf(List.of(liveSession())));
+    }
+
+    @Test
+    void shouldSayWhyWhenTheProjectOfASessionCannotBeLocated() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession())))
+                .thenThrow(new ProjectUnavailableException(reason().value(), new InterruptedException()));
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .as("a git that failed says nothing about where the session is, so the panel must not claim there is none")
+                .isEqualTo(unavailableSessions());
+    }
+
+    @Test
+    void shouldLocateEachDistinctDirectoryOnce() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedSession(), newestReportedSession(), oldestReportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+
+        sessionManager(sessions, locator, watch).sessionsFor(project());
+
+        verify(locator, times(1)).locate(workingDirectoryOf(reportedSession()));
+    }
+
+    @Test
+    void shouldNotListAnSdkCliSession() {
+        when(sessions.liveSessions()).thenReturn(List.of(sdkCliSession(), reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project())).isEqualTo(liveSessionsOf(List.of(liveSession())));
+    }
+
+    @Test
+    void shouldListASessionThatReportsNoEntrypoint() {
+        when(sessions.liveSessions()).thenReturn(List.of(sessionWithoutEntrypoint()));
+        when(locator.locate(workingDirectoryOf(sessionWithoutEntrypoint()))).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .as("claude agents --json has no entrypoint, so an sdk-cli session cannot be told apart there")
+                .isEqualTo(liveSessionsOf(List.of(liveSession())));
+    }
+
+    @Test
+    void shouldOrderNewestStartFirst() {
+        when(sessions.liveSessions()).thenReturn(List.of(oldestReportedSession(), newestReportedSession(), reportedSession()));
+        when(locator.locate(any())).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .isEqualTo(liveSessionsOf(List.of(newestSession(), liveSession(), oldestSession())));
+    }
+
+    @Test
+    void shouldKeepTheOrderWhenAStateChanges() {
+        when(locator.locate(any())).thenReturn(project());
+        when(sessions.liveSessions())
+                .thenReturn(List.of(reportedWith(ReportedStatus.BUSY), newestReportedSession()))
+                .thenReturn(List.of(reportedWith(ReportedStatus.IDLE), newestReportedSession()))
+                .thenReturn(List.of(reportedWaitingFor(inputNeeded()), newestReportedSession()));
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .isEqualTo(liveSessionsOf(List.of(newestSession(), sessionWith(new Busy()))));
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .isEqualTo(liveSessionsOf(List.of(newestSession(), sessionWith(new YourTurn()))));
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .isEqualTo(liveSessionsOf(List.of(newestSession(), sessionWith(new WaitingForInput(inputNeeded())))));
+    }
+
+    @Test
+    void shouldBeBusyWhenTheStatusIsShell() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedWith(ReportedStatus.SHELL)));
+        when(locator.locate(any())).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .isEqualTo(liveSessionsOf(List.of(sessionWith(new Busy()))));
+    }
+
+    @Test
+    void shouldWaitForPermissionOnAPermissionPrompt() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedWaitingFor(permissionPrompt())));
+        when(locator.locate(any())).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .isEqualTo(liveSessionsOf(List.of(sessionWith(new WaitingForPermission()))));
+    }
+
+    @Test
+    void shouldWaitForInputWhenNoReasonIsGiven() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedWaitingFor(new NoWaitingReason())));
+        when(locator.locate(any())).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .isEqualTo(liveSessionsOf(List.of(sessionWith(new WaitingForInput(new NoWaitingReason())))));
+    }
+
+    @Test
+    void shouldIgnoreAReasonOnASessionThatIsNotWaiting() {
+        when(sessions.liveSessions())
+                .thenReturn(List.of(reportedSessionBuilder()
+                        .status(ReportedStatus.IDLE)
+                        .waitingFor(permissionPrompt())
+                        .build()));
+        when(locator.locate(any())).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .as("only a waiting session is blocked, whatever stale reason its record carries")
+                .isEqualTo(liveSessionsOf(List.of(sessionWith(new YourTurn()))));
+    }
+
+    @Test
+    void shouldListASessionWhoseStatusItDoesNotKnowAsUnknown() {
+        when(sessions.liveSessions()).thenReturn(List.of(reportedWith(ReportedStatus.UNKNOWN)));
+        when(locator.locate(any())).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .as("a newer Claude Code's status must not hide a session that runs")
+                .isEqualTo(liveSessionsOf(List.of(sessionWith(new Unknown()))));
+    }
+
+    @Test
+    void shouldListTheProjectsSessionsWhenASessionElsewhereReportsAStatusItDoesNotKnow() {
+        when(sessions.liveSessions())
+                .thenReturn(List.of(
+                        reportedSessionBuilder()
+                                .directory(otherProjectDirectory())
+                                .status(ReportedStatus.UNKNOWN)
+                                .build(),
+                        reportedSession()));
+        when(locator.locate(otherProjectDirectory())).thenReturn(new Project(Path.of("/work/other")));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .as("a session of another project has no say in whether this project's sessions can be shown")
+                .isEqualTo(liveSessionsOf(List.of(liveSession())));
+    }
+
+    @Test
+    void shouldSayWhyWhenNoSourceAnswers() {
+        when(sessions.liveSessions()).thenThrow(sessionsUnavailable());
+
+        assertThat(sessionManager(sessions, locator, watch).sessionsFor(project()))
+                .as("unavailable sessions are shown as such, not a failed start")
+                .isEqualTo(unavailableSessions());
+    }
+
+    @Test
+    void shouldAskTheWatcherToTellItWhenSessionsMayHaveChanged() {
+        Runnable changed = () -> {};
+
+        sessionManager(sessions, locator, watch).watch(changed);
+
+        verify(watch).watch(changed);
+    }
+}

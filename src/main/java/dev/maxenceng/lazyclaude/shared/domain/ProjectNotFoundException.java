@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.board.domain;
+package dev.maxenceng.lazyclaude.shared.domain;
 
 import dev.maxenceng.lazyclaude.error.domain.DomainErrorStatus;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
@@ -8,9 +8,5 @@ public final class ProjectNotFoundException extends DomainException {
 
     public ProjectNotFoundException(String reason) {
         super(DomainErrorStatus.NOT_FOUND, reason);
-    }
-
-    public ProjectNotFoundException(String reason, Throwable cause) {
-        super(DomainErrorStatus.NOT_FOUND, reason, cause);
     }
 }

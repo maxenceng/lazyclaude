@@ -5,14 +5,14 @@ verified by `ArchitectureTest`, so this document describes intent while the test
 
 ## Contexts
 
-`board` and `docs` exist in code. The others become real — package, glossary section and all — in the
+`board`, `docs` and `session` exist in code. The others become real — package, glossary section and all — in the
 change that implements the first ticket refined into them. Their words are already in
 `docs/glossary.md`, marked *expected*.
 
 | Context | Responsibility | Status |
 |---|---|---|
 | `board` | A project's backlog: its tickets, their status read from each ticket branch's copy, and the verbs `/ticket` allows for that status. Read-only. Today it reads each ticket from the project's working tree; branch copies and verbs come later. | in code |
-| `session` | Claude Code sessions: which exist and their state (busy, your turn, waiting), linking them to tickets, the preselected verb, ticket worktrees, hosting sessions on a pty, desktop notifications. | expected |
+| `session` | Claude Code sessions: which are live (from the registry after a liveness check, else `claude agents --json`) and their state (busy, your turn, waiting), kept current by its own watcher on `~/.claude/sessions/` (ADR 0021). Still to come: linking them to tickets, the preselected verb, ticket worktrees, hosting sessions on a pty, desktop notifications. Read-only. | in code |
 | `review` | A ticket's pull request: its diff and threads, your pending review on GitHub, submitting it, and whether it is merged. | expected |
 | `docs` | The project's `docs/**/*.md` outside `docs/backlog/`, as a tree of documents, read-only, kept current by its own watcher on `docs/**` (ADR 0016). | in code |
 
@@ -21,7 +21,7 @@ Not contexts:
 | Package | Role |
 |---|---|
 | `shell` | The TamboUI application. Asks each context through the `*Query` in its `infrastructure.primary`, which answers `*View`s made of the context's `published` value objects (ADR 0011, ADR 0012), composing them into screens and keys, and joins them: a ticket's marker is the strongest state among its linked sessions. |
-| `shared` | Shared kernel. In `shared.domain` (ADR 0010): `Project`, the main worktree's root that `board`, `docs`, `session` and `review` all work in. In `shared.infrastructure.secondary` (ADR 0017): `Utf8Text`, the decoding both `board`'s and `docs`' adapters read files with. |
+| `shared` | Shared kernel. In `shared.domain` (ADR 0010): `Project`, the main worktree's root that `board`, `docs`, `session` and `review` all work in, and what locates it: `ProjectLocatorPort`, `WorkingDirectory`, `ProjectNotFoundException` and `ProjectUnavailableException` (ADR 0019). In `shared.infrastructure.secondary` (ADR 0017): `Utf8Text`, the decoding both `board`'s and `docs`' adapters read files with, and `ProjectLocatorRepository`, the git lookup `board` and `session` share (ADR 0019). |
 | `error` | Error kernel: `DomainException`, its status, and `Assert` (in `error.domain`, ADR 0011). |
 
 ## Relationships
@@ -52,3 +52,4 @@ graph TD
 - Which ticket branches stop being a status source is `review`'s merged state, handed to
   `board`'s status read by `shell` as plain branch names.
 - `docs` stands alone. The shell hands it the project root that `board` located (ADR 0015).
+- `session` stands alone too: the shell hands it the same root, and it asks the shared locator which project each session's `cwd` is in (ADR 0019).

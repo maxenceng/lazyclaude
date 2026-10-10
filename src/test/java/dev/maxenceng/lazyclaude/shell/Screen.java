@@ -52,7 +52,8 @@ public final class Screen {
 
     List<String> boardPanelLines() {
         List<String> found = new ArrayList<>();
-        for (String line : lines) {
+        for (String wholeLine : lines) {
+            String line = wholeLine.substring(0, LEFT_COLUMN_WIDTH);
             int open = line.indexOf(BORDER);
             int close = open < 0 ? -1 : line.indexOf(BORDER, open + 1);
             if (close >= 0) {
@@ -98,6 +99,10 @@ public final class Screen {
 
     List<String> cyanText() {
         return textOfCells(WIDTH, cell -> cell.style().fg().filter(Color.CYAN::equals).isPresent());
+    }
+
+    List<String> foregroundText(Color color) {
+        return textOfCells(WIDTH, cell -> cell.style().fg().filter(color::equals).isPresent());
     }
 
     private List<String> textOfCells(int columns, Predicate<Cell> predicate) {

@@ -5,11 +5,11 @@ import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticket;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicket;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicketBuilder;
-import static dev.maxenceng.lazyclaude.board.domain.WorkingDirectoryFixture.workingDirectory;
 import static dev.maxenceng.lazyclaude.board.published.FileNameFixture.fileName;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.secondTicketId;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.tenthTicketId;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
@@ -25,6 +25,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.maxenceng.lazyclaude.board.published.FileName;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class BoardManagerTest {
