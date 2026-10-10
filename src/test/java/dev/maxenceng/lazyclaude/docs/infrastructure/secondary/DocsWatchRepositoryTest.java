@@ -147,7 +147,7 @@ class DocsWatchRepositoryTest {
     void shouldIgnoreChangesUnderTheBacklog() throws Exception {
         watcher = watching(watcher(said), root, probe);
 
-        write(docs, "backlog/DOCS-1.md", markdown());
+        write(docs, "backlog/ticket.md", markdown());
         write(docs, "backlog/nested/DOCS-2.md", markdown());
 
         assertThat(probe.quietFor(settled())).isTrue();
@@ -230,7 +230,7 @@ class DocsWatchRepositoryTest {
     void shouldPollIgnoringTheBacklog() throws Exception {
         watcher = watching(watcherWithoutInotify(said), root, probe);
 
-        write(docs, "backlog/DOCS-1.md", markdown());
+        write(docs, "backlog/ticket.md", markdown());
 
         assertThat(probe.quietFor(settled())).isTrue();
     }

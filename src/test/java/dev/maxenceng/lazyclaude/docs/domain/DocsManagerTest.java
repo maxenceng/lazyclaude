@@ -44,7 +44,7 @@ class DocsManagerTest {
 
     @Test
     void shouldNotReadWhatTheTreeWouldLeaveOut() {
-        DocumentPath backlog = new DocumentPath("backlog/DOCS-1.md");
+        DocumentPath backlog = new DocumentPath("backlog/ticket.md");
         DocumentPath image = new DocumentPath("adr/diagram.png");
         when(docs.paths(project())).thenReturn(List.of(backlog, image, readDocument().path()));
         when(docs.read(project(), readDocument().path())).thenReturn(readDocument());
@@ -57,7 +57,7 @@ class DocsManagerTest {
 
     @Test
     void shouldBeAnEmptyTreeWhenTheProjectHoldsOnlyTheBacklog() {
-        when(docs.paths(project())).thenReturn(List.of(new DocumentPath("backlog/DOCS-1.md")));
+        when(docs.paths(project())).thenReturn(List.of(new DocumentPath("backlog/ticket.md")));
 
         assertThat(manager.docsFor(project())).isEqualTo(DocsTree.of(List.of()));
     }
