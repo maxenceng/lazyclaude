@@ -13,45 +13,45 @@ class TicketFrontmatterMapperTest {
 
     @Test
     void shouldShowADateAsWritten() {
-        assertThat(mapper.read("created: 2026-10-10").entries().entries()).containsExactly(entry("created", "2026-10-10"));
+        assertThat(mapper.read("created: 2026-10-10").otherKeys().entries()).containsExactly(entry("created", "2026-10-10"));
     }
 
     @Test
     void shouldShowANumberAsWritten() {
-        assertThat(mapper.read("tracker_id: 073\nratio: 1.50\nhex: 0x1F").entries().entries())
+        assertThat(mapper.read("tracker_id: 073\nratio: 1.50\nhex: 0x1F").otherKeys().entries())
                 .as("the source text, not the number it resolves to")
                 .containsExactly(entry("tracker_id", "073"), entry("ratio", "1.50"), entry("hex", "0x1F"));
     }
 
     @Test
     void shouldShowAListAsBracketedItems() {
-        assertThat(mapper.read("blocked_by:\n  - PROJ-8\n  - PROJ-9").entries().entries())
+        assertThat(mapper.read("blocked_by:\n  - PROJ-8\n  - PROJ-9").otherKeys().entries())
                 .containsExactly(entry("blocked_by", "[PROJ-8, PROJ-9]"));
     }
 
     @Test
     void shouldShowAnEmptyListAsEmptyBrackets() {
-        assertThat(mapper.read("blocked_by: []").entries().entries()).containsExactly(entry("blocked_by", "[]"));
+        assertThat(mapper.read("blocked_by: []").otherKeys().entries()).containsExactly(entry("blocked_by", "[]"));
     }
 
     @Test
     void shouldShowANestedMapAsBracedPairs() {
-        assertThat(mapper.read("links: {a: 1, b: two}").entries().entries()).containsExactly(entry("links", "{a: 1, b: two}"));
+        assertThat(mapper.read("links: {a: 1, b: two}").otherKeys().entries()).containsExactly(entry("links", "{a: 1, b: two}"));
     }
 
     @Test
     void shouldShowAKeyWithNothingAfterItAsEmpty() {
-        assertThat(mapper.read("parent:").entries().entries()).containsExactly(entry("parent", ""));
+        assertThat(mapper.read("parent:").otherKeys().entries()).containsExactly(entry("parent", ""));
     }
 
     @Test
     void shouldShowAQuotedValueWithoutItsQuotes() {
-        assertThat(mapper.read("note: 'a: b'").entries().entries()).containsExactly(entry("note", "a: b"));
+        assertThat(mapper.read("note: 'a: b'").otherKeys().entries()).containsExactly(entry("note", "a: b"));
     }
 
     @Test
     void shouldKeepKeysInFileOrder() {
-        assertThat(mapper.read("zeta: 1\nalpha: 2\nmid: 3").entries().entries())
+        assertThat(mapper.read("zeta: 1\nalpha: 2\nmid: 3").otherKeys().entries())
                 .containsExactly(entry("zeta", "1"), entry("alpha", "2"), entry("mid", "3"));
     }
 
@@ -66,6 +66,13 @@ class TicketFrontmatterMapperTest {
     }
 
     @Test
+    void shouldLeaveTheFieldsTheBoardModelsOutOfTheOtherKeys() {
+        assertThat(mapper.read("id: PROJ-1\ncreated: 2026-10-10\nstatus: todo\ncontext: board\ntype: feature").otherKeys().entries())
+                .as("a modelled field is shown by the facts line, so listing it again would show it twice")
+                .containsExactly(entry("created", "2026-10-10"));
+    }
+
+    @Test
     void shouldReadAKeyWithNothingAfterItAsAbsentField() {
         assertThat(mapper.read("id:\nstatus: null").id()).as("an empty id is no id").isNull();
         assertThat(mapper.read("id:\nstatus: null").status()).isNull();
@@ -76,12 +83,12 @@ class TicketFrontmatterMapperTest {
         TicketFrontmatter read = mapper.read("- just\n- a list");
 
         assertThat(read.claimsATicket()).isFalse();
-        assertThat(read.entries().entries()).isEmpty();
+        assertThat(read.otherKeys().entries()).isEmpty();
     }
 
     @Test
     void shouldReadNothingFromEmptyFrontmatter() {
-        assertThat(mapper.read("").entries().entries()).isEmpty();
+        assertThat(mapper.read("").otherKeys().entries()).isEmpty();
     }
 
     @Test
@@ -103,13 +110,13 @@ class TicketFrontmatterMapperTest {
 
     @Test
     void shouldShowAValueWrittenOverSeveralLinesOnOneRow() {
-        assertThat(mapper.read("notes: |\n  first line\n\n  second line\n").entries().entries())
+        assertThat(mapper.read("notes: |\n  first line\n\n  second line\n").otherKeys().entries())
                 .as("a main view row holds one line, so a line break would draw control characters into it")
                 .containsExactly(entry("notes", "first line second line"));
     }
 
     @Test
     void shouldKeepTheSpacesOfAOneLineValue() {
-        assertThat(mapper.read("note: ' padded '").entries().entries()).containsExactly(entry("note", " padded "));
+        assertThat(mapper.read("note: ' padded '").otherKeys().entries()).containsExactly(entry("note", " padded "));
     }
 }

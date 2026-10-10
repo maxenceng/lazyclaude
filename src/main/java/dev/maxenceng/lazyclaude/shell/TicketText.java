@@ -2,7 +2,6 @@ package dev.maxenceng.lazyclaude.shell;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
@@ -15,12 +14,11 @@ import dev.maxenceng.lazyclaude.board.published.TypeName;
 
 /**
  * How the shell words a ticket: a ticket with no title is shown under its id, a missing field is left
- * out, and the frontmatter keys the facts line already carries are not listed again.
+ * out, and the other frontmatter keys line up under their longest name.
  */
 final class TicketText {
 
     private static final String FACT_SEPARATOR = " · ";
-    private static final Set<String> FACT_KEYS = Set.of("id", "status", "context", "type");
     private static final String KEY_GAP = "  ";
 
     private TicketText() {}
@@ -46,9 +44,7 @@ final class TicketText {
     }
 
     static List<String> keyRows(TicketView ticket) {
-        List<FrontmatterEntryView> others = ticket.frontmatter().stream()
-                .filter(entry -> !FACT_KEYS.contains(entry.key().name()))
-                .toList();
+        List<FrontmatterEntryView> others = ticket.frontmatter();
         int keyWidth = others.stream().mapToInt(entry -> entry.key().name().length()).max().orElse(0);
         return others.stream().map(entry -> keyRow(entry, keyWidth)).toList();
     }

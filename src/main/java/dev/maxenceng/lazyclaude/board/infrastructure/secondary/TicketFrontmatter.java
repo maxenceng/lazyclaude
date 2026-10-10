@@ -14,8 +14,8 @@ import dev.maxenceng.lazyclaude.board.published.TicketType;
 import dev.maxenceng.lazyclaude.board.published.TypeName;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** The four frontmatter fields the board models, as text (null where the file lacks one), and every key the file has. */
-record TicketFrontmatter(String id, String status, String context, String type, Frontmatter entries) {
+/** The four frontmatter fields the board models, as text (null where the file lacks one), and the file's other keys. */
+record TicketFrontmatter(String id, String status, String context, String type, Frontmatter otherKeys) {
 
     boolean claimsATicket() {
         return id != null;
@@ -30,7 +30,7 @@ record TicketFrontmatter(String id, String status, String context, String type, 
                 .status(Status.parse(status))
                 .context(ticketContext())
                 .type(ticketType())
-                .frontmatter(entries)
+                .frontmatter(otherKeys)
                 .body(body)
                 .build();
     }

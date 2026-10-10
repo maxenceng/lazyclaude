@@ -37,6 +37,7 @@ final class TicketFrontmatterMapper {
     private static final String STATUS = "status";
     private static final String CONTEXT = "context";
     private static final String TYPE = "type";
+    private static final Set<String> MODELLED = Set.of(ID, STATUS, CONTEXT, TYPE);
     private static final String LIST_OPEN = "[";
     private static final String LIST_CLOSE = "]";
     private static final String MAP_OPEN = "{";
@@ -58,14 +59,14 @@ final class TicketFrontmatterMapper {
                 .map(MappingNode::getValue)
                 .orElse(List.of());
         return new TicketFrontmatter(
-                field(tuples, ID), field(tuples, STATUS), field(tuples, CONTEXT), field(tuples, TYPE), entries(tuples));
+                field(tuples, ID), field(tuples, STATUS), field(tuples, CONTEXT), field(tuples, TYPE), otherKeys(tuples));
     }
 
-    private static Frontmatter entries(List<NodeTuple> tuples) {
+    private static Frontmatter otherKeys(List<NodeTuple> tuples) {
         List<FrontmatterEntry> entries = new ArrayList<>();
         for (NodeTuple tuple : tuples) {
             String key = display(tuple.getKeyNode());
-            if (!key.isBlank()) {
+            if (!key.isBlank() && !MODELLED.contains(key)) {
                 entries.add(FrontmatterEntry.builder()
                         .key(new FrontmatterKey(key))
                         .value(new FrontmatterValue(display(tuple.getValueNode())))

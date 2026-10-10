@@ -226,15 +226,6 @@ class ShellTest {
     }
 
     @Test
-    void shouldLeaveTheFactsKeysOutOfTheOtherKeys() {
-        Shell shell = pressed(shellOn(datedTicketView()), key('j'), 1);
-
-        assertThat(Screen.of(shell).mainViewRows())
-                .as("id, status, context and type are already in the facts line")
-                .noneSatisfy(row -> assertThat(row).matches("(id|status|context|type) +\\S.*"));
-    }
-
-    @Test
     void shouldDrawARuleBetweenTheKeysAndTheBody() {
         Shell shell = pressed(shellOn(datedTicketView()), key('j'), 1);
 

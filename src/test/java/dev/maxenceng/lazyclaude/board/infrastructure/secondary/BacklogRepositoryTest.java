@@ -1,8 +1,5 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
-import static dev.maxenceng.lazyclaude.board.domain.FrontmatterEntryFixture.entry;
-import static dev.maxenceng.lazyclaude.board.domain.FrontmatterEntryFixture.idEntry;
-import static dev.maxenceng.lazyclaude.board.domain.FrontmatterEntryFixture.statusEntry;
 import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.datedFrontmatter;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFile;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.bareTicketBuilder;
@@ -18,7 +15,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +22,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
 import dev.maxenceng.lazyclaude.board.domain.BacklogNotFoundException;
-import dev.maxenceng.lazyclaude.board.domain.Frontmatter;
 import dev.maxenceng.lazyclaude.board.domain.TicketFile;
 import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
 import dev.maxenceng.lazyclaude.board.published.Body;
@@ -125,7 +120,6 @@ class BacklogRepositoryTest {
                 .containsExactly(TicketFile.builder()
                         .file(new FileName("PROJ-1.md"))
                         .ticket(bareTicketBuilder()
-                                .frontmatter(new Frontmatter(List.of(idEntry(), statusEntry(), entry("context", " "))))
                                 .build())
                         .build());
     }
@@ -275,7 +269,7 @@ class BacklogRepositoryTest {
     }
 
     @Test
-    void shouldKeepEveryFrontmatterKeyInFileOrderAsDisplayText() throws IOException {
+    void shouldKeepTheOtherFrontmatterKeysInFileOrderAsDisplayText() throws IOException {
         Files.writeString(
                 backlog.resolve("PROJ-1.md"),
                 "---\nid: PROJ-1\nstatus: todo\ncontext: board\ntype: feature\ncreated: 2026-10-10\nblocked_by: [PROJ-8, PROJ-9]\n---\n\n# A board from the backlog\n\nBody.\n");
@@ -283,7 +277,7 @@ class BacklogRepositoryTest {
         assertThat(repository.entries(new Project(root)))
                 .singleElement()
                 .isInstanceOfSatisfying(TicketFile.class, file -> assertThat(file.ticket().frontmatter())
-                        .as("a date stays as written and a list reads as [A, B]")
+                        .as("the fields the board models are left out, a date stays as written and a list reads as [A, B]")
                         .isEqualTo(datedFrontmatter()));
     }
 

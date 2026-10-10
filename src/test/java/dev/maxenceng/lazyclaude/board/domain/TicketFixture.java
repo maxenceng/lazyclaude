@@ -1,7 +1,6 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
 import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.frontmatter;
-import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.idAndStatusFrontmatter;
 import static dev.maxenceng.lazyclaude.board.published.BodyFixture.body;
 import static dev.maxenceng.lazyclaude.board.published.ContextNameFixture.contextName;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
@@ -43,7 +42,6 @@ public final class TicketFixture {
                 .title(new NoTitle())
                 .context(new NoContext())
                 .type(new NoType())
-                .frontmatter(idAndStatusFrontmatter())
                 .body(new NoBody());
     }
 }

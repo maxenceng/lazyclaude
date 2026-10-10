@@ -10,7 +10,7 @@ import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.TicketTitle;
 import dev.maxenceng.lazyclaude.board.published.TicketType;
 
-/** One ticket as the shell reads it: the fields the board models, then every frontmatter key in file order, then the body. */
+/** One ticket as the shell reads it: the fields the board models, then the other frontmatter keys in file order, then the body. */
 public record TicketView(
         TicketId id,
         TicketTitle title,

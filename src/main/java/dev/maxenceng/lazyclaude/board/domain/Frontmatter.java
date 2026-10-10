@@ -4,7 +4,7 @@ import java.util.List;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** Every key a ticket's file has, in file order; the domain interprets none beyond the ones it models. */
+/** The keys of a ticket's file that the board does not model as fields, in file order; the domain interprets none of them. */
 public record Frontmatter(List<FrontmatterEntry> entries) {
 
     public Frontmatter {

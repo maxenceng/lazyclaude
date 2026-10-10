@@ -1,6 +1,5 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.published.FrontmatterKey;
@@ -22,17 +21,10 @@ public final class FrontmatterEntryViewFixture {
     }
 
     public static List<FrontmatterEntryView> frontmatterViews() {
-        return List.of(
-                entryView("id", "PROJ-1"),
-                entryView("status", "todo"),
-                entryView("context", "board"),
-                entryView("type", "feature"));
+        return List.of();
     }
 
     public static List<FrontmatterEntryView> datedFrontmatterViews() {
-        List<FrontmatterEntryView> entries = new ArrayList<>(frontmatterViews());
-        entries.add(createdEntryView());
-        entries.add(entryView("blocked_by", "[PROJ-8, PROJ-9]"));
-        return entries;
+        return List.of(createdEntryView(), entryView("blocked_by", "[PROJ-8, PROJ-9]"));
     }
 }
