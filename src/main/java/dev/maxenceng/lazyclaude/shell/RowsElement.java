@@ -43,7 +43,7 @@ final class RowsElement implements Element {
     }
 
     // deferred: a wide character (CJK, emoji) counts as one cell, so such a title overruns its panel — close it when one shows up in a backlog.
-    private static String fit(String line, int width) {
+    static String fit(String line, int width) {
         if (line.codePointCount(0, line.length()) <= width) {
             return line;
         }

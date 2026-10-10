@@ -57,6 +57,10 @@
 			<artifactId>tamboui-jline3-backend</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>dev.tamboui</groupId>
+			<artifactId>tamboui-markdown</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.snakeyaml</groupId>
 			<artifactId>snakeyaml-engine</artifactId>
 			<version>${snakeyaml-engine.version}</version>

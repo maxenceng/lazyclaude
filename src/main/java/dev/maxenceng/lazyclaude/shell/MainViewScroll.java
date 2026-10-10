@@ -1,0 +1,66 @@
+package dev.maxenceng.lazyclaude.shell;
+
+/**
+ * Where the main view is scrolled to. The offset is the first visible row of the whole detail; the
+ * heights come from the last render, so it can never rest beyond the last row that fits.
+ */
+final class MainViewScroll {
+
+    private static final int ONE_ROW = 1;
+    private static final int HALF = 2;
+
+    private int offset;
+    private int contentHeight;
+    private int viewHeight;
+
+    int offset() {
+        return offset;
+    }
+
+    /** Takes the heights the last render saw, pulling the offset back if the content no longer reaches it. */
+    void observe(int contentHeight, int viewHeight) {
+        this.contentHeight = contentHeight;
+        this.viewHeight = viewHeight;
+        offset = Math.min(offset, maxOffset());
+    }
+
+    void rowDown() {
+        move(ONE_ROW);
+    }
+
+    void rowUp() {
+        move(-ONE_ROW);
+    }
+
+    void halfPageDown() {
+        move(halfPage());
+    }
+
+    void halfPageUp() {
+        move(-halfPage());
+    }
+
+    void top() {
+        offset = 0;
+    }
+
+    void bottom() {
+        offset = maxOffset();
+    }
+
+    void reset() {
+        top();
+    }
+
+    private void move(int rows) {
+        offset = Math.clamp((long) offset + rows, 0, maxOffset());
+    }
+
+    private int halfPage() {
+        return Math.max(ONE_ROW, viewHeight / HALF);
+    }
+
+    private int maxOffset() {
+        return Math.max(0, contentHeight - viewHeight);
+    }
+}

@@ -22,6 +22,7 @@ import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
 import dev.maxenceng.lazyclaude.board.published.FileName;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.board.published.TicketBody;
 import dev.maxenceng.lazyclaude.board.published.TicketTitle;
 import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
@@ -29,7 +30,7 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
  * Reads `docs/backlog/*.md`: YAML frontmatter for the fields, the first `# ` line outside a code
- * fence for the title. A file is an entry only when its frontmatter claims an `id`.
+ * fence for the title, everything after the closing `---` for the body. A file is an entry only when its frontmatter claims an `id`.
  */
 public final class BacklogRepository implements BacklogPort {
 
@@ -37,6 +38,7 @@ public final class BacklogRepository implements BacklogPort {
     private static final String MARKDOWN = ".md";
     private static final String HIDDEN_PREFIX = "_";
     private static final String FENCE = "---";
+    private static final String LINE_BREAK = "\n";
     private static final String TITLE_PREFIX = "# ";
     private static final List<String> CODE_FENCES = List.of("```", "~~~");
     private static final String BYTE_ORDER_MARK = "﻿";
@@ -101,12 +103,13 @@ public final class BacklogRepository implements BacklogPort {
         if (!fields.claimsATicket()) {
             return Optional.empty();
         }
-        return Optional.of(entry(name, fields, title(lines.subList(closing + 1, lines.size()))));
+        List<String> body = lines.subList(closing + 1, lines.size());
+        return Optional.of(entry(name, fields, title(body), TicketBody.of(String.join(LINE_BREAK, body))));
     }
 
-    private static BacklogEntry entry(FileName name, TicketFrontmatter fields, TicketTitle title) {
+    private static BacklogEntry entry(FileName name, TicketFrontmatter fields, TicketTitle title, TicketBody body) {
         try {
-            return TicketFile.builder().file(name).ticket(fields.toDomain(title)).build();
+            return TicketFile.builder().file(name).ticket(fields.toDomain(title, body)).build();
         } catch (DomainException e) {
             return unreadable(name, e.getMessage());
         }

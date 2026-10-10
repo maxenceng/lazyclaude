@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
 import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.TicketBody;
 import dev.maxenceng.lazyclaude.board.published.TicketContext;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.TicketTitle;
@@ -8,7 +9,14 @@ import dev.maxenceng.lazyclaude.board.published.TicketType;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
 /** One backlog ticket as the board shows it; a field the file lacks is an explicit absence, never a stand-in. */
-public record Ticket(TicketId id, TicketTitle title, Status status, TicketContext context, TicketType type) {
+public record Ticket(
+        TicketId id,
+        TicketTitle title,
+        Status status,
+        TicketContext context,
+        TicketType type,
+        Frontmatter frontmatter,
+        TicketBody body) {
 
     public Ticket {
         Assert.notNull("id", id);
@@ -16,6 +24,8 @@ public record Ticket(TicketId id, TicketTitle title, Status status, TicketContex
         Assert.notNull("status", status);
         Assert.notNull("context", context);
         Assert.notNull("type", type);
+        Assert.notNull("frontmatter", frontmatter);
+        Assert.notNull("body", body);
     }
 
     public static TicketBuilder builder() {
@@ -28,6 +38,8 @@ public record Ticket(TicketId id, TicketTitle title, Status status, TicketContex
         private Status status;
         private TicketContext context;
         private TicketType type;
+        private Frontmatter frontmatter;
+        private TicketBody body;
 
         private TicketBuilder() {}
 
@@ -56,8 +68,18 @@ public record Ticket(TicketId id, TicketTitle title, Status status, TicketContex
             return this;
         }
 
+        public TicketBuilder frontmatter(Frontmatter frontmatter) {
+            this.frontmatter = frontmatter;
+            return this;
+        }
+
+        public TicketBuilder body(TicketBody body) {
+            this.body = body;
+            return this;
+        }
+
         public Ticket build() {
-            return new Ticket(id, title, status, context, type);
+            return new Ticket(id, title, status, context, type, frontmatter, body);
         }
     }
 }

@@ -1,11 +1,14 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
+import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.frontmatter;
+import static dev.maxenceng.lazyclaude.board.published.BodyFixture.body;
 import static dev.maxenceng.lazyclaude.board.published.ContextNameFixture.contextName;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
 import static dev.maxenceng.lazyclaude.board.published.TypeNameFixture.typeName;
 
 import dev.maxenceng.lazyclaude.board.domain.Ticket.TicketBuilder;
+import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoContext;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.NoType;
@@ -21,7 +24,9 @@ public final class TicketFixture {
                 .title(title())
                 .status(Status.TODO)
                 .context(contextName())
-                .type(typeName());
+                .type(typeName())
+                .frontmatter(frontmatter())
+                .body(body());
     }
 
     public static Ticket ticket() {
@@ -29,10 +34,14 @@ public final class TicketFixture {
     }
 
     public static Ticket bareTicket() {
+        return bareTicketBuilder().build();
+    }
+
+    public static TicketBuilder bareTicketBuilder() {
         return ticketBuilder()
                 .title(new NoTitle())
                 .context(new NoContext())
                 .type(new NoType())
-                .build();
+                .body(new NoBody());
     }
 }

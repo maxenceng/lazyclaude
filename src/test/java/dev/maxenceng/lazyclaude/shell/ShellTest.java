@@ -1,17 +1,27 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryViewFixture.entryView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.bareTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.bodylessTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.datedTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.longDoneTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.longSecondTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.longTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.thematicBreakTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.untitledTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.wrappingTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketViewFixture.unreadableTicketView;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.pressed;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellFocusedOnMainViewOf;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOn;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -166,7 +176,7 @@ class ShellTest {
         Shell shell = pressed(shellOn(ticketViewBuilder().status(Status.IN_REVIEW).build()), key('j'), 4);
 
         assertThat(Screen.of(shell).text())
-                .contains("PROJ-1", "A board from the backlog", "status in-review · board · feature");
+                .contains("PROJ-1 · in-review · board · feature", "A board from the backlog");
     }
 
     @Test
@@ -195,8 +205,60 @@ class ShellTest {
 
         assertThat(Screen.of(shell).text())
                 .as("an absent field is left out, never shown as a blank between separators")
-                .contains("status draft")
-                .doesNotContain("·");
+                .contains("PROJ-1 · draft")
+                .doesNotContain("draft ·");
+    }
+
+    @Test
+    void shouldShowEveryOtherFrontmatterKeyInFileOrderAlignedUnderTheFacts() {
+        Shell shell = pressed(shellOn(datedTicketView()), key('j'), 1);
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .startsWith("PROJ-1 · draft · board · feature")
+                .containsSubsequence("created     2026-10-10", "blocked_by  [PROJ-8, PROJ-9]");
+    }
+
+    @Test
+    void shouldShowAKeyWrittenWithNothingAfterItBesideItsName() {
+        TicketView emptyValue = ticketViewBuilder().frontmatter(List.of(entryView("parent", ""))).build();
+
+        assertThat(Screen.of(pressed(shellOn(emptyValue), key('j'), 1)).mainViewRows()).contains("parent");
+    }
+
+    @Test
+    void shouldDrawARuleBetweenTheKeysAndTheBody() {
+        Shell shell = pressed(shellOn(datedTicketView()), key('j'), 1);
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .containsSubsequence("blocked_by  [PROJ-8, PROJ-9]", "─".repeat(50), "A board from the backlog");
+    }
+
+    @Test
+    void shouldRenderTheBodyAsMarkdownWithoutTheYamlBlock() {
+        Shell shell = pressed(shellOn(ticketView()), key('j'), 1);
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .anySatisfy(row -> assertThat(row).contains("A board from the backlog").doesNotContain("#"))
+                .noneSatisfy(row -> assertThat(row).containsAnyOf("---", "id: ", "status: "));
+    }
+
+    @Test
+    void shouldRenderADelimiterInTheBodyAsAThematicBreak() {
+        Shell shell = pressed(shellOn(thematicBreakTicketView()), key('j'), 1);
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .containsSubsequence("above", "─".repeat(50), "below")
+                .noneSatisfy(row -> assertThat(row).contains("---"));
+    }
+
+    @Test
+    void shouldSayNoBodyInDimTextUnderTheRuleWhenThereIsNone() {
+        Shell shell = pressed(shellOn(bodylessTicketView()), key('j'), 1);
+
+        Screen screen = Screen.of(shell);
+
+        assertThat(screen.mainViewRows()).containsSubsequence("─".repeat(50), "no body");
+        assertThat(screen.dimText()).contains("no body");
     }
 
     @Test
@@ -358,11 +420,246 @@ class ShellTest {
 
     @Test
     void shouldListNoBoardKeysWhenAnotherPanelHasFocus() {
-        Shell shell = pressed(shellOn(), key('l'), 1);
+        Shell shell = pressed(pressed(shellOn(), alt('l'), 1), alt('j'), 1);
 
         assertThat(Screen.of(shell).lines().getLast())
                 .contains("h/l panel", "alt+h/j/k/l focus", "q quit")
                 .doesNotContain("j/k move")
                 .doesNotContain("enter fold");
+    }
+
+    @Test
+    void shouldScrollTheMainViewOneRowWithJ() {
+        Shell shell = shellFocusedOnMainViewOf(longTicketView());
+
+        shell.press(key('j'));
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("──────");
+    }
+
+    @Test
+    void shouldScrollTheMainViewBackUpOneRowWithK() {
+        Shell shell = shellFocusedOnMainViewOf(longTicketView());
+        pressed(shell, key('j'), 2);
+
+        shell.press(key('k'));
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("──────");
+    }
+
+    @Test
+    void shouldStayAtTheTopWhenKIsPressedThere() {
+        Shell shell = shellFocusedOnMainViewOf(longTicketView());
+
+        shell.press(key('k'));
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+    }
+
+    @Test
+    void shouldStayAtTheBottomWhenJIsPressedThere() {
+        Shell shell = pressed(shellFocusedOnMainViewOf(longTicketView()), key('G'), 1);
+        List<String> atTheBottom = Screen.of(shell).mainViewRows();
+
+        shell.press(key('j'));
+
+        assertThat(Screen.of(shell).mainViewRows()).isEqualTo(atTheBottom);
+        assertThat(atTheBottom.getLast()).contains("Row 60");
+    }
+
+    @Test
+    void shouldComeBackUpInOneKeyAfterPressingJPastTheBottom() {
+        Shell shell = pressed(shellFocusedOnMainViewOf(longTicketView()), key('j'), 200);
+        Screen.of(shell);
+
+        shell.press(key('k'));
+
+        assertThat(Screen.of(shell).mainViewRows().getLast())
+                .as("the offset never rested beyond the last row, so one k moves the view")
+                .contains("Row 59");
+    }
+
+    @Test
+    void shouldNotScrollATicketShorterThanTheView() {
+        Shell shell = shellFocusedOnMainViewOf(ticketView());
+        List<String> before = Screen.of(shell).mainViewRows();
+
+        pressed(shell, key('j'), 5);
+        shell.press(ctrl('d'));
+        shell.press(key('G'));
+
+        assertThat(Screen.of(shell).mainViewRows()).isEqualTo(before);
+    }
+
+    @Test
+    void shouldScrollHalfTheViewWithCtrlD() {
+        Shell shell = shellFocusedOnMainViewOf(longTicketView());
+        int viewHeight = Screen.of(shell).mainViewRows().size();
+
+        shell.press(ctrl('d'));
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst())
+                .as("two head rows precede the body, so row %d is item %d", viewHeight / 2, viewHeight / 2 - 1)
+                .contains("Row %02d".formatted(viewHeight / 2 - 1));
+    }
+
+    @Test
+    void shouldScrollHalfTheViewBackWithCtrlU() {
+        Shell shell = shellFocusedOnMainViewOf(longTicketView());
+        pressed(shell, ctrl('d'), 3);
+
+        pressed(shell, ctrl('u'), 3);
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+    }
+
+    @Test
+    void shouldClampCtrlDNearTheBottom() {
+        Shell clamped = pressed(shellFocusedOnMainViewOf(longTicketView()), key('G'), 1);
+        pressed(clamped, ctrl('d'), 1);
+        Shell reference = pressed(shellFocusedOnMainViewOf(longTicketView()), key('G'), 1);
+
+        pressed(clamped, ctrl('u'), 1);
+        pressed(reference, ctrl('u'), 1);
+
+        assertThat(Screen.of(clamped).mainViewRows())
+                .as("ctrl+d past the bottom left the offset at the maximum, so ctrl+u lands where it does from there")
+                .isEqualTo(Screen.of(reference).mainViewRows());
+    }
+
+    @Test
+    void shouldClampCtrlUNearTheTop() {
+        Shell shell = shellFocusedOnMainViewOf(longTicketView());
+        shell.press(key('j'));
+
+        shell.press(ctrl('u'));
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+    }
+
+    @Test
+    void shouldGoToTheBottomWithBigGAndBackToTheTopWithG() {
+        Shell shell = shellFocusedOnMainViewOf(longTicketView());
+
+        shell.press(key('G'));
+        assertThat(Screen.of(shell).mainViewRows().getLast()).contains("Row 60");
+        shell.press(key('g'));
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+    }
+
+    @Test
+    void shouldReachTheLastWrappedLineOfALongParagraph() {
+        Shell shell = pressed(shellFocusedOnMainViewOf(wrappingTicketView()), key('G'), 1);
+
+        assertThat(Screen.of(shell).mainViewRows().getLast())
+                .as("the scroll limit agrees with how many rows the wrapped body renders")
+                .contains("THE-END");
+    }
+
+    @Test
+    void shouldNotMoveTheBoardSelectionWithTheMainViewScrollKeys() {
+        Shell shell = shellFocusedOnMainViewOf(longTicketView());
+        List<String> before = Screen.of(shell).boardPanelLines();
+
+        pressed(shell, key('j'), 3);
+        shell.press(ctrl('d'));
+        shell.press(key('G'));
+        shell.press(key('k'));
+        shell.press(key('h'));
+
+        assertThat(Screen.of(shell).boardPanelLines()).isEqualTo(before);
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1");
+    }
+
+    @Test
+    void shouldResetTheMainViewToTheTopWhenAnotherTicketIsSelected() {
+        Shell shell = shellOn(longTicketView(), longSecondTicketView());
+        shell.press(key('j'));
+        Screen.of(shell);
+        shell.press(key('l'));
+        shell.press(key('G'));
+        Screen.of(shell);
+        shell.press(key('h'));
+
+        shell.press(key('j'));
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-2 · draft");
+    }
+
+    @Test
+    void shouldKeepTheScrollWhenTheSelectionDoesNotMove() {
+        Shell shell = pressed(shellOn(longDoneTicketView()), key('j'), 4);
+        shell.press(enter());
+        shell.press(key('j'));
+        Screen.of(shell);
+        shell.press(key('l'));
+        shell.press(key('G'));
+        Screen.of(shell);
+        shell.press(key('h'));
+
+        shell.press(key('j'));
+        shell.press(key('l'));
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst())
+                .as("j on the last board row moves nothing, so the main view stays where it was scrolled")
+                .doesNotStartWith("PROJ-1 · done");
+        assertThat(Screen.of(shell).mainViewRows().getLast()).contains("Row 60");
+    }
+
+    @Test
+    void shouldResetTheMainViewWhenTheSelectionLeavesAndComesBack() {
+        Shell shell = shellFocusedOnMainViewOf(longTicketView());
+        shell.press(key('G'));
+        Screen.of(shell);
+        shell.press(key('h'));
+
+        shell.press(key('k'));
+        shell.press(key('j'));
+        shell.press(key('l'));
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+    }
+
+    @Test
+    void shouldLeaveTheMainViewScrollKeysAloneWhileTheBoardHasFocus() {
+        Shell shell = pressed(shellOn(longTicketView()), key('j'), 1);
+        Screen.of(shell);
+
+        assertThat(shell.press(ctrl('d'))).isFalse();
+        assertThat(shell.press(key('G'))).isFalse();
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+    }
+
+    @Test
+    void shouldListTheScrollKeysBeforeThePanelKeysWhileTheMainViewHasFocus() {
+        Shell shell = pressed(shellOn(), key('l'), 1);
+
+        assertThat(Screen.of(shell.render(), 120, 24).lines().getLast())
+                .contains("j/k scroll  ^d/^u half page  g/G top/bottom  h/l panel  alt+h/j/k/l focus  q quit");
+    }
+
+    @Test
+    void shouldNotListTheScrollKeysWhileTheBoardHasFocus() {
+        assertThat(Screen.of(shellOn()).lines().getLast()).doesNotContain("scroll").doesNotContain("half page");
+    }
+
+    @Test
+    void shouldNotListTheScrollKeysWhileTheDockHasFocus() {
+        Shell shell = pressed(pressed(shellOn(), alt('l'), 1), alt('j'), 1);
+
+        assertThat(Screen.of(shell).lines().getLast()).doesNotContain("scroll");
+    }
+
+    @Test
+    void shouldStillShowAnUnreadableFilesFileAndReasonInTheMainView() {
+        Shell shell = pressed(shellOn(boardViewOf(List.of(), List.of(unreadableTicketView()))), key('j'), 6);
+
+        assertThat(Screen.of(shell).mainViewRows()).anySatisfy(row -> assertThat(row).contains("PROJ-2.md"));
+    }
+
+    @Test
+    void shouldShowNothingInTheMainViewOnAGroupHeader() {
+        assertThat(Screen.of(shellOn(datedTicketView())).mainViewRows()).allSatisfy(row -> assertThat(row).isBlank());
     }
 }
