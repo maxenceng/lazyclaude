@@ -29,6 +29,7 @@ words mean.
 | Term | Meaning | Where it lives |
 |---|---|---|
 | Ticket | One `docs/backlog/*.md` file: frontmatter plus body. | `board` |
+| Title | The first `# ` line of a ticket's body outside a code fence, stripped; a ticket without one is shown under its id. | `board` |
 | Board | A project's tickets grouped by status, as the Board panel shows them. | `board` |
 | Working directory | The directory lazyclaude was started in; the project is located from it. | `board` |
 | Unreadable ticket | A backlog file with an `id` whose frontmatter or status is refused, or whose `id` another file already claims; listed with its reason, never dropped silently. | `board` |
