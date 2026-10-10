@@ -236,4 +236,22 @@ class DocsWatchRepositoryTest {
                 .contains("fs.inotify.max_user_watches")
                 .hasLineCount(1);
     }
+
+    @Test
+    void shouldFallBackToPollingWithOneWarningWhenAFolderAddedWhileWatchingCannotBeWatched() throws Exception {
+        RecordingRegistrar registrar = RecordingRegistrar.failingOnCall(3);
+        watcher = watching(watcherRegisteringWith(registrar, said), root, probe);
+
+        Files.createDirectories(docs.resolve("research"));
+        assertThat(probe.quietFor(settled())).isTrue();
+        write(docs, "research/notes.md", markdown());
+
+        assertThat(probe.changedWithin(within()))
+                .as("the watch limit is hit only on the new folder, so polling must take over from the running watcher")
+                .isTrue();
+        assertThat(said.toString(StandardCharsets.UTF_8))
+                .contains(docs.toString())
+                .contains("fs.inotify.max_user_watches")
+                .hasLineCount(1);
+    }
 }
