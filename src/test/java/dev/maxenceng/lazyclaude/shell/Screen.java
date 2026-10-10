@@ -20,6 +20,7 @@ final class Screen {
     private static final int HEIGHT = 24;
     private static final int LEFT_COLUMN_WIDTH = 28;
     private static final char BORDER = '│';
+    private static final String BOTTOM_LEFT_CORNER = "╰";
 
     private final List<String> lines;
     private final Buffer buffer;
@@ -69,6 +70,16 @@ final class Screen {
         return lines.stream().map(line -> line.substring(LEFT_COLUMN_WIDTH)).toList();
     }
 
+    List<String> mainViewRows() {
+        List<String> right = rightColumnLines();
+        List<String> rows = new ArrayList<>();
+        for (int y = 2; y < right.size() && !right.get(y).startsWith(BOTTOM_LEFT_CORNER); y++) {
+            String line = right.get(y);
+            rows.add(line.substring(1, line.length() - 1).stripTrailing());
+        }
+        return rows;
+    }
+
     String text() {
         return String.join("\n", lines);
     }
@@ -78,18 +89,22 @@ final class Screen {
     }
 
     List<String> reversedText() {
-        return textOfCells(cell -> cell.style().effectiveModifiers().contains(Modifier.REVERSED));
+        return textOfCells(LEFT_COLUMN_WIDTH, cell -> cell.style().effectiveModifiers().contains(Modifier.REVERSED));
+    }
+
+    List<String> dimText() {
+        return textOfCells(WIDTH, cell -> cell.style().effectiveModifiers().contains(Modifier.DIM));
     }
 
     List<String> cyanText() {
-        return textOfCells(cell -> cell.style().fg().filter(Color.CYAN::equals).isPresent());
+        return textOfCells(WIDTH, cell -> cell.style().fg().filter(Color.CYAN::equals).isPresent());
     }
 
-    private List<String> textOfCells(Predicate<Cell> predicate) {
+    private List<String> textOfCells(int columns, Predicate<Cell> predicate) {
         List<String> found = new ArrayList<>();
         for (int y = 0; y < lines.size(); y++) {
             StringBuilder line = new StringBuilder();
-            for (int x = 0; x < lines.get(y).length(); x++) {
+            for (int x = 0; x < Math.min(columns, lines.get(y).length()); x++) {
                 Cell cell = buffer.get(x, y);
                 if (predicate.test(cell)) {
                     line.append(cell.symbol());

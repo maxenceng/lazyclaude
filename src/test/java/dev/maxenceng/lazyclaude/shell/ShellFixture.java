@@ -28,6 +28,17 @@ final class ShellFixture {
         return KeyEvent.ofChar(c, KeyModifiers.ALT);
     }
 
+    static KeyEvent ctrl(char c) {
+        return KeyEvent.ofChar(c, KeyModifiers.CTRL);
+    }
+
+    static Shell shellFocusedOnMainViewOf(TicketView... tickets) {
+        Shell shell = pressed(shellOn(tickets), key('j'), 1);
+        Screen.of(shell);
+        shell.press(key('l'));
+        return shell;
+    }
+
     static KeyEvent enter() {
         return KeyEvent.ofKey(KeyCode.ENTER);
     }

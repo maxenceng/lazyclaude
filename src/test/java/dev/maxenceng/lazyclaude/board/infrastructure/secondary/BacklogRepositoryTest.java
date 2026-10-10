@@ -1,7 +1,11 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.board.domain.FrontmatterEntryFixture.entry;
+import static dev.maxenceng.lazyclaude.board.domain.FrontmatterEntryFixture.idEntry;
+import static dev.maxenceng.lazyclaude.board.domain.FrontmatterEntryFixture.statusEntry;
+import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.datedFrontmatter;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFile;
-import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.bareTicket;
+import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.bareTicketBuilder;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.backlogIn;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.secondTicketMarkdownWithStatus;
@@ -14,6 +18,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,9 +26,12 @@ import org.junit.jupiter.api.io.TempDir;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
 import dev.maxenceng.lazyclaude.board.domain.BacklogNotFoundException;
+import dev.maxenceng.lazyclaude.board.domain.Frontmatter;
 import dev.maxenceng.lazyclaude.board.domain.TicketFile;
 import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
+import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.FileName;
+import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Title;
@@ -86,7 +94,7 @@ class BacklogRepositoryTest {
                 .as("a ticket without a heading is still a ticket, not an unreadable one")
                 .containsExactly(TicketFile.builder()
                         .file(new FileName("PROJ-1.md"))
-                        .ticket(ticketBuilder().title(new NoTitle()).build())
+                        .ticket(ticketBuilder().title(new NoTitle()).body(new Body("\nJust prose.")).build())
                         .build());
     }
 
@@ -96,7 +104,7 @@ class BacklogRepositoryTest {
 
         assertThat(repository.entries(new Project(root))).containsExactly(TicketFile.builder()
                 .file(new FileName("PROJ-1.md"))
-                .ticket(bareTicket())
+                .ticket(bareTicketBuilder().body(new Body("\n```\n# not a title\n```")).build())
                 .build());
     }
 
@@ -106,7 +114,7 @@ class BacklogRepositoryTest {
 
         assertThat(repository.entries(new Project(root)))
                 .as("the first heading is the title, even when it is empty")
-                .containsExactly(TicketFile.builder().file(new FileName("PROJ-1.md")).ticket(bareTicket()).build());
+                .containsExactly(TicketFile.builder().file(new FileName("PROJ-1.md")).ticket(bareTicketBuilder().body(new Body("# \n# Later")).build()).build());
     }
 
     @Test
@@ -114,7 +122,12 @@ class BacklogRepositoryTest {
         Files.writeString(backlog.resolve("PROJ-1.md"), "---\nid: PROJ-1\nstatus: todo\ncontext: ' '\n---\n");
 
         assertThat(repository.entries(new Project(root)))
-                .containsExactly(TicketFile.builder().file(new FileName("PROJ-1.md")).ticket(bareTicket()).build());
+                .containsExactly(TicketFile.builder()
+                        .file(new FileName("PROJ-1.md"))
+                        .ticket(bareTicketBuilder()
+                                .frontmatter(new Frontmatter(List.of(idEntry(), statusEntry(), entry("context", " "))))
+                                .build())
+                        .build());
     }
 
     @Test
@@ -172,6 +185,15 @@ class BacklogRepositoryTest {
     @Test
     void shouldListAFileWithAnIdAndBrokenFrontmatterAsUnreadable() throws IOException {
         Files.writeString(backlog.resolve("PROJ-2.md"), "---\nid: PROJ-2\nstatus: [todo\n---\n\n# Broken\n");
+
+        assertThat(repository.entries(new Project(root))).singleElement().isInstanceOfSatisfying(
+                UnreadableTicket.class,
+                unreadable -> assertThat(unreadable.reason().value()).startsWith("frontmatter is not valid YAML: "));
+    }
+
+    @Test
+    void shouldListAFileThatWritesAKeyTwiceAsUnreadable() throws IOException {
+        Files.writeString(backlog.resolve("PROJ-2.md"), "---\nid: PROJ-2\nstatus: todo\nstatus: done\n---\n\n# Twice\n");
 
         assertThat(repository.entries(new Project(root))).singleElement().isInstanceOfSatisfying(
                 UnreadableTicket.class,
@@ -250,5 +272,59 @@ class BacklogRepositoryTest {
 
         assertThat(repository.entries(new Project(root))).singleElement().isInstanceOfSatisfying(
                 TicketFile.class, file -> assertThat(file.ticket().title()).isEqualTo(new Title("Spaced out")));
+    }
+
+    @Test
+    void shouldKeepEveryFrontmatterKeyInFileOrderAsDisplayText() throws IOException {
+        Files.writeString(
+                backlog.resolve("PROJ-1.md"),
+                "---\nid: PROJ-1\nstatus: todo\ncontext: board\ntype: feature\ncreated: 2026-10-10\nblocked_by: [PROJ-8, PROJ-9]\n---\n\n# A board from the backlog\n\nBody.\n");
+
+        assertThat(repository.entries(new Project(root)))
+                .singleElement()
+                .isInstanceOfSatisfying(TicketFile.class, file -> assertThat(file.ticket().frontmatter())
+                        .as("a date stays as written and a list reads as [A, B]")
+                        .isEqualTo(datedFrontmatter()));
+    }
+
+    @Test
+    void shouldKeepTheBodyAfterTheClosingDelimiter() throws IOException {
+        Files.writeString(backlog.resolve("PROJ-1.md"), "---\nid: PROJ-1\nstatus: todo\n---\nFirst\n\nSecond\n");
+
+        assertThat(repository.entries(new Project(root)))
+                .singleElement()
+                .isInstanceOfSatisfying(
+                        TicketFile.class, file -> assertThat(file.ticket().body()).isEqualTo(new Body("First\n\nSecond")));
+    }
+
+    @Test
+    void shouldKeepADelimiterInsideTheBodyInTheBody() throws IOException {
+        Files.writeString(backlog.resolve("PROJ-1.md"), "---\nid: PROJ-1\nstatus: todo\n---\n\nabove\n\n---\n\nbelow: this\n");
+
+        assertThat(repository.entries(new Project(root)))
+                .singleElement()
+                .isInstanceOfSatisfying(TicketFile.class, file -> assertThat(file.ticket().body())
+                        .as("only the first closing delimiter ends the frontmatter")
+                        .isEqualTo(new Body("\nabove\n\n---\n\nbelow: this")));
+    }
+
+    @Test
+    void shouldReadAnEmptyBodyAsNoBody() throws IOException {
+        Files.writeString(backlog.resolve("PROJ-1.md"), "---\nid: PROJ-1\nstatus: todo\n---\n");
+
+        assertThat(repository.entries(new Project(root)))
+                .singleElement()
+                .isInstanceOfSatisfying(
+                        TicketFile.class, file -> assertThat(file.ticket().body()).isEqualTo(new NoBody()));
+    }
+
+    @Test
+    void shouldReadAWhitespaceOnlyBodyAsNoBody() throws IOException {
+        Files.writeString(backlog.resolve("PROJ-1.md"), "---\nid: PROJ-1\nstatus: todo\n---\n\n  \n\t\n");
+
+        assertThat(repository.entries(new Project(root)))
+                .singleElement()
+                .isInstanceOfSatisfying(
+                        TicketFile.class, file -> assertThat(file.ticket().body()).isEqualTo(new NoBody()));
     }
 }

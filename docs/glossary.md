@@ -17,6 +17,13 @@ words mean.
 |---|---|---|
 | Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; sessions group under the one their `cwd` belongs to, so a ticket worktree's sessions sit under its project. A session whose `cwd` is outside git is grouped on its own. | `shared` |
 
+## shell
+
+| Term | Meaning | Where it lives |
+|---|---|---|
+| Main view | The right column's top pane, which shows whatever the selection points at; for a ticket, its frontmatter and its body rendered as markdown. | `shell` |
+| Ticket detail | What the main view shows for a ticket: its facts line, its other frontmatter keys, a rule, then its body rendered as markdown. It scrolls as one unit. | `shell` |
+
 ## board
 
 | Term | Meaning | Where it lives |

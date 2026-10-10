@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoContext;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.NoType;
@@ -53,5 +54,23 @@ class TicketTest {
     void shouldRefuseATicketWhoseTypeIsNullRatherThanAbsent() {
         assertThatThrownBy(() -> ticketBuilder().type(null).build())
                 .isExactlyInstanceOf(MissingMandatoryValueException.class);
+    }
+
+    @Test
+    void shouldRefuseATicketWithoutFrontmatter() {
+        assertThatThrownBy(() -> ticketBuilder().frontmatter(null).build())
+                .isExactlyInstanceOf(MissingMandatoryValueException.class);
+    }
+
+    @Test
+    void shouldRefuseATicketWhoseBodyIsNullRatherThanAbsent() {
+        assertThatThrownBy(() -> ticketBuilder().body(null).build())
+                .as("absence is NoBody, never null")
+                .isExactlyInstanceOf(MissingMandatoryValueException.class);
+    }
+
+    @Test
+    void shouldKeepAnAbsentBodyAsAbsent() {
+        assertThat(bareTicket().body()).isEqualTo(new NoBody());
     }
 }

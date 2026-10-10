@@ -43,8 +43,13 @@ public final class Shell extends ToolkitApp {
     private static final char DOWN = 'j';
     private static final char UP = 'k';
     private static final char RIGHT = 'l';
+    private static final char TOP = 'g';
+    private static final char BOTTOM = 'G';
+    private static final char HALF_PAGE_DOWN = 'd';
+    private static final char HALF_PAGE_UP = 'u';
 
     private static final String MOVE_KEYS = "j/k move";
+    private static final String SCROLL_KEYS = "j/k scroll  ^d/^u half page  g/G top/bottom";
     private static final String PANEL_KEYS = "h/l panel";
     private static final String FOLD_KEY = "enter fold";
     private static final String FOCUS_KEYS = "alt+h/j/k/l focus";
@@ -53,6 +58,7 @@ public final class Shell extends ToolkitApp {
     private static final String KEY_SEPARATOR = "  ";
 
     private final BoardRows board;
+    private final MainViewScroll mainViewScroll = new MainViewScroll();
     private Focus focus = Focus.BOARD;
     private Focus lastLeft = Focus.BOARD;
     private Focus lastRight = Focus.MAIN;
@@ -82,7 +88,7 @@ public final class Shell extends ToolkitApp {
 
     boolean press(KeyEvent key) {
         if (key.hasCtrl()) {
-            return false;
+            return focus == Focus.MAIN && pressWithCtrl(key);
         }
         if (key.hasAlt()) {
             return pressWithAlt(key);
@@ -102,14 +108,48 @@ public final class Shell extends ToolkitApp {
             return focusOn(lastRight);
         }
         if (focus == Focus.BOARD && key.isChar(DOWN)) {
-            board.down();
-            return true;
+            return select(board::down);
         }
         if (focus == Focus.BOARD && key.isChar(UP)) {
-            board.up();
+            return select(board::up);
+        }
+        return focus == Focus.MAIN && scrollMainView(key);
+    }
+
+    private boolean pressWithCtrl(KeyEvent key) {
+        if (key.isChar(HALF_PAGE_DOWN)) {
+            mainViewScroll.halfPageDown();
+            return true;
+        }
+        if (key.isChar(HALF_PAGE_UP)) {
+            mainViewScroll.halfPageUp();
             return true;
         }
         return false;
+    }
+
+    private boolean scrollMainView(KeyEvent key) {
+        if (key.isChar(DOWN)) {
+            mainViewScroll.rowDown();
+        } else if (key.isChar(UP)) {
+            mainViewScroll.rowUp();
+        } else if (key.isChar(TOP)) {
+            mainViewScroll.top();
+        } else if (key.isChar(BOTTOM)) {
+            mainViewScroll.bottom();
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean select(Runnable move) {
+        RowKey before = board.selected().key();
+        move.run();
+        if (!board.selected().key().equals(before)) {
+            mainViewScroll.reset();
+        }
+        return true;
     }
 
     private boolean pressWithAlt(KeyEvent key) {
@@ -169,7 +209,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element mainView() {
-        return framed(MAIN_VIEW_TITLE, Focus.MAIN, column(detailLines())).fill();
+        return framed(MAIN_VIEW_TITLE, Focus.MAIN, detail()).fill();
     }
 
     private Element dock() {
@@ -181,25 +221,26 @@ public final class Shell extends ToolkitApp {
         return focus == owner ? panel.borderColor(Color.CYAN) : panel;
     }
 
-    private Element[] detailLines() {
+    private Element detail() {
         return switch (board.selected()) {
-            case HeaderRow header -> new Element[0];
+            case HeaderRow header -> column();
             case TicketRow row -> ticketDetail(row.ticket());
             case UnreadableRow row ->
-                new Element[] {text(row.unreadable().file().value()).bold(), text(row.unreadable().reason().value())};
+                column(text(row.unreadable().file().value()).bold(), text(row.unreadable().reason().value()));
         };
     }
 
-    private static Element[] ticketDetail(TicketView ticket) {
-        return new Element[] {
-            text(ticket.id().value()).bold(), text(TicketText.title(ticket)), text(TicketText.facts(ticket))
-        };
+    private Element ticketDetail(TicketView ticket) {
+        return new DetailElement(TicketText.facts(ticket), TicketText.keyRows(ticket), ticket.body(), mainViewScroll);
     }
 
     private String keyBar() {
         List<String> keys = new ArrayList<>();
         if (focus == Focus.BOARD) {
             keys.add(MOVE_KEYS);
+        }
+        if (focus == Focus.MAIN) {
+            keys.add(SCROLL_KEYS);
         }
         keys.add(PANEL_KEYS);
         if (focus == Focus.BOARD && board.selectedHeader().isPresent()) {
