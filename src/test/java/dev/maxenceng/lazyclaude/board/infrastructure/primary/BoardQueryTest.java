@@ -5,12 +5,12 @@ import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFile
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFileOf;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicket;
-import static dev.maxenceng.lazyclaude.board.domain.WorkingDirectoryFixture.workingDirectory;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.boardQuery;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryViewFixture.datedFrontmatterViews;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketViewFixture.unreadableTicketView;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -22,10 +22,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
-import dev.maxenceng.lazyclaude.board.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 
 @ExtendWith(MockitoExtension.class)
 class BoardQueryTest {

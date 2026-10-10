@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.board.domain;
+package dev.maxenceng.lazyclaude.shared.domain;
 
 import dev.maxenceng.lazyclaude.error.domain.DomainErrorStatus;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;

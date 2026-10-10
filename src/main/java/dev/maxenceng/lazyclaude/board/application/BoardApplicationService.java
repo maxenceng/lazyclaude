@@ -3,8 +3,8 @@ package dev.maxenceng.lazyclaude.board.application;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.Board;
 import dev.maxenceng.lazyclaude.board.domain.BoardManager;
-import dev.maxenceng.lazyclaude.board.domain.ProjectLocatorPort;
-import dev.maxenceng.lazyclaude.board.domain.WorkingDirectory;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /** Reads the board of the project a working directory belongs to. */
 public final class BoardApplicationService {

@@ -16,6 +16,7 @@ words mean.
 | Term | Meaning | Where it lives |
 |---|---|---|
 | Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; sessions group under the one their `cwd` belongs to, so a ticket worktree's sessions sit under its project. A session whose `cwd` is outside git is grouped on its own. | `shared` |
+| Working directory | The directory lazyclaude was started in, or a session's `cwd`; the project is located from it. | `shared` |
 
 ## shell
 
@@ -31,7 +32,6 @@ words mean.
 | Ticket | One `docs/backlog/*.md` file: frontmatter plus body. | `board` |
 | Title | The first `# ` line of a ticket's body outside a code fence, stripped; a ticket without one is shown under its id. | `board` |
 | Board | A project's tickets grouped by status, as the Board panel shows them. | `board` |
-| Working directory | The directory lazyclaude was started in; the project is located from it. | `board` |
 | Unreadable ticket | A backlog file with an `id` whose frontmatter or status is refused, or whose `id` another file already claims; listed with its reason, never dropped silently. | `board` |
 | Ticket branch | The branch `<id>-<slug>` a ticket's work happens on, named from the ticket. | `board` (expected) |
 | Branch copy | The ticket's file as its ticket branch has it: the ticket worktree's file, whatever branch the worktree is on, else `git show <branch>:<file>` while the branch's pull request is not merged. | `board` (expected) |
@@ -42,6 +42,8 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
+| Live session | A session whose process runs, as the registry lists it after the liveness check, or `claude agents --json` when the registry is unusable. `sdk-cli` sessions are not listed from the registry. | `session` |
+| Registry | Claude Code's `~/.claude/sessions/<pid>.json` records, one per running process; internal and undocumented, so never trusted without the liveness check. | `session` |
 | Hosted session | A live session lazyclaude spawned: the real `claude` on a pty, drawn in a dock tab. It dies with lazyclaude. | `session` (expected) |
 | Outside session | A live session started anywhere else. lazyclaude shows it read-only and can jump to its terminal window. | `session` (expected) |
 | Past session | A session with no live process, only a transcript. It can be resumed, which makes it hosted. A hosted session whose `claude` exited is past. | `session` (expected) |
@@ -49,11 +51,11 @@ words mean.
 | Weak link | A link found only through the branch name; shown as less certain. | `session` (expected) |
 | Unlinked session | A session attributed to no ticket. Started from lazyclaude, it runs in the project root. | `session` (expected) |
 | Starting | A hosted session with no registry record yet: just spawned, or still on Claude Code's trust dialog. No marker, never notified. | `session` (expected) |
-| Busy | The session is working; nothing is asked of you. | `session` (expected) |
-| Your turn | The session finished and waits for your next prompt, without blocking on anything. Shown, never notified. | `session` (expected) |
+| Busy | The session is working; nothing is asked of you. The registry's `busy` and `shell` both show as busy. | `session` |
+| Your turn | The session finished and waits for your next prompt, without blocking on anything. Shown, never notified. | `session` |
 | Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session. | `session` (expected) |
 | Preselected verb | The allowed verb the new-session picker opens on, from status, past sessions and the pull request's state. | `session` (expected) |
-| Waiting | The session is blocked on you: *waiting for permission* (a permission prompt) or *waiting for input* (any other question). The only state that notifies. | `session` (expected) |
+| Waiting | The session is blocked on you: *waiting for permission* (a permission prompt) or *waiting for input* (any other question). The only state that notifies. | `session` |
 | Reserved chord | A chord lazyclaude takes before `claude` sees it, inside every hosted session: the seven focus, hide, zoom and next-waiting chords, `alt+h/j/k/l/m/z/w` unless `config.yml` rebinds them. | `session` (expected) |
 
 ## review

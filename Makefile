@@ -18,7 +18,7 @@ JAVA := $(if $(JAVA_HOME),$(JAVA_HOME)/bin/java,java)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help doctor build test test-one arch fmt lint dup config-check adr-check
+.PHONY: help doctor build test contract test-one arch fmt lint dup config-check adr-check
 .PHONY: ticket-check guard-fixtures guard-harness no-skipped-tests test-comment-check
 .PHONY: package run ci verify verify-report pr-checks clean
 
@@ -34,6 +34,9 @@ build: ## Compile main sources
 
 test: ## Run every test, architecture rules included
 	$(MVN) test
+
+contract: ## Compare the session registry with `claude agents --json`; run by hand after a Claude Code upgrade
+	$(MVN) test -Dgroups=contract -DexcludedGroups= -Dsurefire.failIfNoSpecifiedTests=false
 
 test-one: ## Run one test class or method, e.g. make test-one T=SomeTest
 	@[ -n "$(T)" ] || { echo "T is unset: make test-one T=SomeTest"; exit 1; }

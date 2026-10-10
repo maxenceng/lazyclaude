@@ -1,8 +1,8 @@
-package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.linkedWorktree;
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.repositoryWithBacklog;
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitFixture.repositoryWithoutBacklog;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.linkedWorktree;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithBacklog;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithoutBacklog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -12,9 +12,9 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import dev.maxenceng.lazyclaude.board.domain.ProjectNotFoundException;
-import dev.maxenceng.lazyclaude.board.domain.WorkingDirectory;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 class ProjectLocatorRepositoryTest {
 

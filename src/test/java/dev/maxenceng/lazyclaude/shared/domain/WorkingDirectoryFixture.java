@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.board.domain;
+package dev.maxenceng.lazyclaude.shared.domain;
 
 import java.nio.file.Path;
 

@@ -106,7 +106,7 @@ class ShellTest {
     void shouldListUnreadableTicketsLastWithTheirReason() {
         Shell shell = shellOn(boardViewOf(List.of(ticketView()), List.of(unreadableTicketView())));
 
-        assertThat(Screen.of(shell).boardPanelText())
+        assertThat(Screen.of(shell.render(), 80, 30).boardPanelText())
                 .containsSubsequence("▸ done (0)", "▾ unreadable (1)", "PROJ-2.md — status is");
     }
 

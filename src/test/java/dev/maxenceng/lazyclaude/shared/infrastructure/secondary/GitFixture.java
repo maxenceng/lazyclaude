@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.backlogIn;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.ticketMarkdown;

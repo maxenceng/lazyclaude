@@ -1,14 +1,14 @@
-package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import dev.maxenceng.lazyclaude.board.domain.ProjectLocatorPort;
-import dev.maxenceng.lazyclaude.board.domain.ProjectNotFoundException;
-import dev.maxenceng.lazyclaude.board.domain.WorkingDirectory;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /** Finds the main worktree through `git`, so a ticket worktree or subdirectory leads to the same project. */
 public final class ProjectLocatorRepository implements ProjectLocatorPort {

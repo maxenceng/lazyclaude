@@ -3,10 +3,12 @@ package dev.maxenceng.lazyclaude.shell;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.emptySessionsView;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
@@ -16,11 +18,22 @@ final class ShellFixture {
     private ShellFixture() {}
 
     static Shell shellOn(BoardView board) {
-        return new Shell(board, emptyDocsView());
+        return new Shell(board, emptyDocsView(), emptySessionsView());
     }
 
     static Shell shellOnDocs(DocsView docs) {
-        return pressed(new Shell(boardViewOf(ticketView()), docs), alt('j'), 2);
+        return pressed(new Shell(boardViewOf(ticketView()), docs, emptySessionsView()), alt('j'), 2);
+    }
+
+    static Shell shellOnSessions(SessionsView sessions) {
+        return pressed(new Shell(boardViewOf(ticketView()), emptyDocsView(), sessions), alt('j'), 1);
+    }
+
+    static Shell shellFocusedOnMainViewOfSessions(SessionsView sessions) {
+        Shell shell = shellOnSessions(sessions);
+        Screen.of(shell);
+        shell.press(key('l'));
+        return shell;
     }
 
     static Shell shellFocusedOnMainViewOfDocs(DocsView docs) {

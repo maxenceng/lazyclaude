@@ -27,6 +27,7 @@ Use `make`, never `mvn` directly — the Makefile selects the Java 25 toolchain.
 - `make run` — build the jar and start the TUI in this terminal
 - `make test` — all tests, architecture rules included
 - `make test-one T=SomeTest` — one class or method, when the full run is too slow to iterate on
+- `make contract` — the `@Tag("contract")` tests `make test` and CI exclude; run after a Claude Code upgrade
 - `make fmt` / `make lint` — apply / verify formatting
 - `make adr-check` — fail on a duplicate or missing ADR number; run it before choosing one
 - `make verify` — everything CI runs, in CI's order; `make ci` is its first step

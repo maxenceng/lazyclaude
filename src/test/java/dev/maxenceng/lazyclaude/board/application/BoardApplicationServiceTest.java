@@ -2,8 +2,8 @@ package dev.maxenceng.lazyclaude.board.application;
 
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFile;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticket;
-import static dev.maxenceng.lazyclaude.board.domain.WorkingDirectoryFixture.workingDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -16,8 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
-import dev.maxenceng.lazyclaude.board.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 
 @ExtendWith(MockitoExtension.class)
 class BoardApplicationServiceTest {

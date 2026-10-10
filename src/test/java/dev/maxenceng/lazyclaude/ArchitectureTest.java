@@ -111,6 +111,16 @@ class ArchitectureTest {
             .haveFullyQualifiedName(java.nio.file.WatchService.class.getName())
             .allowEmptyShould(true);
 
+    // Jackson parses what other tools write; it stays in the adapter that reads it, never in a domain or a screen.
+    @ArchTest
+    static final ArchRule json_is_parsed_only_in_secondary_adapters = noClasses()
+            .that()
+            .resideOutsideOfPackage("..infrastructure.secondary..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..")
+            .allowEmptyShould(true);
+
     // A module's kind decides what the other rules allow it, so an undeclared one would escape them all.
     @ArchTest
     static final ArchRule every_module_declares_its_kind = classes()

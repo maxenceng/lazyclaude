@@ -1,6 +1,5 @@
-package dev.maxenceng.lazyclaude.board.domain;
+package dev.maxenceng.lazyclaude.shared.domain;
 
-import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /** Finds the project a working directory belongs to. */
 public interface ProjectLocatorPort {
