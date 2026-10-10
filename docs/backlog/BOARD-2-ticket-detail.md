@@ -1,6 +1,6 @@
 ---
 id: BOARD-2
-status: in-review
+status: done
 context: board
 type: feature
 tracker_id: 73
@@ -58,3 +58,9 @@ New behaviour on the existing `Ticket`, carried by the board read. There is no n
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in Markdown via `tamboui-toolkit-markdown` ([LAZY-4](LAZY-4-tamboui-capabilities.md)). The PR and checks lines belong to REVIEW-1.
+
+The *Model decision* above is superseded in three places by [ADR 0014](../adr/0014-the-ticket-detail-rides-the-board-read.md), which is what the code follows: `Frontmatter` holds only the keys the board does not model as fields, not every key; `Body | NoBody` are `published`, not domain; and the body renders through `tamboui-markdown`'s `MarkdownView`, not the toolkit's `MarkdownElement`, which would pin the head rows while the markdown scrolls.
+
+A `---` directly under a paragraph line is a setext H2 in CommonMark, not a thematic break. The criterion holds for the blank-line form, and that is the only form tested.
+
+Moving the title rule (first `#` heading outside a code fence) from `BacklogRepository` into `Ticket` was declined in review and left to [BOARD-6](BOARD-6-title-from-the-body.md).
