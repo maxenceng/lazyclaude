@@ -6,113 +6,92 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import dev.maxenceng.lazyclaude.board.domain.Board;
-import dev.maxenceng.lazyclaude.board.domain.Status;
-import dev.maxenceng.lazyclaude.board.domain.Ticket;
-import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
+import dev.maxenceng.lazyclaude.board.published.BoardView;
+import dev.maxenceng.lazyclaude.board.published.StatusGroupView;
 
 /** The Board panel's rows and the two things the shell remembers about them: the selection and the folded groups. */
 final class BoardRows {
 
-    private static final String UNREADABLE = "unreadable";
+    private static final String UNREADABLE_GROUP = "unreadable";
+    private static final int DOWN = 1;
+    private static final int UP = -1;
 
-    private final Board board;
-    private final Set<String> folded = new HashSet<>(Set.of(Status.DONE.label()));
-    private String selected;
+    private final BoardView board;
+    private final Set<RowKey> folded = new HashSet<>();
+    private RowKey selected;
 
-    BoardRows(Board board) {
+    BoardRows(BoardView board) {
         this.board = board;
+        board.groups().stream()
+                .filter(StatusGroupView::finished)
+                .forEach(group -> folded.add(groupKey(group.status())));
         this.selected = visible().getFirst().key();
-    }
-
-    sealed interface Row {
-        String key();
-
-        record Header(String label, int count, boolean folded) implements Row {
-            @Override
-            public String key() {
-                return "group:" + label;
-            }
-
-            String text() {
-                return (folded ? "▸ " : "▾ ") + label + " (" + count + ")";
-            }
-        }
-
-        record TicketRow(Ticket ticket) implements Row {
-            @Override
-            public String key() {
-                return "ticket:" + ticket.id().value();
-            }
-
-            String text() {
-                return "  " + ticket.id().value() + " " + ticket.title();
-            }
-        }
-
-        record UnreadableRow(UnreadableTicket unreadable) implements Row {
-            @Override
-            public String key() {
-                return "file:" + unreadable.file();
-            }
-
-            String text() {
-                return "  " + unreadable.file() + " — " + unreadable.reason();
-            }
-        }
     }
 
     List<Row> visible() {
         List<Row> rows = new ArrayList<>();
-        for (Status status : Status.values()) {
-            List<Ticket> tickets = board.tickets(status);
-            boolean isFolded = folded.contains(status.label());
-            rows.add(new Row.Header(status.label(), tickets.size(), isFolded));
+        for (StatusGroupView group : board.groups()) {
+            boolean isFolded = folded.contains(groupKey(group.status()));
+            rows.add(new HeaderRow(group.status(), group.tickets().size(), isFolded));
             if (!isFolded) {
-                tickets.forEach(ticket -> rows.add(new Row.TicketRow(ticket)));
+                group.tickets().forEach(ticket -> rows.add(new TicketRow(ticket)));
             }
         }
         if (!board.unreadable().isEmpty()) {
-            boolean isFolded = folded.contains(UNREADABLE);
-            rows.add(new Row.Header(UNREADABLE, board.unreadable().size(), isFolded));
+            boolean isFolded = folded.contains(groupKey(UNREADABLE_GROUP));
+            rows.add(new HeaderRow(UNREADABLE_GROUP, board.unreadable().size(), isFolded));
             if (!isFolded) {
-                board.unreadable().forEach(unreadable -> rows.add(new Row.UnreadableRow(unreadable)));
+                board.unreadable().forEach(unreadable -> rows.add(new UnreadableRow(unreadable)));
             }
         }
         return rows;
     }
 
     Row selected() {
-        return visible().stream().filter(row -> row.key().equals(selected)).findFirst().orElseThrow();
+        List<Row> rows = visible();
+        return rows.get(indexOfSelected(rows));
     }
 
     int selectedIndex() {
-        return visible().indexOf(selected());
+        return indexOfSelected(visible());
+    }
+
+    Optional<HeaderRow> selectedHeader() {
+        return selected() instanceof HeaderRow header ? Optional.of(header) : Optional.empty();
     }
 
     void down() {
-        move(1);
+        move(DOWN);
     }
 
     void up() {
-        move(-1);
-    }
-
-    Optional<Row.Header> selectedHeader() {
-        return selected() instanceof Row.Header header ? Optional.of(header) : Optional.empty();
+        move(UP);
     }
 
     void toggleFold() {
-        selectedHeader().ifPresent(header -> {
-            if (!folded.remove(header.label())) {
-                folded.add(header.label());
+        selectedHeader().map(HeaderRow::key).ifPresent(key -> {
+            if (!folded.remove(key)) {
+                folded.add(key);
             }
         });
     }
 
     private void move(int step) {
         List<Row> rows = visible();
-        int target = Math.max(0, Math.min(rows.size() - 1, rows.indexOf(selected()) + step));
+        int target = Math.clamp(indexOfSelected(rows) + (long) step, 0, rows.size() - 1);
         selected = rows.get(target).key();
+    }
+
+    private int indexOfSelected(List<Row> rows) {
+        for (int index = 0; index < rows.size(); index++) {
+            if (rows.get(index).key().equals(selected)) {
+                return index;
+            }
+        }
+        throw new IllegalStateException("the selected row %s is not visible".formatted(selected));
+    }
+
+    private static RowKey groupKey(String group) {
+        return new RowKey(RowKind.GROUP, group);
     }
 }

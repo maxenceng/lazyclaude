@@ -24,12 +24,17 @@ class StatusTest {
     @Test
     void shouldRefuseAStatusOutsideTheFive() {
         assertThatThrownBy(() -> Status.parse("blocked"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("blocked");
+                .isInstanceOf(UnknownStatusException.class)
+                .hasMessage("status 'blocked' is not one of draft, todo, in-progress, in-review, done");
     }
 
     @Test
     void shouldRefuseAMissingStatus() {
-        assertThatThrownBy(() -> Status.parse(null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Status.parse(null)).isInstanceOf(UnknownStatusException.class);
+    }
+
+    @Test
+    void shouldFinishTheLifecycleAtDoneOnly() {
+        assertThat(List.of(Status.values())).filteredOn(Status::finished).containsExactly(Status.DONE);
     }
 }

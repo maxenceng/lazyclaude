@@ -9,10 +9,8 @@ enum Focus {
     MAIN(Column.RIGHT),
     DOCK(Column.RIGHT);
 
-    enum Column {
-        LEFT,
-        RIGHT
-    }
+    private static final int DOWN = 1;
+    private static final int UP = -1;
 
     private final Column column;
 
@@ -25,11 +23,11 @@ enum Focus {
     }
 
     Focus below() {
-        return neighbour(1);
+        return neighbour(DOWN);
     }
 
     Focus above() {
-        return neighbour(-1);
+        return neighbour(UP);
     }
 
     private Focus neighbour(int step) {

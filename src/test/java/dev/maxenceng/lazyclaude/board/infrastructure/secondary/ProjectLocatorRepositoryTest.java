@@ -6,23 +6,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import dev.maxenceng.lazyclaude.board.domain.ProjectNotFoundException;
+import dev.maxenceng.lazyclaude.board.domain.WorkingDirectory;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
-class GitProjectLocatorTest {
+class ProjectLocatorRepositoryTest {
 
     @TempDir
     Path sandbox;
 
     private Path repo;
 
-    private final GitProjectLocator locator = new GitProjectLocator();
+    private final ProjectLocatorRepository locator = new ProjectLocatorRepository();
 
     @BeforeEach
     void createRepository() throws Exception {
@@ -47,14 +47,14 @@ class GitProjectLocatorTest {
 
     @Test
     void shouldLocateTheProjectFromItsRoot() {
-        assertThat(locator.locate(repo)).isEqualTo(new Project(repo));
+        assertThat(locator.locate(new WorkingDirectory(repo))).isEqualTo(new Project(repo));
     }
 
     @Test
     void shouldLocateTheProjectFromASubdirectory() throws IOException {
         Path sub = Files.createDirectories(repo.resolve("src/main"));
 
-        assertThat(locator.locate(sub)).isEqualTo(new Project(repo));
+        assertThat(locator.locate(new WorkingDirectory(sub))).isEqualTo(new Project(repo));
     }
 
     @Test
@@ -62,7 +62,7 @@ class GitProjectLocatorTest {
         Path worktree = sandbox.resolve("app.worktrees/A-1-ticket");
         git(repo, "worktree", "add", "-q", "-b", "A-1-ticket", worktree.toString());
 
-        assertThat(locator.locate(worktree.toRealPath())).isEqualTo(new Project(repo));
+        assertThat(locator.locate(new WorkingDirectory(worktree.toRealPath()))).isEqualTo(new Project(repo));
     }
 
     @Test
@@ -70,62 +70,42 @@ class GitProjectLocatorTest {
         Path worktree = sandbox.resolve("app.worktrees/A-1-ticket");
         git(repo, "worktree", "add", "-q", "-b", "A-1-ticket", worktree.toString());
 
-        assertThat(locator.locate(worktree.resolve("docs").toRealPath())).isEqualTo(new Project(repo));
+        assertThat(locator.locate(new WorkingDirectory(worktree.resolve("docs").toRealPath()))).isEqualTo(new Project(repo));
     }
 
     @Test
     void shouldLocateTheProjectFromADirectoryGivenThroughASymlink() throws Exception {
         Path link = Files.createSymbolicLink(sandbox.resolve("link"), repo);
 
-        assertThat(locator.locate(link)).isEqualTo(new Project(repo));
+        assertThat(locator.locate(new WorkingDirectory(link))).isEqualTo(new Project(repo));
     }
 
     @Test
     void shouldSayItIsNotAGitRepositoryOutsideOne() throws IOException {
         Path outside = Files.createDirectories(sandbox.resolve("plain"));
 
-        assertThatThrownBy(() -> locator.locate(outside))
+        assertThatThrownBy(() -> locator.locate(new WorkingDirectory(outside)))
                 .isInstanceOf(ProjectNotFoundException.class)
                 .hasMessageContaining("not inside a git repository")
                 .hasMessageContaining(outside.toString());
     }
 
     @Test
-    void shouldSayWhenARepositoryHasNoBacklog() throws Exception {
+    void shouldLocateARepositoryWithoutABacklog() throws Exception {
         Path other = Files.createDirectories(sandbox.resolve("bare-app"));
         git(other, "init", "-q", "-b", "main");
 
-        assertThatThrownBy(() -> locator.locate(other))
-                .isInstanceOf(ProjectNotFoundException.class)
-                .hasMessageContaining(other.toRealPath().resolve("docs/backlog").toString());
-    }
-
-    @Test
-    void shouldSayWhenALinkedWorktreeHasABacklogButTheMainWorktreeDoesNot() throws Exception {
-        Path worktree = sandbox.resolve("app.worktrees/A-1-ticket");
-        git(repo, "worktree", "add", "-q", "-b", "A-1-ticket", worktree.toString());
-        deleteTree(repo.resolve("docs"));
-
-        assertThatThrownBy(() -> locator.locate(worktree.toRealPath()))
-                .as("the main worktree's backlog is the one that counts")
-                .isInstanceOf(ProjectNotFoundException.class)
-                .hasMessageContaining(repo.resolve("docs/backlog").toString());
+        assertThat(locator.locate(new WorkingDirectory(other)))
+                .as("whether a project has a backlog is the board's question, not the locator's")
+                .isEqualTo(new Project(other.toRealPath()));
     }
 
     @Test
     void shouldSayWhenTheDirectoryDoesNotExist() {
         Path missing = sandbox.resolve("gone");
 
-        assertThatThrownBy(() -> locator.locate(missing))
+        assertThatThrownBy(() -> locator.locate(new WorkingDirectory(missing)))
                 .isInstanceOf(ProjectNotFoundException.class)
                 .hasMessageContaining(missing.toString());
-    }
-
-    private static void deleteTree(Path path) throws IOException {
-        try (var paths = Files.walk(path)) {
-            for (Path p : paths.sorted(Comparator.reverseOrder()).toList()) {
-                Files.delete(p);
-            }
-        }
     }
 }

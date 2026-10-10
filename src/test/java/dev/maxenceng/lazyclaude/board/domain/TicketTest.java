@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.error.domain.MissingMandatoryValueException;
+
 class TicketTest {
 
     @Test
     void shouldCarryWhatItWasBuiltWith() {
         Ticket ticket = Ticket.builder()
-                .id(TicketId.of("PROJ-1"))
+                .id(new TicketId("PROJ-1"))
                 .title("A board")
                 .status(Status.TODO)
                 .context("board")
@@ -26,7 +28,7 @@ class TicketTest {
     @Test
     void shouldShowItsIdAsTitleWhenItHasNone() {
         Ticket ticket = Ticket.builder()
-                .id(TicketId.of("PROJ-1"))
+                .id(new TicketId("PROJ-1"))
                 .status(Status.DRAFT)
                 .build();
 
@@ -36,7 +38,7 @@ class TicketTest {
     @Test
     void shouldShowItsIdAsTitleWhenTheTitleIsBlank() {
         Ticket ticket = Ticket.builder()
-                .id(TicketId.of("PROJ-1"))
+                .id(new TicketId("PROJ-1"))
                 .title("  ")
                 .status(Status.DRAFT)
                 .build();
@@ -46,7 +48,7 @@ class TicketTest {
 
     @Test
     void shouldHaveEmptyContextAndTypeWhenFrontmatterLacksThem() {
-        Ticket ticket = Ticket.builder().id(TicketId.of("PROJ-1")).status(Status.DRAFT).build();
+        Ticket ticket = Ticket.builder().id(new TicketId("PROJ-1")).status(Status.DRAFT).build();
 
         assertThat(ticket.context()).isEmpty();
         assertThat(ticket.type()).isEmpty();
@@ -54,12 +56,12 @@ class TicketTest {
 
     @Test
     void shouldRefuseATicketWithoutAnId() {
-        assertThatThrownBy(() -> Ticket.builder().status(Status.DRAFT).build()).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> Ticket.builder().status(Status.DRAFT).build()).isInstanceOf(MissingMandatoryValueException.class);
     }
 
     @Test
     void shouldRefuseATicketWithoutAStatus() {
-        assertThatThrownBy(() -> Ticket.builder().id(TicketId.of("PROJ-1")).build())
-                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> Ticket.builder().id(new TicketId("PROJ-1")).build())
+                .isInstanceOf(MissingMandatoryValueException.class);
     }
 }

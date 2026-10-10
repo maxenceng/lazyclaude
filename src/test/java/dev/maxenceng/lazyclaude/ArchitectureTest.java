@@ -3,8 +3,11 @@ package dev.maxenceng.lazyclaude;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import java.util.Optional;
+
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaPackage;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -14,9 +17,11 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 
 /*
- * The architecture, as rules that fail the build. A context is a direct subpackage of
- * dev.maxenceng.lazyclaude other than `shell` (the TUI) and `shared` (the shared kernel),
- * shaped as {published, domain, application, infrastructure.{primary, secondary}}.
+ * The architecture, as rules that fail the build. Each direct subpackage of
+ * dev.maxenceng.lazyclaude is a module whose package-info declares its kind with
+ * @ApplicationModule: a context, shaped as {published, domain, application,
+ * infrastructure.{primary, secondary}}; a kernel (`shared`, `error`); or the shell (the TUI).
+ * The rules between modules read that kind rather than a list of package names.
  *
  * Rules over packages that do not exist yet allow an empty match: the template ships no
  * context, and a rule must not fail on the absence of the thing it governs.
@@ -87,6 +92,14 @@ class ArchitectureTest {
             .resideInAPackage("java.net.http..")
             .allowEmptyShould(true);
 
+    // A module's kind decides what the other rules allow it, so an undeclared one would escape them all.
+    @ArchTest
+    static final ArchRule every_module_declares_its_kind = classes()
+            .that()
+            .resideInAPackage(ROOT + ".*..")
+            .should(beInAModuleThatDeclaresItsKind())
+            .allowEmptyShould(true);
+
     // Contexts are reached through their `published` package, never by importing their insides.
     @ArchTest
     static final ArchRule contexts_meet_only_through_published = classes()
@@ -95,17 +108,64 @@ class ArchitectureTest {
             .should(onlyReachOtherContextsThroughPublished())
             .allowEmptyShould(true);
 
+    // The shell asks a context through its primary adapter and reads what that hands back; it never sees a domain.
+    @ArchTest
+    static final ArchRule the_shell_reaches_contexts_only_through_primary_and_published = classes()
+            .that()
+            .resideInAPackage(ROOT + ".*..")
+            .should(reachContextsOnlyThroughPrimaryAndPublishedFromTheShell())
+            .allowEmptyShould(true);
+
     // The shell composes contexts; a context that knew about the shell could not be reused or tested alone.
     @ArchTest
-    static final ArchRule nothing_depends_on_the_shell = noClasses()
+    static final ArchRule nothing_depends_on_the_shell = classes()
             .that()
-            .resideOutsideOfPackage(ROOT + ".shell..")
+            .resideInAPackage(ROOT + "..")
             .and()
             .doNotHaveFullyQualifiedName(LazyClaude.class.getName())
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage(ROOT + ".shell..")
+            .should(notReachTheShellFromOutsideIt())
             .allowEmptyShould(true);
+
+    // One type per file keeps each concept findable by name; a builder is part of the type it builds.
+    @ArchTest
+    static final ArchRule no_nested_types_but_builders = classes()
+            .that()
+            .resideInAPackage(ROOT + "..")
+            .and()
+            .areNestedClasses()
+            .and()
+            .areNotAnonymousClasses()
+            .should()
+            .haveSimpleNameEndingWith("Builder")
+            .allowEmptyShould(true);
+
+    private static ArchCondition<JavaClass> beInAModuleThatDeclaresItsKind() {
+        return new ArchCondition<>("be in a module whose package-info declares its kind") {
+            @Override
+            public void check(JavaClass origin, ConditionEvents events) {
+                if (moduleOf(origin).isEmpty() && !origin.getPackageName().equals(ROOT)) {
+                    events.add(SimpleConditionEvent.violated(origin, "%s is in %s, whose package-info has no @%s"
+                            .formatted(origin.getName(), modulePackageName(origin), ApplicationModule.class.getSimpleName())));
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> notReachTheShellFromOutsideIt() {
+        return new ArchCondition<>("not depend on the shell from outside it") {
+            @Override
+            public void check(JavaClass origin, ConditionEvents events) {
+                if (kindOf(origin) == ModuleType.SHELL) {
+                    return;
+                }
+                for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                    if (kindOf(dependency.getTargetClass()) == ModuleType.SHELL) {
+                        events.add(SimpleConditionEvent.violated(dependency, dependency.getDescription()));
+                    }
+                }
+            }
+        };
+    }
 
     private static ArchCondition<JavaClass> onlyReachOtherContextsThroughPublished() {
         return new ArchCondition<>("only reach another context through its published package") {
@@ -119,8 +179,7 @@ class ArchitectureTest {
                     JavaClass target = dependency.getTargetClass();
                     String to = contextOf(target);
                     boolean foreign = to != null && !to.equals(from);
-                    boolean published = target.getPackageName().startsWith(ROOT + "." + to + ".published");
-                    if (foreign && !published) {
+                    if (foreign && !isIn(target, to, "published")) {
                         events.add(SimpleConditionEvent.violated(dependency, dependency.getDescription()));
                     }
                 }
@@ -128,12 +187,63 @@ class ArchitectureTest {
         };
     }
 
+    private static ArchCondition<JavaClass> reachContextsOnlyThroughPrimaryAndPublishedFromTheShell() {
+        return new ArchCondition<>("reach a context, from the shell, only through its infrastructure.primary or published package") {
+            @Override
+            public void check(JavaClass origin, ConditionEvents events) {
+                if (kindOf(origin) != ModuleType.SHELL) {
+                    return;
+                }
+                for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                    JavaClass target = dependency.getTargetClass();
+                    String to = contextOf(target);
+                    if (to != null && !isIn(target, to, "infrastructure.primary") && !isIn(target, to, "published")) {
+                        events.add(SimpleConditionEvent.violated(dependency, dependency.getDescription()));
+                    }
+                }
+            }
+        };
+    }
+
+    private static boolean isIn(JavaClass javaClass, String context, String layer) {
+        String layerPackage = ROOT + "." + context + "." + layer;
+        String name = javaClass.getPackageName();
+        return name.equals(layerPackage) || name.startsWith(layerPackage + ".");
+    }
+
     private static String contextOf(JavaClass javaClass) {
+        return kindOf(javaClass) == ModuleType.CONTEXT ? moduleNameOf(javaClass) : null;
+    }
+
+    private static ModuleType kindOf(JavaClass javaClass) {
+        return moduleOf(javaClass)
+                .flatMap(module -> module.tryGetAnnotationOfType(ApplicationModule.class))
+                .map(ApplicationModule::type)
+                .orElse(null);
+    }
+
+    private static Optional<JavaPackage> moduleOf(JavaClass javaClass) {
+        String module = modulePackageName(javaClass);
+        if (module == null) {
+            return Optional.empty();
+        }
+        JavaPackage candidate = javaClass.getPackage();
+        while (!candidate.getName().equals(module)) {
+            candidate = candidate.getParent().orElseThrow();
+        }
+        return candidate.isAnnotatedWith(ApplicationModule.class) ? Optional.of(candidate) : Optional.empty();
+    }
+
+    private static String moduleNameOf(JavaClass javaClass) {
+        String module = modulePackageName(javaClass);
+        return module == null ? null : module.substring(ROOT.length() + 1);
+    }
+
+    private static String modulePackageName(JavaClass javaClass) {
         String name = javaClass.getPackageName();
         if (!name.startsWith(ROOT + ".")) {
             return null;
         }
-        String context = name.substring(ROOT.length() + 1).split("\\.")[0];
-        return context.equals("shell") || context.equals("shared") ? null : context;
+        return ROOT + "." + name.substring(ROOT.length() + 1).split("\\.")[0];
     }
 }

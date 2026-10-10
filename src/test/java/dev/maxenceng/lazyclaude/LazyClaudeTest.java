@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,62 +13,84 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import dev.maxenceng.lazyclaude.board.application.ReadBoard;
-import dev.maxenceng.lazyclaude.board.domain.Board;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.GitProjectLocator;
+import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
+import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
+import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
+import dev.maxenceng.lazyclaude.board.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardController;
+import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogRepository;
+import dev.maxenceng.lazyclaude.board.infrastructure.secondary.ProjectLocatorRepository;
+import dev.maxenceng.lazyclaude.board.published.BoardView;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 class LazyClaudeTest {
 
     private final ByteArrayOutputStream err = new ByteArrayOutputStream();
-    private final List<Board> opened = new ArrayList<>();
+    private final List<BoardView> opened = new ArrayList<>();
+
+    private static BoardController board(ProjectLocatorPort locator, BacklogPort backlog) {
+        return new BoardController(new BoardApplicationService(locator, backlog));
+    }
+
+    private int start(Path from, BoardController board) throws Exception {
+        return LazyClaude.start(from, board, new PrintStream(err, true, StandardCharsets.UTF_8), opened::add);
+    }
+
+    private String said() {
+        return err.toString(StandardCharsets.UTF_8);
+    }
 
     @Test
     void shouldSayWhyAndExitNonZeroWithoutOpeningTheShellOutsideAGitRepository(@TempDir Path outside)
             throws Exception {
-        int exit = LazyClaude.start(
-                outside, new GitProjectLocator(), new ReadBoard(project -> Board.of(List.of(), List.of())),
-                stream(), opened::add);
+        int exit = start(outside, board(new ProjectLocatorRepository(), new BacklogRepository()));
 
         assertThat(exit).as("a missing project is a failed start").isNotZero();
-        assertThat(err.toString(StandardCharsets.UTF_8))
-                .as("the reason reaches the terminal")
-                .startsWith("lazyclaude: ")
-                .contains("not inside a git repository");
+        assertThat(said()).as("the reason reaches the terminal").startsWith("lazyclaude: ").contains("not inside a git repository");
         assertThat(opened).as("no frame is drawn before the reason").isEmpty();
     }
 
     @Test
-    void shouldSayWhyAndExitNonZeroWithoutOpeningTheShellWhenTheBacklogCannotBeRead() throws Exception {
-        int exit = LazyClaude.start(
-                Path.of("/work/app"), from -> new Project(from),
-                new ReadBoard(project -> {
-                    throw new UncheckedIOException("cannot list /work/app/docs/backlog", new IOException("denied"));
-                }),
-                stream(), opened::add);
+    void shouldSayWhyAndExitNonZeroWithoutOpeningTheShellWhenTheMainWorktreeHasNoBacklog(@TempDir Path repo)
+            throws Exception {
+        Process init = new ProcessBuilder("git", "init", "-q", repo.toString()).start();
+        assertThat(init.waitFor()).isZero();
+
+        int exit = start(repo, board(new ProjectLocatorRepository(), new BacklogRepository()));
 
         assertThat(exit).isNotZero();
-        assertThat(err.toString(StandardCharsets.UTF_8))
+        assertThat(said())
+                .startsWith("lazyclaude: the main worktree has no ")
+                .contains(repo.toRealPath().resolve("docs/backlog").toString());
+        assertThat(opened).isEmpty();
+    }
+
+    @Test
+    void shouldSayWhyAndExitNonZeroWithoutOpeningTheShellWhenTheBacklogCannotBeListed() throws Exception {
+        Path backlog = Path.of("/work/app/docs/backlog");
+        int exit = start(
+                Path.of("/work/app"),
+                board(from -> new Project(from.path()), project -> {
+                    throw new BacklogUnavailableException(backlog, new IOException("denied"));
+                }));
+
+        assertThat(exit).isNotZero();
+        assertThat(said())
                 .as("an unlistable backlog is reported, not a stack trace")
-                .startsWith("lazyclaude: cannot list /work/app/docs/backlog");
+                .startsWith("lazyclaude: cannot list /work/app/docs/backlog: denied");
         assertThat(opened).isEmpty();
     }
 
     @Test
     void shouldOpenTheShellOnTheBoardOfTheLocatedProject() throws Exception {
         Project project = new Project(Path.of("/work/app"));
-        Board board = Board.of(List.of(), List.of());
 
-        int exit = LazyClaude.start(
-                Path.of("/work/app/src"), from -> project,
-                new ReadBoard(asked -> asked.equals(project) ? board : null), stream(), opened::add);
+        int exit = start(
+                Path.of("/work/app/src"),
+                board(from -> project, asked -> asked.equals(project) ? List.of() : null));
 
         assertThat(exit).isZero();
-        assertThat(opened).containsExactly(board);
+        assertThat(opened).singleElement().satisfies(view -> assertThat(view.groups()).hasSize(5));
         assertThat(err.size()).as("a found project prints nothing").isZero();
-    }
-
-    private PrintStream stream() {
-        return new PrintStream(err, true, StandardCharsets.UTF_8);
     }
 }

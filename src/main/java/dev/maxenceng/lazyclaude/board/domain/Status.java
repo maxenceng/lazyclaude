@@ -20,11 +20,15 @@ public enum Status {
         return label;
     }
 
+    /** The end of the lifecycle: nothing moves a ticket on from here. */
+    public boolean finished() {
+        return this == DONE;
+    }
+
     public static Status parse(String label) {
         return Arrays.stream(values())
                 .filter(status -> status.label.equals(label))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("status '" + label + "' is not one of "
-                        + String.join(", ", Arrays.stream(values()).map(Status::label).toList())));
+                .orElseThrow(() -> new UnknownStatusException(label));
     }
 }

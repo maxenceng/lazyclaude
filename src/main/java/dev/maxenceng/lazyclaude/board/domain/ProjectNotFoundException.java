@@ -1,13 +1,16 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
-/** There is no project to show a board for; the message says why. */
-public final class ProjectNotFoundException extends RuntimeException {
+import dev.maxenceng.lazyclaude.error.domain.DomainErrorStatus;
+import dev.maxenceng.lazyclaude.error.domain.DomainException;
+
+/** The working directory belongs to no project; the message says why. */
+public final class ProjectNotFoundException extends DomainException {
 
     public ProjectNotFoundException(String reason) {
-        super(reason);
+        super(DomainErrorStatus.NOT_FOUND, reason);
     }
 
     public ProjectNotFoundException(String reason, Throwable cause) {
-        super(reason, cause);
+        super(DomainErrorStatus.NOT_FOUND, reason, cause);
     }
 }

@@ -8,7 +8,8 @@ import static dev.tamboui.toolkit.Toolkit.text;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.maxenceng.lazyclaude.board.domain.Board;
+import dev.maxenceng.lazyclaude.board.published.BoardView;
+import dev.maxenceng.lazyclaude.board.published.TicketView;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.element.Element;
@@ -19,12 +20,40 @@ import dev.tamboui.tui.event.KeyEvent;
 
 /**
  * The terminal application itself. It owns the screen and the keyboard, and composes what
- * each context's application layer offers; it holds no rules of its own.
+ * each context's primary adapter offers; it holds no rules of its own.
  */
 public final class Shell extends ToolkitApp {
 
     private static final int LEFT_COLUMN_PERCENT = 35;
     private static final int SMALL_PANEL_HEIGHT = 3;
+    private static final int STATUS_LINE_HEIGHT = 1;
+    private static final int KEY_BAR_HEIGHT = 1;
+
+    private static final String BOARD_TITLE = "Board";
+    private static final String SESSIONS_TITLE = "Sessions";
+    private static final String DOCS_TITLE = "Docs";
+    private static final String ELSEWHERE_TITLE = "Elsewhere";
+    private static final String MAIN_VIEW_TITLE = "main view";
+    private static final String DOCK_TITLE = "dock";
+    private static final String NO_HOSTED_SESSION = "no hosted session";
+    private static final String EMPTY = "";
+
+    private static final char QUIT = 'q';
+    private static final char LEFT = 'h';
+    private static final char DOWN = 'j';
+    private static final char UP = 'k';
+    private static final char RIGHT = 'l';
+
+    private static final String MOVE_KEYS = "j/k move";
+    private static final String PANEL_KEYS = "h/l panel";
+    private static final String FOLD_KEY = "enter fold";
+    private static final String FOCUS_KEYS = "alt+h/j/k/l focus";
+    private static final String QUIT_KEY = "q quit";
+    private static final String KEY_BAR_INDENT = " ";
+    private static final String KEY_SEPARATOR = "  ";
+
+    private static final String STATUS_PREFIX = "status ";
+    private static final String DETAIL_SEPARATOR = " · ";
 
     private final BoardRows board;
     private Focus focus = Focus.BOARD;
@@ -32,7 +61,7 @@ public final class Shell extends ToolkitApp {
     private Focus lastRight = Focus.MAIN;
     private boolean quitRequested;
 
-    public Shell(Board board) {
+    public Shell(BoardView board) {
         this.board = new BoardRows(board);
     }
 
@@ -64,22 +93,22 @@ public final class Shell extends ToolkitApp {
         if (key.isKey(KeyCode.ENTER)) {
             return focus == Focus.BOARD && board.selectedHeader().isPresent() && fold();
         }
-        if (key.isChar('q')) {
+        if (key.isChar(QUIT)) {
             quitRequested = true;
             quit();
             return true;
         }
-        if (key.isChar('h')) {
-            return moveFocusLeft();
+        if (key.isChar(LEFT)) {
+            return focusOn(lastLeft);
         }
-        if (key.isChar('l')) {
-            return moveFocusRight();
+        if (key.isChar(RIGHT)) {
+            return focusOn(lastRight);
         }
-        if (focus == Focus.BOARD && key.isChar('j')) {
+        if (focus == Focus.BOARD && key.isChar(DOWN)) {
             board.down();
             return true;
         }
-        if (focus == Focus.BOARD && key.isChar('k')) {
+        if (focus == Focus.BOARD && key.isChar(UP)) {
             board.up();
             return true;
         }
@@ -87,16 +116,16 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean pressWithAlt(KeyEvent key) {
-        if (key.isChar('h')) {
-            return moveFocusLeft();
+        if (key.isChar(LEFT)) {
+            return focusOn(lastLeft);
         }
-        if (key.isChar('l')) {
-            return moveFocusRight();
+        if (key.isChar(RIGHT)) {
+            return focusOn(lastRight);
         }
-        if (key.isChar('j')) {
+        if (key.isChar(DOWN)) {
             return focusOn(focus.below());
         }
-        if (key.isChar('k')) {
+        if (key.isChar(UP)) {
             return focusOn(focus.above());
         }
         return false;
@@ -107,17 +136,9 @@ public final class Shell extends ToolkitApp {
         return true;
     }
 
-    private boolean moveFocusLeft() {
-        return focusOn(lastLeft);
-    }
-
-    private boolean moveFocusRight() {
-        return focusOn(lastRight);
-    }
-
     private boolean focusOn(Focus target) {
         focus = target;
-        if (target.column() == Focus.Column.LEFT) {
+        if (target.column() == Column.LEFT) {
             lastLeft = target;
         } else {
             lastRight = target;
@@ -128,42 +149,34 @@ public final class Shell extends ToolkitApp {
     @Override
     protected Element render() {
         return column(
-                text("").length(1),
+                text(EMPTY).length(STATUS_LINE_HEIGHT),
                 row(
                         column(
                                         boardPanel(),
-                                        small("Sessions", Focus.SESSIONS),
-                                        small("Docs", Focus.DOCS),
-                                        small("Elsewhere", Focus.ELSEWHERE))
+                                        small(SESSIONS_TITLE, Focus.SESSIONS),
+                                        small(DOCS_TITLE, Focus.DOCS),
+                                        small(ELSEWHERE_TITLE, Focus.ELSEWHERE))
                                 .percent(LEFT_COLUMN_PERCENT),
                         column(mainView(), dock()).fill()).fill(),
-                text(keyBar()).dim().length(1));
+                text(keyBar()).dim().length(KEY_BAR_HEIGHT));
     }
 
     private Element boardPanel() {
-        List<BoardRows.Row> rows = board.visible();
-        List<String> lines = new ArrayList<>();
-        for (BoardRows.Row row : rows) {
-            lines.add(switch (row) {
-                case BoardRows.Row.Header header -> header.text();
-                case BoardRows.Row.TicketRow ticket -> ticket.text();
-                case BoardRows.Row.UnreadableRow unreadable -> unreadable.text();
-            });
-        }
-        return framed("Board", Focus.BOARD, new RowsElement(lines, board.selectedIndex(), focus == Focus.BOARD))
+        List<String> lines = board.visible().stream().map(Row::text).toList();
+        return framed(BOARD_TITLE, Focus.BOARD, new RowsElement(lines, board.selectedIndex(), focus == Focus.BOARD))
                 .fill();
     }
 
     private Element small(String title, Focus owner) {
-        return framed(title, owner, text("")).length(SMALL_PANEL_HEIGHT);
+        return framed(title, owner, text(EMPTY)).length(SMALL_PANEL_HEIGHT);
     }
 
     private Element mainView() {
-        return framed("main view", Focus.MAIN, column(detailLines())).fill();
+        return framed(MAIN_VIEW_TITLE, Focus.MAIN, column(detailLines())).fill();
     }
 
     private Element dock() {
-        return framed("dock", Focus.DOCK, text("no hosted session")).fill();
+        return framed(DOCK_TITLE, Focus.DOCK, text(NO_HOSTED_SESSION)).fill();
     }
 
     private Panel framed(String title, Focus owner, Element body) {
@@ -173,36 +186,37 @@ public final class Shell extends ToolkitApp {
 
     private Element[] detailLines() {
         return switch (board.selected()) {
-            case BoardRows.Row.Header header -> new Element[0];
-            case BoardRows.Row.TicketRow row -> {
-                var ticket = row.ticket();
-                List<String> parts = new ArrayList<>(List.of("status " + ticket.status().label()));
-                if (!ticket.context().isBlank()) {
-                    parts.add(ticket.context());
-                }
-                if (!ticket.type().isBlank()) {
-                    parts.add(ticket.type());
-                }
-                yield new Element[] {
-                    text(ticket.id().value()).bold(), text(ticket.title()), text(String.join(" · ", parts))
-                };
-            }
-            case BoardRows.Row.UnreadableRow row ->
+            case HeaderRow header -> new Element[0];
+            case TicketRow row -> ticketDetail(row.ticket());
+            case UnreadableRow row ->
                 new Element[] {text(row.unreadable().file()).bold(), text(row.unreadable().reason())};
+        };
+    }
+
+    private static Element[] ticketDetail(TicketView ticket) {
+        List<String> facts = new ArrayList<>(List.of(STATUS_PREFIX + ticket.status()));
+        if (!ticket.context().isBlank()) {
+            facts.add(ticket.context());
+        }
+        if (!ticket.type().isBlank()) {
+            facts.add(ticket.type());
+        }
+        return new Element[] {
+            text(ticket.id()).bold(), text(ticket.title()), text(String.join(DETAIL_SEPARATOR, facts))
         };
     }
 
     private String keyBar() {
         List<String> keys = new ArrayList<>();
         if (focus == Focus.BOARD) {
-            keys.add("j/k move");
+            keys.add(MOVE_KEYS);
         }
-        keys.add("h/l panel");
+        keys.add(PANEL_KEYS);
         if (focus == Focus.BOARD && board.selectedHeader().isPresent()) {
-            keys.add("enter fold");
+            keys.add(FOLD_KEY);
         }
-        keys.add("alt+h/j/k/l focus");
-        keys.add("q quit");
-        return " " + String.join("  ", keys);
+        keys.add(FOCUS_KEYS);
+        keys.add(QUIT_KEY);
+        return KEY_BAR_INDENT + String.join(KEY_SEPARATOR, keys);
     }
 }

@@ -1,13 +1,13 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
-import java.util.Objects;
+import dev.maxenceng.lazyclaude.error.domain.Assert;
 
 /** One backlog ticket as the board shows it. */
 public record Ticket(TicketId id, String title, Status status, String context, String type) {
 
     public Ticket {
-        Objects.requireNonNull(id, "id");
-        Objects.requireNonNull(status, "status");
+        Assert.notNull("id", id);
+        Assert.notNull("status", status);
         title = title == null || title.isBlank() ? id.value() : title.strip();
         context = context == null ? "" : context;
         type = type == null ? "" : type;

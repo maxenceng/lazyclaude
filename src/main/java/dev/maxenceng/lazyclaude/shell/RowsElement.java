@@ -13,6 +13,9 @@ import dev.tamboui.toolkit.element.Size;
 /** Draws lines top-down inside whatever area it gets, scrolled just far enough to show the selected one. */
 final class RowsElement implements Element {
 
+    private static final String ELLIPSIS = "…";
+    private static final String PADDING = " ";
+
     private final List<String> lines;
     private final int selected;
     private final boolean highlighted;
@@ -34,7 +37,7 @@ final class RowsElement implements Element {
             int index = first + row;
             String line = fit(lines.get(index), area.width());
             Style style = index == selected && highlighted ? Style.EMPTY.reversed() : Style.EMPTY;
-            String padded = style == Style.EMPTY ? line : line + " ".repeat(area.width() - line.codePointCount(0, line.length()));
+            String padded = style == Style.EMPTY ? line : line + PADDING.repeat(area.width() - line.codePointCount(0, line.length()));
             frame.buffer().setString(area.x(), area.y() + row, padded, style);
         }
     }
@@ -45,7 +48,7 @@ final class RowsElement implements Element {
             return line;
         }
         int end = line.offsetByCodePoints(0, width - 1);
-        return line.substring(0, end) + "…";
+        return line.substring(0, end) + ELLIPSIS;
     }
 
     @Override

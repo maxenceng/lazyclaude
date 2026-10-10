@@ -1,15 +1,16 @@
 package dev.maxenceng.lazyclaude.shared.domain;
 
 import java.nio.file.Path;
-import java.util.Objects;
 
-/** The directory lazyclaude works on: the root of the main worktree, as {@code ProjectLocator} finds it. */
+import dev.maxenceng.lazyclaude.error.domain.Assert;
+
+/** The directory lazyclaude works on: the root of the main worktree. */
 public record Project(Path root) {
 
     public Project {
-        Objects.requireNonNull(root, "root");
+        Assert.notNull("root", root);
         if (!root.isAbsolute()) {
-            throw new IllegalArgumentException("a project root is absolute, got " + root);
+            throw new IllegalArgumentException("a project root is absolute, got %s".formatted(root));
         }
     }
 }

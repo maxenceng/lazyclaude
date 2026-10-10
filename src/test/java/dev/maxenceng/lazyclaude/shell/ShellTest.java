@@ -7,11 +7,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import dev.maxenceng.lazyclaude.board.domain.Board;
-import dev.maxenceng.lazyclaude.board.domain.Status;
-import dev.maxenceng.lazyclaude.board.domain.Ticket;
-import dev.maxenceng.lazyclaude.board.domain.TicketId;
-import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
+import dev.maxenceng.lazyclaude.board.published.BoardView;
+import dev.maxenceng.lazyclaude.board.published.StatusGroupView;
+import dev.maxenceng.lazyclaude.board.published.TicketView;
+import dev.maxenceng.lazyclaude.board.published.UnreadableTicketView;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
@@ -21,22 +20,29 @@ class ShellTest {
     private static final int WIDTH = 80;
     private static final int HEIGHT = 24;
 
-    private static Ticket ticket(String id, Status status, String title) {
-        return Ticket.builder()
-                .id(TicketId.of(id))
-                .title(title)
-                .status(status)
-                .context("board")
-                .type("feature")
-                .build();
+    private static final List<String> LIFECYCLE = List.of("draft", "todo", "in-progress", "in-review", "done");
+    private static final String FINISHED = "done";
+
+    private static TicketView ticket(String id, String status, String title) {
+        return new TicketView(id, title == null ? id : title, status, "board", "feature");
     }
 
-    private static Shell shellOn(Board board) {
+    private static BoardView board(List<TicketView> tickets, List<UnreadableTicketView> unreadable) {
+        List<StatusGroupView> groups = LIFECYCLE.stream()
+                .map(status -> new StatusGroupView(
+                        status,
+                        status.equals(FINISHED),
+                        tickets.stream().filter(ticket -> ticket.status().equals(status)).toList()))
+                .toList();
+        return new BoardView(groups, unreadable);
+    }
+
+    private static Shell shellOn(BoardView board) {
         return new Shell(board);
     }
 
-    private static Shell shellOn(Ticket... tickets) {
-        return shellOn(Board.of(List.of(tickets), List.of()));
+    private static Shell shellOn(TicketView... tickets) {
+        return shellOn(board(List.of(tickets), List.of()));
     }
 
     private static KeyEvent key(char c) {
@@ -65,12 +71,12 @@ class ShellTest {
     @Test
     void shouldGroupTicketsByStatusInLifecycleOrderWithCounts() {
         Shell shell = shellOn(
-                ticket("A-1", Status.DONE, "Old"),
-                ticket("A-2", Status.IN_REVIEW, "Review"),
-                ticket("A-3", Status.TODO, "Todo"),
-                ticket("A-4", Status.DRAFT, "Draft one"),
-                ticket("A-5", Status.DRAFT, "Draft two"),
-                ticket("A-6", Status.IN_PROGRESS, "Working"));
+                ticket("A-1", "done", "Old"),
+                ticket("A-2", "in-review", "Review"),
+                ticket("A-3", "todo", "Todo"),
+                ticket("A-4", "draft", "Draft one"),
+                ticket("A-5", "draft", "Draft two"),
+                ticket("A-6", "in-progress", "Working"));
 
         String board = String.join("\n", boardPanelLines(screen(shell)));
 
@@ -82,28 +88,21 @@ class ShellTest {
 
     @Test
     void shouldShowAnEmptyGroupAtZero() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Only"));
+        Shell shell = shellOn(ticket("A-1", "draft", "Only"));
 
         assertThat(screen(shell).text()).contains("▾ todo (0)", "▾ in-progress (0)", "▾ in-review (0)", "▸ done (0)");
     }
 
     @Test
-    void shouldOrderTicketsWithinAGroupNumerically() {
-        Shell shell = shellOn(ticket("PROJ-10", Status.DRAFT, "Ten"), ticket("PROJ-2", Status.DRAFT, "Two"));
-
-        assertThat(String.join("\n", boardPanelLines(screen(shell)))).containsSubsequence("PROJ-2", "PROJ-10");
-    }
-
-    @Test
     void shouldStartWithDoneFolded() {
-        Shell shell = shellOn(ticket("A-1", Status.DONE, "Shipped"));
+        Shell shell = shellOn(ticket("A-1", "done", "Shipped"));
 
         assertThat(screen(shell).text()).contains("▸ done (1)").doesNotContain("A-1");
     }
 
     @Test
     void shouldUnfoldDoneWithEnterOnItsHeader() {
-        Shell shell = shellOn(ticket("A-1", Status.DONE, "Shipped"));
+        Shell shell = shellOn(ticket("A-1", "done", "Shipped"));
         for (int i = 0; i < 4; i++) {
             shell.press(key('j'));
         }
@@ -115,7 +114,7 @@ class ShellTest {
 
     @Test
     void shouldFoldAnOpenGroupWithEnterOnItsHeader() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
 
         shell.press(KeyEvent.ofKey(KeyCode.ENTER));
 
@@ -134,7 +133,7 @@ class ShellTest {
 
     @Test
     void shouldLeaveATicketRowAloneOnEnter() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
         shell.press(key('j'));
 
         shell.press(KeyEvent.ofKey(KeyCode.ENTER));
@@ -144,9 +143,9 @@ class ShellTest {
 
     @Test
     void shouldListUnreadableTicketsLastWithTheirReason() {
-        Board board = Board.of(
-                List.of(ticket("A-1", Status.DRAFT, "Fine")),
-                List.of(new UnreadableTicket("A-2.md", "bad")));
+        BoardView board = board(
+                List.of(ticket("A-1", "draft", "Fine")),
+                List.of(new UnreadableTicketView("A-2.md", "bad")));
 
         String boardText = String.join("\n", boardPanelLines(screen(shellOn(board))));
 
@@ -160,14 +159,14 @@ class ShellTest {
 
     @Test
     void shouldShowATicketWithoutATitleUnderItsId() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, null));
+        Shell shell = shellOn(ticket("A-1", "draft", null));
 
         assertThat(String.join("\n", boardPanelLines(screen(shell)))).contains("A-1 A-1");
     }
 
     @Test
     void shouldMoveTheSelectionDownWithJ() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"), ticket("A-2", Status.DRAFT, "Plan"));
+        Shell shell = shellOn(ticket("A-1", "draft", "Idea"), ticket("A-2", "draft", "Plan"));
 
         shell.press(key('j'));
         shell.press(key('j'));
@@ -177,7 +176,7 @@ class ShellTest {
 
     @Test
     void shouldMoveTheSelectionUpWithK() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"), ticket("A-2", Status.DRAFT, "Plan"));
+        Shell shell = shellOn(ticket("A-1", "draft", "Idea"), ticket("A-2", "draft", "Plan"));
         shell.press(key('j'));
         shell.press(key('j'));
 
@@ -188,7 +187,7 @@ class ShellTest {
 
     @Test
     void shouldStayOnTheFirstRowWhenKIsPressedThere() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
 
         shell.press(key('k'));
 
@@ -197,7 +196,7 @@ class ShellTest {
 
     @Test
     void shouldStayOnTheLastRowWhenJIsPressedThere() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
         for (int i = 0; i < 20; i++) {
             shell.press(key('j'));
         }
@@ -207,11 +206,11 @@ class ShellTest {
 
     @Test
     void shouldKeepTheSelectionVisibleWhenTheBoardIsLongerThanThePanel() {
-        List<Ticket> tickets = new ArrayList<>();
+        List<TicketView> tickets = new ArrayList<>();
         for (int i = 1; i <= 40; i++) {
-            tickets.add(ticket("A-" + i, Status.DRAFT, "Ticket " + i));
+            tickets.add(ticket("A-" + i, "draft", "Ticket " + i));
         }
-        Shell shell = shellOn(Board.of(tickets, List.of()));
+        Shell shell = shellOn(board(tickets, List.of()));
 
         for (int i = 0; i < 30; i++) {
             shell.press(key('j'));
@@ -222,7 +221,7 @@ class ShellTest {
 
     @Test
     void shouldShowTheSelectedTicketInTheMainView() {
-        Shell shell = shellOn(ticket("A-1", Status.IN_REVIEW, "A fine idea"));
+        Shell shell = shellOn(ticket("A-1", "in-review", "A fine idea"));
         shell.press(key('j'));
         shell.press(key('j'));
         shell.press(key('j'));
@@ -235,7 +234,7 @@ class ShellTest {
 
     @Test
     void shouldShowTheSelectedTicketsDetailRightOfTheBoard() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "A fine idea"));
+        Shell shell = shellOn(ticket("A-1", "draft", "A fine idea"));
         shell.press(key('j'));
 
         List<String> lines = screen(shell).lines();
@@ -245,7 +244,7 @@ class ShellTest {
 
     @Test
     void shouldLeaveTheMainViewEmptyOnAGroupHeader() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "A fine idea"));
+        Shell shell = shellOn(ticket("A-1", "draft", "A fine idea"));
 
         List<String> lines = screen(shell).lines();
 
@@ -254,7 +253,7 @@ class ShellTest {
 
     @Test
     void shouldShowAnUnreadableFilesReasonInTheMainViewWhenItIsSelected() {
-        Board board = Board.of(List.of(), List.of(new UnreadableTicket("A-2.md", "status is missing")));
+        BoardView board = board(List.of(), List.of(new UnreadableTicketView("A-2.md", "status is missing")));
         Shell shell = shellOn(board);
         for (int i = 0; i < 6; i++) {
             shell.press(key('j'));
@@ -366,7 +365,7 @@ class ShellTest {
 
     @Test
     void shouldNotMoveTheBoardSelectionWhileAnotherPanelHasFocus() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
         shell.press(key('l'));
 
         shell.press(key('j'));
@@ -431,7 +430,7 @@ class ShellTest {
 
     @Test
     void shouldNotOfferFoldOnATicketRow() {
-        Shell shell = shellOn(ticket("A-1", Status.DRAFT, "Idea"));
+        Shell shell = shellOn(ticket("A-1", "draft", "Idea"));
         shell.press(key('j'));
 
         assertThat(screen(shell).lines().getLast()).contains("j/k move", "q quit").doesNotContain("enter fold");
