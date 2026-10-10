@@ -20,17 +20,14 @@ import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.TicketFile;
 import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
 import dev.maxenceng.lazyclaude.board.published.FileName;
-import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
-import dev.maxenceng.lazyclaude.board.published.TicketTitle;
-import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
- * Reads `docs/backlog/*.md`: YAML frontmatter for the fields, the first `# ` line outside a code
- * fence for the title, everything after the closing `---` for the body. A file is an entry only when its frontmatter claims an `id`.
+ * Reads `docs/backlog/*.md`: YAML frontmatter for the fields, everything after the closing `---` for the body.
+ * A file is an entry only when its frontmatter claims an `id`.
  */
 public final class BacklogRepository implements BacklogPort {
 
@@ -39,8 +36,6 @@ public final class BacklogRepository implements BacklogPort {
     private static final String HIDDEN_PREFIX = "_";
     private static final String FENCE = "---";
     private static final String LINE_BREAK = "\n";
-    private static final String TITLE_PREFIX = "# ";
-    private static final List<String> CODE_FENCES = List.of("```", "~~~");
     private static final String BYTE_ORDER_MARK = "﻿";
     private static final Pattern ID_LINE = Pattern.compile("(?m)^id:[ \\t]*\\S");
     private static final String NO_DETAIL = "unreadable";
@@ -104,12 +99,12 @@ public final class BacklogRepository implements BacklogPort {
             return Optional.empty();
         }
         List<String> body = lines.subList(closing + 1, lines.size());
-        return Optional.of(entry(name, fields, title(body), TicketBody.of(String.join(LINE_BREAK, body))));
+        return Optional.of(entry(name, fields, TicketBody.of(String.join(LINE_BREAK, body))));
     }
 
-    private static BacklogEntry entry(FileName name, TicketFrontmatter fields, TicketTitle title, TicketBody body) {
+    private static BacklogEntry entry(FileName name, TicketFrontmatter fields, TicketBody body) {
         try {
-            return TicketFile.builder().file(name).ticket(fields.toDomain(title, body)).build();
+            return TicketFile.builder().file(name).ticket(fields.toDomain(body)).build();
         } catch (DomainException e) {
             return unreadable(name, e.getMessage());
         }
@@ -148,19 +143,6 @@ public final class BacklogRepository implements BacklogPort {
             }
         }
         return -1;
-    }
-
-    private static TicketTitle title(List<String> body) {
-        boolean inCode = false;
-        for (String line : body) {
-            if (CODE_FENCES.stream().anyMatch(line::startsWith)) {
-                inCode = !inCode;
-            } else if (!inCode && line.startsWith(TITLE_PREFIX)) {
-                String heading = line.substring(TITLE_PREFIX.length()).strip();
-                return heading.isEmpty() ? new NoTitle() : new Title(heading);
-            }
-        }
-        return new NoTitle();
     }
 
     private static String firstLine(String message) {

@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
+import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.Status;
 
 @ExtendWith(MockitoExtension.class)
@@ -74,7 +75,8 @@ class BoardQueryTest {
         when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticketBuilder().body(new NoBody()).build())));
 
         assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets())
-                .containsExactly(ticketViewBuilder().status(Status.TODO).body(new NoBody()).build());
+                .as("a ticket with no body has no title to derive")
+                .containsExactly(ticketViewBuilder().status(Status.TODO).title(new NoTitle()).body(new NoBody()).build());
     }
 
     @Test

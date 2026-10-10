@@ -9,7 +9,6 @@ import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
 import dev.maxenceng.lazyclaude.board.published.TicketContext;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
-import dev.maxenceng.lazyclaude.board.published.TicketTitle;
 import dev.maxenceng.lazyclaude.board.published.TicketType;
 import dev.maxenceng.lazyclaude.board.published.TypeName;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
@@ -22,11 +21,10 @@ record TicketFrontmatter(String id, String status, String context, String type, 
     }
 
     /** @throws dev.maxenceng.lazyclaude.error.domain.DomainException when a field is refused, saying which */
-    Ticket toDomain(TicketTitle title, TicketBody body) {
+    Ticket toDomain(TicketBody body) {
         Assert.notNull("status", status);
         return Ticket.builder()
                 .id(new TicketId(id))
-                .title(title)
                 .status(Status.parse(status))
                 .context(ticketContext())
                 .type(ticketType())

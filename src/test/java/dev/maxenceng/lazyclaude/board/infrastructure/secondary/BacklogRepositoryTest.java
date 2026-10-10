@@ -3,7 +3,6 @@ package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.datedFrontmatter;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFile;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.bareTicketBuilder;
-import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.backlogIn;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.secondTicketMarkdownWithStatus;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.ticketMarkdown;
@@ -27,9 +26,7 @@ import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
 import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.FileName;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
-import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.Reason;
-import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 class BacklogRepositoryTest {
@@ -47,7 +44,7 @@ class BacklogRepositoryTest {
     }
 
     @Test
-    void shouldReadATicketsFrontmatterAndTitle() throws IOException {
+    void shouldReadATicketsFrontmatter() throws IOException {
         Files.writeString(backlog.resolve("PROJ-1.md"), ticketMarkdown());
 
         assertThat(repository.entries(new Project(root))).containsExactly(ticketFile());
@@ -62,7 +59,7 @@ class BacklogRepositoryTest {
 
     @Test
     void shouldSkipAFileWithFrontmatterButNoId() throws IOException {
-        Files.writeString(backlog.resolve("ROADMAP.md"), "---\ntitle: Roadmap\n---\n\n# Roadmap\n");
+        Files.writeString(backlog.resolve("ROADMAP.md"), "---\nowner: Roadmap\n---\n\n# Roadmap\n");
 
         assertThat(repository.entries(new Project(root))).isEmpty();
     }
@@ -79,37 +76,6 @@ class BacklogRepositoryTest {
         Files.writeString(backlog.resolve("notes.txt"), ticketMarkdown());
 
         assertThat(repository.entries(new Project(root))).isEmpty();
-    }
-
-    @Test
-    void shouldReadATicketWithNoHeadingAsHavingNoTitle() throws IOException {
-        Files.writeString(backlog.resolve("PROJ-1.md"), "---\nid: PROJ-1\nstatus: todo\ncontext: board\ntype: feature\n---\n\nJust prose.\n");
-
-        assertThat(repository.entries(new Project(root)))
-                .as("a ticket without a heading is still a ticket, not an unreadable one")
-                .containsExactly(TicketFile.builder()
-                        .file(new FileName("PROJ-1.md"))
-                        .ticket(ticketBuilder().title(new NoTitle()).body(new Body("\nJust prose.")).build())
-                        .build());
-    }
-
-    @Test
-    void shouldNotTakeAHeadingInsideACodeFenceForTheTitle() throws IOException {
-        Files.writeString(backlog.resolve("PROJ-1.md"), "---\nid: PROJ-1\nstatus: todo\n---\n\n```\n# not a title\n```\n");
-
-        assertThat(repository.entries(new Project(root))).containsExactly(TicketFile.builder()
-                .file(new FileName("PROJ-1.md"))
-                .ticket(bareTicketBuilder().body(new Body("\n```\n# not a title\n```")).build())
-                .build());
-    }
-
-    @Test
-    void shouldReadAnEmptyHeadingAsNoTitle() throws IOException {
-        Files.writeString(backlog.resolve("PROJ-1.md"), "---\nid: PROJ-1\nstatus: todo\n---\n# \n# Later\n");
-
-        assertThat(repository.entries(new Project(root)))
-                .as("the first heading is the title, even when it is empty")
-                .containsExactly(TicketFile.builder().file(new FileName("PROJ-1.md")).ticket(bareTicketBuilder().body(new Body("# \n# Later")).build()).build());
     }
 
     @Test
@@ -216,14 +182,14 @@ class BacklogRepositoryTest {
 
     @Test
     void shouldSkipBrokenFrontmatterThatHasNoId() throws IOException {
-        Files.writeString(backlog.resolve("NOTES.md"), "---\ntitle: [oops\n---\n");
+        Files.writeString(backlog.resolve("NOTES.md"), "---\nowner: [oops\n---\n");
 
         assertThat(repository.entries(new Project(root))).isEmpty();
     }
 
     @Test
     void shouldSkipBrokenFrontmatterWhoseIdIsEmpty() throws IOException {
-        Files.writeString(backlog.resolve("NOTES.md"), "---\nid:\ntitle: [oops\n---\n");
+        Files.writeString(backlog.resolve("NOTES.md"), "---\nid:\nowner: [oops\n---\n");
 
         assertThat(repository.entries(new Project(root))).as("an empty id is no id").isEmpty();
     }
@@ -258,14 +224,6 @@ class BacklogRepositoryTest {
         assertThatThrownBy(() -> repository.entries(new Project(root)))
                 .isExactlyInstanceOf(BacklogNotFoundException.class)
                 .hasMessage("the main worktree has no %s".formatted(backlog));
-    }
-
-    @Test
-    void shouldStripTheHeadingItReadsAsTheTitle() throws IOException {
-        Files.writeString(backlog.resolve("PROJ-1.md"), "---\nid: PROJ-1\nstatus: todo\n---\n#   Spaced out  \n");
-
-        assertThat(repository.entries(new Project(root))).singleElement().isInstanceOfSatisfying(
-                TicketFile.class, file -> assertThat(file.ticket().title()).isEqualTo(new Title("Spaced out")));
     }
 
     @Test
