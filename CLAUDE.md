@@ -41,9 +41,10 @@ dev.maxenceng.lazyclaude.shell                       the TamboUI application: sc
 dev.maxenceng.lazyclaude.<context>.{published, domain, application, infrastructure.{primary, secondary}}
 ```
 
-One bounded context per direct subpackage of the root; `shell` and `shared` are not contexts.
-None exists yet — `docs/context-map.md` lists the ones expected, and a context is created by
-the first ticket refined into it. `published` only exists once another context needs it.
+One module per direct subpackage of the root, its kind declared by `@ApplicationModule` in its
+`package-info` (ADR 0011): a context, a kernel (`shared`, `error`), or the shell.
+`board` is the first — `docs/context-map.md` lists the ones expected, and a context is created by
+the first ticket refined into it. `published` only exists once another module — the shell or a context — reads it.
 
 ## Hard rules
 
@@ -59,13 +60,23 @@ an ADR.
    `tmux`, and reading the backlog, are all side effects.
 5. Contexts reach each other only through the other's `published` package.
 6. Nothing depends on `shell`; it composes contexts, never the reverse.
+7. The shell reaches a context only through its `infrastructure.primary` and `published`.
+8. No nested types except builders.
 
 ## Conventions
 
 - Wiring is constructor injection, done by hand in `LazyClaude.main`. No service locator, no
   static singletons.
+- Roles are named alike in every context (ADR 0011): `*ApplicationService` → domain `*Manager`
+  → `*Port`, implemented by a `*Repository`; the shell asks through a primary `*Query` (reads)
+  or `*Command` (writes), with a `*Payload` in and a `*View` out (ADR 0012).
+- A value a file may lack is a sealed value object with an explicit absent shape (`Title | NoTitle`),
+  never `null` or a stand-in.
+- A domain failure is a `DomainException`; an input check goes through `Assert`.
 - A screen is tested by rendering it into a buffer (`Screen` in the shell's tests) and
   asserting on its text, not by driving a real terminal.
+- A `*Test` class holds tests only; values come from the `<Type>Fixture` beside the type, and
+  ports are mocked with Mockito (ADR 0013). `TestConventionsTest` enforces the first part.
 - The `ddd-backend` skill describes a Spring project; its aggregate, value-object and
   port/adapter guidance applies here, its Spring, HTTP and persistence parts do not.
 
