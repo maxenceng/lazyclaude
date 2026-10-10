@@ -1,6 +1,6 @@
 ---
 id: LAZY-1
-status: in-progress
+status: done
 context: cross-context
 type: map
 created: 2026-10-09
@@ -49,6 +49,9 @@ v1, as scoped on 2026-10-09:
   - GitHub refuses *Approve* and *Request changes* on your own PR, and every PR here is
     opened under the user's account — a review is always a *Comment* review.
 - The user works in kitty on Linux, with `claude` and `gh` on the PATH.
+- Closed 2026-10-10 with v1 captured as `draft` feature tickets rather than refined ones:
+  every decision is made, and each ticket is refined just before it is built, in the
+  order [ROADMAP.md](ROADMAP.md) gives.
 
 ## Decisions so far
 

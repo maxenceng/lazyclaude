@@ -7,7 +7,7 @@ public final class LazyClaude {
 
     private LazyClaude() {}
 
-    public static void main(String[] args) throws Exception {
+    static void main() throws Exception {
         new Shell().run();
     }
 }
