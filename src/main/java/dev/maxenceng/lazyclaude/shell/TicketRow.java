@@ -1,9 +1,15 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import java.util.Optional;
 
-/** A ticket under its status's header: id, then title. */
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.session.published.Marker;
+import dev.tamboui.style.Style;
+
+/** A ticket under its status's header: id, then title, with the strongest marker of its live sessions in the gutter before the id. */
 record TicketRow(TicketView ticket) implements Row {
+
+    private static final String GUTTER_GAP = " ";
 
     @Override
     public RowKey key() {
@@ -13,5 +19,14 @@ record TicketRow(TicketView ticket) implements Row {
     @Override
     public String text() {
         return "%s%s %s".formatted(INDENT, ticket.id().value(), TicketText.title(ticket));
+    }
+
+    RowLine line(Optional<Marker> marker) {
+        return marker
+                .map(strongest -> new RowLine(
+                        SessionText.glyph(strongest) + GUTTER_GAP,
+                        Style.EMPTY.fg(SessionText.colour(strongest)),
+                        "%s %s".formatted(ticket.id().value(), TicketText.title(ticket))))
+                .orElseGet(() -> RowLine.plain(text()));
     }
 }

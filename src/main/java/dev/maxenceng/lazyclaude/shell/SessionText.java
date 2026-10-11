@@ -3,21 +3,26 @@ package dev.maxenceng.lazyclaude.shell;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.FirstPrompt;
+import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.NoTitle;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
+import dev.maxenceng.lazyclaude.session.published.StrongLink;
+import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.Version;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.WaitingReason;
+import dev.maxenceng.lazyclaude.session.published.WeakLink;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
@@ -31,6 +36,9 @@ final class SessionText {
     private static final String INPUT_GLYPH = "?";
     private static final String UNKNOWN_GLYPH = "·";
     private static final String PAST_GLYPH = "○";
+    private static final String BRANCH_SUFFIX = "(branch)";
+    private static final String NO_SESSION_LABEL = "no session";
+    private static final String UNLINKED_LABEL = "unlinked";
     private static final String OLDER_GLYPH = "…";
     private static final String OLDER_FORMAT = "%d older";
     private static final String PAST_HEADING_FORMAT = "%s  %s past";
@@ -72,6 +80,43 @@ final class SessionText {
             case WaitingForInput input -> Color.YELLOW;
             case Unknown unknown -> Color.GRAY;
         };
+    }
+
+    static String glyph(Marker marker) {
+        return switch (marker) {
+            case WAITING_FOR_PERMISSION -> PERMISSION_GLYPH;
+            case WAITING_FOR_INPUT -> INPUT_GLYPH;
+            case YOUR_TURN -> YOUR_TURN_GLYPH;
+        };
+    }
+
+    static Color colour(Marker marker) {
+        return switch (marker) {
+            case WAITING_FOR_PERMISSION -> Color.RED;
+            case WAITING_FOR_INPUT -> Color.YELLOW;
+            case YOUR_TURN -> Color.CYAN;
+        };
+    }
+
+    /** The verb a linked row reads before its title; a weak link, and a session with no link, have none. */
+    static Optional<String> verb(Optional<TicketLink> link) {
+        return link.filter(StrongLink.class::isInstance).map(strong -> ((StrongLink) strong).verb().value());
+    }
+
+    static boolean isWeak(Optional<TicketLink> link) {
+        return link.filter(WeakLink.class::isInstance).isPresent();
+    }
+
+    static String branchSuffix() {
+        return BRANCH_SUFFIX;
+    }
+
+    static String noSessionLabel() {
+        return NO_SESSION_LABEL;
+    }
+
+    static String unlinkedLabel() {
+        return UNLINKED_LABEL;
     }
 
     static String pastGlyph() {

@@ -123,6 +123,16 @@ public final class SessionsViewFixture {
                 .build();
     }
 
+    public static PastSessionView linkedPastSessionView(int number, TicketLink... links) {
+        return pastSessionViewBuilder()
+                .id(pastSessionIdOf(number))
+                .title(new AiTitle("Past %d".formatted(number)))
+                .lastActivity(LocalDateTime.of(2026, 10, 10, 14, 0).minusMinutes(number * 10L))
+                .age(new SessionAge(Duration.ofMinutes(number * 10L)))
+                .links(List.of(links))
+                .build();
+    }
+
     public static List<PastSessionView> pastSessionViewsNumbered(int count) {
         return IntStream.rangeClosed(1, count).mapToObj(SessionsViewFixture::pastSessionViewNumbered).toList();
     }
@@ -158,6 +168,15 @@ public final class SessionsViewFixture {
 
     public static LiveSessionView linkedSessionView(SessionId id, SessionState state, TicketLink... links) {
         return sessionViewBuilder().id(id).state(state).links(List.of(links)).build();
+    }
+
+    public static LiveSessionView linkedNamedSessionView(int number, String name, SessionState state, TicketLink... links) {
+        return sessionViewBuilder()
+                .id(sessionIdOf(number))
+                .name(new SessionName(name))
+                .state(state)
+                .links(List.of(links))
+                .build();
     }
 
     public static LiveSessionView sessionViewWithoutVersion() {

@@ -52,7 +52,9 @@ class ShellSessionsTest {
     void shouldDrawTheGlyphOfEachStateInItsColour() {
         Screen screen = Screen.of(shellOnSessions(sessionsViewOf(everyStateSessionViews())));
 
-        assertThat(screen.foregroundText(Color.RED)).containsExactly("!");
+        assertThat(screen.foregroundText(Color.RED))
+                .as("the status line shows the strongest marker too")
+                .containsExactly("!", "!");
         assertThat(screen.foregroundText(Color.YELLOW)).containsExactly("?");
         assertThat(screen.foregroundText(Color.GREEN)).containsExactly("∼");
         assertThat(screen.foregroundText(Color.GRAY)).containsExactly("·");
@@ -65,7 +67,7 @@ class ShellSessionsTest {
     void shouldColourTheGlyphAloneAndNotTheName() {
         Screen screen = Screen.of(shellOnSessions(sessionsViewOf(everyStateSessionViews())));
 
-        assertThat(screen.foregroundText(Color.RED)).doesNotContain("permission-one").containsExactly("!");
+        assertThat(screen.foregroundText(Color.RED)).doesNotContain("permission-one").containsExactly("!", "!");
     }
 
     @Test

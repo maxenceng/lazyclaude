@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.session.published.LinkVerb;
-import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
+import dev.maxenceng.lazyclaude.session.published.TicketLinkFixture;
 import dev.maxenceng.lazyclaude.session.published.WeakLink;
 
 public final class LinkFactsFixture {
@@ -44,10 +44,7 @@ public final class LinkFactsFixture {
     }
 
     public static StrongLink strong(String ticket, String verb) {
-        return StrongLink.builder()
-                .ticket(new LinkedTicketId(ticket))
-                .verb(new LinkVerb(verb))
-                .build();
+        return TicketLinkFixture.strongLink(ticket, verb);
     }
 
     public static List<NamedTicketId> namedIds(String... ids) {
@@ -55,6 +52,6 @@ public final class LinkFactsFixture {
     }
 
     public static WeakLink weak(String ticket) {
-        return new WeakLink(new LinkedTicketId(ticket));
+        return TicketLinkFixture.weakLink(ticket);
     }
 }

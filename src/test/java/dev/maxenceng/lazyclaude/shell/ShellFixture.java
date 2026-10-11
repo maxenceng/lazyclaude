@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
@@ -36,6 +37,16 @@ final class ShellFixture {
 
     static Shell shellOnSessions(SessionsView sessions) {
         return pressed(new Shell(boardViewOf(ticketView()), emptyDocsView(), sessions), alt('j'), 1);
+    }
+
+    static Shell shellOnTicketSessions(SessionsView sessions) {
+        Shell shell = new Shell(boardViewOf(ticketView(), secondTicketView()), emptyDocsView(), sessions);
+        shell.press(key('j'));
+        return shell;
+    }
+
+    static Shell shellOnTicketSessionsPanel(SessionsView sessions) {
+        return pressed(shellOnTicketSessions(sessions), alt('j'), 1);
     }
 
     static Shell shellFocusedOnMainViewOfSessions(SessionsView sessions) {

@@ -8,5 +8,7 @@ enum RowKind {
     FOLDER,
     DOCUMENT,
     SESSION,
-    OLDER
+    OLDER,
+    HEADER,
+    NO_SESSION
 }

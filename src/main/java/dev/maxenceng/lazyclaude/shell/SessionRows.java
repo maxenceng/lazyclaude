@@ -6,15 +6,19 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.AvailableSessionsView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnavailableSessionsView;
+import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 
 /**
  * The Sessions panel's rows and what the shell remembers about them: the selection, by session id, so it survives the
- * sessions being read again and does not move when a row above it appears or a state changes, and whether the older past
- * sessions are unfolded. Only the newest few past sessions show until then, followed by a row that counts the rest.
+ * sessions being read again and does not move when a row above it appears or a state changes, the ticket whose section is
+ * shown, and whether the older unlinked past sessions are unfolded. The selected ticket's section comes first, under its id,
+ * with every session linked to it; the unlinked section follows, where only the newest few past sessions show until the
+ * rest are unfolded, followed by a row that counts them. Header rows are labels the cursor skips.
  */
 final class SessionRows {
 
@@ -23,12 +27,13 @@ final class SessionRows {
     private static final int PAST_SHOWN = 5;
 
     private SessionsView sessions;
+    private Optional<String> ticket = Optional.empty();
     private Optional<RowKey> selected;
     private boolean expanded;
 
     SessionRows(SessionsView sessions) {
         this.sessions = sessions;
-        this.selected = visible().stream().findFirst().map(SessionRow::key);
+        this.selected = firstSelectable();
     }
 
     List<SessionRow> visible() {
@@ -40,14 +45,42 @@ final class SessionRows {
 
     private List<SessionRow> rowsOf(AvailableSessionsView available) {
         List<SessionRow> rows = new ArrayList<>();
-        available.live().forEach(session -> rows.add(new LiveSessionRow(session)));
-        List<PastSessionView> past = available.past();
+        ticket.ifPresent(selectedTicket -> addTicketSection(rows, available, selectedTicket));
+        addUnlinkedSection(rows, available);
+        return rows;
+    }
+
+    private void addTicketSection(List<SessionRow> rows, AvailableSessionsView available, String selectedTicket) {
+        rows.add(new SectionHeaderRow(selectedTicket));
+        int header = rows.size();
+        for (LiveSessionView session : available.live()) {
+            session.linkTo(selectedTicket).ifPresent(link -> rows.add(new LiveSessionRow(session, Optional.of(link))));
+        }
+        for (PastSessionView session : available.past()) {
+            session.linkTo(selectedTicket).ifPresent(link -> rows.add(new PastSessionRow(session, Optional.of(link))));
+        }
+        if (rows.size() == header) {
+            rows.add(new NoSessionRow(selectedTicket));
+        }
+    }
+
+    private void addUnlinkedSection(List<SessionRow> rows, AvailableSessionsView available) {
+        List<LiveSessionView> live = available.live().stream().filter(session -> session.links().isEmpty()).toList();
+        List<PastSessionView> past = unlinkedPast(available);
+        if (live.isEmpty() && past.isEmpty()) {
+            return;
+        }
+        rows.add(new SectionHeaderRow(SessionText.unlinkedLabel()));
+        live.forEach(session -> rows.add(new LiveSessionRow(session, Optional.empty())));
         int shown = expanded ? past.size() : Math.min(past.size(), PAST_SHOWN);
-        past.stream().limit(shown).forEach(session -> rows.add(new PastSessionRow(session)));
+        past.stream().limit(shown).forEach(session -> rows.add(new PastSessionRow(session, Optional.empty())));
         if (shown < past.size()) {
             rows.add(new OlderSessionsRow(past.size() - shown));
         }
-        return rows;
+    }
+
+    private static List<PastSessionView> unlinkedPast(AvailableSessionsView available) {
+        return available.past().stream().filter(session -> session.links().isEmpty()).toList();
     }
 
     /** Why there are no sessions to show, when no source answered. */
@@ -77,6 +110,47 @@ final class SessionRows {
         return selected().filter(OlderSessionsRow.class::isInstance).isPresent();
     }
 
+    /** The strongest marker among the live sessions linked to {@code ticketId}, for the ticket's row on the board. */
+    Optional<Marker> markerOf(String ticketId) {
+        return sessions instanceof AvailableSessionsView available ? available.strongestMarkerOf(ticketId) : Optional.empty();
+    }
+
+    /** The strongest marker among the project's live sessions, linked or not, for the status line. */
+    Optional<Marker> strongestMarker() {
+        return sessions instanceof AvailableSessionsView available ? available.strongestMarker() : Optional.empty();
+    }
+
+    /** Shows {@code next}'s section, the selection going to its first row. Says whether the ticket changed. */
+    boolean showTicket(Optional<String> next) {
+        if (next.equals(ticket)) {
+            return false;
+        }
+        ticket = next;
+        selected = firstSelectable();
+        return true;
+    }
+
+    /** Selects the session of the shown ticket with the strongest marker, the first of any tied, else the first row. */
+    void selectStrongestMarker() {
+        SessionRow best = null;
+        Marker bestMarker = null;
+        for (SessionRow row : visible()) {
+            Optional<Marker> marker = markerOf(row);
+            if (marker.isPresent() && (bestMarker == null || marker.get().compareTo(bestMarker) > 0)) {
+                best = row;
+                bestMarker = marker.get();
+            }
+        }
+        selected = best == null ? firstSelectable() : Optional.of(best.key());
+    }
+
+    private Optional<Marker> markerOf(SessionRow row) {
+        return switch (row) {
+            case LiveSessionRow live when live.link().isPresent() -> live.session().marker();
+            default -> Optional.empty();
+        };
+    }
+
     /** Unfolds every older past session in place; the selection lands on the first of them. */
     void expand() {
         int index = selectedIndex();
@@ -95,26 +169,42 @@ final class SessionRows {
     /** Swaps in freshly read sessions; the selection stays on its id, or on the row that took its place. Says whether the selection moved. */
     boolean replace(SessionsView next) {
         Optional<RowKey> was = selected;
-        int index = selectedIndex();
+        int index = selectableIndexOfSelected();
         sessions = next;
         expanded |= was.filter(this::isFolded).isPresent();
-        selected = RowSelection.kept(was, index, visible().stream().map(SessionRow::key).toList());
+        selected = RowSelection.kept(was, index, selectableKeys());
         return !was.equals(selected);
     }
 
     private void move(int step) {
-        List<SessionRow> rows = visible();
-        if (rows.isEmpty()) {
+        List<RowKey> keys = selectableKeys();
+        if (keys.isEmpty()) {
             return;
         }
-        int target = Math.clamp(selectedIndex() + (long) step, 0, rows.size() - 1);
-        selected = Optional.of(rows.get(target).key());
+        int target = Math.clamp(selectableIndexOfSelected() + (long) step, 0, keys.size() - 1);
+        selected = Optional.of(keys.get(target));
     }
 
-    /** Whether {@code key} is a past session the fold hides, as a selected live session is once it dies idle long enough. */
+    private Optional<RowKey> firstSelectable() {
+        return selectableKeys().stream().findFirst();
+    }
+
+    private List<RowKey> selectableKeys() {
+        return visible().stream().filter(SessionRow::selectable).map(SessionRow::key).toList();
+    }
+
+    private int selectableIndexOfSelected() {
+        List<RowKey> keys = selectableKeys();
+        return selected.map(keys::indexOf).filter(index -> index >= 0).orElse(0);
+    }
+
+    /** Whether {@code key} is an unlinked past session the fold hides, as a selected live session is once it dies idle long enough. */
     private boolean isFolded(RowKey key) {
         return sessions instanceof AvailableSessionsView available
-                && available.past().stream().skip(PAST_SHOWN).map(PastSessionRow::new).anyMatch(row -> row.key().equals(key));
+                && unlinkedPast(available).stream()
+                        .skip(PAST_SHOWN)
+                        .map(session -> new PastSessionRow(session, Optional.empty()))
+                        .anyMatch(row -> row.key().equals(key));
     }
 
     private static int indexOf(List<SessionRow> rows, RowKey key) {

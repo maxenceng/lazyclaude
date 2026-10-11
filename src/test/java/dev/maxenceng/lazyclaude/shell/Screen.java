@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.shell;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.Cell;
@@ -107,6 +108,24 @@ public final class Screen {
 
     List<String> foregroundText(Color color) {
         return textOfCells(WIDTH, cell -> cell.style().fg().filter(color::equals).isPresent());
+    }
+
+    int lineOf(String fragment) {
+        return IntStream.range(0, lines.size())
+                .filter(y -> lines.get(y).contains(fragment))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no line holds " + fragment));
+    }
+
+    String foregroundTextOnLine(int line, Color color) {
+        StringBuilder found = new StringBuilder();
+        for (int x = 0; x < Math.min(WIDTH, lines.get(line).length()); x++) {
+            Cell cell = buffer.get(x, line);
+            if (cell.style().fg().filter(color::equals).isPresent()) {
+                found.append(cell.symbol());
+            }
+        }
+        return found.toString().strip();
     }
 
     private List<String> textOfCells(int columns, Predicate<Cell> predicate) {
