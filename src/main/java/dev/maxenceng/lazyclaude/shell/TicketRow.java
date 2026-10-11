@@ -18,7 +18,7 @@ record TicketRow(TicketView ticket) implements Row {
 
     @Override
     public String text() {
-        return "%s%s %s".formatted(INDENT, ticket.id().value(), TicketText.title(ticket));
+        return "%s%s %s".formatted(Indent.STEP, ticket.id().value(), TicketText.title(ticket));
     }
 
     RowLine line(Optional<Marker> marker) {

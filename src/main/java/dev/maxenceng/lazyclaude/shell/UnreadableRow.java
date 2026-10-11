@@ -12,6 +12,6 @@ record UnreadableRow(UnreadableTicketView unreadable) implements Row {
 
     @Override
     public String text() {
-        return "%s%s — %s".formatted(INDENT, unreadable.file().value(), unreadable.reason().value());
+        return "%s%s — %s".formatted(Indent.STEP, unreadable.file().value(), unreadable.reason().value());
     }
 }

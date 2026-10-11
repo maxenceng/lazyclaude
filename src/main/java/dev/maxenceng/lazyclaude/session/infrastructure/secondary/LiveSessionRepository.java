@@ -21,8 +21,11 @@ public final class LiveSessionRepository implements LiveSessionPort {
     private final ClaudeAgentsRepository agents;
     private final Duration sweep;
 
-    public LiveSessionRepository(
-            SessionRegistryRepository registry, ClaudeAgentsRepository agents, Duration sweep) {
+    public LiveSessionRepository(SessionRegistryRepository registry, ClaudeAgentsRepository agents) {
+        this(registry, agents, SessionWatchRepository.SWEEP_INTERVAL);
+    }
+
+    LiveSessionRepository(SessionRegistryRepository registry, ClaudeAgentsRepository agents, Duration sweep) {
         this.registry = registry;
         this.agents = agents;
         this.sweep = sweep;

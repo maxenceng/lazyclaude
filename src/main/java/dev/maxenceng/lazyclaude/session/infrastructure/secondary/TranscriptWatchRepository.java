@@ -40,7 +40,7 @@ import dev.maxenceng.lazyclaude.session.published.Reason;
 public final class TranscriptWatchRepository implements TranscriptWatchPort, AutoCloseable {
 
     static final Duration SETTLE = Duration.ofSeconds(1);
-    public static final Duration POLL_INTERVAL = Duration.ofSeconds(5);
+    static final Duration POLL_INTERVAL = Duration.ofSeconds(5);
 
     private static final Duration TICK = Duration.ofMillis(100);
     private static final String WORKER_NAME = "transcript-watch";

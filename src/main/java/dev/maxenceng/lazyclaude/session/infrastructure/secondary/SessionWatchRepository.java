@@ -33,7 +33,7 @@ import dev.maxenceng.lazyclaude.session.published.Reason;
 public final class SessionWatchRepository implements SessionWatchPort, AutoCloseable {
 
     static final Duration BATCH_WINDOW = Duration.ofMillis(100);
-    public static final Duration SWEEP_INTERVAL = Duration.ofSeconds(2);
+    static final Duration SWEEP_INTERVAL = Duration.ofSeconds(2);
 
     private static final String RECORD_SUFFIX = ".json";
     private static final String CAUSE = "cannot watch %s (%s)";

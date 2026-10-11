@@ -10,6 +10,6 @@ record FolderRow(String path, String name, int count, boolean folded, int depth)
 
     @Override
     public String text() {
-        return INDENT.repeat(depth) + new HeaderRow(name, count, folded).text();
+        return Indent.STEP.repeat(depth) + new HeaderRow(name, count, folded).text();
     }
 }
