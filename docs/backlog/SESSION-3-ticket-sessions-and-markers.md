@@ -1,6 +1,6 @@
 ---
 id: SESSION-3
-status: in-progress
+status: in-review
 context: session
 type: feature
 tracker_id: 80
@@ -11,42 +11,42 @@ created: 2026-10-10
 
 ## Acceptance criteria
 
-- [ ] A session whose transcript carries `/ticket <verb> <ID…>` (in `<command-args>`, or a
+- [x] A session whose transcript carries `/ticket <verb> <ID…>` (in `<command-args>`, or a
       `Skill` tool_use whose skill is `ticket` or `*:ticket`) is linked only to the ticket ids
       it named, matched case-insensitively against the board's ids. Its `gitBranch` is
       ignored, even when it names another ticket.
-- [ ] A named id that is not on the board links nothing; a session whose named ids all miss
+- [x] A named id that is not on the board links nothing; a session whose named ids all miss
       is unlinked, not linked by its branch.
-- [ ] A session without `/ticket` args is weakly linked to every ticket a `gitBranch` it
+- [x] A session without `/ticket` args is weakly linked to every ticket a `gitBranch` it
       recorded names (`^([A-Za-z]+-\d+)`, case-insensitive). `main`, or any branch with no
       ticket id prefix, links nothing.
-- [ ] A live session is linked through its transcript, found by session id. A live session
+- [x] A live session is linked through its transcript, found by session id. A live session
       with no transcript yet is unlinked, and moves under its ticket once its transcript
       names it.
-- [ ] Selecting a ticket on the board shows its section in the Sessions panel: a dim header
+- [x] Selecting a ticket on the board shows its section in the Sessions panel: a dim header
       row with the ticket id, its live sessions newest-started first, then its past sessions
       by last activity, newest first. Every linked session is shown; there is no fold.
-- [ ] The unlinked section follows under a dim `unlinked` header row: live sessions, then the
+- [x] The unlinked section follows under a dim `unlinked` header row: live sessions, then the
       5 newest past ones and the `… N older` row, as the panel lists them today.
-- [ ] A session linked to two tickets is listed under each of them. A weak link carries a dim
+- [x] A session linked to two tickets is listed under each of them. A weak link carries a dim
       `(branch)` suffix and stays in the same order as the others.
-- [ ] A linked row reads its verb, then its title: the last `/ticket` verb the session ran on
+- [x] A linked row reads its verb, then its title: the last `/ticket` verb the session ran on
       that ticket. A weak link has no verb. Unlinked rows keep their current text.
-- [ ] A ticket with no linked session shows a dim `no session` row in its section.
-- [ ] With no ticket selected (a status header, or an empty board), only the unlinked section
+- [x] A ticket with no linked session shows a dim `no session` row in its section.
+- [x] With no ticket selected (a status header, or an empty board), only the unlinked section
       shows.
-- [ ] Header rows are skipped by `j`/`k`. The selection follows the session id across
+- [x] Header rows are skipped by `j`/`k`. The selection follows the session id across
       refreshes; when the board selection moves to another ticket, it goes to the first row.
-- [ ] A ticket row on the board shows, in the gutter before its id and in its colour, the
+- [x] A ticket row on the board shows, in the gutter before its id and in its colour, the
       strongest marker among its linked live sessions, weak links included (`!` > `?` > `•`).
       A ticket whose sessions are all busy, unknown or past shows none.
-- [ ] The status line shows, on its left and in its colour, the strongest marker among this
+- [x] The status line shows, on its left and in its colour, the strongest marker among this
       project's live sessions, linked or not. With none, it shows nothing there. Warnings stay
       on the right.
-- [ ] `enter` on a ticket moves to the Sessions panel on that ticket's session with the
+- [x] `enter` on a ticket moves to the Sessions panel on that ticket's session with the
       strongest marker; a tie goes to the first row. With no marker it lands on the ticket's
       first row, and on `no session` when it has none.
-- [ ] Ticket ids, verbs and branch ids are kept in the transcript cache raw, not filtered by
+- [x] Ticket ids, verbs and branch ids are kept in the transcript cache raw, not filtered by
       the board, so a ticket created later links its sessions without reading a transcript
       again. A cache of the previous format version is treated as empty and rewritten.
 

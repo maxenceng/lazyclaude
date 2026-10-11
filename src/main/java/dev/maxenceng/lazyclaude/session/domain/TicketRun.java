@@ -5,12 +5,12 @@ import java.util.List;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 
-/** One {@code /ticket <verb> <ID…>} a session ran, as its transcript spelt it. */
+/** One {@code /ticket <verb> <ID…>} a session ran, as its transcript spelt it; a run names at least one id. */
 public record TicketRun(LinkVerb verb, List<NamedTicketId> ids) {
 
     public TicketRun {
         Assert.notNull("verb", verb);
-        Assert.notNull("ids", ids);
+        Assert.notEmpty("ids", ids);
     }
 
     public static TicketRunBuilder builder() {

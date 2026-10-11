@@ -27,10 +27,24 @@ public record AvailableSessionsView(List<LiveSessionView> live, List<PastSession
 
     /** The strongest marker among the live sessions linked to {@code ticket}, weak links included. */
     public Optional<Marker> strongestMarkerOf(String ticket) {
-        return Marker.strongest(live.stream()
-                .filter(session -> session.linkTo(ticket).isPresent())
-                .flatMap(session -> session.marker().stream())
-                .toList());
+        return strongestSessionOf(ticket).flatMap(LiveSessionView::marker);
+    }
+
+    /** The live session linked to {@code ticket}, weak links included, with the strongest marker; the first of any tied. */
+    public Optional<LiveSessionView> strongestSessionOf(String ticket) {
+        return live.stream()
+                .filter(session -> session.linkTo(ticket).isPresent() && session.marker().isPresent())
+                .reduce((best, next) -> next.marker().orElseThrow().compareTo(best.marker().orElseThrow()) > 0 ? next : best);
+    }
+
+    /** The live sessions linked to no ticket. */
+    public List<LiveSessionView> unlinkedLive() {
+        return live.stream().filter(LiveSessionView::isUnlinked).toList();
+    }
+
+    /** The past sessions linked to no ticket, newest activity first. */
+    public List<PastSessionView> unlinkedPast() {
+        return past.stream().filter(PastSessionView::isUnlinked).toList();
     }
 
     public static AvailableSessionsViewBuilder builder() {

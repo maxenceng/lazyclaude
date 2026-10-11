@@ -16,7 +16,6 @@ import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 record CachedTicketRun(String verb, List<String> ids) {
 
     private static final Pattern WORDS = Pattern.compile("\\s+");
-    private static final Pattern ID = Pattern.compile("[A-Za-z][A-Za-z0-9]*-\\d{1,18}");
 
     boolean isWhole() {
         return verb != null && !verb.isBlank() && ids != null && !ids.isEmpty() && ids.stream().allMatch(id -> id != null && !id.isBlank());
@@ -24,10 +23,10 @@ record CachedTicketRun(String verb, List<String> ids) {
 
     static Optional<CachedTicketRun> parse(String args) {
         String[] words = WORDS.split(args.strip());
-        if (words.length < 2 || ID.matcher(words[0]).matches()) {
+        if (words.length < 2 || NamedTicketId.SHAPE.matcher(words[0]).matches()) {
             return Optional.empty();
         }
-        List<String> ids = Arrays.stream(words).skip(1).filter(word -> ID.matcher(word).matches()).toList();
+        List<String> ids = Arrays.stream(words).skip(1).filter(word -> NamedTicketId.SHAPE.matcher(word).matches()).toList();
         return ids.isEmpty() ? Optional.empty() : Optional.of(new CachedTicketRun(words[0], ids));
     }
 

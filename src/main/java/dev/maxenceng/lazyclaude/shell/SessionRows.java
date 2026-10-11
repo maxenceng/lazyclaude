@@ -65,8 +65,8 @@ final class SessionRows {
     }
 
     private void addUnlinkedSection(List<SessionRow> rows, AvailableSessionsView available) {
-        List<LiveSessionView> live = available.live().stream().filter(session -> session.links().isEmpty()).toList();
-        List<PastSessionView> past = unlinkedPast(available);
+        List<LiveSessionView> live = available.unlinkedLive();
+        List<PastSessionView> past = available.unlinkedPast();
         if (live.isEmpty() && past.isEmpty()) {
             return;
         }
@@ -77,10 +77,6 @@ final class SessionRows {
         if (shown < past.size()) {
             rows.add(new OlderSessionsRow(past.size() - shown));
         }
-    }
-
-    private static List<PastSessionView> unlinkedPast(AvailableSessionsView available) {
-        return available.past().stream().filter(session -> session.links().isEmpty()).toList();
     }
 
     /** Why there are no sessions to show, when no source answered. */
@@ -132,23 +128,10 @@ final class SessionRows {
 
     /** Selects the session of the shown ticket with the strongest marker, the first of any tied, else the first row. */
     void selectStrongestMarker() {
-        SessionRow best = null;
-        Marker bestMarker = null;
-        for (SessionRow row : visible()) {
-            Optional<Marker> marker = markerOf(row);
-            if (marker.isPresent() && (bestMarker == null || marker.get().compareTo(bestMarker) > 0)) {
-                best = row;
-                bestMarker = marker.get();
-            }
-        }
-        selected = best == null ? firstSelectable() : Optional.of(best.key());
-    }
-
-    private Optional<Marker> markerOf(SessionRow row) {
-        return switch (row) {
-            case LiveSessionRow live when live.link().isPresent() -> live.session().marker();
-            default -> Optional.empty();
-        };
+        Optional<RowKey> strongest = sessions instanceof AvailableSessionsView available
+                ? ticket.flatMap(available::strongestSessionOf).map(session -> new LiveSessionRow(session, Optional.empty()).key())
+                : Optional.empty();
+        selected = strongest.or(this::firstSelectable);
     }
 
     /** Unfolds every older past session in place; the selection lands on the first of them. */
@@ -201,7 +184,7 @@ final class SessionRows {
     /** Whether {@code key} is an unlinked past session the fold hides, as a selected live session is once it dies idle long enough. */
     private boolean isFolded(RowKey key) {
         return sessions instanceof AvailableSessionsView available
-                && unlinkedPast(available).stream()
+                && available.unlinkedPast().stream()
                         .skip(PAST_SHOWN)
                         .map(session -> new PastSessionRow(session, Optional.empty()))
                         .anyMatch(row -> row.key().equals(key));

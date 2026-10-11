@@ -34,10 +34,9 @@ graph TD
     review[review]
     docs[docs]
     shell --> board
-    shell --> session
+    shell -- "board's ticket ids" --> session
     shell --> review
     shell --> docs
-    session -- "ticket ids, handed over by the shell" --> board
     session -- "PR head branch, merged state" --> review
     review -- "ticket branch" --> board
 ```

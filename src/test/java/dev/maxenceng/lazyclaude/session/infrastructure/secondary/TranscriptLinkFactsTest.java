@@ -180,6 +180,15 @@ class TranscriptLinkFactsTest {
     }
 
     @Test
+    void shouldReadATicketIdPrefixWithDigitsBeforeItsDash() throws IOException {
+        writeTranscript(projects, folder(), sessionId(), branchLine(cwd(), started(), "V2-4-second-version"));
+
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).linkFacts())
+                .as("a branch names any id the board can hold, and the board accepts digits before the dash")
+                .containsEntry(new SessionId(sessionId()), onBranches("V2-4"));
+    }
+
+    @Test
     void shouldReadNoTicketIdFromMainOrFromABranchWithNoTicketPrefix() throws IOException {
         writeTranscript(
                 projects,

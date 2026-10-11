@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.strong;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
@@ -54,5 +55,44 @@ class AvailableSessionsViewTest {
 
         assertThat(view.strongestMarkerOf("PROJ-1")).isEmpty();
         assertThat(view.strongestMarkerOf("PROJ-3")).isEmpty();
+    }
+
+    @Test
+    void shouldAnswerTheTicketsSessionWithTheStrongestMarker() {
+        LiveSessionView strongest = linkedSessionView(sessionIdOf(2), new WaitingForPermission(), weak("PROJ-1"));
+        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
+                linkedSessionView(sessionIdOf(1), new YourTurn(), strong("PROJ-1", "start")),
+                strongest,
+                linkedSessionView(sessionIdOf(3), new WaitingForPermission(), strong("PROJ-2", "start"))));
+
+        assertThat(view.strongestSessionOf("PROJ-1")).contains(strongest);
+    }
+
+    @Test
+    void shouldAnswerTheFirstOfTheTicketsSessionsTiedOnTheStrongestMarker() {
+        LiveSessionView first = linkedSessionView(sessionIdOf(1), waitingForInput(), strong("PROJ-1", "start"));
+        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
+                first, linkedSessionView(sessionIdOf(2), waitingForInput(), strong("PROJ-1", "review"))));
+
+        assertThat(view.strongestSessionOf("PROJ-1")).as("the Sessions panel lists them in this order, so enter lands on the top one").contains(first);
+    }
+
+    @Test
+    void shouldAnswerNoSessionForATicketWhoseSessionsCarryNoMarker() {
+        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new Busy(), strong("PROJ-1", "start"))));
+
+        assertThat(view.strongestSessionOf("PROJ-1")).isEmpty();
+    }
+
+    @Test
+    void shouldAnswerOnlyTheSessionsLinkedToNoTicketAsUnlinked() {
+        LiveSessionView unlinkedLive = linkedSessionView(sessionIdOf(1), new YourTurn());
+        PastSessionView unlinkedPast = linkedPastSessionView(1);
+        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(
+                List.of(unlinkedLive, linkedSessionView(sessionIdOf(2), new YourTurn(), weak("PROJ-1"))),
+                List.of(linkedPastSessionView(2, strong("PROJ-1", "start")), unlinkedPast));
+
+        assertThat(view.unlinkedLive()).containsExactly(unlinkedLive);
+        assertThat(view.unlinkedPast()).containsExactly(unlinkedPast);
     }
 }

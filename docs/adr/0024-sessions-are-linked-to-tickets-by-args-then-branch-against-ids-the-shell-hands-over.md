@@ -18,7 +18,8 @@ read must still find the sessions that named it.
   command's `<command-args>` or a `Skill` call whose skill is `ticket` or `*:ticket`, is linked only to the ids it
   named, matched without regard to case against the board's. Its `gitBranch` is ignored, even when it names another
   ticket, and ids the board lacks link nothing: a session whose named ids all miss is unlinked. A session with no such
-  args is weakly linked to each ticket a recorded `gitBranch` names (`^([A-Za-z]+-\d+)`); `main`, or a branch with no
+  args is weakly linked to each ticket a recorded `gitBranch` names, read as a prefix of the board's own id shape
+  (`^([A-Za-z][A-Za-z0-9]*-\d{1,18})(?!\d)`), so any id the board can hold can be named by a branch; `main`, or a branch with no
   ticket-id prefix, links nothing. A link carries the last verb run on its ticket; a weak one has none.
 - **`pr-link` is deferred.** It needs a pull request's head branch, which is `review`'s, and `review` does not exist.
   It is a `deferred:` note on the rule, closed when `review` publishes head branches.
@@ -33,7 +34,8 @@ read must still find the sessions that named it.
   the root, so `session` imports nothing from `board`. `SessionManager` owns the rule against them. The ids are those
   of the board when it was read; a ticket created while lazyclaude runs links at the next start.
 - **The marker ranking is `session`'s.** `Marker` (`!` > `?` > `•`) comes from `SessionState`; busy and unknown rank
-  nothing. The views answer the strongest marker overall and per ticket, so the shell never re-ranks. The board row
+  nothing. The views answer the strongest marker overall and per ticket, and which of a ticket's
+  sessions holds it, so the shell never re-ranks. The board row
   and the status line are the shell's join.
 
 ## Consequences
@@ -41,6 +43,7 @@ read must still find the sessions that named it.
 - The first start after this change reads every transcript once more, off the UI thread, to find the link facts.
 - A session that ran `/ticket` on a ticket and later worked on another through its branch alone stays linked to the
   first only; the args are taken as the user's word.
-- Args whose first word is not a verb, or that name no id, are not a run, so the branch decides.
+- Args whose first word has the shape of a ticket id, or that name no id, are not a run, so the branch decides.
+  `session` does not know `board`'s verbs, so any other first word is taken as the verb.
 - Linking depends on two more things Claude Code does not promise: the `<command-args>` markup and the `Skill` call's
   input shape. A change shows as a session under `unlinked`, not as a failure.

@@ -53,6 +53,7 @@ words mean.
 | Transcript | Claude Code's `~/.claude/projects/<folder>/<sessionId>.jsonl`, one per session; internal format, append-only by observation. A `subagents/` file is not one. | `session` |
 | Last activity | The timestamp of a transcript's last entry. It orders past sessions. | `session` |
 | Linked session | A session attributed to a ticket, by the first link rule that matches: `/ticket` args, or branch. A third rule, `pr-link`, waits for `review` to publish head branches. | `session` |
+| Strong link | A link made by the session's own `/ticket` args; it carries the last verb the session ran on that ticket. | `session` |
 | Weak link | A link found only through the branch name; shown as less certain, with a dim `(branch)` and no verb. | `session` |
 | Unlinked session | A session attributed to no ticket. Started from lazyclaude, it runs in the project root. | `session` |
 | Marker | What a live session asks of you, in the board gutter and on the status line: `!` waiting for permission, `?` waiting for input, `•` your turn; the strongest is `!` > `?` > `•`. Busy, unknown and past are not markers. | `session` |

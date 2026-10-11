@@ -39,6 +39,11 @@ public record PastSessionView(
         return TicketLink.to(links, ticket);
     }
 
+    /** Whether the session is linked to no ticket. */
+    public boolean isUnlinked() {
+        return links.isEmpty();
+    }
+
     public static PastSessionViewBuilder builder() {
         return new PastSessionViewBuilder();
     }

@@ -9,6 +9,8 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import dev.maxenceng.lazyclaude.session.domain.NamedTicketId;
+
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -37,7 +39,7 @@ final class TranscriptTail {
     private static final Pattern TICKET_SKILL = Pattern.compile("(?:.+:)?ticket");
     private static final Pattern TICKET_COMMAND = Pattern.compile("<command-name>/(?:[^:<]+:)?ticket</command-name>");
     private static final Pattern COMMAND_ARGS = Pattern.compile("<command-args>(.*?)</command-args>", Pattern.DOTALL);
-    private static final Pattern BRANCH_TICKET = Pattern.compile("^([A-Za-z]+-\\d+)");
+    private static final Pattern BRANCH_TICKET = Pattern.compile("^(" + NamedTicketId.SHAPE.pattern() + ")(?!\\d)");
     private static final String CONTENT = "content";
     private static final String TEXT = "text";
 
