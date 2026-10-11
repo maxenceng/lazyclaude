@@ -2,16 +2,13 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
-import dev.maxenceng.lazyclaude.session.published.SessionId;
 
 /**
  * The sessions of one project that could be read: the live ones, then the past ones, with the clock their ages are read
- * from. A session is one or the other, never both; the order is the manager's.
+ * from. That a session is one or the other, never both, and the order, are the manager's.
  */
 public record AvailableSessions(List<LiveSession> live, List<PastSession> past, SessionClock clock)
         implements Sessions {
@@ -20,10 +17,6 @@ public record AvailableSessions(List<LiveSession> live, List<PastSession> past, 
         Assert.notNull("live sessions", live);
         Assert.notNull("past sessions", past);
         Assert.notNull("clock", clock);
-        Set<SessionId> liveIds = live.stream().map(LiveSession::id).collect(Collectors.toSet());
-        past.stream().map(PastSession::id).filter(liveIds::contains).findFirst().ifPresent(id -> {
-            throw new SessionListedTwiceException(id);
-        });
     }
 
     public SessionAge ageOf(LiveSession session) {

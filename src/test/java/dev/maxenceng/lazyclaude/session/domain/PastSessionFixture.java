@@ -1,7 +1,6 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
-import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.aiTitle;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
@@ -32,10 +31,6 @@ public final class PastSessionFixture {
                 .directory(projectRootDirectory())
                 .lastActivity(new LastActivity(now().minus(Duration.ofMinutes(10))))
                 .startedAt(new StartedAt(now().minus(Duration.ofMinutes(80))));
-    }
-
-    public static PastSession pastSessionOfTheLiveOne() {
-        return pastSessionBuilder().id(sessionId()).build();
     }
 
     public static PastSession pastSession() {
