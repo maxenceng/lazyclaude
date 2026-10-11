@@ -16,6 +16,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.app.ToolkitApp;
@@ -64,6 +65,7 @@ public final class Shell extends ToolkitApp {
     private static final String SCROLL_KEYS = "j/k scroll  ^d/^u half page  g/G top/bottom";
     private static final String PANEL_KEYS = "h/l panel";
     private static final String FOLD_KEY = "enter fold";
+    private static final String SESSIONS_KEY = "enter sessions";
     private static final String EXPAND_KEY = "enter expand";
     private static final String FOCUS_KEYS = "alt+h/j/k/l focus";
     private static final String QUIT_KEY = "q quit";
@@ -242,8 +244,16 @@ public final class Shell extends ToolkitApp {
         move.run();
         if (!board.selected().key().equals(before)) {
             mainViewScroll.reset();
+            showSelectedTicketsSessions();
         }
         return true;
+    }
+
+    private void showSelectedTicketsSessions() {
+        Optional<LinkedTicketId> ticket = board.selected() instanceof TicketRow row
+                ? Optional.of(new LinkedTicketId(row.ticket().id().value()))
+                : Optional.empty();
+        sessions.showTicket(ticket);
     }
 
     private boolean selectDoc(Runnable move) {
@@ -285,6 +295,10 @@ public final class Shell extends ToolkitApp {
             board.toggleFold();
             return true;
         }
+        if (focus == Focus.BOARD && board.selected() instanceof TicketRow) {
+            sessions.selectStrongestMarker();
+            return focusOn(Focus.SESSIONS);
+        }
         if (focus == Focus.DOCS && docs.selectedFolder().isPresent()) {
             docs.toggleFold();
             return true;
@@ -317,7 +331,7 @@ public final class Shell extends ToolkitApp {
         applyPendingSessions();
         applyPendingWarning();
         return column(
-                new StatusLineElement(warning),
+                new StatusLineElement(sessions.strongestMarker(), warning),
                 row(
                         column(
                                         boardPanel(),
@@ -330,10 +344,16 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element boardPanel() {
-        List<String> lines = board.visible().stream().map(Row::text).toList();
+        List<RowLine> lines = board.visible().stream().map(this::boardLine).toList();
         return sized(
                 framed(BOARD_TITLE, Focus.BOARD, new RowsElement(lines, board.selectedIndex(), focus == Focus.BOARD)),
                 Focus.BOARD);
+    }
+
+    private RowLine boardLine(Row row) {
+        return row instanceof TicketRow ticket
+                ? ticket.line(sessions.markerOf(new LinkedTicketId(ticket.ticket().id().value())))
+                : RowLine.plain(row.text());
     }
 
     private Element sessionsPanel() {
@@ -346,7 +366,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element docsPanel() {
-        List<String> lines = docs.visible().stream().map(DocsRow::text).toList();
+        List<RowLine> lines = docs.visible().stream().map(row -> RowLine.plain(row.text())).toList();
         Element body = docs.unavailable()
                 .<Element>map(reason -> column(text(DOCS_UNAVAILABLE).dim(), text(reason.value()).dim()))
                 .orElseGet(() -> docs.isEmpty()
@@ -392,6 +412,8 @@ public final class Shell extends ToolkitApp {
                     case PastSessionRow past ->
                         new DetailElement(width -> SessionText.pastFacts(past.session()), Optional.empty(), mainViewScroll);
                     case OlderSessionsRow older -> column();
+                    case SectionHeaderRow header -> column();
+                    case NoSessionRow none -> column();
                 })
                 .orElseGet(() -> column());
     }
@@ -433,6 +455,9 @@ public final class Shell extends ToolkitApp {
         keys.add(PANEL_KEYS);
         if (foldable()) {
             keys.add(FOLD_KEY);
+        }
+        if (focus == Focus.BOARD && board.selected() instanceof TicketRow) {
+            keys.add(SESSIONS_KEY);
         }
         if (focus == Focus.SESSIONS && sessions.olderSelected()) {
             keys.add(EXPAND_KEY);

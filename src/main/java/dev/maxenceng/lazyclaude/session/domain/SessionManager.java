@@ -13,6 +13,7 @@ import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
+import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingFor;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
@@ -36,7 +37,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * one here knows, on a session elsewhere, changes nothing. Each fallback is warned about once, however
  * often its source reports it. A live id hides the past session of the same id, a past session belongs to
  * the project its {@code cwd} was located in (or, when that directory is gone, to the one its path lies in), and
- * past rows run newest activity first.
+ * past rows run newest activity first. A session is linked to tickets by its transcript, live or past, against the ticket ids it is
+ * handed; a live session with no transcript yet is linked to none.
  */
 public final class SessionManager {
 
@@ -87,9 +89,9 @@ public final class SessionManager {
     }
 
     /** Reads the live sessions again; the past ones come from what the cache already holds. */
-    public Sessions sessionsFor(Project project) {
+    public Sessions sessionsFor(Project project, KnownTickets tickets) {
         synchronized (lastLive) {
-            return readingLive(project);
+            return readingLive(project, tickets);
         }
     }
 
@@ -98,11 +100,11 @@ public final class SessionManager {
      * change to the transcripts reuses the last read of them. Both deliver under one lock, so a slower read never
      * overwrites a newer one.
      */
-    public void watch(Project project, Consumer<Sessions> listener) {
-        watch.watch(() -> deliver(listener, () -> readingLive(project)), this::warnOfSweep);
+    public void watch(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
+        watch.watch(() -> deliver(listener, () -> readingLive(project, tickets)), this::warnOfSweep);
         transcriptWatch.watch(
                 this::locationOf,
-                () -> deliver(listener, () -> reusingLive(project)),
+                () -> deliver(listener, () -> reusingLive(project, tickets)),
                 this::warnOfTranscriptPolling,
                 this::warnOfCache,
                 this::warnOfUnlistableRoot);
@@ -114,11 +116,11 @@ public final class SessionManager {
         }
     }
 
-    private Sessions readingLive(Project project) {
+    private Sessions readingLive(Project project, KnownTickets tickets) {
         try {
             RunningSessions running = runningIn(project);
             lastLive.remember(running);
-            return available(project, running);
+            return available(project, tickets, running);
         } catch (SessionsUnavailableException noSource) {
             lastLive.forget();
             return new UnavailableSessions(new Reason(noSource.getMessage()));
@@ -128,18 +130,27 @@ public final class SessionManager {
         }
     }
 
-    private Sessions reusingLive(Project project) {
+    private Sessions reusingLive(Project project, KnownTickets tickets) {
         return lastLive.of(project)
-                .map(running -> available(project, running))
-                .orElseGet(() -> readingLive(project));
+                .map(running -> available(project, tickets, running))
+                .orElseGet(() -> readingLive(project, tickets));
     }
 
-    private Sessions available(Project project, RunningSessions running) {
+    private Sessions available(Project project, KnownTickets tickets, RunningSessions running) {
+        Map<SessionId, LinkFacts> facts = pastSessions.linkFacts();
         return AvailableSessions.builder()
-                .live(running.live())
-                .past(pastSessionsOf(project, running.ids()))
+                .live(running.live().stream()
+                        .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))
+                        .toList())
+                .past(pastSessionsOf(project, running.ids()).stream()
+                        .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))
+                        .toList())
                 .clock(clock.frozen())
                 .build();
+    }
+
+    private static List<TicketLink> linksOf(SessionId id, Map<SessionId, LinkFacts> facts, KnownTickets tickets) {
+        return facts.getOrDefault(id, LinkFacts.none()).linksTo(tickets);
     }
 
     private RunningSessions runningIn(Project project) {

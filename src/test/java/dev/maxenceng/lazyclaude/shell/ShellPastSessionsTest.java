@@ -77,9 +77,10 @@ class ShellPastSessionsTest {
 
     @Test
     void shouldCountFiveNewestPastSessionsAfterTheLiveOnesNotInPlaceOfThem() {
-        Screen screen = Screen.of(shellOnSessions(sessionsViewOf(List.of(sessionView()), pastSessionViewsNumbered(6))));
+        Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionView()), pastSessionViewsNumbered(6)));
+        pressed(shell, key('j'), 6);
 
-        assertThat(screen.boardPanelText()).contains("lazyclaude-b6", "Past session 5", "… 1 older");
+        assertThat(Screen.of(shell).boardPanelText()).contains("lazyclaude-b6", "Past session 5", "… 1 older");
     }
 
     @Test
@@ -89,6 +90,7 @@ class ShellPastSessionsTest {
         pressed(shell, key('j'), 5);
         assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("… 2 older");
         shell.press(enter());
+        shell.press(key('j'));
 
         assertThat(Screen.of(shell).boardPanelText())
                 .contains("Past session 5", "Past session 6", "Past session 7")
@@ -112,6 +114,7 @@ class ShellPastSessionsTest {
         shell.press(enter());
 
         shell.sessionsChanged(pastSessionsViewOf(pastSessionViewsNumbered(7)));
+        shell.press(key('j'));
 
         assertThat(Screen.of(shell).boardPanelText()).contains("Past session 7").doesNotContain("older");
     }

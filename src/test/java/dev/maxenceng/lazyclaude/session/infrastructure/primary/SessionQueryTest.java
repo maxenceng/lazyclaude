@@ -1,5 +1,10 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.onBranches;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ran;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.strong;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ticketRun;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedIn;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedPastSession;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionActiveMinutesAgo;
@@ -12,11 +17,14 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.newestSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.oldestSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionViewBuilder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionViewNumbered;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewBuilder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
+import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketIds;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +33,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +51,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 @ExtendWith(MockitoExtension.class)
 class SessionQueryTest {
 
-    private static final SessionPayload OF_THE_PROJECT = new SessionPayload(project().root());
+    private static final SessionPayload OF_THE_PROJECT = new SessionPayload(project().root(), List.of());
+    private static final SessionPayload WITH_TICKETS = new SessionPayload(project().root(), linkedTicketIds("PROJ-1", "PROJ-2"));
 
     @Mock
     private LiveSessionPort sessions;
@@ -120,5 +130,35 @@ class SessionQueryTest {
 
         assertThat(sessionQuery(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT))
                 .isEqualTo(sessionsViewOf(List.of(sessionView()), List.of(pastSessionView())));
+    }
+
+    @Test
+    void shouldViewTheLinksOfALiveSessionSpeltAsTheBoardSpellsThem() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(any())).thenReturn(project());
+        when(past.linkFacts()).thenReturn(Map.of(sessionView().id(), ran(ticketRun("start", "proj-1"))));
+
+        assertThat(sessionQuery(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(WITH_TICKETS))
+                .isEqualTo(sessionsViewOf(List.of(sessionViewBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+    }
+
+    @Test
+    void shouldViewTheLinksOfAPastSession() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+        when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
+        when(past.linkFacts()).thenReturn(Map.of(pastSessionView().id(), onBranches("PROJ-2")));
+
+        assertThat(sessionQuery(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(WITH_TICKETS))
+                .isEqualTo(pastSessionsViewOf(List.of(pastSessionViewBuilder().links(List.of(weak("PROJ-2"))).build())));
+    }
+
+    @Test
+    void shouldViewNoLinkWhenThePayloadHandsOverNoTicket() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(any())).thenReturn(project());
+        when(past.linkFacts()).thenReturn(Map.of(sessionView().id(), ran(ticketRun("start", "PROJ-1"))));
+
+        assertThat(sessionQuery(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT))
+                .isEqualTo(sessionsViewOf(List.of(sessionView())));
     }
 }

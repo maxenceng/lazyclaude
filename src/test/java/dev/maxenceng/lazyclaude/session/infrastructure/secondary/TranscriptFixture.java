@@ -95,6 +95,35 @@ public final class TranscriptFixture {
                 .formatted(timestamp, cwd);
     }
 
+    public static String commandLine(String cwd, String timestamp, String branch, String command, String args) {
+        return "{\"type\":\"user\",\"timestamp\":\"%s\",\"cwd\":\"%s\",\"gitBranch\":\"%s\",\"message\":{\"role\":\"user\",\"content\":%s}}\n"
+                .formatted(
+                        timestamp,
+                        cwd,
+                        branch,
+                        quoted("<command-message>x</command-message>\n<command-name>%s</command-name>\n<command-args>%s</command-args>"
+                                .formatted(command, args)));
+    }
+
+    public static String skillLine(String cwd, String timestamp, String branch, String skill, String args) {
+        return "{\"type\":\"assistant\",\"timestamp\":\"%s\",\"cwd\":\"%s\",\"gitBranch\":\"%s\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Skill\",\"input\":{\"skill\":%s,\"args\":%s}}]}}\n"
+                .formatted(timestamp, cwd, branch, quoted(skill), quoted(args));
+    }
+
+    public static String skillLineWithoutArgs(String cwd, String timestamp, String skill) {
+        return "{\"type\":\"assistant\",\"timestamp\":\"%s\",\"cwd\":\"%s\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Skill\",\"input\":{\"skill\":%s}}]}}\n"
+                .formatted(timestamp, cwd, quoted(skill));
+    }
+
+    public static String branchLine(String cwd, String timestamp, String branch) {
+        return "{\"type\":\"assistant\",\"timestamp\":\"%s\",\"cwd\":\"%s\",\"gitBranch\":\"%s\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"done\"}]}}\n"
+                .formatted(timestamp, cwd, branch);
+    }
+
+    public static String branchLineWithoutTimestamp(String branch) {
+        return "{\"type\":\"file-history-snapshot\",\"gitBranch\":\"%s\"}\n".formatted(branch);
+    }
+
     public static String lineWithoutCwd(String timestamp) {
         return "{\"type\":\"queue-operation\",\"timestamp\":\"%s\"}\n".formatted(timestamp);
     }

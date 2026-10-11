@@ -17,7 +17,7 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public final class TranscriptCacheFile {
 
-    static final int FORMAT_VERSION = 1;
+    static final int FORMAT_VERSION = 2;
 
     private static final JsonMapper MAPPER = JsonMapper.builder().build();
     private static final String TEMPORARY_SUFFIX = ".tmp";

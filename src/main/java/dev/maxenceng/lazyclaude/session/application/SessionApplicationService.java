@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.application;
 import java.time.Clock;
 import java.util.function.Consumer;
 
+import dev.maxenceng.lazyclaude.session.domain.KnownTickets;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionClock;
@@ -14,7 +15,7 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
-/** Reads a project's live and past sessions, and keeps a listener handed them again as they change. */
+/** Reads a project's live and past sessions, linked to the tickets it is handed, and keeps a listener handed them again as they change. */
 public final class SessionApplicationService {
 
     private final SessionManager manager;
@@ -31,11 +32,11 @@ public final class SessionApplicationService {
                 sessions, pastSessions, locator, watch, transcriptWatch, warnings, new SessionClock(clock));
     }
 
-    public Sessions sessionsFor(Project project) {
-        return manager.sessionsFor(project);
+    public Sessions sessionsFor(Project project, KnownTickets tickets) {
+        return manager.sessionsFor(project, tickets);
     }
 
-    public void subscribe(Project project, Consumer<Sessions> listener) {
-        manager.watch(project, listener);
+    public void subscribe(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
+        manager.watch(project, tickets, listener);
     }
 }

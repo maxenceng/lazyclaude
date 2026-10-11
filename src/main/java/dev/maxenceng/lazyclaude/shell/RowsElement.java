@@ -16,11 +16,11 @@ final class RowsElement implements Element {
     private static final String ELLIPSIS = "…";
     private static final String PADDING = " ";
 
-    private final List<String> lines;
+    private final List<RowLine> lines;
     private final int selected;
     private final boolean highlighted;
 
-    RowsElement(List<String> lines, int selected, boolean highlighted) {
+    RowsElement(List<RowLine> lines, int selected, boolean highlighted) {
         this.lines = lines;
         this.selected = selected;
         this.highlighted = highlighted;
@@ -35,10 +35,17 @@ final class RowsElement implements Element {
         int first = Math.max(0, Math.min(selected - height + 1, lines.size() - height));
         for (int row = 0; row < height && first + row < lines.size(); row++) {
             int index = first + row;
-            String line = fit(lines.get(index), area.width());
-            Style style = index == selected && highlighted ? Style.EMPTY.reversed() : Style.EMPTY;
-            String padded = style == Style.EMPTY ? line : line + PADDING.repeat(area.width() - line.codePointCount(0, line.length()));
+            RowLine entry = lines.get(index);
+            String line = fit(entry.whole(), area.width());
+            boolean reversed = index == selected && highlighted;
+            Style style = reversed ? Style.EMPTY.reversed() : Style.EMPTY;
+            String padded = reversed ? line + PADDING.repeat(area.width() - line.codePointCount(0, line.length())) : line;
             frame.buffer().setString(area.x(), area.y() + row, padded, style);
+            int gutterWidth = Math.min(entry.gutter().codePointCount(0, entry.gutter().length()), line.codePointCount(0, line.length()));
+            if (gutterWidth > 0) {
+                Style gutterStyle = reversed ? entry.gutterStyle().reversed() : entry.gutterStyle();
+                frame.buffer().setString(area.x(), area.y() + row, line.substring(0, line.offsetByCodePoints(0, gutterWidth)), gutterStyle);
+            }
         }
     }
 

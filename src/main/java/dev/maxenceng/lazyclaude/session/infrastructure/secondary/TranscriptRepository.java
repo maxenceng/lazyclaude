@@ -13,9 +13,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
+import dev.maxenceng.lazyclaude.session.domain.LinkFacts;
 import dev.maxenceng.lazyclaude.session.domain.LocatedInProject;
 import dev.maxenceng.lazyclaude.session.domain.LocatedPastSession;
 import dev.maxenceng.lazyclaude.session.domain.NotLocated;
@@ -24,6 +26,7 @@ import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
 import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -32,7 +35,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * kept in the cache: a transcript is read again only when its size, modification time or file key differ from the cache's,
  * and one that grew is read from the offset the cache holds. That relies on transcripts being append-only, which is
  * observed, not documented; a file that shrank or whose key changed is read in full. A {@code subagents/} transcript sits
- * a level deeper and is never met. A transcript that cannot be read is dropped and read in full the next time it changes.
+ * a level deeper and is never met. It also answers the link facts of every transcript it knows, by session id. A transcript that cannot be read is dropped and read in full the next time it changes.
  */
 public final class TranscriptRepository implements PastSessionPort {
 
@@ -57,6 +60,14 @@ public final class TranscriptRepository implements PastSessionPort {
                 .map(CachedTranscript::toLocated)
                 .flatMap(Optional::stream)
                 .toList();
+    }
+
+    @Override
+    public Map<SessionId, LinkFacts> linkFacts() {
+        ensureLoaded();
+        return known.values().stream()
+                .filter(transcript -> !transcript.sessionId().isBlank())
+                .collect(Collectors.toMap(transcript -> new SessionId(transcript.sessionId()), CachedTranscript::linkFacts, (first, second) -> first));
     }
 
     /** Reads again every transcript that is new or changed since the cache, and forgets those that are gone. */
@@ -161,7 +172,7 @@ public final class TranscriptRepository implements PastSessionPort {
 
     private static CachedTranscript empty(Path file) {
         String sessionId = TranscriptFile.sessionIdOf(file);
-        return new CachedTranscript(file.toString(), 0, 0, "", 0, sessionId, null, null, null, null, null, null);
+        return new CachedTranscript(file.toString(), 0, 0, "", 0, sessionId, null, null, null, null, null, null, List.of(), List.of());
     }
 
     private static CachedTranscript located(CachedTranscript read, CachedTranscript before, TranscriptLocator locator) {
@@ -196,7 +207,9 @@ public final class TranscriptRepository implements PastSessionPort {
                 transcript.aiTitle(),
                 transcript.firstPrompt(),
                 transcript.startedAt(),
-                transcript.lastActivity());
+                transcript.lastActivity(),
+                transcript.branchIds(),
+                transcript.ticketRuns());
     }
 
     private void persist(boolean changed, CacheFallback unwritable) {

@@ -1,17 +1,21 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import java.util.List;
+
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
+import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
-/** A session with no live process, only a transcript: what that transcript says of it. */
+/** A session with no live process, only a transcript: what that transcript says of it, and the tickets it links the session to. */
 public record PastSession(
         SessionId id,
         SessionTitle title,
         WorkingDirectory directory,
         LastActivity lastActivity,
-        StartedAt startedAt) {
+        StartedAt startedAt,
+        List<TicketLink> links) {
 
     public PastSession {
         Assert.notNull("id", id);
@@ -19,6 +23,11 @@ public record PastSession(
         Assert.notNull("directory", directory);
         Assert.notNull("last activity", lastActivity);
         Assert.notNull("started at", startedAt);
+        Assert.notNull("links", links);
+    }
+
+    public PastSession linkedTo(List<TicketLink> links) {
+        return new PastSession(id, title, directory, lastActivity, startedAt, links);
     }
 
     public static PastSessionBuilder builder() {
@@ -31,6 +40,7 @@ public record PastSession(
         private WorkingDirectory directory;
         private LastActivity lastActivity;
         private StartedAt startedAt;
+        private List<TicketLink> links = List.of();
 
         private PastSessionBuilder() {}
 
@@ -59,8 +69,13 @@ public record PastSession(
             return this;
         }
 
+        public PastSessionBuilder links(List<TicketLink> links) {
+            this.links = links;
+            return this;
+        }
+
         public PastSession build() {
-            return new PastSession(id, title, directory, lastActivity, startedAt);
+            return new PastSession(id, title, directory, lastActivity, startedAt, links);
         }
     }
 }

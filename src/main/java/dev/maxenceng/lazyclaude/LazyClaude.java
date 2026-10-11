@@ -29,6 +29,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRep
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptCacheFile;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchRepository;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.shared.application.WarningApplicationService;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.StoppedThreadPayload;
@@ -138,13 +139,23 @@ public final class LazyClaude {
         try {
             view = board.boardFor(new BoardPayload(from));
             tree = docs.docsFor(new DocsPayload(view.root().value()));
-            live = sessions.sessionsFor(new SessionPayload(view.root().value()));
+            live = sessions.sessionsFor(sessionPayload(view));
         } catch (DomainException e) {
             err.println(PREFIX + e.getMessage());
             return 1;
         }
         shell.open(view, tree, live);
         return 0;
+    }
+
+    /** The project's root and the id of every ticket on its board, which {@code session} links its sessions against (ADR 0015). */
+    static SessionPayload sessionPayload(BoardView view) {
+        return new SessionPayload(
+                view.root().value(),
+                view.groups().stream()
+                        .flatMap(group -> group.tickets().stream())
+                        .map(ticket -> new LinkedTicketId(ticket.id().value()))
+                        .toList());
     }
 
     private static void run(
@@ -172,7 +183,8 @@ public final class LazyClaude {
             WarningQuery warnings) {
         Shell shell = new Shell(view, tree, live);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
-        sessions.subscribe(new SessionPayload(view.root().value()), shell::sessionsChanged);
+        // deferred: the ticket ids are the board's at start-up, so a ticket created while running links its sessions only at the next start — close it when the board is watched for changes.
+        sessions.subscribe(sessionPayload(view), shell::sessionsChanged);
         warnings.subscribe(shell::warningsChanged);
         return shell;
     }

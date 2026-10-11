@@ -55,6 +55,31 @@ class TranscriptCacheFileTest {
     }
 
     @Test
+    void shouldBeEmptyWhenTheCacheIsOfThePreviousFormatVersion() throws IOException {
+        Path file = directory.resolve("past-sessions.json");
+        Files.writeString(
+                file,
+                "{\"version\":1,\"transcripts\":[{\"path\":\"/home/max/.claude/projects/-work-app/s.jsonl\",\"size\":1,\"modified\":1,\"fileKey\":\"k\",\"offset\":1,\"sessionId\":\"s\"}]}",
+                StandardCharsets.UTF_8);
+
+        assertThat(new TranscriptCacheFile(file).load())
+                .as("a version 1 cache holds no link facts, so every transcript is read again to find them")
+                .isEmpty();
+    }
+
+    @Test
+    void shouldBeEmptyWhenAnEntryOfTheCurrentVersionCarriesNoLinkFacts() throws IOException {
+        Path file = directory.resolve("past-sessions.json");
+        Files.writeString(
+                file,
+                "{\"version\":%d,\"transcripts\":[{\"path\":\"/home/max/.claude/projects/-work-app/s.jsonl\",\"size\":1,\"modified\":1,\"fileKey\":\"k\",\"offset\":1,\"sessionId\":\"s\"}]}"
+                        .formatted(TranscriptCacheFile.FORMAT_VERSION),
+                StandardCharsets.UTF_8);
+
+        assertThat(new TranscriptCacheFile(file).load()).isEmpty();
+    }
+
+    @Test
     void shouldBeEmptyWhenTheCacheCarriesNoVersion() throws IOException {
         Path file = directory.resolve("past-sessions.json");
         Files.writeString(file, "{\"transcripts\":[]}", StandardCharsets.UTF_8);

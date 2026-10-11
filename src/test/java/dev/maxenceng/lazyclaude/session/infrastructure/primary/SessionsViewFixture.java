@@ -28,6 +28,7 @@ import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
+import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
@@ -45,7 +46,8 @@ public final class SessionsViewFixture {
                 .startedAt(LocalDateTime.of(2026, 10, 10, 12, 0))
                 .age(new SessionAge(Duration.ofHours(2)))
                 .version(version())
-                .state(new Busy());
+                .state(new Busy())
+                .links(List.of());
     }
 
     public static LiveSessionView sessionView() {
@@ -100,7 +102,8 @@ public final class SessionsViewFixture {
                 .directory(projectRootDirectory().path())
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 13, 50))
                 .age(new SessionAge(Duration.ofMinutes(10)))
-                .startedAt(LocalDateTime.of(2026, 10, 10, 12, 40));
+                .startedAt(LocalDateTime.of(2026, 10, 10, 12, 40))
+                .links(List.of());
     }
 
     public static PastSessionView pastSessionView() {
@@ -117,6 +120,16 @@ public final class SessionsViewFixture {
                 .title(new AiTitle("Past session %d".formatted(number)))
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 14, 0).minusMinutes(number * 10L))
                 .age(new SessionAge(Duration.ofMinutes(number * 10L)))
+                .build();
+    }
+
+    public static PastSessionView linkedPastSessionView(int number, TicketLink... links) {
+        return pastSessionViewBuilder()
+                .id(pastSessionIdOf(number))
+                .title(new AiTitle("Past %d".formatted(number)))
+                .lastActivity(LocalDateTime.of(2026, 10, 10, 14, 0).minusMinutes(number * 10L))
+                .age(new SessionAge(Duration.ofMinutes(number * 10L)))
+                .links(List.of(links))
                 .build();
     }
 
@@ -151,6 +164,19 @@ public final class SessionsViewFixture {
 
     public static LiveSessionView namedSessionView(SessionId id, String name, SessionState state) {
         return sessionViewBuilder().id(id).name(new SessionName(name)).state(state).build();
+    }
+
+    public static LiveSessionView linkedSessionView(SessionId id, SessionState state, TicketLink... links) {
+        return sessionViewBuilder().id(id).state(state).links(List.of(links)).build();
+    }
+
+    public static LiveSessionView linkedNamedSessionView(int number, String name, SessionState state, TicketLink... links) {
+        return sessionViewBuilder()
+                .id(sessionIdOf(number))
+                .name(new SessionName(name))
+                .state(state)
+                .links(List.of(links))
+                .build();
     }
 
     public static LiveSessionView sessionViewWithoutVersion() {

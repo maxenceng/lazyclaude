@@ -49,12 +49,14 @@ words mean.
 | Sweep | Re-reading the live sessions on a timer (every 2 s), always, watch or not: a session whose process died never rewrites its record, so only the sweep notices. Without a watch, the sweep is all there is. | `session` |
 | Hosted session | A live session lazyclaude spawned: the real `claude` on a pty, drawn in a dock tab. It dies with lazyclaude. | `session` (expected) |
 | Outside session | A live session started anywhere else. lazyclaude shows it read-only and can jump to its terminal window. | `session` (expected) |
-| Past session | A session with no live process, only a transcript. It can be resumed, which makes it hosted. A hosted session whose `claude` exited is past. Until linking lands, every past session is unlinked. | `session` |
+| Past session | A session with no live process, only a transcript. It can be resumed, which makes it hosted. A hosted session whose `claude` exited is past. | `session` |
 | Transcript | Claude Code's `~/.claude/projects/<folder>/<sessionId>.jsonl`, one per session; internal format, append-only by observation. A `subagents/` file is not one. | `session` |
 | Last activity | The timestamp of a transcript's last entry. It orders past sessions. | `session` |
-| Linked session | A session attributed to a ticket, by the first link rule that matches: `/ticket` args, `pr-link`, or branch. | `session` (expected) |
-| Weak link | A link found only through the branch name; shown as less certain. | `session` (expected) |
-| Unlinked session | A session attributed to no ticket. Started from lazyclaude, it runs in the project root. | `session` (expected) |
+| Linked session | A session attributed to a ticket, by the first link rule that matches: `/ticket` args, or branch. A third rule, `pr-link`, waits for `review` to publish head branches. | `session` |
+| Strong link | A link made by the session's own `/ticket` args; it carries the last verb the session ran on that ticket. | `session` |
+| Weak link | A link found only through the branch name; shown as less certain, with a dim `(branch)` and no verb. | `session` |
+| Unlinked session | A session attributed to no ticket. Started from lazyclaude, it runs in the project root. | `session` |
+| Marker | What a live session asks of you, in the board gutter and on the status line: `!` waiting for permission, `?` waiting for input, `•` your turn; the strongest is `!` > `?` > `•`. Busy, unknown and past are not markers. | `session` |
 | Starting | A hosted session with no registry record yet: just spawned, or still on Claude Code's trust dialog. No marker, never notified. | `session` (expected) |
 | Busy | The session is working; nothing is asked of you. The registry's `busy` and `shell` both show as busy. | `session` |
 | Your turn | The session finished and waits for your next prompt, without blocking on anything. Shown, never notified. | `session` |
