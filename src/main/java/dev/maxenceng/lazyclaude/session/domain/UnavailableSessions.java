@@ -1,15 +1,44 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import java.util.List;
+
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 
 /**
  * Neither the registry nor {@code claude agents --json} answered; lazyclaude starts anyway and says why. The past sessions
- * are not shown either: without the live ones, a session still running cannot be told from its past row.
+ * are not shown either: without the live ones, a session still running cannot be told from its past row. The hosted ones
+ * are still lazyclaude's own, so their tabs stay open, starting for want of a registry to say otherwise.
  */
-public record UnavailableSessions(Reason reason) implements Sessions {
+public record UnavailableSessions(Reason reason, List<HostedTab> hosted) implements Sessions {
 
     public UnavailableSessions {
         Assert.notNull("reason", reason);
+        Assert.notNull("hosted tabs", hosted);
+    }
+
+    public static UnavailableSessionsBuilder builder() {
+        return new UnavailableSessionsBuilder();
+    }
+
+    public static final class UnavailableSessionsBuilder {
+        private Reason reason;
+        private List<HostedTab> hosted = List.of();
+
+        private UnavailableSessionsBuilder() {}
+
+        public UnavailableSessionsBuilder reason(Reason reason) {
+            this.reason = reason;
+            return this;
+        }
+
+        public UnavailableSessionsBuilder hosted(List<HostedTab> hosted) {
+            this.hosted = hosted;
+            return this;
+        }
+
+        public UnavailableSessions build() {
+            return new UnavailableSessions(reason, hosted);
+        }
     }
 }

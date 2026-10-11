@@ -132,11 +132,23 @@ public final class SessionManager {
             return available(project, tickets, running);
         } catch (SessionsUnavailableException noSource) {
             lastLive.forget();
-            return new UnavailableSessions(new Reason(noSource.getMessage()));
+            return unavailable(noSource.getMessage());
         } catch (ProjectUnavailableException noLocator) {
             lastLive.forget();
-            return new UnavailableSessions(new Reason(noLocator.getMessage()));
+            return unavailable(noLocator.getMessage());
         }
+    }
+
+    private Sessions unavailable(String reason) {
+        return UnavailableSessions.builder()
+                .reason(new Reason(reason))
+                .hosted(hosted.open().sessions().stream()
+                        .map(session -> HostedTab.builder()
+                                .session(session)
+                                .phase(new StartingPhase())
+                                .build())
+                        .toList())
+                .build();
     }
 
     private Sessions reusingLive(Project project, KnownTickets tickets) {

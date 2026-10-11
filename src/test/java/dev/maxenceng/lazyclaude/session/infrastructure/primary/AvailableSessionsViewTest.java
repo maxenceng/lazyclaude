@@ -7,6 +7,7 @@ import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.hostedLiveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedLiveSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedSessionView;
@@ -15,6 +16,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewHosting;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingHostedSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsViewHosting;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -147,5 +149,12 @@ class AvailableSessionsViewTest {
                         registeredHostedSessionView(hostedLiveSessionView(), true)));
 
         assertThat(view.busyOrWaitingHosted()).isEqualTo(2);
+    }
+
+    @Test
+    void shouldViewTheHostedSessionsOfSessionsThatCouldNotBeRead() {
+        UnavailableSessionsView view = UnavailableSessionsView.from(unavailableSessionsHosting(List.of(startingTab())));
+
+        assertThat(view).isEqualTo(unavailableSessionsViewHosting(List.of(startingHostedSessionView())));
     }
 }

@@ -175,7 +175,11 @@ public final class SessionsViewFixture {
     }
 
     public static SessionsView unavailableSessionsView() {
-        return new UnavailableSessionsView(reason());
+        return unavailableSessionsViewHosting(List.of());
+    }
+
+    public static SessionsView unavailableSessionsViewHosting(List<HostedSessionView> hosted) {
+        return UnavailableSessionsView.builder().reason(reason()).hosted(hosted).build();
     }
 
     public static List<LiveSessionView> everyStateSessionViews() {

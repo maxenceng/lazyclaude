@@ -64,7 +64,11 @@ public final class SessionsFixture {
     }
 
     public static UnavailableSessions unavailableSessions() {
-        return new UnavailableSessions(reason());
+        return unavailableSessionsHosting(List.of());
+    }
+
+    public static UnavailableSessions unavailableSessionsHosting(List<HostedTab> hosted) {
+        return UnavailableSessions.builder().reason(reason()).hosted(hosted).build();
     }
 
     public static SessionManager sessionManager(LiveSessionPort sessions, ProjectLocatorPort locator, SessionWatchPort watch, WarningPort warnings) {

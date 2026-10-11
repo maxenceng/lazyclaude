@@ -46,6 +46,7 @@ import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessio
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionManager;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.workingDirectoryOf;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.cacheUnwritable;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
@@ -753,5 +754,17 @@ class SessionManagerTest {
         sessionManager(sessions, locator, watch, warnings).refresh(project(), noTickets(), listener);
 
         verify(listener).accept(liveSessionsOf(List.of()));
+    }
+
+    @Test
+    void shouldKeepTheHostedSessionsWhenNoSourceAnswers() {
+        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
+
+        Sessions read = sessionManager(sessions, locator, watch, warnings, () -> hostedSessionsOf(hostedSession()))
+                .sessionsFor(project(), noTickets());
+
+        assertThat(read)
+                .as("a registry that cannot be read must not close the tabs of claudes that are running")
+                .isEqualTo(unavailableSessionsHosting(List.of(startingTab())));
     }
 }
