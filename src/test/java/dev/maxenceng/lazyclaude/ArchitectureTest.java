@@ -308,6 +308,15 @@ class ArchitectureTest {
             .resideInAPackage("..domain..")
             .allowEmptyShould(true);
 
+    // A repository is a port's implementation (ADR 0011); a helper an adapter keeps for itself takes another name.
+    @ArchTest
+    static final ArchRule repositories_implement_a_port = classes()
+            .that()
+            .haveSimpleNameEndingWith("Repository")
+            .should()
+            .implement(nameMatching(".*Port"))
+            .allowEmptyShould(true);
+
     // A manager wired into another is a second place deciding what that one's use case means.
     @ArchTest
     static final ArchRule managers_are_wired_with_ports_not_other_managers = classes()

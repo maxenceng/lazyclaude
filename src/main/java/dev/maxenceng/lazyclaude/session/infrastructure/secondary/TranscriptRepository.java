@@ -21,6 +21,7 @@ import dev.maxenceng.lazyclaude.session.domain.LocatedPastSession;
 import dev.maxenceng.lazyclaude.session.domain.NotLocated;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
+import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
@@ -36,14 +37,15 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 public final class TranscriptRepository implements PastSessionPort {
 
     private static final String CACHE_UNWRITABLE = "cannot write the cache %s: %s";
+    private static final String ROOT_UNLISTABLE = "cannot list %s: %s";
 
     private final Path transcriptsRoot;
-    private final TranscriptCacheRepository cache;
+    private final TranscriptCacheFile cache;
     private final Map<String, CachedTranscript> known = new ConcurrentHashMap<>();
     private final Object loading = new Object();
     private volatile boolean loaded;
 
-    public TranscriptRepository(Path transcriptsRoot, TranscriptCacheRepository cache) {
+    public TranscriptRepository(Path transcriptsRoot, TranscriptCacheFile cache) {
         this.transcriptsRoot = transcriptsRoot;
         this.cache = cache;
     }
@@ -58,11 +60,11 @@ public final class TranscriptRepository implements PastSessionPort {
     }
 
     /** Reads again every transcript that is new or changed since the cache, and forgets those that are gone. */
-    synchronized void rescanAll(TranscriptLocator locator, CacheFallback unwritable) {
+    synchronized void rescanAll(TranscriptLocator locator, CacheFallback unwritable, RootFallback unlistable) {
         ensureLoaded();
         Set<Path> present = new HashSet<>();
         Set<Path> unlisted = new HashSet<>();
-        listTranscripts(present, unlisted);
+        listTranscripts(present, unlisted, unlistable);
         boolean changed = known.keySet().removeIf(path -> isGone(Path.of(path), present, unlisted));
         for (Path file : present) {
             changed |= refresh(file, locator);
@@ -93,15 +95,22 @@ public final class TranscriptRepository implements PastSessionPort {
         }
     }
 
-    private void listTranscripts(Set<Path> present, Set<Path> unlisted) {
+    private void listTranscripts(Set<Path> present, Set<Path> unlisted, RootFallback unlistable) {
         if (!Files.isDirectory(transcriptsRoot)) {
             return;
         }
         try (Stream<Path> folders = Files.list(transcriptsRoot)) {
             folders.filter(Files::isDirectory).forEach(folder -> listFolder(folder, present, unlisted));
-        } catch (IOException | UncheckedIOException unreadable) {
-            unlisted.add(transcriptsRoot);
+        } catch (IOException unreadable) {
+            unlisted(unreadable, unlisted, unlistable);
+        } catch (UncheckedIOException unreadable) {
+            unlisted(unreadable.getCause(), unlisted, unlistable);
         }
+    }
+
+    private void unlisted(IOException cause, Set<Path> unlisted, RootFallback unlistable) {
+        unlisted.add(transcriptsRoot);
+        unlistable.unlistable(new Reason(ROOT_UNLISTABLE.formatted(transcriptsRoot, FileFailure.causeOf(cause))));
     }
 
     private static void listFolder(Path folder, Set<Path> present, Set<Path> unlisted) {
@@ -134,6 +143,7 @@ public final class TranscriptRepository implements PastSessionPort {
         } catch (IOException vanishedOrUnreadable) {
             return known.remove(key) != null;
         } catch (ProjectUnavailableException cannotLocate) {
+            // deferred: a cwd git fails on is read again and asked again on every scan, with no warning — close it when that shows up as load, since it never shows a wrong row.
             return false;
         }
     }
@@ -196,7 +206,7 @@ public final class TranscriptRepository implements PastSessionPort {
         try {
             cache.write(known.values());
         } catch (IOException e) {
-            unwritable.unwritable(new Reason(CACHE_UNWRITABLE.formatted(cache.file(), e.getMessage())));
+            unwritable.unwritable(new Reason(CACHE_UNWRITABLE.formatted(cache.file(), FileFailure.causeOf(e))));
         }
     }
 }

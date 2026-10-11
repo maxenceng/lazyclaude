@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
 import dev.maxenceng.lazyclaude.session.domain.PollingFallback;
+import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.published.Reason;
@@ -80,8 +81,12 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
     }
 
     @Override
-    public void watch(TranscriptLocator locator, Runnable changed, PollingFallback fallback, CacheFallback cache) {
-        workers.add(Thread.ofPlatform().daemon().name(WORKER_NAME).start(() -> run(locator, changed, fallback, cache)));
+    public void watch(
+            TranscriptLocator locator, Runnable changed, PollingFallback fallback, CacheFallback cache, RootFallback root) {
+        workers.add(Thread.ofPlatform()
+                .daemon()
+                .name(WORKER_NAME)
+                .start(() -> run(locator, changed, fallback, cache, root)));
     }
 
     @Override
@@ -91,14 +96,15 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
     }
 
     // deferred: an exception other than a closed or interrupted watch ends this thread, and the past sessions stop updating with only a warning to say so — close it when a rescan can fail in a way the adapter does not turn into a value.
-    private void run(TranscriptLocator locator, Runnable changed, PollingFallback fallback, CacheFallback cache) {
+    private void run(
+            TranscriptLocator locator, Runnable changed, PollingFallback fallback, CacheFallback cache, RootFallback root) {
         try {
             Optional<WatchService> service = watchOver(fallback);
-            transcripts.rescanAll(locator, cache);
+            transcripts.rescanAll(locator, cache, root);
             changed.run();
             // deferred: a transcripts root that does not exist when lazyclaude starts is not watched, so past sessions of a Claude Code first run in this session appear at the next start — close it when that is seen.
             if (service.isPresent() || Files.isDirectory(transcriptsRoot)) {
-                follow(service, locator, changed, fallback, cache);
+                follow(service, locator, changed, fallback, cache, root);
             }
         } catch (InterruptedException | ClosedWatchServiceException stopped) {
             Thread.currentThread().interrupt();
@@ -110,7 +116,8 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
             TranscriptLocator locator,
             Runnable changed,
             PollingFallback fallback,
-            CacheFallback cache)
+            CacheFallback cache,
+            RootFallback root)
             throws InterruptedException {
         Optional<WatchService> service = initial;
         Map<Path, Instant> pending = new HashMap<>();
@@ -130,7 +137,7 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
             }
             if (everything) {
                 pending.clear();
-                transcripts.rescanAll(locator, cache);
+                transcripts.rescanAll(locator, cache, root);
                 changed.run();
             } else if (settleInto(pending, locator, cache)) {
                 changed.run();
@@ -240,7 +247,7 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
     }
 
     private void giveUpWatching(IOException cause, PollingFallback fallback) {
-        fallback.polling(new Reason(CAUSE.formatted(transcriptsRoot, cause.getMessage())), pollInterval);
+        fallback.polling(new Reason(CAUSE.formatted(transcriptsRoot, FileFailure.causeOf(cause))), pollInterval);
     }
 
     private static void closeQuietly(WatchService service) {

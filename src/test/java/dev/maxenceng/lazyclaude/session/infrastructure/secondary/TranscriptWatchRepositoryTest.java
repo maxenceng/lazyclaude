@@ -43,6 +43,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
 import dev.maxenceng.lazyclaude.session.domain.PollingFallback;
+import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 
@@ -57,6 +58,9 @@ class TranscriptWatchRepositoryTest {
 
     @Mock
     private CacheFallback cache;
+
+    @Mock
+    private RootFallback unlistable;
 
     private final ChangeProbe probe = new ChangeProbe();
     private TranscriptRepository transcripts;
@@ -84,7 +88,7 @@ class TranscriptWatchRepositoryTest {
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
         watcher = watcherOver(projects, transcripts);
 
-        watcher.watch(locator, probe.listener(), fallback, cache);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
 
         assertThat(probe.changedWithin(within())).isTrue();
         assertThat(transcripts.pastSessions()).as("read off the caller's thread, and landed before the callback").hasSize(1);
@@ -94,7 +98,7 @@ class TranscriptWatchRepositoryTest {
     void shouldReportANewTranscriptInAFolderThatIsWatched() throws Exception {
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
         watcher = watcherOver(projects, transcripts);
-        watcher.watch(locator, probe.listener(), fallback, cache);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
         assertThat(probe.changedWithin(within())).isTrue();
 
         writeTranscript(projects, folder(), otherSessionId(), userLine(cwd(), later(), "Another"));
@@ -107,7 +111,7 @@ class TranscriptWatchRepositoryTest {
     void shouldReportATranscriptInAFolderCreatedLater() throws Exception {
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
         watcher = watcherOver(projects, transcripts);
-        watcher.watch(locator, probe.listener(), fallback, cache);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
         assertThat(probe.changedWithin(within())).isTrue();
 
         writeTranscript(projects, "-work-new-folder", otherSessionId(), userLine(cwd(), later(), "Another"));
@@ -122,7 +126,7 @@ class TranscriptWatchRepositoryTest {
     void shouldReadAGrowingTranscriptOnceItHasBeenQuietAndNotOnEveryLine() throws Exception {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
         watcher = watcherOver(projects, transcripts);
-        watcher.watch(locator, probe.listener(), fallback, cache);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
         assertThat(probe.changedWithin(within())).isTrue();
 
         for (int line = 0; line < 5; line++) {
@@ -141,7 +145,7 @@ class TranscriptWatchRepositoryTest {
     void shouldReportADeletedTranscriptAndForgetIt() throws Exception {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
         watcher = watcherOver(projects, transcripts);
-        watcher.watch(locator, probe.listener(), fallback, cache);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
         assertThat(probe.changedWithin(within())).isTrue();
 
         Files.delete(file);
@@ -155,7 +159,7 @@ class TranscriptWatchRepositoryTest {
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
         LostEventsPoll keys = new LostEventsPoll(projects);
         watcher = watcherLosingEvents(projects, transcripts, keys);
-        watcher.watch(locator, probe.listener(), fallback, cache);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
         assertThat(probe.changedWithin(within())).isTrue();
         writeTranscript(projects, folder(), otherSessionId(), userLine(cwd(), later(), "Another"));
         assertThat(probe.quietFor(quietLongerThanTheSettleTime()))
@@ -176,7 +180,7 @@ class TranscriptWatchRepositoryTest {
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
         LostEventsPoll keys = new LostEventsPoll(projects);
         watcher = watcherLosingEvents(projects, transcripts, keys);
-        watcher.watch(locator, probe.listener(), fallback, cache);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
         assertThat(probe.changedWithin(within())).isTrue();
         writeTranscript(projects, "-work-new-folder", otherSessionId(), userLine(cwd(), later(), "Another"));
         keys.overflow();
@@ -194,7 +198,7 @@ class TranscriptWatchRepositoryTest {
     void shouldSayNothingAndWatchNothingWhenTheProjectsDirectoryIsMissing() throws Exception {
         watcher = watcherOver(projects, transcripts);
 
-        watcher.watch(locator, probe.listener(), fallback, cache);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
 
         assertThat(probe.changedWithin(within())).as("it still tells the domain the (empty) scan landed").isTrue();
         assertThat(probe.quietFor(quietLongerThanTheSettleTime())).isTrue();
@@ -205,7 +209,7 @@ class TranscriptWatchRepositoryTest {
     void shouldRestateEveryTranscriptOnATimerAndWarnOnceWhenTheWatchCannotBeSetUp() throws Exception {
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
         watcher = watcherWithoutInotify(projects, transcripts);
-        watcher.watch(locator, probe.listener(), fallback, cache);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
         assertThat(probe.changedWithin(within())).isTrue();
 
         writeTranscript(projects, folder(), otherSessionId(), userLine(cwd(), later(), "Another"));
@@ -222,7 +226,7 @@ class TranscriptWatchRepositoryTest {
     void shouldReadNothingAtStartWhenTheWatchCannotBeSetUpAndTheDirectoryIsMissing() throws IOException, InterruptedException {
         watcher = watcherWithoutInotify(projects, transcripts);
 
-        watcher.watch(locator, probe.listener(), fallback, cache);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
 
         assertThat(probe.changedWithin(within())).isTrue();
         verifyNoInteractions(fallback);

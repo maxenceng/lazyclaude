@@ -4,9 +4,9 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.session.published.Busy;
@@ -31,7 +31,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 /**
  * Builds the sessions of a project from every live session on the machine and every past one. It owns the rules: an
  * {@code sdk-cli} session is not listed, a session belongs to the project its {@code cwd} is located
- * in (and one whose {@code cwd} belongs to none is nobody's), rows run newest first, and a session's
+ * in (or, when git cannot place it, the one its path lies in), rows run newest first, and a session's
  * state is drawn from its reported status only once it is known to be the project's, so a status no
  * one here knows, on a session elsewhere, changes nothing. Each fallback is warned about once, however
  * often its source reports it. A live id hides the past session of the same id, a past session belongs to
@@ -45,6 +45,7 @@ public final class SessionManager {
 
     private static final String TRANSCRIPT_WARNING = "past sessions: %s; checking every %d s instead.";
     private static final String CACHE_WARNING = "past sessions: %s; they are read in full on every start.";
+    private static final String ROOT_WARNING = "past sessions: %s; only those already read show.";
 
     private static final Comparator<PastSession> MOST_RECENTLY_ACTIVE_FIRST = Comparator.comparing(PastSession::lastActivity)
             .reversed()
@@ -65,6 +66,8 @@ public final class SessionManager {
     private final WarnOnce askingAgents = new WarnOnce();
     private final WarnOnce pollingTranscripts = new WarnOnce();
     private final WarnOnce cacheUnwritable = new WarnOnce();
+    private final WarnOnce rootUnlistable = new WarnOnce();
+    private final LastLiveRead lastLive = new LastLiveRead();
 
     public SessionManager(
             LiveSessionPort sessions,
@@ -83,24 +86,69 @@ public final class SessionManager {
         this.clock = clock;
     }
 
+    /** Reads the live sessions again; the past ones come from what the cache already holds. */
     public Sessions sessionsFor(Project project) {
+        synchronized (lastLive) {
+            return readingLive(project);
+        }
+    }
+
+    /**
+     * Hands {@code listener} the sessions again on every change. A change to the registry reads the live sessions again; a
+     * change to the transcripts reuses the last read of them. Both deliver under one lock, so a slower read never
+     * overwrites a newer one.
+     */
+    public void watch(Project project, Consumer<Sessions> listener) {
+        watch.watch(() -> deliver(listener, () -> readingLive(project)), this::warnOfSweep);
+        transcriptWatch.watch(
+                this::locationOf,
+                () -> deliver(listener, () -> reusingLive(project)),
+                this::warnOfTranscriptPolling,
+                this::warnOfCache,
+                this::warnOfUnlistableRoot);
+    }
+
+    private void deliver(Consumer<Sessions> listener, Supplier<Sessions> read) {
+        synchronized (lastLive) {
+            listener.accept(read.get());
+        }
+    }
+
+    private Sessions readingLive(Project project) {
         try {
-            List<ReportedSession> reported = sessions.liveSessions(this::warnOfAgents);
-            return AvailableSessions.builder()
-                    .live(liveSessionsOf(project, reported))
-                    .past(pastSessionsOf(project, reported))
-                    .clock(clock.frozen())
-                    .build();
+            RunningSessions running = runningIn(project);
+            lastLive.remember(running);
+            return available(project, running);
         } catch (SessionsUnavailableException noSource) {
+            lastLive.forget();
             return new UnavailableSessions(new Reason(noSource.getMessage()));
         } catch (ProjectUnavailableException noLocator) {
+            lastLive.forget();
             return new UnavailableSessions(new Reason(noLocator.getMessage()));
         }
     }
 
-    public void watch(Runnable changed) {
-        watch.watch(changed, this::warnOfSweep);
-        transcriptWatch.watch(this::locateTranscript, changed, this::warnOfTranscriptPolling, this::warnOfCache);
+    private Sessions reusingLive(Project project) {
+        return lastLive.of(project)
+                .map(running -> available(project, running))
+                .orElseGet(() -> readingLive(project));
+    }
+
+    private Sessions available(Project project, RunningSessions running) {
+        return AvailableSessions.builder()
+                .live(running.live())
+                .past(pastSessionsOf(project, running.ids()))
+                .clock(clock.frozen())
+                .build();
+    }
+
+    private RunningSessions runningIn(Project project) {
+        List<ReportedSession> reported = sessions.liveSessions(this::warnOfAgents);
+        return RunningSessions.builder()
+                .project(project)
+                .ids(reported.stream().map(ReportedSession::id).toList())
+                .live(liveSessionsOf(project, reported))
+                .build();
     }
 
     private void warnOfTranscriptPolling(Reason cause, Duration every) {
@@ -111,7 +159,11 @@ public final class SessionManager {
         cacheUnwritable.raise(warnings, new Warning(CACHE_WARNING.formatted(cause.value())));
     }
 
-    private ProjectLocation locateTranscript(WorkingDirectory directory) {
+    private void warnOfUnlistableRoot(Reason cause) {
+        rootUnlistable.raise(warnings, new Warning(ROOT_WARNING.formatted(cause.value())));
+    }
+
+    private ProjectLocation locationOf(WorkingDirectory directory) {
         try {
             return new LocatedInProject(locator.locate(directory));
         } catch (ProjectNotFoundException outsideAnyProject) {
@@ -127,10 +179,9 @@ public final class SessionManager {
         askingAgents.raise(warnings, new Warning(AGENTS_WARNING.formatted(cause.value(), every.toSeconds())));
     }
 
-    private List<PastSession> pastSessionsOf(Project project, List<ReportedSession> reported) {
-        Set<SessionId> live = reported.stream().map(ReportedSession::id).collect(Collectors.toSet());
+    private List<PastSession> pastSessionsOf(Project project, List<SessionId> running) {
         return pastSessions.pastSessions().stream()
-                .filter(located -> !live.contains(located.session().id()))
+                .filter(located -> !running.contains(located.session().id()))
                 .filter(located -> located.belongsTo(project))
                 .map(LocatedPastSession::session)
                 .sorted(MOST_RECENTLY_ACTIVE_FIRST)
@@ -141,24 +192,16 @@ public final class SessionManager {
         List<ReportedSession> candidates = reported.stream()
                 .filter(session -> !session.isSdkCli())
                 .toList();
-        // deferred: git runs once per distinct cwd on every refresh, about every 2 s — close it when that shows up as load on a project with many worktrees.
-        Map<WorkingDirectory, Optional<Project>> located = candidates.stream()
+        // deferred: git runs once per distinct cwd on every read of the registry, about every 2 s — close it when that shows up as load on a project with many worktrees.
+        Map<WorkingDirectory, ProjectLocation> located = candidates.stream()
                 .map(ReportedSession::directory)
                 .distinct()
-                .collect(Collectors.toMap(Function.identity(), this::locate));
+                .collect(Collectors.toMap(Function.identity(), this::locationOf));
         return candidates.stream()
-                .filter(session -> located.get(session.directory()).filter(project::equals).isPresent())
+                .filter(session -> located.get(session.directory()).holds(project, session.directory()))
                 .sorted(NEWEST_FIRST)
                 .map(SessionManager::live)
                 .toList();
-    }
-
-    private Optional<Project> locate(WorkingDirectory directory) {
-        try {
-            return Optional.of(locator.locate(directory));
-        } catch (ProjectNotFoundException outsideAnyProject) {
-            return Optional.empty();
-        }
     }
 
     private static LiveSession live(ReportedSession session) {

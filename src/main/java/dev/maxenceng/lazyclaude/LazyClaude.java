@@ -26,7 +26,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeAgentsRep
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LiveSessionRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRepository;
-import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptCacheRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptCacheFile;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchRepository;
 import dev.maxenceng.lazyclaude.shared.application.WarningApplicationService;
@@ -99,7 +99,7 @@ public final class LazyClaude {
         Path registry = home.resolve(REGISTRY);
         TranscriptRepository transcripts = new TranscriptRepository(
                 home.resolve(TRANSCRIPTS),
-                new TranscriptCacheRepository(cacheHome(home, System.getenv(XDG_CACHE_HOME))
+                new TranscriptCacheFile(cacheHome(home, System.getenv(XDG_CACHE_HOME))
                         .resolve(CACHE_DIRECTORY)
                         .resolve(CACHE_FILE)));
         LiveSessionRepository live = new LiveSessionRepository(

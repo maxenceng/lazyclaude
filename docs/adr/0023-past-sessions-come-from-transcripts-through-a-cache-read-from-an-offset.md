@@ -42,9 +42,18 @@ not with what changed.
   under those paths; nothing of the kind is expected there.
 - **A live id hides the past session of the same id.** A session is listed once, in the live block. When its
   process dies it moves to the past block with the same session id, so a selection follows it.
+- **Live sessions are placed by the same rule.** A live session's `cwd` is located through git on each read of
+  the registry, and by the path rule when git cannot place it. Otherwise a session still running in a removed
+  worktree would be listed nowhere: not live, because git cannot place it, and not past, because its live id
+  hides its past row.
+- **A change to the transcripts reuses the last read of the live sessions.** Only a change to the registry
+  reads the registry and runs git for the live sessions again. Both watchers deliver under one lock in
+  `SessionManager`, so a slower delivery never overwrites a newer one. A read that fails is forgotten, so the
+  next change reads again rather than reusing a list that no longer holds.
 - **Past sessions never make the panel unavailable.** `UnavailableSessions` still means the live source
   failed. A transcript that cannot be read is not listed and is read again when it changes; a line that does
-  not parse is skipped and the rest of the transcript counts.
+  not parse is skipped and the rest of the transcript counts. A projects directory that exists but cannot be
+  listed raises one warning, and the past sessions already cached still show.
 - **The watch is two levels deep and the scan is the watcher's.** `TranscriptWatchRepository` watches
   `~/.claude/projects/` and each folder in it, and a folder created later; a changed file is read about one
   second after its last change, not on every line, and an `OVERFLOW` re-stats every transcript. It does not

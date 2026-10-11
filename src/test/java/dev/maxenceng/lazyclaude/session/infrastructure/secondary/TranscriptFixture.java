@@ -13,6 +13,7 @@ import dev.maxenceng.lazyclaude.session.domain.LastActivity;
 import dev.maxenceng.lazyclaude.session.domain.LocatedPastSession;
 import dev.maxenceng.lazyclaude.session.domain.PastSession;
 import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
+import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.StartedAt;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
@@ -166,9 +167,9 @@ public final class TranscriptFixture {
     }
 
     static TranscriptRepository scanned(
-            Path projects, Path cache, TranscriptLocator locator, CacheFallback unwritable) {
-        TranscriptRepository repository = new TranscriptRepository(projects, new TranscriptCacheRepository(cache));
-        repository.rescanAll(locator, unwritable);
+            Path projects, Path cache, TranscriptLocator locator, CacheFallback unwritable, RootFallback unlistable) {
+        TranscriptRepository repository = new TranscriptRepository(projects, new TranscriptCacheFile(cache));
+        repository.rescanAll(locator, unwritable, unlistable);
         return repository;
     }
 

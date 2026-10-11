@@ -36,6 +36,6 @@ public final class SessionApplicationService {
     }
 
     public void subscribe(Project project, Consumer<Sessions> listener) {
-        manager.watch(() -> listener.accept(manager.sessionsFor(project)));
+        manager.watch(project, listener);
     }
 }

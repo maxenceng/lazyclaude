@@ -40,3 +40,5 @@ and the same name for each role in every context.
 - Mapping domain types to published views is a cost every context pays at its primary adapter.
 - *Manager* leaves the glossary's list of avoided words: it now names the domain service of
   this convention, nothing else.
+- A `*Repository` that implements no `*Port` fails the build (`ArchitectureTest`). A helper an
+  adapter keeps for itself takes another name, as `TranscriptCacheFile` does.

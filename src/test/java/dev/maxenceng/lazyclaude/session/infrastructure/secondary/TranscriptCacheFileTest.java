@@ -17,14 +17,14 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-class TranscriptCacheRepositoryTest {
+class TranscriptCacheFileTest {
 
     @TempDir
     Path directory;
 
     @Test
     void shouldReadWhatItWrote() throws IOException {
-        TranscriptCacheRepository cache = new TranscriptCacheRepository(directory.resolve("lazyclaude/past-sessions.json"));
+        TranscriptCacheFile cache = new TranscriptCacheFile(directory.resolve("lazyclaude/past-sessions.json"));
 
         cache.write(List.of(cachedTranscript(), otherCachedTranscript()));
 
@@ -33,7 +33,7 @@ class TranscriptCacheRepositoryTest {
 
     @Test
     void shouldBeEmptyWhenTheCacheIsMissing() {
-        assertThat(new TranscriptCacheRepository(directory.resolve("missing.json")).load()).isEmpty();
+        assertThat(new TranscriptCacheFile(directory.resolve("missing.json")).load()).isEmpty();
     }
 
     @Test
@@ -41,15 +41,15 @@ class TranscriptCacheRepositoryTest {
         Path file = directory.resolve("past-sessions.json");
         Files.writeString(file, "{ this is not json", StandardCharsets.UTF_8);
 
-        assertThat(new TranscriptCacheRepository(file).load()).isEmpty();
+        assertThat(new TranscriptCacheFile(file).load()).isEmpty();
     }
 
     @Test
     void shouldBeEmptyWhenTheCacheIsOfAnotherFormatVersion() throws IOException {
         Path file = directory.resolve("past-sessions.json");
-        Files.writeString(file, "{\"version\":%d,\"transcripts\":[]}".formatted(TranscriptCacheRepository.FORMAT_VERSION + 1), StandardCharsets.UTF_8);
+        Files.writeString(file, "{\"version\":%d,\"transcripts\":[]}".formatted(TranscriptCacheFile.FORMAT_VERSION + 1), StandardCharsets.UTF_8);
 
-        assertThat(new TranscriptCacheRepository(file).load())
+        assertThat(new TranscriptCacheFile(file).load())
                 .as("a field this version does not know cannot be trusted, so the cache is read from scratch")
                 .isEmpty();
     }
@@ -59,7 +59,7 @@ class TranscriptCacheRepositoryTest {
         Path file = directory.resolve("past-sessions.json");
         Files.writeString(file, "{\"transcripts\":[]}", StandardCharsets.UTF_8);
 
-        assertThat(new TranscriptCacheRepository(file).load()).isEmpty();
+        assertThat(new TranscriptCacheFile(file).load()).isEmpty();
     }
 
     @ParameterizedTest
@@ -68,10 +68,10 @@ class TranscriptCacheRepositoryTest {
         Path file = directory.resolve("past-sessions.json");
         Files.writeString(
                 file,
-                "{\"version\":%d,\"transcripts\":%s}".formatted(TranscriptCacheRepository.FORMAT_VERSION, transcripts),
+                "{\"version\":%d,\"transcripts\":%s}".formatted(TranscriptCacheFile.FORMAT_VERSION, transcripts),
                 StandardCharsets.UTF_8);
 
-        assertThat(new TranscriptCacheRepository(file).load())
+        assertThat(new TranscriptCacheFile(file).load())
                 .as("an entry with no path or file key would fail every scan and every read of the panel, so the cache is read from scratch")
                 .isEmpty();
     }
@@ -79,7 +79,7 @@ class TranscriptCacheRepositoryTest {
     @Test
     void shouldReplaceAnOlderCacheWholeAndLeaveNoTemporaryFileBehind() throws IOException {
         Path file = directory.resolve("lazyclaude/past-sessions.json");
-        TranscriptCacheRepository cache = new TranscriptCacheRepository(file);
+        TranscriptCacheFile cache = new TranscriptCacheFile(file);
         cache.write(List.of(cachedTranscript(), otherCachedTranscript()));
 
         cache.write(List.of(otherCachedTranscript()));
@@ -93,10 +93,25 @@ class TranscriptCacheRepositoryTest {
     }
 
     @Test
+    void shouldLeaveNoTemporaryFileBehindWhenTheRenameFails() throws IOException {
+        Path file = directory.resolve("past-sessions.json");
+        Files.createDirectories(file);
+        Files.writeString(file.resolve("entry"), "a folder where the cache should be", StandardCharsets.UTF_8);
+        TranscriptCacheFile cache = new TranscriptCacheFile(file);
+
+        assertThatThrownBy(() -> cache.write(List.of(cachedTranscript()))).isInstanceOf(IOException.class);
+        try (Stream<Path> files = Files.list(directory)) {
+            assertThat(files.map(entry -> entry.getFileName().toString()))
+                    .as("a rename that failed must not leave its temporary file beside the cache")
+                    .containsExactly("past-sessions.json");
+        }
+    }
+
+    @Test
     void shouldFailToWriteWhenItsFolderCannotBeMade() throws IOException {
         Path blocker = directory.resolve("blocker");
         Files.writeString(blocker, "a file where the cache folder should be", StandardCharsets.UTF_8);
-        TranscriptCacheRepository cache = new TranscriptCacheRepository(blocker.resolve("lazyclaude/past-sessions.json"));
+        TranscriptCacheFile cache = new TranscriptCacheFile(blocker.resolve("lazyclaude/past-sessions.json"));
 
         assertThatThrownBy(() -> cache.write(List.of(cachedTranscript()))).isInstanceOf(IOException.class);
     }

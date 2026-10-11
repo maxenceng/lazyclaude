@@ -13,7 +13,7 @@ public final class TranscriptWatchFixture {
     private TranscriptWatchFixture() {}
 
     static TranscriptRepository repositoryOver(Path projects, Path cache) {
-        return new TranscriptRepository(projects, new TranscriptCacheRepository(cache));
+        return new TranscriptRepository(projects, new TranscriptCacheFile(cache));
     }
 
     static TranscriptWatchRepository watcherOver(Path projects, TranscriptRepository transcripts) {

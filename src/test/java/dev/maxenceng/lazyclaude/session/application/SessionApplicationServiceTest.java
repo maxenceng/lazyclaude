@@ -96,7 +96,7 @@ class SessionApplicationServiceTest {
 
         new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).subscribe(project(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(transcriptWatch).watch(any(), changed.capture(), any(), any());
+        verify(transcriptWatch).watch(any(), changed.capture(), any(), any(), any());
         changed.getValue().run();
 
         assertThat(received)

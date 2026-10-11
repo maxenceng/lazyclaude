@@ -13,9 +13,9 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Loads and writes the cache of what the transcripts said. A cache that is missing, does not parse or was written in
  * another format version is empty, not a failure: it is rewritten by the next write. A write goes whole to a temporary file
- * beside the cache and is renamed over it, so a reader never meets half a cache.
+ * beside the cache and is renamed over it, so a reader never meets half a cache; one that fails leaves no temporary file behind.
  */
-public final class TranscriptCacheRepository {
+public final class TranscriptCacheFile {
 
     static final int FORMAT_VERSION = 1;
 
@@ -24,7 +24,7 @@ public final class TranscriptCacheRepository {
 
     private final Path file;
 
-    public TranscriptCacheRepository(Path file) {
+    public TranscriptCacheFile(Path file) {
         this.file = file;
     }
 
@@ -53,8 +53,12 @@ public final class TranscriptCacheRepository {
         }
         Files.createDirectories(file.getParent());
         Path temporary = file.resolveSibling(file.getFileName() + TEMPORARY_SUFFIX);
-        Files.write(temporary, json);
-        Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        try {
+            Files.write(temporary, json);
+            Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
     }
 
     Path file() {

@@ -57,10 +57,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
 import dev.maxenceng.lazyclaude.session.domain.NotLocated;
+import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.FirstPrompt;
 import dev.maxenceng.lazyclaude.session.published.NoTitle;
+import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -72,6 +74,9 @@ class TranscriptRepositoryTest {
 
     @Mock
     private CacheFallback unwritable;
+
+    @Mock
+    private RootFallback unlistable;
 
     @TempDir
     Path root;
@@ -98,7 +103,7 @@ class TranscriptRepositoryTest {
             release.await();
             return locatedInProject();
         });
-        Thread rescan = Thread.ofPlatform().start(() -> repository.rescanAll(locator, unwritable));
+        Thread rescan = Thread.ofPlatform().start(() -> repository.rescanAll(locator, unwritable, unlistable));
         reading.await();
 
         try {
@@ -121,7 +126,7 @@ class TranscriptRepositoryTest {
                 assistantLine(cwd(), later()),
                 aiTitleLine("Refine PROJ-1"));
 
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         assertThat(repository.pastSessions())
                 .containsExactly(pastSessionOf(sessionId(), new AiTitle("Refine PROJ-1"), cwd(), later(), started(), locatedInProject()));
@@ -131,7 +136,7 @@ class TranscriptRepositoryTest {
     void shouldNeverListASubagentTranscript() throws IOException {
         writeSubagentTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Explore"));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions()).as("a subagents/ file is not a session").isEmpty();
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions()).as("a subagents/ file is not a session").isEmpty();
     }
 
     @Test
@@ -145,7 +150,7 @@ class TranscriptRepositoryTest {
                 assistantLine(cwd(), later()),
                 aiTitleLine("Last title"));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions()).singleElement().satisfies(session -> assertThat(session.session().title()).isEqualTo(new AiTitle("Last title")));
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions()).singleElement().satisfies(session -> assertThat(session.session().title()).isEqualTo(new AiTitle("Last title")));
     }
 
     @Test
@@ -157,7 +162,7 @@ class TranscriptRepositoryTest {
                 userLine(cwd(), started(), "Fix the\n  status line"),
                 userLine(cwd(), later(), "A second prompt"));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions())
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
                 .satisfies(session -> assertThat(session.session().title()).isEqualTo(new FirstPrompt("Fix the status line")));
     }
@@ -171,7 +176,7 @@ class TranscriptRepositoryTest {
                 toolResultLine(cwd(), started()),
                 userLineWithBlocks(cwd(), later(), "Review this change"));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions())
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
                 .satisfies(session -> assertThat(session.session().title())
                         .as("a tool result is not what the session was asked")
@@ -187,7 +192,7 @@ class TranscriptRepositoryTest {
                 metaLine(cwd(), started(), "<system-reminder>context</system-reminder>"),
                 userLine(cwd(), later(), "The real prompt"));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions())
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
                 .satisfies(session -> assertThat(session.session().title()).isEqualTo(new FirstPrompt("The real prompt")));
     }
@@ -196,7 +201,7 @@ class TranscriptRepositoryTest {
     void shouldListASessionWithNeitherTitleNorPromptAsUntitled() throws IOException {
         writeTranscript(projects, folder(), sessionId(), assistantLine(cwd(), started()));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions())
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
                 .satisfies(session -> assertThat(session.session().title()).isEqualTo(new NoTitle()));
     }
@@ -205,7 +210,7 @@ class TranscriptRepositoryTest {
     void shouldNotListATranscriptWithNoCwd() throws IOException {
         writeTranscript(projects, folder(), sessionId(), lineWithoutCwd(started()), aiTitleLine("Orphan"));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions()).isEmpty();
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions()).isEmpty();
         verifyNoInteractions(locator);
     }
 
@@ -213,7 +218,7 @@ class TranscriptRepositoryTest {
     void shouldNotListATranscriptWithNoEntryCarryingATimestamp() throws IOException {
         writeTranscript(projects, folder(), sessionId(), aiTitleLine("Only a title"));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions())
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .as("without a timestamp there is no last activity to order it by")
                 .isEmpty();
     }
@@ -228,7 +233,7 @@ class TranscriptRepositoryTest {
                 notJsonLine(),
                 assistantLine(cwd(), later()));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions())
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
                 .satisfies(session -> assertThat(session.session().lastActivity().value()).isEqualTo(Instant.parse(later())));
     }
@@ -243,7 +248,7 @@ class TranscriptRepositoryTest {
                 assistantLine(cwd(), beyondEpochMillis()),
                 assistantLine(cwd(), later()));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions())
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .as("an instant past what milliseconds can hold is a bad line, not a reason to stop reading")
                 .singleElement()
                 .satisfies(session -> assertThat(session.session().lastActivity().value()).isEqualTo(Instant.parse(later())));
@@ -259,7 +264,7 @@ class TranscriptRepositoryTest {
                 userLine(cwd(), started(), "Refine"),
                 assistantLine("/work/app.worktrees/PROJ-1", later()));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions())
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
                 .satisfies(session -> assertThat(session.session().directory().path()).isEqualTo(Path.of("/work/app.worktrees/PROJ-1")));
     }
@@ -269,13 +274,13 @@ class TranscriptRepositoryTest {
         when(locator.locate(any())).thenReturn(new NotLocated());
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions()).singleElement().satisfies(session -> assertThat(session.location()).isEqualTo(new NotLocated()));
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions()).singleElement().satisfies(session -> assertThat(session.location()).isEqualTo(new NotLocated()));
     }
 
     @Test
     void shouldLocateATranscriptOnceHoweverOftenItGrows() throws IOException {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         append(file, assistantLine(cwd(), later()));
         repository.rescan(List.of(file), locator, unwritable);
@@ -291,7 +296,7 @@ class TranscriptRepositoryTest {
     @Test
     void shouldReadAGrownTranscriptOnlyFromTheOffsetTheCacheHolds() throws IOException {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"), aiTitleLine("AAAA"));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         rewriteInPlace(file, userLine(cwd(), started(), "Refine") + aiTitleLine("BBBB") + assistantLine(cwd(), later()));
         repository.rescan(List.of(file), locator, unwritable);
@@ -307,7 +312,7 @@ class TranscriptRepositoryTest {
     @Test
     void shouldNotConsumeALastLineWithNoNewlineYetAndTakeItWholeNextTime() throws IOException {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
         String half = assistantLine(cwd(), later()).strip();
 
         append(file, half.substring(0, 30));
@@ -327,7 +332,7 @@ class TranscriptRepositoryTest {
                 sessionId(),
                 userLine(cwd(), started(), "A long first prompt that makes the file big"),
                 assistantLine(cwd(), later()));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         rewriteInPlace(file, userLine(cwd(), started(), "Short"));
         repository.rescan(List.of(file), locator, unwritable);
@@ -343,7 +348,7 @@ class TranscriptRepositoryTest {
     @Test
     void shouldReadATranscriptAgainInFullWhenItsFileKeyChanges() throws IOException {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "AAAA"));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
         Path replacement = projects.resolve(folder()).resolve("replacement.tmp");
         Files.writeString(replacement, userLine(cwd(), started(), "BBBB") + assistantLine(cwd(), later()), StandardCharsets.UTF_8);
 
@@ -361,11 +366,11 @@ class TranscriptRepositoryTest {
     void shouldNotReadATranscriptAgainWhenItsSizeModificationTimeAndFileKeyAreTheCaches() throws IOException {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "AAAA"));
         Instant modified = modifiedAt(file);
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         rewriteInPlace(file, userLine(cwd(), started(), "BBBB"));
         touch(file, modified);
-        repository.rescanAll(locator, unwritable);
+        repository.rescanAll(locator, unwritable, unlistable);
 
         assertThat(repository.pastSessions())
                 .singleElement()
@@ -375,10 +380,10 @@ class TranscriptRepositoryTest {
     @Test
     void shouldForgetADeletedTranscriptAndRewriteTheCacheWithoutIt() throws IOException {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         Files.delete(file);
-        repository.rescanAll(locator, unwritable);
+        repository.rescanAll(locator, unwritable, unlistable);
 
         assertThat(repository.pastSessions()).isEmpty();
         assertThat(repositoryOver(projects, cacheFile).pastSessions()).as("deleted by Claude Code's retention, so gone from the cache").isEmpty();
@@ -387,7 +392,7 @@ class TranscriptRepositoryTest {
     @Test
     void shouldForgetADeletedTranscriptWhenOnlyThatFileIsRescanned() throws IOException {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         Files.delete(file);
         repository.rescan(List.of(file), locator, unwritable);
@@ -398,19 +403,19 @@ class TranscriptRepositoryTest {
     @Test
     void shouldForgetEveryTranscriptWhenTheProjectsDirectoryIsGone() throws IOException {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         Files.delete(file);
         Files.delete(file.getParent());
         Files.delete(projects);
-        repository.rescanAll(locator, unwritable);
+        repository.rescanAll(locator, unwritable, unlistable);
 
         assertThat(repository.pastSessions()).isEmpty();
     }
 
     @Test
     void shouldListNothingAndWarnOfNothingWhenTheProjectsDirectoryIsMissing() {
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         assertThat(repository.pastSessions()).isEmpty();
         verifyNoInteractions(locator, unwritable);
@@ -420,7 +425,7 @@ class TranscriptRepositoryTest {
     void shouldNotListATranscriptItCannotReadAndReadItOnItsNextChange() throws IOException {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
         Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("---------"));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
         assertThat(repository.pastSessions()).as("unreadable, so not listed").isEmpty();
 
         Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
@@ -433,7 +438,7 @@ class TranscriptRepositoryTest {
     void shouldAskAgainOnTheNextChangeWhenItsProjectCouldNotBeLocated() throws IOException {
         when(locator.locate(any())).thenThrow(new ProjectUnavailableException("git failed", new InterruptedException())).thenReturn(locatedInProject());
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
         assertThat(repository.pastSessions())
                 .as("a failed lookup must not be cached as 'belongs nowhere'")
                 .isEmpty();
@@ -447,7 +452,7 @@ class TranscriptRepositoryTest {
     @Test
     void shouldListFromTheCacheWithoutReadingAnyTranscript() throws IOException {
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"), assistantLine(cwd(), later()));
-        scanned(projects, cacheFile, locator, unwritable);
+        scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         Files.delete(file);
 
@@ -461,7 +466,7 @@ class TranscriptRepositoryTest {
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "One"));
         writeTranscript(projects, "-work-other", otherSessionId(), userLine(cwd(), later(), "Two"));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable).pastSessions()).hasSize(2);
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions()).hasSize(2);
     }
 
     @Test
@@ -470,22 +475,53 @@ class TranscriptRepositoryTest {
         Files.writeString(blocker, "a file where the cache folder should be", StandardCharsets.UTF_8);
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
         TranscriptRepository repository = new TranscriptRepository(
-                projects, new TranscriptCacheRepository(blocker.resolve("lazyclaude/past-sessions.json")));
+                projects, new TranscriptCacheFile(blocker.resolve("lazyclaude/past-sessions.json")));
 
-        repository.rescanAll(locator, unwritable);
+        repository.rescanAll(locator, unwritable, unlistable);
 
         verify(unwritable).unwritable(any());
         assertThat(repository.pastSessions()).as("past sessions still show, read in full on every start").hasSize(1);
     }
 
     @Test
+    void shouldNameAnAccessDeniedCacheFolderInTheCacheFallback() throws IOException {
+        Path locked = root.resolve("locked");
+        Files.createDirectories(locked);
+        Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("r-x------"));
+        writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
+        TranscriptRepository repository = new TranscriptRepository(projects, new TranscriptCacheFile(locked.resolve("past-sessions.json")));
+
+        repository.rescanAll(locator, unwritable, unlistable);
+
+        verify(unwritable)
+                .unwritable(new Reason("cannot write the cache %s: access denied to %s"
+                        .formatted(locked.resolve("past-sessions.json"), locked.resolve("past-sessions.json.tmp"))));
+    }
+
+    @Test
+    void shouldRaiseTheRootFallbackWhenTheProjectsDirectoryCannotBeListedAndKeepWhatTheCacheHolds() throws IOException {
+        writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
+        Files.setPosixFilePermissions(projects, PosixFilePermissions.fromString("---------"));
+
+        try {
+            repository.rescanAll(locator, unwritable, unlistable);
+        } finally {
+            Files.setPosixFilePermissions(projects, PosixFilePermissions.fromString("rwx------"));
+        }
+
+        verify(unlistable).unlistable(new Reason("cannot list %s: access denied to %s".formatted(projects, projects)));
+        assertThat(repository.pastSessions()).as("a root that cannot be listed says nothing about which transcripts are gone").hasSize(1);
+    }
+
+    @Test
     void shouldNotTouchTheCacheWhenNothingChanged() throws IOException {
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
         Instant written = modifiedAt(cacheFile);
         touch(cacheFile, written.minusSeconds(60));
 
-        repository.rescanAll(locator, unwritable);
+        repository.rescanAll(locator, unwritable, unlistable);
 
         assertThat(modifiedAt(cacheFile)).as("a sweep that finds nothing writes nothing").isEqualTo(written.minusSeconds(60));
         verify(unwritable, never()).unwritable(any());
@@ -497,7 +533,7 @@ class TranscriptRepositoryTest {
         Files.writeString(cacheFile, "garbage", StandardCharsets.UTF_8);
         writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
 
-        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable);
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         assertThat(repositoryOver(projects, cacheFile).pastSessions()).hasSize(1);
         assertThat(repository.pastSessions()).hasSize(1);
