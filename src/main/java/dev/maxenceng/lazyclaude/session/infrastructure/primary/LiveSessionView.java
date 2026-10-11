@@ -2,17 +2,21 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.LiveSession;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
+import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
+import dev.maxenceng.lazyclaude.session.published.TicketLink;
 
-/** One live session as the shell reads it: what its row and the main view show. */
+/** One live session as the shell reads it: what its row and the main view show, and the tickets it is linked to. */
 public record LiveSessionView(
         SessionId id,
         ProcessId pid,
@@ -21,7 +25,8 @@ public record LiveSessionView(
         LocalDateTime startedAt,
         SessionAge age,
         ClaudeVersion version,
-        SessionState state) {
+        SessionState state,
+        List<TicketLink> links) {
 
     static LiveSessionView from(AvailableSessions available, LiveSession session) {
         return builder()
@@ -33,7 +38,18 @@ public record LiveSessionView(
                 .age(available.ageOf(session))
                 .version(session.version())
                 .state(session.state())
+                .links(session.links())
                 .build();
+    }
+
+    /** What the session asks of you, if anything. */
+    public Optional<Marker> marker() {
+        return state.marker();
+    }
+
+    /** How the session is linked to {@code ticket}, if it is. */
+    public Optional<TicketLink> linkTo(String ticket) {
+        return TicketLink.to(links, ticket);
     }
 
     public static LiveSessionViewBuilder builder() {
@@ -49,6 +65,7 @@ public record LiveSessionView(
         private SessionAge age;
         private ClaudeVersion version;
         private SessionState state;
+        private List<TicketLink> links;
 
         private LiveSessionViewBuilder() {}
 
@@ -92,8 +109,13 @@ public record LiveSessionView(
             return this;
         }
 
+        public LiveSessionViewBuilder links(List<TicketLink> links) {
+            this.links = links;
+            return this;
+        }
+
         public LiveSessionView build() {
-            return new LiveSessionView(id, pid, name, directory, startedAt, age, version, state);
+            return new LiveSessionView(id, pid, name, directory, startedAt, age, version, state, links);
         }
     }
 }

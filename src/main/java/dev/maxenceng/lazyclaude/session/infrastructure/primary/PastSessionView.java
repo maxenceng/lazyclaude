@@ -2,21 +2,25 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.PastSession;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
+import dev.maxenceng.lazyclaude.session.published.TicketLink;
 
-/** One past session as the shell reads it: what its row and the main view show. */
+/** One past session as the shell reads it: what its row and the main view show, and the tickets it is linked to. */
 public record PastSessionView(
         SessionId id,
         SessionTitle title,
         Path directory,
         LocalDateTime lastActivity,
         SessionAge age,
-        LocalDateTime startedAt) {
+        LocalDateTime startedAt,
+        List<TicketLink> links) {
 
     static PastSessionView from(AvailableSessions available, PastSession session) {
         return builder()
@@ -26,7 +30,13 @@ public record PastSessionView(
                 .lastActivity(available.lastActiveLocally(session))
                 .age(available.ageOf(session))
                 .startedAt(available.startedLocally(session))
+                .links(session.links())
                 .build();
+    }
+
+    /** How the session is linked to {@code ticket}, if it is. */
+    public Optional<TicketLink> linkTo(String ticket) {
+        return TicketLink.to(links, ticket);
     }
 
     public static PastSessionViewBuilder builder() {
@@ -40,6 +50,7 @@ public record PastSessionView(
         private LocalDateTime lastActivity;
         private SessionAge age;
         private LocalDateTime startedAt;
+        private List<TicketLink> links;
 
         private PastSessionViewBuilder() {}
 
@@ -73,8 +84,13 @@ public record PastSessionView(
             return this;
         }
 
+        public PastSessionViewBuilder links(List<TicketLink> links) {
+            this.links = links;
+            return this;
+        }
+
         public PastSessionView build() {
-            return new PastSessionView(id, title, directory, lastActivity, age, startedAt);
+            return new PastSessionView(id, title, directory, lastActivity, age, startedAt, links);
         }
     }
 }

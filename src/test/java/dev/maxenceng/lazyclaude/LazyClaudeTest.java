@@ -2,6 +2,11 @@ package dev.maxenceng.lazyclaude;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.boardQuery;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
+import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.secondTicketId;
+import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
 import static dev.maxenceng.lazyclaude.docs.domain.ReadDocumentFixture.readDocument;
 import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.docsUnavailable;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQueryFixture.docsQuery;
@@ -57,6 +62,7 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsRepository;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchRepository;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
@@ -257,6 +263,14 @@ class LazyClaudeTest {
         List<WarningView> shown = new ArrayList<>();
         warningQuery(raised).subscribe(shown::add);
         assertThat(shown).isEmpty();
+    }
+
+    @Test
+    void shouldHandTheSessionsTheRootAndTheIdOfEveryTicketOnTheBoard() {
+        BoardView board = boardViewOf(ticketView(), secondTicketView(), doneTicketView());
+
+        assertThat(LazyClaude.sessionPayload(board))
+                .isEqualTo(new SessionPayload(project().root(), List.of(ticketId().value(), secondTicketId().value(), ticketId().value())));
     }
 
     @Test

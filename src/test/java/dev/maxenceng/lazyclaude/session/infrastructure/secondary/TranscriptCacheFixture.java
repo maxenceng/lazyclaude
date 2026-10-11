@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
+import java.util.List;
+
 public final class TranscriptCacheFixture {
 
     private TranscriptCacheFixture() {}
@@ -17,7 +19,9 @@ public final class TranscriptCacheFixture {
                 "Refine PROJ-1",
                 "/ticket start PROJ-1",
                 1_760_170_800_000L,
-                1_760_173_920_000L);
+                1_760_173_920_000L,
+                List.of("PROJ-1"),
+                List.of(new CachedTicketRun("start", List.of("PROJ-1"))));
     }
 
     static CachedTranscript otherCachedTranscript() {
@@ -33,6 +37,8 @@ public final class TranscriptCacheFixture {
                 null,
                 null,
                 1_760_100_000_000L,
-                1_760_110_000_000L);
+                1_760_110_000_000L,
+                List.of(),
+                List.of());
     }
 }

@@ -3,12 +3,15 @@ package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.session.domain.LastActivity;
+import dev.maxenceng.lazyclaude.session.domain.LinkFacts;
 import dev.maxenceng.lazyclaude.session.domain.LocatedInProject;
 import dev.maxenceng.lazyclaude.session.domain.LocatedPastSession;
+import dev.maxenceng.lazyclaude.session.domain.NamedTicketId;
 import dev.maxenceng.lazyclaude.session.domain.NotLocated;
 import dev.maxenceng.lazyclaude.session.domain.PastSession;
 import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
@@ -22,7 +25,9 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * What is known of one transcript, as the cache file holds it: where it was last seen (path, size, modification time and
  * file key, which decide whether it is read again), how far it was read, and the facts drawn from it. Adding a field is a
  * bump of the cache's format version. {@code projectRoot} is null when the {@code cwd} was located in no project, and
- * every other nullable field is null while no line has carried it.
+ * every other nullable field is null while no line has carried it. {@code branchIds} and {@code ticketRuns} are the raw link
+ * facts, every ticket-id prefix of a recorded branch and every {@code /ticket} run, kept whatever the board holds so that a
+ * ticket made later links its sessions without a transcript being read again; they are empty, never null.
  */
 record CachedTranscript(
         String path,
@@ -36,11 +41,16 @@ record CachedTranscript(
         String aiTitle,
         String firstPrompt,
         Long startedAt,
-        Long lastActivity) {
+        Long lastActivity,
+        List<String> branchIds,
+        List<CachedTicketRun> ticketRuns) {
 
     /** Whether the entry holds what every read of it relies on; a cache with one that does not is not trusted at all. */
     boolean isWhole() {
         if (path == null || fileKey == null || sessionId == null || size < 0 || offset < 0 || offset > size) {
+            return false;
+        }
+        if (branchIds == null || ticketRuns == null || !ticketRuns.stream().allMatch(run -> run != null && run.isWhole())) {
             return false;
         }
         try {
@@ -75,6 +85,13 @@ record CachedTranscript(
         } catch (DomainException | InvalidPathException refused) {
             return Optional.empty();
         }
+    }
+
+    LinkFacts linkFacts() {
+        return LinkFacts.builder()
+                .runs(ticketRuns.stream().map(CachedTicketRun::toDomain).toList())
+                .branchIds(branchIds.stream().map(NamedTicketId::new).toList())
+                .build();
     }
 
     private SessionTitle title() {

@@ -15,11 +15,11 @@ public final class SessionQuery {
 
     /** The project's live and past sessions, or why none could be read; never a failure. */
     public SessionsView sessionsFor(SessionPayload payload) {
-        return SessionsView.from(sessions.sessionsFor(payload.toDomain()));
+        return SessionsView.from(sessions.sessionsFor(payload.toDomain(), payload.tickets()));
     }
 
     /** Hands {@code listener} a view on each change and each sweep, on a thread of the watcher's own, not the caller's. */
     public void subscribe(SessionPayload payload, Consumer<SessionsView> listener) {
-        sessions.subscribe(payload.toDomain(), read -> listener.accept(SessionsView.from(read)));
+        sessions.subscribe(payload.toDomain(), payload.tickets(), read -> listener.accept(SessionsView.from(read)));
     }
 }

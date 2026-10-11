@@ -1,8 +1,10 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.util.List;
+import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
+import dev.maxenceng.lazyclaude.session.published.Marker;
 
 /** The project's sessions: the live ones newest start first, then the past ones newest activity first. */
 public record AvailableSessionsView(List<LiveSessionView> live, List<PastSessionView> past) implements SessionsView {
@@ -16,6 +18,19 @@ public record AvailableSessionsView(List<LiveSessionView> live, List<PastSession
                         .map(session -> PastSessionView.from(available, session))
                         .toList())
                 .build();
+    }
+
+    /** The strongest marker among this project's live sessions, linked or not. */
+    public Optional<Marker> strongestMarker() {
+        return Marker.strongest(live.stream().flatMap(session -> session.marker().stream()).toList());
+    }
+
+    /** The strongest marker among the live sessions linked to {@code ticket}, weak links included. */
+    public Optional<Marker> strongestMarkerOf(String ticket) {
+        return Marker.strongest(live.stream()
+                .filter(session -> session.linkTo(ticket).isPresent())
+                .flatMap(session -> session.marker().stream())
+                .toList());
     }
 
     public static AvailableSessionsViewBuilder builder() {

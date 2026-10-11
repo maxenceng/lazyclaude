@@ -1,6 +1,12 @@
 package dev.maxenceng.lazyclaude.session.application;
 
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.boardTickets;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ran;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.strong;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ticketRun;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
+import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedPastSession;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
@@ -18,6 +24,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,7 +67,7 @@ class SessionApplicationServiceTest {
         when(locator.locate(workingDirectoryOf(reportedSession())))
                 .thenReturn(project());
 
-        assertThat(new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).sessionsFor(project()))
+        assertThat(new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).sessionsFor(project(), noTickets()))
                 .isEqualTo(liveSessionsOf(List.of(liveSession())));
     }
 
@@ -69,7 +76,7 @@ class SessionApplicationServiceTest {
         when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable()).thenReturn(List.of());
         List<Sessions> received = new ArrayList<>();
 
-        new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).subscribe(project(), received::add);
+        new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).subscribe(project(), noTickets(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(changed.capture(), any());
         changed.getValue().run();
@@ -85,7 +92,7 @@ class SessionApplicationServiceTest {
         when(sessions.liveSessions(any())).thenReturn(List.of());
         when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
 
-        assertThat(new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).sessionsFor(project()))
+        assertThat(new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).sessionsFor(project(), noTickets()))
                 .isEqualTo(pastSessionsOf(List.of(pastSession())));
     }
 
@@ -94,7 +101,7 @@ class SessionApplicationServiceTest {
         when(sessions.liveSessions(any())).thenReturn(List.of());
         List<Sessions> received = new ArrayList<>();
 
-        new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).subscribe(project(), received::add);
+        new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).subscribe(project(), noTickets(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(transcriptWatch).watch(any(), changed.capture(), any(), any(), any());
         changed.getValue().run();
@@ -102,5 +109,15 @@ class SessionApplicationServiceTest {
         assertThat(received)
                 .as("the transcripts are read on their own thread, so their landing must reach the panel without waiting for the registry")
                 .containsExactly(liveSessionsOf(List.of()));
+    }
+
+    @Test
+    void shouldLinkTheLiveSessionsToTheTicketsItIsHanded() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+        when(past.linkFacts()).thenReturn(Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
+
+        assertThat(new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).sessionsFor(project(), boardTickets()))
+                .isEqualTo(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
     }
 }
