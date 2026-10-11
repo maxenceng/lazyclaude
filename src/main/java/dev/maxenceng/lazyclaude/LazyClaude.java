@@ -26,6 +26,9 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeAgentsRep
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LiveSessionRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptCacheFile;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchRepository;
 import dev.maxenceng.lazyclaude.shared.application.WarningApplicationService;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.StoppedThreadPayload;
@@ -41,6 +44,11 @@ public final class LazyClaude {
     private static final String PREFIX = "lazyclaude: ";
     private static final String USER_HOME = "user.home";
     private static final String REGISTRY = ".claude/sessions";
+    private static final String TRANSCRIPTS = ".claude/projects";
+    private static final String XDG_CACHE_HOME = "XDG_CACHE_HOME";
+    private static final String DEFAULT_CACHE_HOME = ".cache";
+    private static final String CACHE_DIRECTORY = "lazyclaude";
+    private static final String CACHE_FILE = "past-sessions.json";
     private static final Path PROC = Path.of("/proc");
     private static final Path MACHINE_ID = Path.of("/etc/machine-id");
     private static final List<String> CLAUDE_AGENTS = List.of("claude", "agents", "--json");
@@ -87,22 +95,38 @@ public final class LazyClaude {
     }
 
     private static SessionQuery sessionQuery(WarningPort warnings) {
-        Path registry = Path.of(System.getProperty(USER_HOME)).resolve(REGISTRY);
+        Path home = Path.of(System.getProperty(USER_HOME));
+        Path registry = home.resolve(REGISTRY);
+        TranscriptRepository transcripts = new TranscriptRepository(
+                home.resolve(TRANSCRIPTS),
+                new TranscriptCacheFile(cacheHome(home, System.getenv(XDG_CACHE_HOME))
+                        .resolve(CACHE_DIRECTORY)
+                        .resolve(CACHE_FILE)));
         LiveSessionRepository live = new LiveSessionRepository(
                 new SessionRegistryRepository(registry, PROC, MACHINE_ID),
                 new ClaudeAgentsRepository(CLAUDE_AGENTS, CLAUDE_AGENTS_PATIENCE),
                 SessionWatchRepository.SWEEP_INTERVAL);
         return new SessionQuery(new SessionApplicationService(
                 live,
+                transcripts,
                 new ProjectLocatorRepository(),
                 new SessionWatchRepository(registry),
+                new TranscriptWatchRepository(home.resolve(TRANSCRIPTS), transcripts),
                 warnings,
                 Clock.systemDefaultZone()));
     }
 
+    /** {@code $XDG_CACHE_HOME} when it is set to an absolute path, else {@code ~/.cache}, as the XDG base directory spec has it. */
+    static Path cacheHome(Path home, String xdgCacheHome) {
+        if (xdgCacheHome != null && !xdgCacheHome.isBlank() && Path.of(xdgCacheHome).isAbsolute()) {
+            return Path.of(xdgCacheHome);
+        }
+        return home.resolve(DEFAULT_CACHE_HOME);
+    }
+
     /**
      * Opens the shell on the board of the project {@code from} belongs to and that project's docs and
-     * live sessions, or says why there is no board and returns non-zero without opening it. Docs that
+     * live and past sessions, or says why there is no board and returns non-zero without opening it. Docs that
      * cannot be listed and sessions that cannot be read do not stop it: their panels say why.
      */
     static int start(

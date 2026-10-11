@@ -24,7 +24,8 @@ project than the board.
   (ADR 0017's pattern: an adapter more than one context uses).
 - `board` and `session` each take the port in their application service and ask it; neither
   decides what "the project of this path" means. `session` asks for each distinct `cwd` and
-  reads a `ProjectNotFoundException` as "this path belongs to no project here".
+  reads a `ProjectNotFoundException` as "git cannot place this path"; the path rule of ADR 0023
+  then decides whether it is a removed worktree of the project.
 - **A lookup that failed is not an answer.** When `git` cannot be run or the wait for it is
   interrupted, the port throws `ProjectUnavailableException`, not `ProjectNotFoundException`.
   `session` shows *sessions unavailable* for that read instead of dropping the session as

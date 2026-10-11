@@ -16,7 +16,6 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
-import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.app.ToolkitApp;
@@ -65,6 +64,7 @@ public final class Shell extends ToolkitApp {
     private static final String SCROLL_KEYS = "j/k scroll  ^d/^u half page  g/G top/bottom";
     private static final String PANEL_KEYS = "h/l panel";
     private static final String FOLD_KEY = "enter fold";
+    private static final String EXPAND_KEY = "enter expand";
     private static final String FOCUS_KEYS = "alt+h/j/k/l focus";
     private static final String QUIT_KEY = "q quit";
     private static final String KEY_BAR_INDENT = " ";
@@ -256,9 +256,9 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean selectSession(Runnable move) {
-        Optional<SessionId> before = sessions.selectedId();
+        Optional<RowKey> before = sessions.selectedKey();
         move.run();
-        if (!sessions.selectedId().equals(before)) {
+        if (!sessions.selectedKey().equals(before)) {
             mainViewScroll.reset();
         }
         return true;
@@ -287,6 +287,11 @@ public final class Shell extends ToolkitApp {
         }
         if (focus == Focus.DOCS && docs.selectedFolder().isPresent()) {
             docs.toggleFold();
+            return true;
+        }
+        if (focus == Focus.SESSIONS && sessions.olderSelected()) {
+            sessions.expand();
+            mainViewScroll.reset();
             return true;
         }
         return false;
@@ -381,7 +386,13 @@ public final class Shell extends ToolkitApp {
 
     private Element sessionsDetail() {
         return sessions.selected()
-                .<Element>map(session -> new DetailElement(width -> SessionText.facts(session), Optional.empty(), mainViewScroll))
+                .map(row -> switch (row) {
+                    case LiveSessionRow live ->
+                        new DetailElement(width -> SessionText.facts(live.session()), Optional.empty(), mainViewScroll);
+                    case PastSessionRow past ->
+                        new DetailElement(width -> SessionText.pastFacts(past.session()), Optional.empty(), mainViewScroll);
+                    case OlderSessionsRow older -> column();
+                })
                 .orElseGet(() -> column());
     }
 
@@ -422,6 +433,9 @@ public final class Shell extends ToolkitApp {
         keys.add(PANEL_KEYS);
         if (foldable()) {
             keys.add(FOLD_KEY);
+        }
+        if (focus == Focus.SESSIONS && sessions.olderSelected()) {
+            keys.add(EXPAND_KEY);
         }
         keys.add(FOCUS_KEYS);
         keys.add(QUIT_KEY);

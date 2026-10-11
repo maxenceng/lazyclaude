@@ -15,4 +15,17 @@ public final class ReasonFixture {
     public static Reason registryUnreadable() {
         return new Reason("cannot read /home/max/.claude/sessions");
     }
+
+    public static Reason transcriptsUnwatchable() {
+        return new Reason(
+                "cannot watch /home/max/.claude/projects (User limit of inotify watches reached); if the watch limit is reached, raise fs.inotify.max_user_watches");
+    }
+
+    public static Reason transcriptsUnlistable() {
+        return new Reason("cannot list /home/max/.claude/projects: access denied to /home/max/.claude/projects");
+    }
+
+    public static Reason cacheUnwritable() {
+        return new Reason("cannot write the cache /home/max/.cache/lazyclaude/past-sessions.json: Permission denied");
+    }
 }

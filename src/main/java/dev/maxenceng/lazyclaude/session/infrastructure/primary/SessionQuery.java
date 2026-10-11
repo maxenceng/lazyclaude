@@ -4,7 +4,7 @@ import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 
-/** What the shell asks of {@code session}: a project's live sessions as a view, and a view again whenever they may have changed. It only reads. */
+/** What the shell asks of {@code session}: a project's live and past sessions as a view, and a view again whenever they may have changed. It only reads. */
 public final class SessionQuery {
 
     private final SessionApplicationService sessions;
@@ -13,7 +13,7 @@ public final class SessionQuery {
         this.sessions = sessions;
     }
 
-    /** The project's live sessions, or why none could be read; never a failure. */
+    /** The project's live and past sessions, or why none could be read; never a failure. */
     public SessionsView sessionsFor(SessionPayload payload) {
         return SessionsView.from(sessions.sessionsFor(payload.toDomain()));
     }
