@@ -17,6 +17,7 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
@@ -35,7 +36,6 @@ public final class Shell extends ToolkitApp {
     private static final int LEFT_COLUMN_PERCENT = 35;
     private static final int SMALL_PANEL_HEIGHT = 3;
     private static final int SHRUNK_PANEL_HEIGHT = 5;
-    private static final int STATUS_LINE_HEIGHT = 1;
     private static final int KEY_BAR_HEIGHT = 1;
 
     private static final String BOARD_TITLE = "Board";
@@ -75,11 +75,13 @@ public final class Shell extends ToolkitApp {
     private final SessionRows sessions;
     private final AtomicReference<DocsView> pendingDocs = new AtomicReference<>();
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
+    private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private Focus focus = Focus.BOARD;
     private Focus lastLeft = Focus.BOARD;
     private Focus lastRight = Focus.MAIN;
     private Focus mainViewOwner = Focus.BOARD;
+    private Optional<WarningView> warning = Optional.empty();
     private boolean quitRequested;
 
     public Shell(BoardView board, DocsView docs, SessionsView sessions) {
@@ -126,6 +128,25 @@ public final class Shell extends ToolkitApp {
         }
     }
 
+    /**
+     * A warning was raised, or held ones are handed over at start. Callable from any thread: it is applied on the UI thread,
+     * at the next render or key press, so the status line never changes under a frame being drawn.
+     */
+    public void warningsChanged(WarningView view) {
+        pendingWarning.set(view);
+        ToolkitRunner running = runner();
+        if (running != null) {
+            running.runOnRenderThread(this::applyPendingWarning);
+        }
+    }
+
+    private void applyPendingWarning() {
+        WarningView next = pendingWarning.getAndSet(null);
+        if (next != null) {
+            warning = Optional.of(next);
+        }
+    }
+
     @Override
     protected void onStart() {
         runner()
@@ -147,6 +168,7 @@ public final class Shell extends ToolkitApp {
     boolean press(KeyEvent key) {
         applyPendingDocs();
         applyPendingSessions();
+        applyPendingWarning();
         if (key.hasCtrl()) {
             return focus == Focus.MAIN && pressWithCtrl(key);
         }
@@ -288,8 +310,9 @@ public final class Shell extends ToolkitApp {
     protected Element render() {
         applyPendingDocs();
         applyPendingSessions();
+        applyPendingWarning();
         return column(
-                text(EMPTY).length(STATUS_LINE_HEIGHT),
+                new StatusLineElement(warning),
                 row(
                         column(
                                         boardPanel(),

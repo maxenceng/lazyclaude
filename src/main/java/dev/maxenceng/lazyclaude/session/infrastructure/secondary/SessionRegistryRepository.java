@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
+import dev.maxenceng.lazyclaude.session.domain.SourceFallback;
 
 /**
  * Reads Claude Code's registry, {@code ~/.claude/sessions/<pid>.json}, and keeps the records whose process
@@ -32,7 +33,12 @@ public final class SessionRegistryRepository implements LiveSessionPort {
         this.liveness = new LivenessCheck(proc, machineId);
     }
 
+    /** The leaf sources have no other to fall back to, so there is nothing to tell {@code fallback}. */
     @Override
+    public List<ReportedSession> liveSessions(SourceFallback fallback) {
+        return liveSessions();
+    }
+
     public List<ReportedSession> liveSessions() {
         List<Path> files = recordFiles();
         String domain = liveness.thisMachinesDomain();

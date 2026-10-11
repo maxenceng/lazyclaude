@@ -12,6 +12,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class SessionsFixture {
@@ -49,8 +50,8 @@ public final class SessionsFixture {
         return new UnavailableSessions(reason());
     }
 
-    public static SessionManager sessionManager(LiveSessionPort sessions, ProjectLocatorPort locator, SessionWatchPort watch) {
-        return new SessionManager(sessions, locator, watch, sessionClock());
+    public static SessionManager sessionManager(LiveSessionPort sessions, ProjectLocatorPort locator, SessionWatchPort watch, WarningPort warnings) {
+        return new SessionManager(sessions, locator, watch, warnings, sessionClock());
     }
 
     public static WorkingDirectory workingDirectoryOf(ReportedSession session) {

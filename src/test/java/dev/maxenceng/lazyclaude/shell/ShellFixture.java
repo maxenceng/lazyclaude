@@ -9,6 +9,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
@@ -19,6 +20,14 @@ final class ShellFixture {
 
     static Shell shellOn(BoardView board) {
         return new Shell(board, emptyDocsView(), emptySessionsView());
+    }
+
+    static Shell shellWarning(WarningView... warnings) {
+        Shell shell = shellOn(boardViewOf(ticketView()));
+        for (WarningView warning : warnings) {
+            shell.warningsChanged(warning);
+        }
+        return shell;
     }
 
     static Shell shellOnDocs(DocsView docs) {

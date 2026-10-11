@@ -1,13 +1,13 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+
+import dev.maxenceng.lazyclaude.session.domain.WatchFallback;
 
 public final class SessionWatchFixture {
 
@@ -22,32 +22,35 @@ public final class SessionWatchFixture {
         return Duration.ofSeconds(5);
     }
 
+    public static Duration sweepInterval() {
+        return SHORT_SWEEP;
+    }
+
     public static Duration settled() {
         return Duration.ofMillis(700);
     }
 
-    static SessionWatchRepository watching(SessionWatchRepository watcher, ChangeProbe probe) {
-        watcher.watch(probe.listener());
+    static SessionWatchRepository watching(SessionWatchRepository watcher, ChangeProbe probe, WatchFallback fallback) {
+        watcher.watch(probe.listener(), fallback);
         return watcher;
     }
 
-    public static SessionWatchRepository watcherWithoutSweep(Path sessions, ByteArrayOutputStream said) {
+    public static SessionWatchRepository watcherWithoutSweep(Path sessions) {
         return new SessionWatchRepository(
-                sessions, () -> FileSystems.getDefault().newWatchService(), warnings(said), SHORT_BATCH, LONG_SWEEP);
+                sessions, () -> FileSystems.getDefault().newWatchService(), SHORT_BATCH, LONG_SWEEP);
     }
 
-    public static SessionWatchRepository sweepingWatcher(Path sessions, ByteArrayOutputStream said) {
+    public static SessionWatchRepository sweepingWatcher(Path sessions) {
         return new SessionWatchRepository(
-                sessions, () -> FileSystems.getDefault().newWatchService(), warnings(said), SHORT_BATCH, SHORT_SWEEP);
+                sessions, () -> FileSystems.getDefault().newWatchService(), SHORT_BATCH, SHORT_SWEEP);
     }
 
-    public static SessionWatchRepository watcherWithoutInotify(Path sessions, ByteArrayOutputStream said) {
+    public static SessionWatchRepository watcherWithoutInotify(Path sessions) {
         return new SessionWatchRepository(
                 sessions,
                 () -> {
                     throw new IOException("User limit of inotify watches reached");
                 },
-                warnings(said),
                 SHORT_BATCH,
                 SHORT_SWEEP);
     }
@@ -64,9 +67,5 @@ public final class SessionWatchFixture {
             }
         });
         return writer::interrupt;
-    }
-
-    private static PrintStream warnings(ByteArrayOutputStream said) {
-        return new PrintStream(said, true, StandardCharsets.UTF_8);
     }
 }

@@ -29,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 @ExtendWith(MockitoExtension.class)
 class SessionQueryTest {
@@ -44,38 +45,41 @@ class SessionQueryTest {
     @Mock
     private SessionWatchPort watch;
 
+    @Mock
+    private WarningPort warnings;
+
     @Test
     void shouldViewNoSessionsWhenNoneIsLive() {
-        when(sessions.liveSessions()).thenReturn(List.of());
+        when(sessions.liveSessions(any())).thenReturn(List.of());
 
-        assertThat(sessionQuery(sessions, locator, watch).sessionsFor(OF_THE_PROJECT)).isEqualTo(emptySessionsView());
+        assertThat(sessionQuery(sessions, locator, watch, warnings).sessionsFor(OF_THE_PROJECT)).isEqualTo(emptySessionsView());
     }
 
     @Test
     void shouldViewEachSessionWithItsAgeNewestFirst() {
-        when(sessions.liveSessions()).thenReturn(List.of(oldestReportedSession(), reportedSession(), newestReportedSession()));
+        when(sessions.liveSessions(any())).thenReturn(List.of(oldestReportedSession(), reportedSession(), newestReportedSession()));
         when(locator.locate(any())).thenReturn(project());
 
-        assertThat(sessionQuery(sessions, locator, watch).sessionsFor(OF_THE_PROJECT))
+        assertThat(sessionQuery(sessions, locator, watch, warnings).sessionsFor(OF_THE_PROJECT))
                 .isEqualTo(sessionsViewOf(List.of(newestSessionView(), sessionView(), oldestSessionView())));
     }
 
     @Test
     void shouldViewWhyWhenNoSourceAnswers() {
-        when(sessions.liveSessions()).thenThrow(sessionsUnavailable());
+        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
 
-        assertThat(sessionQuery(sessions, locator, watch).sessionsFor(OF_THE_PROJECT))
+        assertThat(sessionQuery(sessions, locator, watch, warnings).sessionsFor(OF_THE_PROJECT))
                 .isEqualTo(unavailableSessionsView());
     }
 
     @Test
     void shouldHandTheListenerAViewWheneverTheWatcherReportsAChange() {
-        when(sessions.liveSessions()).thenReturn(List.of());
+        when(sessions.liveSessions(any())).thenReturn(List.of());
         List<SessionsView> received = new ArrayList<>();
 
-        sessionQuery(sessions, locator, watch).subscribe(OF_THE_PROJECT, received::add);
+        sessionQuery(sessions, locator, watch, warnings).subscribe(OF_THE_PROJECT, received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(watch).watch(changed.capture());
+        verify(watch).watch(changed.capture(), any());
         changed.getValue().run();
         changed.getValue().run();
 

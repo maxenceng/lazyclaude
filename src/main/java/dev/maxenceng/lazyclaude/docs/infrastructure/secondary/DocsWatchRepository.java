@@ -6,7 +6,6 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
@@ -28,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
+import dev.maxenceng.lazyclaude.docs.domain.WatchFallback;
 import dev.maxenceng.lazyclaude.docs.published.DocumentPath;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
@@ -47,13 +47,10 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     private static final Path DOCS = Path.of("docs");
     private static final String BACKLOG = "backlog";
     private static final String SEPARATOR = "/";
-    private static final String WARNING =
-            "lazyclaude: %s; checking it every %d s instead. If the cause is the watch limit, raise the fs.inotify.max_user_watches sysctl.";
     private static final String WORKER_NAME = "docs-watch";
 
     private final WatchServiceFactory services;
     private final DirectoryRegistrar registrar;
-    private final PrintStream warnings;
     private final Duration batchWindow;
     private final Duration pollInterval;
     private final AtomicBoolean warned = new AtomicBoolean();
@@ -61,11 +58,10 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     private final List<Thread> workers = new CopyOnWriteArrayList<>();
     private final Map<Path, WatchKey> watched = new ConcurrentHashMap<>();
 
-    public DocsWatchRepository(PrintStream warnings) {
+    public DocsWatchRepository() {
         this(
                 () -> FileSystems.getDefault().newWatchService(),
                 (service, directory) -> directory.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY),
-                warnings,
                 BATCH_WINDOW,
                 POLL_INTERVAL);
     }
@@ -73,18 +69,16 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     DocsWatchRepository(
             WatchServiceFactory services,
             DirectoryRegistrar registrar,
-            PrintStream warnings,
             Duration batchWindow,
             Duration pollInterval) {
         this.services = services;
         this.registrar = registrar;
-        this.warnings = warnings;
         this.batchWindow = batchWindow;
         this.pollInterval = pollInterval;
     }
 
     @Override
-    public void watch(Project project, Runnable changed) {
+    public void watch(Project project, Runnable changed, WatchFallback fallback) {
         Path docs = project.root().resolve(DOCS);
         // deferred: a project without docs/ at start is never watched, so a docs/ created later shows up only after a restart — close it when someone starts a project that way.
         if (!Files.isDirectory(docs)) {
@@ -93,9 +87,9 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         Path backlog = docs.resolve(BACKLOG);
         try {
             WatchService service = watchOver(docs, backlog);
-            start(() -> watchLoop(service, backlog, docs, changed));
+            start(() -> watchLoop(service, backlog, docs, changed, fallback));
         } catch (WatchUnavailableException unavailable) {
-            giveUpWatching(unavailable);
+            giveUpWatching(unavailable, fallback);
             Map<String, String> seen = snapshot(docs, Map.of());
             start(() -> pollLoop(docs, seen, changed));
         }
@@ -130,8 +124,8 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     }
 
     // deferred: docs/ deleted and created again while running is not watched again until a restart — close it when a checkout that swaps docs/ wholesale is used day to day.
-    // deferred: an exception other than a closed or interrupted watch ends this thread without a word — close it when a re-read can fail in a way the domain does not turn into a value.
-    private void watchLoop(WatchService service, Path backlog, Path docs, Runnable changed) {
+    // deferred: an exception other than a closed or interrupted watch ends this thread, and the JVM prints it on stderr over the screen — close it when a re-read can fail in a way the domain does not turn into a value.
+    private void watchLoop(WatchService service, Path backlog, Path docs, Runnable changed, WatchFallback fallback) {
         try {
             while (true) {
                 boolean relevant = process(service, service.take(), backlog, docs);
@@ -148,7 +142,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
             Thread.currentThread().interrupt();
         } catch (WatchUnavailableException unavailable) {
             closeQuietly(service);
-            giveUpWatching(unavailable);
+            giveUpWatching(unavailable, fallback);
             pollLoop(docs, snapshot(docs, Map.of()), changed);
         }
     }
@@ -247,9 +241,9 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
         }
     }
 
-    private void giveUpWatching(WatchUnavailableException unavailable) {
+    private void giveUpWatching(WatchUnavailableException unavailable, WatchFallback fallback) {
         if (warned.compareAndSet(false, true)) {
-            warnings.println(WARNING.formatted(unavailable.getMessage(), pollInterval.toSeconds()));
+            fallback.polling(unavailable.getMessage(), pollInterval);
         }
     }
 

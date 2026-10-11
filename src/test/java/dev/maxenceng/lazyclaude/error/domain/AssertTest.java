@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
@@ -83,5 +84,22 @@ class AssertTest {
     @Test
     void shouldAcceptAnAbsolutePath() {
         assertThatCode(() -> Assert.absolute("root", Path.of("/work/app"))).doesNotThrowAnyException();
+    }
+
+    @Test
+    void shouldRefuseAnEmptyCollectionNamingItsField() {
+        assertThatThrownBy(() -> Assert.notEmpty("warnings", List.of()))
+                .isInstanceOf(EmptyValueException.class)
+                .hasMessage("warnings is empty");
+    }
+
+    @Test
+    void shouldRefuseAMissingCollectionBeforeCheckingItIsEmpty() {
+        assertThatThrownBy(() -> Assert.notEmpty("warnings", null)).isInstanceOf(MissingMandatoryValueException.class);
+    }
+
+    @Test
+    void shouldAcceptACollectionWithOneElement() {
+        assertThatCode(() -> Assert.notEmpty("warnings", List.of("a"))).doesNotThrowAnyException();
     }
 }

@@ -21,7 +21,7 @@ Not contexts:
 | Package | Role |
 |---|---|
 | `shell` | The TamboUI application. Asks each context through the `*Query` in its `infrastructure.primary`, which answers `*View`s made of the context's `published` value objects (ADR 0011, ADR 0012), composing them into screens and keys, and joins them: a ticket's marker is the strongest state among its linked sessions. |
-| `shared` | Shared kernel. In `shared.domain` (ADR 0010): `Project`, the main worktree's root that `board`, `docs`, `session` and `review` all work in, and what locates it: `ProjectLocatorPort`, `WorkingDirectory`, `ProjectNotFoundException` and `ProjectUnavailableException` (ADR 0019). In `shared.infrastructure.secondary` (ADR 0017): `Utf8Text`, the decoding both `board`'s and `docs`' adapters read files with, and `ProjectLocatorRepository`, the git lookup `board` and `session` share (ADR 0019). |
+| `shared` | Shared kernel. In `shared.domain` (ADR 0010): `Project`, the main worktree's root that `board`, `docs`, `session` and `review` all work in, and what locates it: `ProjectLocatorPort`, `WorkingDirectory`, `ProjectNotFoundException` and `ProjectUnavailableException` (ADR 0019). In `shared.infrastructure.secondary` (ADR 0017): `Utf8Text`, the decoding both `board`'s and `docs`' adapters read files with, and `ProjectLocatorRepository`, the git lookup `board` and `session` share (ADR 0019). Warnings (ADR 0022): `Warning` and `WarningPort`, raised by the `docs` and `session` managers; `WarningRepository` holds them, and the shell reads them through `WarningQuery`, the kernel's one primary adapter. |
 | `error` | Error kernel: `DomainException`, its status, and `Assert` (in `error.domain`, ADR 0011). |
 
 ## Relationships

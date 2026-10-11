@@ -11,6 +11,7 @@ import java.util.concurrent.TimeoutException;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
+import dev.maxenceng.lazyclaude.session.domain.SourceFallback;
 
 /**
  * Asks {@code claude agents --json}, Claude Code's documented listing, which already leaves out dead
@@ -29,7 +30,12 @@ public final class ClaudeAgentsRepository implements LiveSessionPort {
         this.patience = patience;
     }
 
+    /** The leaf sources have no other to fall back to, so there is nothing to tell {@code fallback}. */
     @Override
+    public List<ReportedSession> liveSessions(SourceFallback fallback) {
+        return liveSessions();
+    }
+
     public List<ReportedSession> liveSessions() {
         byte[] output = run();
         return SessionRecords.records(output, SOURCE).stream()

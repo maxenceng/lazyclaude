@@ -111,6 +111,22 @@ class ArchitectureTest {
             .haveFullyQualifiedName(java.nio.file.WatchService.class.getName())
             .allowEmptyShould(true);
 
+    // A line printed while the screen is up lands on the drawn frame (ADR 0022); only the refusal to start prints.
+    @ArchTest
+    static final ArchRule only_the_composition_root_prints = noClasses()
+            .that()
+            .doNotHaveFullyQualifiedName(LazyClaude.class.getName())
+            .should()
+            .accessField(System.class, "err")
+            .orShould()
+            .accessField(System.class, "out")
+            .orShould()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName(java.io.PrintStream.class.getName())
+            .orShould()
+            .callMethod(Throwable.class, "printStackTrace")
+            .allowEmptyShould(true);
+
     // Jackson parses what other tools write; it stays in the adapter that reads it, never in a domain or a screen.
     @ArchTest
     static final ArchRule json_is_parsed_only_in_secondary_adapters = noClasses()
@@ -137,12 +153,12 @@ class ArchitectureTest {
             .should(onlyReachOtherContextsThroughPublished())
             .allowEmptyShould(true);
 
-    // The shell asks a context through its primary adapter and reads what that hands back; it never sees a domain.
+    // The shell asks a context or a kernel through its primary adapter and reads what that hands back; it never sees a domain (ADR 0022).
     @ArchTest
-    static final ArchRule the_shell_reaches_contexts_only_through_primary_and_published = classes()
+    static final ArchRule the_shell_reaches_modules_only_through_primary_and_published = classes()
             .that()
             .resideInAPackage(ROOT + ".*..")
-            .should(reachContextsOnlyThroughPrimaryAndPublishedFromTheShell())
+            .should(reachModulesOnlyThroughPrimaryAndPublishedFromTheShell())
             .allowEmptyShould(true);
 
     // The shell composes contexts; a context that knew about the shell could not be reused or tested alone.
@@ -466,8 +482,8 @@ class ArchitectureTest {
         };
     }
 
-    private static ArchCondition<JavaClass> reachContextsOnlyThroughPrimaryAndPublishedFromTheShell() {
-        return new ArchCondition<>("reach a context, from the shell, only through its infrastructure.primary or published package") {
+    private static ArchCondition<JavaClass> reachModulesOnlyThroughPrimaryAndPublishedFromTheShell() {
+        return new ArchCondition<>("reach a context or a kernel, from the shell, only through its infrastructure.primary or published package") {
             @Override
             public void check(JavaClass origin, ConditionEvents events) {
                 if (kindOf(origin) != ModuleType.SHELL) {
@@ -475,7 +491,7 @@ class ArchitectureTest {
                 }
                 for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
                     JavaClass target = dependency.getTargetClass();
-                    String to = contextOf(target);
+                    String to = contextOrKernelOf(target);
                     if (to != null && !isIn(target, to, "infrastructure.primary") && !isIn(target, to, "published")) {
                         events.add(SimpleConditionEvent.violated(dependency, dependency.getDescription()));
                     }
@@ -492,6 +508,11 @@ class ArchitectureTest {
 
     private static String contextOf(JavaClass javaClass) {
         return kindOf(javaClass) == ModuleType.CONTEXT ? moduleNameOf(javaClass) : null;
+    }
+
+    private static String contextOrKernelOf(JavaClass javaClass) {
+        ModuleType kind = kindOf(javaClass);
+        return kind == ModuleType.CONTEXT || kind == ModuleType.KERNEL ? moduleNameOf(javaClass) : null;
     }
 
     private static ModuleType kindOf(JavaClass javaClass) {

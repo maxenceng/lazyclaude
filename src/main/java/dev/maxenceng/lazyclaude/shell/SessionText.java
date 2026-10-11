@@ -79,7 +79,7 @@ final class SessionText {
         rows.add(new DetailRow(
                 HEADING_FORMAT.formatted(session.name().value(), glyph(session.state()), label(session.state())),
                 Style.EMPTY.bold()));
-        rows.add(fact(CWD, session.directory().path().toString()));
+        rows.add(fact(CWD, session.directory().toString()));
         rows.add(fact(PID, Long.toString(session.pid().value())));
         rows.add(fact(STARTED_FACT, STARTED_FORMAT.formatted(STARTED.format(session.startedAt()), session.age().label())));
         switch (session.version()) {

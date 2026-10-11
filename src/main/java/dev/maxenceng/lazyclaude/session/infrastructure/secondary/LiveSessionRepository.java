@@ -1,6 +1,5 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
-import java.io.PrintStream;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -8,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
+import dev.maxenceng.lazyclaude.session.domain.SourceFallback;
 
 /**
  * The machine's live sessions from the registry, or from {@code claude agents --json} while the registry
@@ -16,24 +16,20 @@ import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
  */
 public final class LiveSessionRepository implements LiveSessionPort {
 
-    private static final String WARNING = "lazyclaude: %s; asking claude agents --json every %d s instead.";
-
     private final SessionRegistryRepository registry;
     private final ClaudeAgentsRepository agents;
-    private final PrintStream warnings;
-    private final Duration poll;
+    private final Duration sweep;
     private final AtomicBoolean warned = new AtomicBoolean();
 
     public LiveSessionRepository(
-            SessionRegistryRepository registry, ClaudeAgentsRepository agents, PrintStream warnings, Duration poll) {
+            SessionRegistryRepository registry, ClaudeAgentsRepository agents, Duration sweep) {
         this.registry = registry;
         this.agents = agents;
-        this.warnings = warnings;
-        this.poll = poll;
+        this.sweep = sweep;
     }
 
     @Override
-    public List<ReportedSession> liveSessions() {
+    public List<ReportedSession> liveSessions(SourceFallback fallback) {
         SessionsUnavailableException unusable;
         try {
             return registry.liveSessions();
@@ -42,7 +38,7 @@ public final class LiveSessionRepository implements LiveSessionPort {
         }
         try {
             List<ReportedSession> live = agents.liveSessions();
-            warnOnce(unusable);
+            warnOnce(unusable, fallback);
             return live;
         } catch (SessionsUnavailableException agentsFailure) {
             throw new SessionsUnavailableException(
@@ -50,9 +46,9 @@ public final class LiveSessionRepository implements LiveSessionPort {
         }
     }
 
-    private void warnOnce(SessionsUnavailableException registryFailure) {
+    private void warnOnce(SessionsUnavailableException registryFailure, SourceFallback fallback) {
         if (warned.compareAndSet(false, true)) {
-            warnings.println(WARNING.formatted(registryFailure.getMessage(), poll.toSeconds()));
+            fallback.askingClaudeAgents(registryFailure.getMessage(), sweep);
         }
     }
 }

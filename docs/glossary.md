@@ -17,11 +17,13 @@ words mean.
 |---|---|---|
 | Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; sessions group under the one their `cwd` belongs to, so a ticket worktree's sessions sit under its project. A session whose `cwd` is outside git is grouped on its own. | `shared` |
 | Working directory | The directory lazyclaude was started in, or a session's `cwd`; the project is located from it. | `shared` |
+| Warning | A degraded mode lazyclaude carries on in (the docs watch fell back to polling, the sessions watch left to its sweep, live sessions read from `claude agents`), named once by the source that falls back; it shows on the status line until quit, and is never printed over the screen. | `shared` |
 
 ## shell
 
 | Term | Meaning | Where it lives |
 |---|---|---|
+| Status line | The top row of the screen: the newest warning on the right (`⚠ <text>`, or `⚠ 2 · <text>` once there are two), cut with `…` rather than wrapped. | `shell` |
 | Main view | The right column's top pane, which shows the selection of whichever left panel last had focus; for a ticket, its frontmatter and its body rendered as markdown, for a document, its markdown rendered. | `shell` |
 | Ticket detail | What the main view shows for a ticket: its facts line, its other frontmatter keys, a rule, then its body rendered as markdown. It scrolls as one unit. | `shell` |
 

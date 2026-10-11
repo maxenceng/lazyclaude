@@ -16,21 +16,30 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.Registry
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.RegistryFixture.writeRecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
+import dev.maxenceng.lazyclaude.session.domain.SourceFallback;
 
+@ExtendWith(MockitoExtension.class)
 class LiveSessionRepositoryTest {
 
     private static final Path CWD = Path.of("/work/app");
@@ -39,7 +48,9 @@ class LiveSessionRepositoryTest {
     @TempDir
     Path root;
 
-    private final ByteArrayOutputStream said = new ByteArrayOutputStream();
+    @Mock
+    private SourceFallback fallback;
+
     private Path sessions;
     private Path proc;
     private SessionRegistryRepository registry;
@@ -57,21 +68,21 @@ class LiveSessionRepositoryTest {
         runningProcess(proc, registeredPid(), "claude", "175781");
         ClaudeAgentsRepository agents = new ClaudeAgentsRepository(List.of(missingCommand()), PATIENCE);
 
-        assertThat(repositoryOver(registry, said, agents).liveSessions()).containsExactly(registeredBusy(CWD));
-        assertThat(said.toString(StandardCharsets.UTF_8)).as("no fallback, so nothing to warn about").isEmpty();
+        assertThat(repositoryOver(registry, agents).liveSessions(fallback)).containsExactly(registeredBusy(CWD));
+        verifyNoInteractions(fallback);
     }
 
     @Test
     void shouldFallBackToClaudeAgentsWhenTheRegistryIsMissingAndWarnOnceNamingWhy() throws IOException {
         Path claude = claudePrinting(root, agentsJson(List.of(agent(registeredPid(), registeredSessionId(), CWD, "busy"))));
-        LiveSessionRepository repository = repositoryOver(registry, said, new ClaudeAgentsRepository(List.of(claude.toString()), PATIENCE));
+        LiveSessionRepository repository = repositoryOver(registry, new ClaudeAgentsRepository(List.of(claude.toString()), PATIENCE));
 
-        assertThat(repository.liveSessions()).containsExactly(reportedByAgents(CWD, ReportedStatus.BUSY));
-        assertThat(repository.liveSessions()).containsExactly(reportedByAgents(CWD, ReportedStatus.BUSY));
+        assertThat(repository.liveSessions(fallback)).containsExactly(reportedByAgents(CWD, ReportedStatus.BUSY));
+        assertThat(repository.liveSessions(fallback)).containsExactly(reportedByAgents(CWD, ReportedStatus.BUSY));
 
-        assertThat(said.toString(StandardCharsets.UTF_8))
-                .contains(sessions.toString(), "claude agents --json", "2 s")
-                .hasLineCount(1);
+        ArgumentCaptor<String> cause = ArgumentCaptor.forClass(String.class);
+        verify(fallback, times(1)).askingClaudeAgents(cause.capture(), eq(Duration.ofSeconds(2)));
+        assertThat(cause.getValue()).contains(sessions.toString());
     }
 
     @Test
@@ -80,15 +91,17 @@ class LiveSessionRepositoryTest {
         runningProcess(proc, registeredPid(), "claude", "175781");
         Path claude = claudePrinting(root, "[]");
 
-        assertThat(repositoryOver(registry, said, new ClaudeAgentsRepository(List.of(claude.toString()), PATIENCE)).liveSessions()).isEmpty();
-        assertThat(said.toString(StandardCharsets.UTF_8)).contains("17234.json");
+        assertThat(repositoryOver(registry, new ClaudeAgentsRepository(List.of(claude.toString()), PATIENCE)).liveSessions(fallback)).isEmpty();
+        ArgumentCaptor<String> cause = ArgumentCaptor.forClass(String.class);
+        verify(fallback).askingClaudeAgents(cause.capture(), any());
+        assertThat(cause.getValue()).contains("17234.json");
     }
 
     @Test
     void shouldNameBothReasonsWhenNeitherSourceAnswers() {
-        LiveSessionRepository repository = repositoryOver(registry, said, new ClaudeAgentsRepository(List.of(missingCommand()), PATIENCE));
+        LiveSessionRepository repository = repositoryOver(registry, new ClaudeAgentsRepository(List.of(missingCommand()), PATIENCE));
 
-        assertThatThrownBy(repository::liveSessions)
+        assertThatThrownBy(() -> repository.liveSessions(fallback))
                 .isInstanceOf(SessionsUnavailableException.class)
                 .hasMessageContaining(sessions.toString())
                 .hasMessageContaining(missingCommand());
