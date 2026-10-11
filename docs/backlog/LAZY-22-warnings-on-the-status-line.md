@@ -1,6 +1,6 @@
 ---
 id: LAZY-22
-status: in-review
+status: done
 context: cross-context
 type: feature
 tracker_id: 91
@@ -55,3 +55,10 @@ j/k move  h/l panel  ? keys
 Raised in the review of [SESSION-1](SESSION-1-live-sessions.md). `LiveSessionRepository`'s fallback warning and `DocsWatchRepository`'s watch warning both print to stderr. One that first fires after start-up lands on top of the drawn screen. The fix is suggested to sit in the shell, as a status-line message both warnings go through.
 
 Refining found a third warning the draft missed, `SessionWatchRepository`'s "cannot watch sessions", which fires only at start-up; it is in scope. The status line is shared with the session markers planned by the layout tickets, so the warning takes the right side rather than the whole line.
+
+Closed after [#12](https://github.com/maxenceng/lazyclaude/pull/12). Review changed the Model decision in one place. ADR 0022 records it, and the section above is left as decided:
+
+- The three adapters hold no `WarningPort`. `ports_are_held_only_by_the_domain` forbids a port field in a secondary adapter. Each one reports its fallback through a callback on its context's port (`WatchFallback`, `SourceFallback`), and the `docs` and `session` managers raise the warning. Each manager names a degraded mode once, through a kernel `WarnOnce`.
+- Review widened the scope by one warning: a thread that ends on an uncaught failure raises one, through `WarningCommand`. The `main` thread still prints, since the screen is gone by then.
+- `SessionView` now carries a `Path` rather than the kernel's `WorkingDirectory`. The shell-reach rule now covers kernels too.
+- Moving the registry-or-`claude agents` choice into `SessionManager` was rejected for now; a `deferred:` note on `LiveSessionRepository` records it.
