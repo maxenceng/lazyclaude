@@ -21,6 +21,9 @@ class WarningManagerTest {
     @Mock
     private WarningWatchPort watch;
 
+    @Mock
+    private WarningPort warnings;
+
     @InjectMocks
     private WarningManager manager;
 
@@ -35,5 +38,14 @@ class WarningManagerTest {
         listener.getValue().accept(warnings());
 
         assertThat(received).containsExactly(warnings());
+    }
+
+    @Test
+    void shouldRaiseAWarningNamingTheThreadThatStoppedAndWhy() {
+        manager.threadStopped("docs-watch", "java.lang.IllegalStateException: gone");
+
+        verify(warnings)
+                .raise(new Warning(
+                        "docs-watch stopped (java.lang.IllegalStateException: gone); what it kept current no longer updates."));
     }
 }

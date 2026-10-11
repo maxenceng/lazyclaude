@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.shared.application.WarningApplicationService;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningWatchPort;
 import dev.maxenceng.lazyclaude.shared.domain.Warnings;
 
@@ -27,10 +28,13 @@ class WarningQueryTest {
     @Mock
     private WarningWatchPort watch;
 
+    @Mock
+    private WarningPort warnings;
+
     @Test
     void shouldHandTheListenerTheNewestWarningAndHowManyThereAre() {
         List<WarningView> received = new ArrayList<>();
-        new WarningQuery(new WarningApplicationService(watch)).subscribe(received::add);
+        new WarningQuery(new WarningApplicationService(watch, warnings)).subscribe(received::add);
 
         listener().accept(warnings());
         listener().accept(twoWarnings());

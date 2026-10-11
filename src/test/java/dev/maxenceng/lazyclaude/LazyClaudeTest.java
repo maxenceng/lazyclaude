@@ -17,6 +17,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionVie
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.unavailableSessionsView;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.warning;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningCommandFixture.warningCommand;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQueryFixture.warningQuery;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.linkedWorktree;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.removeBacklog;
@@ -58,6 +59,7 @@ import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.ProjectLocatorRepository;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepository;
 import dev.maxenceng.lazyclaude.shell.Screen;
@@ -224,6 +226,37 @@ class LazyClaudeTest {
 
         assertThat(Screen.of(shell).statusLine()).endsWith(warning().text());
         assertThat(said.size()).as("nothing reaches stderr while the screen is up").isZero();
+    }
+
+    @Test
+    void shouldShowAWarningWhenAThreadOtherThanMainStopsOnAFailureNobodyCaught() throws Exception {
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), warningQuery(raised));
+        Thread.UncaughtExceptionHandler handler = LazyClaude.warnOfStoppedThreads(Thread.currentThread(), warningCommand(raised), err);
+
+        Thread.ofPlatform()
+                .name("docs-watch")
+                .uncaughtExceptionHandler(handler)
+                .start(() -> {
+                    throw new IllegalStateException("gone");
+                })
+                .join();
+
+        assertThat(Screen.of(shell).statusLine()).contains("⚠ docs-watch stopped (java.lang.IllegalStateException: gone)");
+        assertThat(said.size()).as("a dying watcher must not print its stack trace over the screen").isZero();
+    }
+
+    @Test
+    void shouldPrintAFailureThatEndsTheMainThreadSinceTheScreenIsGoneByThen() {
+        Thread.UncaughtExceptionHandler handler = LazyClaude.warnOfStoppedThreads(Thread.currentThread(), warningCommand(raised), err);
+
+        handler.uncaughtException(Thread.currentThread(), new IllegalStateException("gone"));
+
+        assertThat(said.toString(StandardCharsets.UTF_8))
+                .as("main carries the shell, so a failure there would otherwise vanish into a warning nobody sees")
+                .contains("java.lang.IllegalStateException: gone");
+        List<WarningView> shown = new ArrayList<>();
+        warningQuery(raised).subscribe(shown::add);
+        assertThat(shown).isEmpty();
     }
 
     @Test

@@ -1,6 +1,7 @@
 /**
  * Shared kernel: types more than one context's domain needs (ADR 0010), and the warnings those
- * contexts raise, read by the shell through WarningQuery (ADR 0022).
+ * contexts raise (Warning, WarningPort, WarnOnce), read by the shell through WarningQuery and raised
+ * for a stopped thread through WarningCommand (ADR 0022).
  * Keep this small — anything that belongs to one context belongs in that context.
  */
 @ApplicationModule(type = KERNEL)

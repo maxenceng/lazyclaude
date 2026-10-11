@@ -15,6 +15,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.shared.domain.Warning;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningWatchPort;
 import dev.maxenceng.lazyclaude.shared.domain.Warnings;
 
@@ -23,6 +25,9 @@ class WarningApplicationServiceTest {
 
     @Mock
     private WarningWatchPort watch;
+
+    @Mock
+    private WarningPort warnings;
 
     @InjectMocks
     private WarningApplicationService service;
@@ -38,5 +43,14 @@ class WarningApplicationServiceTest {
         listener.getValue().accept(twoWarnings());
 
         assertThat(received).containsExactly(twoWarnings());
+    }
+
+    @Test
+    void shouldRaiseAWarningForAThreadThatStopped() {
+        service.threadStopped("session-watch", "java.lang.IllegalStateException: gone");
+
+        verify(warnings)
+                .raise(new Warning(
+                        "session-watch stopped (java.lang.IllegalStateException: gone); what it kept current no longer updates."));
     }
 }

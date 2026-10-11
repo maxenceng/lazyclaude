@@ -29,6 +29,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.domain.WatchFallback;
+import dev.maxenceng.lazyclaude.session.published.Reason;
 
 @ExtendWith(MockitoExtension.class)
 class SessionWatchRepositoryTest {
@@ -130,9 +131,9 @@ class SessionWatchRepositoryTest {
     void shouldWarnOnceNamingTheDirectoryWhenTheWatchCannotBeSetUp() {
         watcher = watching(watcherWithoutInotify(sessions), probe, fallback);
 
-        ArgumentCaptor<String> cause = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
         verify(fallback).sweepingAlone(cause.capture(), eq(sweepInterval()));
-        assertThat(cause.getValue()).contains(sessions.toString()).contains("User limit of inotify watches reached");
+        assertThat(cause.getValue().value()).contains(sessions.toString()).contains("User limit of inotify watches reached");
     }
 
     @Test
@@ -147,9 +148,9 @@ class SessionWatchRepositoryTest {
     void shouldWarnAndSweepWhenTheRegistryDirectoryDoesNotExist() throws Exception {
         watcher = watching(sweepingWatcher(root.resolve("absent")), probe, fallback);
 
-        ArgumentCaptor<String> cause = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
         verify(fallback).sweepingAlone(cause.capture(), any());
-        assertThat(cause.getValue()).contains("absent");
+        assertThat(cause.getValue().value()).contains("absent");
         assertThat(probe.changedWithin(within())).isTrue();
     }
 }

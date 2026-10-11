@@ -28,6 +28,8 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistry
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRepository;
 import dev.maxenceng.lazyclaude.shared.application.WarningApplicationService;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.StoppedThreadPayload;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningCommand;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.ProjectLocatorRepository;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepository;
@@ -50,7 +52,10 @@ public final class LazyClaude {
         BoardQuery board = new BoardQuery(
                 new BoardApplicationService(new ProjectLocatorRepository(), new BacklogRepository()));
         WarningRepository warningRepository = new WarningRepository();
-        WarningQuery warnings = new WarningQuery(new WarningApplicationService(warningRepository));
+        WarningApplicationService warningService = new WarningApplicationService(warningRepository, warningRepository);
+        WarningQuery warnings = new WarningQuery(warningService);
+        Thread.setDefaultUncaughtExceptionHandler(
+                warnOfStoppedThreads(Thread.currentThread(), new WarningCommand(warningService), System.err));
         DocsQuery docs = new DocsQuery(
                 new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(), warningRepository));
         SessionQuery sessions = sessionQuery(warningRepository);
@@ -64,6 +69,21 @@ public final class LazyClaude {
         if (exit != 0) {
             System.exit(exit);
         }
+    }
+
+    /**
+     * A thread other than {@code main} that ends on a failure nobody caught raises a warning, since the
+     * screen is up and a stack trace would print over it. {@code main} carries the shell, so the screen
+     * is gone by the time a failure reaches here, and it is printed as the JVM would.
+     */
+    static Thread.UncaughtExceptionHandler warnOfStoppedThreads(Thread main, WarningCommand warnings, PrintStream err) {
+        return (thread, failure) -> {
+            if (thread == main) {
+                failure.printStackTrace(err);
+            } else {
+                warnings.threadStopped(new StoppedThreadPayload(thread.getName(), failure));
+            }
+        };
     }
 
     private static SessionQuery sessionQuery(WarningPort warnings) {

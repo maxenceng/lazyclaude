@@ -4,11 +4,13 @@ import static dev.maxenceng.lazyclaude.docs.domain.ReadDocumentFixture.readDocum
 import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.docsUnavailable;
 import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.unavailableDocs;
 import static dev.maxenceng.lazyclaude.docs.domain.UnreadableDocumentFixture.unreadableDocument;
+import static dev.maxenceng.lazyclaude.docs.published.ReasonFixture.watchLimitReached;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -96,11 +98,23 @@ class DocsManagerTest {
         ArgumentCaptor<WatchFallback> fallback = ArgumentCaptor.forClass(WatchFallback.class);
         verify(watch).watch(eq(project()), any(), fallback.capture());
 
-        fallback.getValue().polling("cannot watch /work/app/docs (User limit of inotify watches reached)", Duration.ofSeconds(5));
+        fallback.getValue().polling(watchLimitReached(), Duration.ofSeconds(5));
 
         verify(warnings)
                 .raise(new Warning(
-                        "docs: cannot watch /work/app/docs (User limit of inotify watches reached); checking every 5 s instead. If the cause is the watch limit, raise fs.inotify.max_user_watches."));
+                        "docs: cannot watch /work/app/docs (User limit of inotify watches reached); if the watch limit is reached, raise fs.inotify.max_user_watches; checking every 5 s instead."));
+    }
+
+    @Test
+    void shouldRaiseThePollingWarningOnceHoweverOftenTheWatcherReportsIt() {
+        manager.watch(project(), () -> {});
+        ArgumentCaptor<WatchFallback> fallback = ArgumentCaptor.forClass(WatchFallback.class);
+        verify(watch).watch(eq(project()), any(), fallback.capture());
+
+        fallback.getValue().polling(watchLimitReached(), Duration.ofSeconds(5));
+        fallback.getValue().polling(watchLimitReached(), Duration.ofSeconds(5));
+
+        verify(warnings, times(1)).raise(any());
     }
 
     @Test

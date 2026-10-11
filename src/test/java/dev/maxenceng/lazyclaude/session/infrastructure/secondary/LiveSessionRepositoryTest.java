@@ -38,6 +38,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
 import dev.maxenceng.lazyclaude.session.domain.SourceFallback;
+import dev.maxenceng.lazyclaude.session.published.Reason;
 
 @ExtendWith(MockitoExtension.class)
 class LiveSessionRepositoryTest {
@@ -73,16 +74,16 @@ class LiveSessionRepositoryTest {
     }
 
     @Test
-    void shouldFallBackToClaudeAgentsWhenTheRegistryIsMissingAndWarnOnceNamingWhy() throws IOException {
+    void shouldFallBackToClaudeAgentsWhenTheRegistryIsMissingAndTellTheFallbackWhyOnEachRead() throws IOException {
         Path claude = claudePrinting(root, agentsJson(List.of(agent(registeredPid(), registeredSessionId(), CWD, "busy"))));
         LiveSessionRepository repository = repositoryOver(registry, new ClaudeAgentsRepository(List.of(claude.toString()), PATIENCE));
 
         assertThat(repository.liveSessions(fallback)).containsExactly(reportedByAgents(CWD, ReportedStatus.BUSY));
         assertThat(repository.liveSessions(fallback)).containsExactly(reportedByAgents(CWD, ReportedStatus.BUSY));
 
-        ArgumentCaptor<String> cause = ArgumentCaptor.forClass(String.class);
-        verify(fallback, times(1)).askingClaudeAgents(cause.capture(), eq(Duration.ofSeconds(2)));
-        assertThat(cause.getValue()).contains(sessions.toString());
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
+        verify(fallback, times(2)).askingClaudeAgents(cause.capture(), eq(Duration.ofSeconds(2)));
+        assertThat(cause.getValue().value()).contains(sessions.toString());
     }
 
     @Test
@@ -92,9 +93,9 @@ class LiveSessionRepositoryTest {
         Path claude = claudePrinting(root, "[]");
 
         assertThat(repositoryOver(registry, new ClaudeAgentsRepository(List.of(claude.toString()), PATIENCE)).liveSessions(fallback)).isEmpty();
-        ArgumentCaptor<String> cause = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
         verify(fallback).askingClaudeAgents(cause.capture(), any());
-        assertThat(cause.getValue()).contains("17234.json");
+        assertThat(cause.getValue().value()).contains("17234.json");
     }
 
     @Test

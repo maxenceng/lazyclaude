@@ -20,14 +20,15 @@ import java.util.concurrent.TimeUnit;
 
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.WatchFallback;
+import dev.maxenceng.lazyclaude.session.published.Reason;
 
 /**
  * Tells the domain when the session registry may have changed: at once when Claude Code rewrites a
  * {@code .json} record (a {@code .key} file is not one), and on a sweep every few seconds besides, because
  * a session whose process died never rewrites its record. One thread carries both, so a change is never
  * reported twice at once, and a batch of events never outlasts a sweep, so a registry rewritten without
- * pause still reports. When the registry cannot be put under a watch the sweep carries on alone, with
- * one warning.
+ * pause still reports. When the registry cannot be put under a watch the sweep carries on alone, and the
+ * fallback is told why.
  */
 public final class SessionWatchRepository implements SessionWatchPort, AutoCloseable {
 
@@ -91,7 +92,7 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
         return Optional.of(service);
     }
 
-    // deferred: an exception other than a closed or interrupted watch ends this thread, and the JVM prints it on stderr over the screen — close it when a re-read can fail in a way the domain does not turn into a value.
+    // deferred: an exception other than a closed or interrupted watch ends this thread, and the sessions stop updating with only a warning to say so — close it when a re-read can fail in a way the domain does not turn into a value.
     private void loop(Optional<WatchService> service, Runnable changed) {
         try {
             while (true) {
@@ -139,7 +140,7 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
     }
 
     private void giveUpWatching(IOException cause, WatchFallback fallback) {
-        fallback.sweepingAlone(CAUSE.formatted(sessions, cause.getMessage()), sweepInterval);
+        fallback.sweepingAlone(new Reason(CAUSE.formatted(sessions, cause.getMessage())), sweepInterval);
     }
 
     private static void closeQuietly(WatchService service) {

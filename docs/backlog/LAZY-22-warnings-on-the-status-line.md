@@ -17,7 +17,7 @@ created: 2026-10-11
 - [x] A second warning shows as `⚠ 2 · <newest>`.
 - [x] A warning longer than the room the status line has left is cut with `…`, never wrapped.
 - [x] With no warning, the status line is unchanged.
-- [ ] Nothing lazyclaude writes reaches stderr while the screen is up.
+- [x] Nothing lazyclaude writes reaches stderr while the screen is up.
 - [x] The board-read failure at start-up still prints and exits: it is a refusal to start, not a warning.
 
 ## Model decision

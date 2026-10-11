@@ -21,9 +21,12 @@ import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUn
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.workingDirectoryOf;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
+import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.registryUnreadable;
+import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.registryUnwatchable;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.permissionPrompt;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.raisedTexts;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.otherProjectDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.outsideGitDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
@@ -275,7 +278,7 @@ class SessionManagerTest {
         ArgumentCaptor<WatchFallback> fallback = ArgumentCaptor.forClass(WatchFallback.class);
         verify(watch).watch(any(), fallback.capture());
 
-        fallback.getValue().sweepingAlone("cannot watch /home/max/.claude/sessions (User limit of inotify watches reached)", Duration.ofSeconds(2));
+        fallback.getValue().sweepingAlone(registryUnwatchable(), Duration.ofSeconds(2));
 
         verify(warnings)
                 .raise(new Warning(
@@ -289,10 +292,33 @@ class SessionManagerTest {
         ArgumentCaptor<SourceFallback> fallback = ArgumentCaptor.forClass(SourceFallback.class);
         verify(sessions).liveSessions(fallback.capture());
 
-        fallback.getValue().askingClaudeAgents("cannot read /home/max/.claude/sessions", Duration.ofSeconds(2));
+        fallback.getValue().askingClaudeAgents(registryUnreadable(), Duration.ofSeconds(2));
 
         verify(warnings)
                 .raise(new Warning("sessions: cannot read /home/max/.claude/sessions; asking claude agents --json every 2 s instead."));
+    }
+
+    @Test
+    void shouldRaiseEachFallbacksWarningOnceHoweverOftenItIsReported() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+        SessionManager manager = sessionManager(sessions, locator, watch, warnings);
+        manager.sessionsFor(project());
+        manager.sessionsFor(project());
+        manager.watch(() -> {});
+        ArgumentCaptor<SourceFallback> source = ArgumentCaptor.forClass(SourceFallback.class);
+        verify(sessions, times(2)).liveSessions(source.capture());
+        ArgumentCaptor<WatchFallback> sweep = ArgumentCaptor.forClass(WatchFallback.class);
+        verify(watch).watch(any(), sweep.capture());
+
+        source.getAllValues().forEach(fallback -> fallback.askingClaudeAgents(registryUnreadable(), Duration.ofSeconds(2)));
+        sweep.getValue().sweepingAlone(registryUnwatchable(), Duration.ofSeconds(2));
+        sweep.getValue().sweepingAlone(registryUnwatchable(), Duration.ofSeconds(2));
+
+        assertThat(raisedTexts(warnings))
+                .as("each fallback is named once, and one being named does not silence the other")
+                .containsExactly(
+                        "sessions: cannot read /home/max/.claude/sessions; asking claude agents --json every 2 s instead.",
+                        "sessions: cannot watch /home/max/.claude/sessions (User limit of inotify watches reached); checking every 2 s instead.");
     }
 
     @Test

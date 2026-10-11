@@ -23,12 +23,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
 import dev.maxenceng.lazyclaude.docs.domain.WatchFallback;
 import dev.maxenceng.lazyclaude.docs.published.DocumentPath;
+import dev.maxenceng.lazyclaude.docs.published.Reason;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
@@ -36,8 +36,8 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
  * does not reach into subdirectories on Linux: a directory that appears gets a watch of its own, and
  * an {@code OVERFLOW} registers the tree again. One save fires several events, so a change is
  * reported once the events have been quiet for the batch window. When a watch cannot be set up
- * ({@code fs.inotify.max_user_watches} used up, or no inotify) the tree is polled instead, with one
- * warning.
+ * ({@code fs.inotify.max_user_watches} used up, or no inotify) the tree is polled instead, and the
+ * fallback is told why, naming the sysctl only this adapter knows it depends on.
  */
 public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
 
@@ -48,12 +48,12 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     private static final String BACKLOG = "backlog";
     private static final String SEPARATOR = "/";
     private static final String WORKER_NAME = "docs-watch";
+    private static final String WATCH_LIMIT_ADVICE = "%s; if the watch limit is reached, raise fs.inotify.max_user_watches";
 
     private final WatchServiceFactory services;
     private final DirectoryRegistrar registrar;
     private final Duration batchWindow;
     private final Duration pollInterval;
-    private final AtomicBoolean warned = new AtomicBoolean();
     private final List<WatchService> open = new CopyOnWriteArrayList<>();
     private final List<Thread> workers = new CopyOnWriteArrayList<>();
     private final Map<Path, WatchKey> watched = new ConcurrentHashMap<>();
@@ -124,7 +124,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     }
 
     // deferred: docs/ deleted and created again while running is not watched again until a restart — close it when a checkout that swaps docs/ wholesale is used day to day.
-    // deferred: an exception other than a closed or interrupted watch ends this thread, and the JVM prints it on stderr over the screen — close it when a re-read can fail in a way the domain does not turn into a value.
+    // deferred: an exception other than a closed or interrupted watch ends this thread, and the docs stop updating with only a warning to say so — close it when a re-read can fail in a way the domain does not turn into a value.
     private void watchLoop(WatchService service, Path backlog, Path docs, Runnable changed, WatchFallback fallback) {
         try {
             while (true) {
@@ -242,9 +242,7 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     }
 
     private void giveUpWatching(WatchUnavailableException unavailable, WatchFallback fallback) {
-        if (warned.compareAndSet(false, true)) {
-            fallback.polling(unavailable.getMessage(), pollInterval);
-        }
+        fallback.polling(new Reason(WATCH_LIMIT_ADVICE.formatted(unavailable.getMessage())), pollInterval);
     }
 
     private static void closeQuietly(WatchService service) {

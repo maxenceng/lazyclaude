@@ -33,6 +33,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.docs.domain.WatchFallback;
+import dev.maxenceng.lazyclaude.docs.published.Reason;
 
 @ExtendWith(MockitoExtension.class)
 class DocsWatchRepositoryTest {
@@ -196,9 +197,11 @@ class DocsWatchRepositoryTest {
     void shouldWarnOnceNamingTheTreeAndTheSysctlWhenTheWatchCannotBeSetUp() {
         watcher = watching(watcherWithoutInotify(), root, probe, fallback);
 
-        ArgumentCaptor<String> cause = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
         verify(fallback).polling(cause.capture(), eq(pollInterval()));
-        assertThat(cause.getValue()).contains(docs.toString()).contains("User limit of inotify watches reached");
+        assertThat(cause.getValue().value()).contains(docs.toString())
+                .contains("User limit of inotify watches reached")
+                .contains("fs.inotify.max_user_watches");
     }
 
     @Test
@@ -271,9 +274,9 @@ class DocsWatchRepositoryTest {
         write(docs, "glossary.md", "# Glossary, edited\n");
 
         assertThat(probe.changedWithin(within())).isTrue();
-        ArgumentCaptor<String> cause = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
         verify(fallback).polling(cause.capture(), any());
-        assertThat(cause.getValue()).contains(docs.toString());
+        assertThat(cause.getValue().value()).contains(docs.toString());
     }
 
     @Test
@@ -298,8 +301,8 @@ class DocsWatchRepositoryTest {
         assertThat(probe.changedWithin(within()))
                 .as("the watch limit is hit only on the new folder, so polling must take over from the running watcher")
                 .isTrue();
-        ArgumentCaptor<String> cause = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
         verify(fallback).polling(cause.capture(), any());
-        assertThat(cause.getValue()).contains(docs.toString());
+        assertThat(cause.getValue().value()).contains(docs.toString());
     }
 }
