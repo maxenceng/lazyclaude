@@ -1,6 +1,6 @@
 ---
 id: SESSION-2
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 79
@@ -141,3 +141,13 @@ session        3f2a91c0-…
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-16](LAZY-16-startup-cost-of-transcripts.md), [LAZY-21](LAZY-21-keeping-the-screen-current.md). Draw the first frame from the registry and the cache; rescan the misses in the background.
+
+Closed after [#14](https://github.com/maxenceng/lazyclaude/pull/14). Review changed the Model decision in several places. ADR 0023 records the decisions, and the section above is left as decided:
+
+- Live sessions are placed by the same rule as past ones: through git on every registry read, and by the path rule when git cannot place the `cwd`. Without it, a session still running in a removed worktree is listed nowhere: not live, because git cannot place it, and not past, because its live id hides its past row. A `deferred:` note on `SessionManager` covers git running once per distinct `cwd` on every read.
+- A change to the transcripts reuses the last read of the live sessions (`LastLiveRead`) rather than reading the registry again. Both watchers deliver under one lock in `SessionManager`.
+- The watcher does not hold `ProjectLocatorPort`. The domain hands it a `TranscriptLocator`, so locating stays a domain decision and runs once per new transcript.
+- `SessionTitle`, `AiTitle`, `FirstPrompt`, `NoTitle` and `SessionId` sit in `session.published`, not the domain, because the shell's `SessionText` reads them.
+- `LiveSessions` became `AvailableSessions` (live list, past list, clock). One registry read is a `RunningSessions`: the id of every session running on the machine, which hides its past row even when it belongs to another project, plus this project's live sessions. `AvailableSessions` holds whatever it is given; only the manager keeps a live id out of the past list.
+- `TranscriptCacheRepository` became `TranscriptCacheFile`. A `*Repository` that implements no `*Port` now fails the build (ADR 0011).
+- `WatchFallback` split into `PollingFallback`, `CacheFallback` and `RootFallback`, one per warning the watch can raise. A transcripts root that is missing raises none.
