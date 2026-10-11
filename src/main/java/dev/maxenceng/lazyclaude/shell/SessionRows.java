@@ -54,12 +54,12 @@ final class SessionRows {
     private void addTicketSection(List<SessionRow> rows, AvailableSessionsView available, LinkedTicketId selectedTicket) {
         rows.add(new SectionHeaderRow(selectedTicket.value()));
         int header = rows.size();
-        for (LiveSessionView session : available.live()) {
-            session.linkTo(selectedTicket).ifPresent(link -> rows.add(new LiveSessionRow(session, Optional.of(link))));
-        }
-        for (PastSessionView session : available.past()) {
-            session.linkTo(selectedTicket).ifPresent(link -> rows.add(new PastSessionRow(session, Optional.of(link))));
-        }
+        available.live().stream()
+                .flatMap(session -> session.linkTo(selectedTicket).map(link -> new LiveSessionRow(session, Optional.of(link))).stream())
+                .forEach(rows::add);
+        available.past().stream()
+                .flatMap(session -> session.linkTo(selectedTicket).map(link -> new PastSessionRow(session, Optional.of(link))).stream())
+                .forEach(rows::add);
         if (rows.size() == header) {
             rows.add(new NoSessionRow(selectedTicket));
         }

@@ -204,6 +204,10 @@
 				<configuration>
 					<minimumTokens>${cpd.minimumTokens}</minimumTokens>
 					<printFailingErrors>true</printFailingErrors>
+					<rulesets>
+						<ruleset>config/pmd-rules.xml</ruleset>
+					</rulesets>
+					<failurePriority>1</failurePriority>
 				</configuration>
 			</plugin>
 		</plugins>

@@ -6,7 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
@@ -78,12 +80,12 @@ public final class BacklogRepository implements BacklogPort {
         if (lines.isEmpty() || !lines.getFirst().strip().equals(FENCE)) {
             return Optional.empty();
         }
-        int closing = closingFence(lines);
-        String frontmatter = String.join("\n", lines.subList(1, closing < 0 ? lines.size() : closing));
+        OptionalInt closing = closingFence(lines);
+        String frontmatter = String.join("\n", lines.subList(1, closing.orElse(lines.size())));
         if (decoded.isEmpty()) {
             return refusedIfClaimed(name, frontmatter, "cannot be read: not valid UTF-8");
         }
-        if (closing < 0) {
+        if (closing.isEmpty()) {
             return refusedIfClaimed(name, frontmatter, "frontmatter has no closing %s".formatted(FENCE));
         }
         TicketFrontmatter fields;
@@ -96,7 +98,7 @@ public final class BacklogRepository implements BacklogPort {
         if (!fields.claimsATicket()) {
             return Optional.empty();
         }
-        List<String> body = lines.subList(closing + 1, lines.size());
+        List<String> body = lines.subList(closing.getAsInt() + 1, lines.size());
         return Optional.of(entry(name, fields, TicketBody.of(String.join(LINE_BREAK, body))));
     }
 
@@ -125,13 +127,10 @@ public final class BacklogRepository implements BacklogPort {
         return file.getFileName().toString();
     }
 
-    private static int closingFence(List<String> lines) {
-        for (int i = 1; i < lines.size(); i++) {
-            if (lines.get(i).strip().equals(FENCE)) {
-                return i;
-            }
-        }
-        return -1;
+    private static OptionalInt closingFence(List<String> lines) {
+        return IntStream.range(1, lines.size())
+                .filter(index -> lines.get(index).strip().equals(FENCE))
+                .findFirst();
     }
 
     private static String firstLine(String message) {

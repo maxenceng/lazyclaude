@@ -172,6 +172,8 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
         return everything;
     }
 
+    // A loop, not a stream: registering throws IOException, which a lambda cannot throw and the build forbids wrapping.
+    @SuppressWarnings("PMD.UseStreamsNotForLoops")
     private boolean process(WatchKey key, WatchService service, Map<Path, Instant> pending) throws IOException {
         boolean everything = false;
         Path directory = (Path) key.watchable();
@@ -232,6 +234,8 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
     }
 
     /** Watches every folder; one already watched keeps its key, so this also catches a folder whose creation an overflow lost. */
+    // A loop, not a stream: registering throws IOException, which a lambda cannot throw and the build forbids wrapping.
+    @SuppressWarnings("PMD.UseStreamsNotForLoops")
     private void watchFolders(WatchService service) throws IOException {
         for (Path folder : foldersOf(transcriptsRoot)) {
             folder.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);

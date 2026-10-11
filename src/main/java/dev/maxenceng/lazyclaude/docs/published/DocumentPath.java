@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.docs.published;
 
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
@@ -40,12 +41,10 @@ public record DocumentPath(String value) implements Comparable<DocumentPath> {
     public int compareTo(DocumentPath other) {
         List<String> mine = segments();
         List<String> theirs = other.segments();
-        for (int index = 0; index < Math.min(mine.size(), theirs.size()); index++) {
-            int order = mine.get(index).compareTo(theirs.get(index));
-            if (order != 0) {
-                return order;
-            }
-        }
-        return Integer.compare(mine.size(), theirs.size());
+        return IntStream.range(0, Math.min(mine.size(), theirs.size()))
+                .map(index -> mine.get(index).compareTo(theirs.get(index)))
+                .filter(order -> order != 0)
+                .findFirst()
+                .orElseGet(() -> Integer.compare(mine.size(), theirs.size()));
     }
 }

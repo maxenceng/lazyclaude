@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
@@ -29,14 +31,8 @@ final class BoardRows {
     }
 
     List<Row> visible() {
-        List<Row> rows = new ArrayList<>();
-        for (StatusGroupView group : board.groups()) {
-            boolean isFolded = folded.contains(groupKey(group.status().label()));
-            rows.add(new HeaderRow(group.status().label(), group.tickets().size(), isFolded));
-            if (!isFolded) {
-                group.tickets().forEach(ticket -> rows.add(new TicketRow(ticket)));
-            }
-        }
+        List<Row> rows = new ArrayList<>(
+                board.groups().stream().flatMap(this::groupRows).toList());
         if (!board.unreadable().isEmpty()) {
             boolean isFolded = folded.contains(groupKey(UNREADABLE_GROUP));
             rows.add(new HeaderRow(UNREADABLE_GROUP, board.unreadable().size(), isFolded));
@@ -82,13 +78,17 @@ final class BoardRows {
         selected = rows.get(target).key();
     }
 
+    private Stream<Row> groupRows(StatusGroupView group) {
+        boolean isFolded = folded.contains(groupKey(group.status().label()));
+        Stream<Row> header = Stream.of(new HeaderRow(group.status().label(), group.tickets().size(), isFolded));
+        return isFolded ? header : Stream.concat(header, group.tickets().stream().map(TicketRow::new));
+    }
+
     private int indexOfSelected(List<Row> rows) {
-        for (int index = 0; index < rows.size(); index++) {
-            if (rows.get(index).key().equals(selected)) {
-                return index;
-            }
-        }
-        throw new SelectedRowNotVisibleException(selected);
+        return IntStream.range(0, rows.size())
+                .filter(index -> rows.get(index).key().equals(selected))
+                .findFirst()
+                .orElseThrow(() -> new SelectedRowNotVisibleException(selected));
     }
 
     private static RowKey groupKey(String group) {

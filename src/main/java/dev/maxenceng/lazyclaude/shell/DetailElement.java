@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.shell;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.IntFunction;
+import java.util.stream.IntStream;
 
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
@@ -39,13 +40,9 @@ final class DetailElement implements Element {
         int bodyHeight = markdown.map(source -> view(source, 0).computeHeight(area.width())).orElse(0);
         scroll.observe(head.size() + bodyHeight, area.height());
         int offset = scroll.offset();
-        for (int row = 0; row < head.size(); row++) {
-            int y = row - offset;
-            if (y >= 0 && y < area.height()) {
-                DetailRow detail = head.get(row);
-                frame.buffer().setString(area.x(), area.y() + y, RowsElement.fit(detail.text(), area.width()), detail.style());
-            }
-        }
+        IntStream.range(Math.max(0, offset), Math.min(head.size(), offset + area.height()))
+                .forEach(row -> frame.buffer().setString(
+                        area.x(), area.y() + row - offset, RowsElement.fit(head.get(row).text(), area.width()), head.get(row).style()));
         int bodyTop = head.size() - offset;
         if (bodyTop < area.height()) {
             int shown = Math.max(0, bodyTop);
