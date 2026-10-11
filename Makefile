@@ -54,8 +54,8 @@ lint: ## Verify formatting without touching files
 dup: ## Fail on copy-pasted code
 	$(MVN) pmd:cpd-check
 
-rules: ## Fail on a source rule ArchUnit cannot see, such as a for loop
-	$(MVN) pmd:check
+rules: ## Fail on a source rule ArchUnit cannot see: a for loop, a magic number
+	$(MVN) pmd:check checkstyle:check
 
 config-check: ## Fail on a config comment that explains the tool rather than the choice
 	@python3 scripts/check-config-comments.py

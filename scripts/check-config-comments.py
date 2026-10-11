@@ -22,6 +22,7 @@ TARGETS = [
     "pom.xml",
     "Makefile",
     "config/pmd-rules.xml",
+    "config/checkstyle.xml",
 ]
 TARGETS += sorted(glob.glob(os.path.join(ROOT, ".github/workflows/*.yml")))
 TARGETS = [os.path.relpath(os.path.join(ROOT, target), ROOT) for target in TARGETS]
