@@ -12,28 +12,32 @@ import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.seco
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.sessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.thirdSessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
+import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.aiTitle;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.IntStream;
 
+import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
+import dev.maxenceng.lazyclaude.session.published.SessionTitle;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 
-public final class SessionViewFixture {
+public final class SessionsViewFixture {
 
-    private SessionViewFixture() {}
+    private SessionsViewFixture() {}
 
-    public static SessionView.SessionViewBuilder sessionViewBuilder() {
-        return SessionView.builder()
+    public static LiveSessionView.LiveSessionViewBuilder sessionViewBuilder() {
+        return LiveSessionView.builder()
                 .id(sessionId())
                 .pid(processId())
                 .name(sessionName())
@@ -44,11 +48,11 @@ public final class SessionViewFixture {
                 .state(new Busy());
     }
 
-    public static SessionView sessionView() {
+    public static LiveSessionView sessionView() {
         return sessionViewBuilder().build();
     }
 
-    public static SessionView newestSessionView() {
+    public static LiveSessionView newestSessionView() {
         return sessionViewBuilder()
                 .id(secondSessionId())
                 .pid(secondProcessId())
@@ -58,7 +62,7 @@ public final class SessionViewFixture {
                 .build();
     }
 
-    public static SessionView oldestSessionView() {
+    public static LiveSessionView oldestSessionView() {
         return sessionViewBuilder()
                 .id(thirdSessionId())
                 .pid(thirdProcessId())
@@ -69,16 +73,59 @@ public final class SessionViewFixture {
                 .build();
     }
 
-    public static SessionView sessionViewWith(SessionState state) {
+    public static LiveSessionView sessionViewWith(SessionState state) {
         return sessionViewBuilder().state(state).build();
     }
 
-    public static SessionView waitingSessionView() {
+    public static LiveSessionView waitingSessionView() {
         return sessionViewWith(new WaitingForPermission());
     }
 
-    public static SessionsView sessionsViewOf(List<SessionView> sessions) {
-        return new LiveSessionsView(sessions);
+    public static SessionsView sessionsViewOf(List<LiveSessionView> sessions) {
+        return sessionsViewOf(sessions, List.of());
+    }
+
+    public static SessionsView sessionsViewOf(List<LiveSessionView> sessions, List<PastSessionView> past) {
+        return AvailableSessionsView.builder().live(sessions).past(past).build();
+    }
+
+    public static SessionsView pastSessionsViewOf(List<PastSessionView> past) {
+        return sessionsViewOf(List.of(), past);
+    }
+
+    public static PastSessionView.PastSessionViewBuilder pastSessionViewBuilder() {
+        return PastSessionView.builder()
+                .id(pastSessionIdOf(1))
+                .title(aiTitle())
+                .directory(projectRootDirectory().path())
+                .lastActivity(LocalDateTime.of(2026, 10, 10, 13, 50))
+                .age(new SessionAge(Duration.ofMinutes(10)))
+                .startedAt(LocalDateTime.of(2026, 10, 10, 12, 40));
+    }
+
+    public static PastSessionView pastSessionView() {
+        return pastSessionViewBuilder().build();
+    }
+
+    public static PastSessionView pastSessionViewTitled(SessionTitle title) {
+        return pastSessionViewBuilder().title(title).build();
+    }
+
+    public static PastSessionView pastSessionViewNumbered(int number) {
+        return pastSessionViewBuilder()
+                .id(pastSessionIdOf(number))
+                .title(new AiTitle("Past session %d".formatted(number)))
+                .lastActivity(LocalDateTime.of(2026, 10, 10, 14, 0).minusMinutes(number * 10L))
+                .age(new SessionAge(Duration.ofMinutes(number * 10L)))
+                .build();
+    }
+
+    public static List<PastSessionView> pastSessionViewsNumbered(int count) {
+        return IntStream.rangeClosed(1, count).mapToObj(SessionsViewFixture::pastSessionViewNumbered).toList();
+    }
+
+    public static SessionId pastSessionIdOf(int number) {
+        return new SessionId("11111111-0000-0000-0000-%012d".formatted(number));
     }
 
     public static SessionsView emptySessionsView() {
@@ -89,7 +136,7 @@ public final class SessionViewFixture {
         return new UnavailableSessionsView(reason());
     }
 
-    public static List<SessionView> everyStateSessionViews() {
+    public static List<LiveSessionView> everyStateSessionViews() {
         return List.of(
                 namedSessionView(sessionIdOf(1), "busy-one", new Busy()),
                 namedSessionView(sessionIdOf(2), "your-turn-one", new YourTurn()),
@@ -98,15 +145,15 @@ public final class SessionViewFixture {
                 namedSessionView(sessionIdOf(5), "unknown-one", new Unknown()));
     }
 
-    public static SessionView inputSessionView() {
+    public static LiveSessionView inputSessionView() {
         return sessionViewWith(waitingForInput());
     }
 
-    public static SessionView namedSessionView(SessionId id, String name, SessionState state) {
+    public static LiveSessionView namedSessionView(SessionId id, String name, SessionState state) {
         return sessionViewBuilder().id(id).name(new SessionName(name)).state(state).build();
     }
 
-    public static SessionView sessionViewWithoutVersion() {
+    public static LiveSessionView sessionViewWithoutVersion() {
         return sessionViewBuilder().version(new NoVersion()).build();
     }
 

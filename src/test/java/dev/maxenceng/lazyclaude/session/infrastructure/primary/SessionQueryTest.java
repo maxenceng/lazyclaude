@@ -1,16 +1,22 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedIn;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedPastSession;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionActiveMinutesAgo;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.newestReportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.oldestReportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.emptySessionsView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.newestSessionView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.oldestSessionView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.sessionView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.sessionsViewOf;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.unavailableSessionsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.newestSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.oldestSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionViewNumbered;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionsViewOf;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,7 +33,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
+import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -38,6 +46,12 @@ class SessionQueryTest {
 
     @Mock
     private LiveSessionPort sessions;
+
+    @Mock
+    private PastSessionPort past;
+
+    @Mock
+    private TranscriptWatchPort transcriptWatch;
 
     @Mock
     private ProjectLocatorPort locator;
@@ -84,5 +98,27 @@ class SessionQueryTest {
         changed.getValue().run();
 
         assertThat(received).containsExactly(emptySessionsView(), emptySessionsView());
+    }
+
+    @Test
+    void shouldViewEachPastSessionWithTheTimeSinceItsLastActivityNewestFirst() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+        when(past.pastSessions())
+                .thenReturn(List.of(
+                        locatedIn(pastSessionActiveMinutesAgo(3, 30)),
+                        locatedIn(pastSessionActiveMinutesAgo(1, 10))));
+
+        assertThat(sessionQuery(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT))
+                .isEqualTo(pastSessionsViewOf(List.of(pastSessionViewNumbered(1), pastSessionViewNumbered(3))));
+    }
+
+    @Test
+    void shouldViewThePastSessionsAfterTheLiveOnes() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(any())).thenReturn(project());
+        when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
+
+        assertThat(sessionQuery(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT))
+                .isEqualTo(sessionsViewOf(List.of(sessionView()), List.of(pastSessionView())));
     }
 }

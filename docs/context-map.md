@@ -12,7 +12,7 @@ change that implements the first ticket refined into them. Their words are alrea
 | Context | Responsibility | Status |
 |---|---|---|
 | `board` | A project's backlog: its tickets, their status read from each ticket branch's copy, and the verbs `/ticket` allows for that status. Read-only. Today it reads each ticket from the project's working tree; branch copies and verbs come later. | in code |
-| `session` | Claude Code sessions: which are live (from the registry after a liveness check, else `claude agents --json`) and their state (busy, your turn, waiting), kept current by its own watcher on `~/.claude/sessions/` (ADR 0021). Still to come: linking them to tickets, the preselected verb, ticket worktrees, hosting sessions on a pty, desktop notifications. Read-only. | in code |
+| `session` | Claude Code sessions: which are live (from the registry after a liveness check, else `claude agents --json`) and their state (busy, your turn, waiting), kept current by its own watcher on `~/.claude/sessions/` (ADR 0021); and which are past, from the transcripts under `~/.claude/projects/` through a cache of their own, kept current by a second watcher (ADR 0023). Still to come: linking them to tickets, the preselected verb, ticket worktrees, hosting sessions on a pty, desktop notifications. Read-only. | in code |
 | `review` | A ticket's pull request: its diff and threads, your pending review on GitHub, submitting it, and whether it is merged. | expected |
 | `docs` | The project's `docs/**/*.md` outside `docs/backlog/`, as a tree of documents, read-only, kept current by its own watcher on `docs/**` (ADR 0016). | in code |
 

@@ -5,11 +5,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingFor;
@@ -27,47 +29,66 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * Builds the sessions of a project from every live session on the machine. It owns the rules: an
+ * Builds the sessions of a project from every live session on the machine and every past one. It owns the rules: an
  * {@code sdk-cli} session is not listed, a session belongs to the project its {@code cwd} is located
  * in (and one whose {@code cwd} belongs to none is nobody's), rows run newest first, and a session's
  * state is drawn from its reported status only once it is known to be the project's, so a status no
  * one here knows, on a session elsewhere, changes nothing. Each fallback is warned about once, however
- * often its source reports it.
+ * often its source reports it. A live id hides the past session of the same id, a past session belongs to
+ * the project its {@code cwd} was located in (or, when that directory is gone, to the one its path lies in), and
+ * past rows run newest activity first.
  */
 public final class SessionManager {
 
     private static final String SWEEP_WARNING = "sessions: %s; checking every %d s instead.";
     private static final String AGENTS_WARNING = "sessions: %s; asking claude agents --json every %d s instead.";
 
+    private static final String TRANSCRIPT_WARNING = "past sessions: %s; checking every %d s instead.";
+    private static final String CACHE_WARNING = "past sessions: %s; they are read in full on every start.";
+
+    private static final Comparator<PastSession> MOST_RECENTLY_ACTIVE_FIRST = Comparator.comparing(PastSession::lastActivity)
+            .reversed()
+            .thenComparing(session -> session.id().value());
+
     private static final Comparator<ReportedSession> NEWEST_FIRST = Comparator.comparing(ReportedSession::startedAt)
             .reversed()
             .thenComparing(session -> session.id().value());
 
     private final LiveSessionPort sessions;
+    private final PastSessionPort pastSessions;
     private final ProjectLocatorPort locator;
     private final SessionWatchPort watch;
+    private final TranscriptWatchPort transcriptWatch;
     private final WarningPort warnings;
     private final SessionClock clock;
     private final WarnOnce sweeping = new WarnOnce();
     private final WarnOnce askingAgents = new WarnOnce();
+    private final WarnOnce pollingTranscripts = new WarnOnce();
+    private final WarnOnce cacheUnwritable = new WarnOnce();
 
     public SessionManager(
             LiveSessionPort sessions,
+            PastSessionPort pastSessions,
             ProjectLocatorPort locator,
             SessionWatchPort watch,
+            TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
             SessionClock clock) {
         this.sessions = sessions;
+        this.pastSessions = pastSessions;
         this.locator = locator;
         this.watch = watch;
+        this.transcriptWatch = transcriptWatch;
         this.warnings = warnings;
         this.clock = clock;
     }
 
     public Sessions sessionsFor(Project project) {
         try {
-            return LiveSessions.builder()
-                    .sessions(liveSessionsOf(project))
+            List<ReportedSession> reported = sessions.liveSessions(this::warnOfAgents);
+            return AvailableSessions.builder()
+                    .live(liveSessionsOf(project, reported))
+                    .past(pastSessionsOf(project, reported))
                     .clock(clock.frozen())
                     .build();
         } catch (SessionsUnavailableException noSource) {
@@ -79,6 +100,23 @@ public final class SessionManager {
 
     public void watch(Runnable changed) {
         watch.watch(changed, this::warnOfSweep);
+        transcriptWatch.watch(this::locateTranscript, changed, this::warnOfTranscriptPolling, this::warnOfCache);
+    }
+
+    private void warnOfTranscriptPolling(Reason cause, Duration every) {
+        pollingTranscripts.raise(warnings, new Warning(TRANSCRIPT_WARNING.formatted(cause.value(), every.toSeconds())));
+    }
+
+    private void warnOfCache(Reason cause) {
+        cacheUnwritable.raise(warnings, new Warning(CACHE_WARNING.formatted(cause.value())));
+    }
+
+    private ProjectLocation locateTranscript(WorkingDirectory directory) {
+        try {
+            return new LocatedInProject(locator.locate(directory));
+        } catch (ProjectNotFoundException outsideAnyProject) {
+            return new NotLocated();
+        }
     }
 
     private void warnOfSweep(Reason cause, Duration every) {
@@ -89,8 +127,18 @@ public final class SessionManager {
         askingAgents.raise(warnings, new Warning(AGENTS_WARNING.formatted(cause.value(), every.toSeconds())));
     }
 
-    private List<LiveSession> liveSessionsOf(Project project) {
-        List<ReportedSession> candidates = sessions.liveSessions(this::warnOfAgents).stream()
+    private List<PastSession> pastSessionsOf(Project project, List<ReportedSession> reported) {
+        Set<SessionId> live = reported.stream().map(ReportedSession::id).collect(Collectors.toSet());
+        return pastSessions.pastSessions().stream()
+                .filter(located -> !live.contains(located.session().id()))
+                .filter(located -> located.belongsTo(project))
+                .map(LocatedPastSession::session)
+                .sorted(MOST_RECENTLY_ACTIVE_FIRST)
+                .toList();
+    }
+
+    private List<LiveSession> liveSessionsOf(Project project, List<ReportedSession> reported) {
+        List<ReportedSession> candidates = reported.stream()
                 .filter(session -> !session.isSdkCli())
                 .toList();
         // deferred: git runs once per distinct cwd on every refresh, about every 2 s — close it when that shows up as load on a project with many worktrees.

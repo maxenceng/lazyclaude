@@ -16,7 +16,7 @@ import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixtu
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.secondDocumentView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.unavailableDocsView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.unreadableDocumentView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.emptySessionsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;

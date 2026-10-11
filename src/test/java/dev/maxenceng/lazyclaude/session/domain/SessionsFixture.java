@@ -38,8 +38,16 @@ public final class SessionsFixture {
         return clock;
     }
 
-    public static LiveSessions liveSessionsOf(List<LiveSession> sessions) {
-        return LiveSessions.builder().sessions(sessions).clock(sessionClock()).build();
+    public static AvailableSessions liveSessionsOf(List<LiveSession> sessions) {
+        return availableSessionsOf(sessions, List.of());
+    }
+
+    public static AvailableSessions pastSessionsOf(List<PastSession> past) {
+        return availableSessionsOf(List.of(), past);
+    }
+
+    public static AvailableSessions availableSessionsOf(List<LiveSession> sessions, List<PastSession> past) {
+        return AvailableSessions.builder().live(sessions).past(past).clock(sessionClock()).build();
     }
 
     public static SessionsUnavailableException sessionsUnavailable() {
@@ -51,7 +59,17 @@ public final class SessionsFixture {
     }
 
     public static SessionManager sessionManager(LiveSessionPort sessions, ProjectLocatorPort locator, SessionWatchPort watch, WarningPort warnings) {
-        return new SessionManager(sessions, locator, watch, warnings, sessionClock());
+        return sessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings);
+    }
+
+    public static SessionManager sessionManager(
+            LiveSessionPort sessions,
+            PastSessionPort past,
+            ProjectLocatorPort locator,
+            SessionWatchPort watch,
+            TranscriptWatchPort transcriptWatch,
+            WarningPort warnings) {
+        return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, sessionClock());
     }
 
     public static WorkingDirectory workingDirectoryOf(ReportedSession session) {

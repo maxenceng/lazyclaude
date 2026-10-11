@@ -23,7 +23,15 @@ public record SessionClock(Clock clock) {
         return new SessionAge(Duration.between(startedAt.value(), clock.instant()));
     }
 
+    public SessionAge ageOf(LastActivity lastActivity) {
+        return new SessionAge(Duration.between(lastActivity.value(), clock.instant()));
+    }
+
     public LocalDateTime localTimeOf(StartedAt startedAt) {
         return LocalDateTime.ofInstant(startedAt.value(), clock.getZone());
+    }
+
+    public LocalDateTime localTimeOf(LastActivity lastActivity) {
+        return LocalDateTime.ofInstant(lastActivity.value(), clock.getZone());
     }
 }

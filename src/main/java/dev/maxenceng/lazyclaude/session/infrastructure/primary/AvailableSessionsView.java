@@ -1,0 +1,45 @@
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
+
+import java.util.List;
+
+import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
+
+/** The project's sessions: the live ones newest start first, then the past ones newest activity first. */
+public record AvailableSessionsView(List<LiveSessionView> live, List<PastSessionView> past) implements SessionsView {
+
+    static AvailableSessionsView from(AvailableSessions available) {
+        return builder()
+                .live(available.live().stream()
+                        .map(session -> LiveSessionView.from(available, session))
+                        .toList())
+                .past(available.past().stream()
+                        .map(session -> PastSessionView.from(available, session))
+                        .toList())
+                .build();
+    }
+
+    public static AvailableSessionsViewBuilder builder() {
+        return new AvailableSessionsViewBuilder();
+    }
+
+    public static final class AvailableSessionsViewBuilder {
+        private List<LiveSessionView> live;
+        private List<PastSessionView> past;
+
+        private AvailableSessionsViewBuilder() {}
+
+        public AvailableSessionsViewBuilder live(List<LiveSessionView> live) {
+            this.live = live;
+            return this;
+        }
+
+        public AvailableSessionsViewBuilder past(List<PastSessionView> past) {
+            this.past = past;
+            return this;
+        }
+
+        public AvailableSessionsView build() {
+            return new AvailableSessionsView(live, past);
+        }
+    }
+}

@@ -3,7 +3,6 @@ package dev.maxenceng.lazyclaude.shell;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionView;
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Style;
@@ -14,17 +13,18 @@ import dev.tamboui.toolkit.element.Size;
 
 /**
  * Draws one session per line, top-down inside whatever area it gets, scrolled just far enough to show the
- * selected one: the state glyph in its colour, the name, and the age against the right edge.
+ * selected one: a live session as its state glyph in its colour, its name and its age against the right edge; a
+ * past one as a dim {@code ○}, its title and the age since its last activity; and the row of older ones, dim.
  */
 final class SessionRowsElement implements Element {
 
     private static final String GAP = " ";
 
-    private final List<SessionView> sessions;
+    private final List<SessionRow> sessions;
     private final int selected;
     private final boolean highlighted;
 
-    SessionRowsElement(List<SessionView> sessions, int selected, boolean highlighted) {
+    SessionRowsElement(List<SessionRow> sessions, int selected, boolean highlighted) {
         this.sessions = sessions;
         this.selected = selected;
         this.highlighted = highlighted;
@@ -41,17 +41,42 @@ final class SessionRowsElement implements Element {
                 .forEach(row -> draw(frame, area, row, sessions.get(first + row), first + row == selected && highlighted));
     }
 
-    private static void draw(Frame frame, Rect area, int row, SessionView session, boolean reversed) {
-        String glyph = SessionText.glyph(session.state());
-        String age = session.age().label();
-        int nameWidth = Math.max(0, area.width() - glyph.length() - GAP.length() - GAP.length() - age.length());
-        String name = nameWidth == 0 ? "" : RowsElement.fit(session.name().value(), nameWidth);
-        String padding = " ".repeat(Math.max(0, nameWidth - name.codePointCount(0, name.length())));
+    private static void draw(Frame frame, Rect area, int row, SessionRow session, boolean reversed) {
         Style plain = reversed ? Style.EMPTY.reversed() : Style.EMPTY;
-        Style glyphStyle = plain.fg(SessionText.colour(session.state()));
         int y = area.y() + row;
+        switch (session) {
+            case LiveSessionRow live -> {
+                String glyph = SessionText.glyph(live.session().state());
+                line(frame, area, y, glyph, plain.fg(SessionText.colour(live.session().state())), live.session().name().value(), plain, live.session().age().label(), plain);
+            }
+            case PastSessionRow past -> {
+                Style title = SessionText.titleIsStandIn(past.session()) ? plain.dim() : plain;
+                line(frame, area, y, SessionText.pastGlyph(), plain.dim(), SessionText.title(past.session()), title, past.session().age().label(), plain);
+            }
+            case OlderSessionsRow older ->
+                line(frame, area, y, SessionText.olderGlyph(), plain.dim(), SessionText.olderLabel(older), plain.dim(), "", plain);
+        }
+    }
+
+    private static void line(
+            Frame frame,
+            Rect area,
+            int y,
+            String glyph,
+            Style glyphStyle,
+            String text,
+            Style textStyle,
+            String age,
+            Style ageStyle) {
+        int ageWidth = age.isEmpty() ? 0 : GAP.length() + age.length();
+        int textWidth = Math.max(0, area.width() - glyph.length() - GAP.length() - ageWidth);
+        String fitted = textWidth == 0 ? "" : RowsElement.fit(text, textWidth);
+        String padding = " ".repeat(Math.max(0, textWidth - fitted.codePointCount(0, fitted.length())));
         frame.buffer().setString(area.x(), y, glyph, glyphStyle);
-        frame.buffer().setString(area.x() + glyph.length(), y, GAP + name + padding + GAP + age, plain);
+        frame.buffer().setString(area.x() + glyph.length(), y, GAP + fitted + padding, textStyle);
+        if (ageWidth > 0) {
+            frame.buffer().setString(area.x() + area.width() - age.length() - GAP.length(), y, GAP + age, ageStyle);
+        }
     }
 
     @Override

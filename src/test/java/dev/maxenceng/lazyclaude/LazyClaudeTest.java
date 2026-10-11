@@ -13,8 +13,8 @@ import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watcherWithoutInotify;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.emptySessionsView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.unavailableSessionsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.warning;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningCommandFixture.warningCommand;
@@ -298,5 +298,21 @@ class LazyClaudeTest {
         assertThat(Screen.of(shell).dimText())
                 .as("watcher, application and shell are joined for the project the board was read from")
                 .anySatisfy(line -> assertThat(line).contains("sessions unavailable"));
+    }
+
+    @Test
+    void shouldKeepTheCacheUnderXdgCacheHomeWhenItIsSet() {
+        assertThat(LazyClaude.cacheHome(Path.of("/home/max"), "/var/cache/max")).isEqualTo(Path.of("/var/cache/max"));
+    }
+
+    @Test
+    void shouldKeepTheCacheUnderTheDotCacheOfTheHomeWhenXdgCacheHomeIsUnsetOrBlank() {
+        assertThat(LazyClaude.cacheHome(Path.of("/home/max"), null)).isEqualTo(Path.of("/home/max/.cache"));
+        assertThat(LazyClaude.cacheHome(Path.of("/home/max"), "  ")).isEqualTo(Path.of("/home/max/.cache"));
+    }
+
+    @Test
+    void shouldIgnoreARelativeXdgCacheHomeAsTheSpecDoes() {
+        assertThat(LazyClaude.cacheHome(Path.of("/home/max"), "cache")).isEqualTo(Path.of("/home/max/.cache"));
     }
 }

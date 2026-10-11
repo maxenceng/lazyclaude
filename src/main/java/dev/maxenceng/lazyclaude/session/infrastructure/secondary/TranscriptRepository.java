@@ -1,0 +1,202 @@
+package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
+
+import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
+import dev.maxenceng.lazyclaude.session.domain.LocatedInProject;
+import dev.maxenceng.lazyclaude.session.domain.LocatedPastSession;
+import dev.maxenceng.lazyclaude.session.domain.NotLocated;
+import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
+import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
+import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
+
+/**
+ * The past sessions Claude Code's transcripts, {@code ~/.claude/projects/<folder>/<sessionId>.jsonl}, say. What was read is
+ * kept in the cache: a transcript is read again only when its size, modification time or file key differ from the cache's,
+ * and one that grew is read from the offset the cache holds. That relies on transcripts being append-only, which is
+ * observed, not documented; a file that shrank or whose key changed is read in full. A {@code subagents/} transcript sits
+ * a level deeper and is never met. A transcript that cannot be read is dropped and read in full the next time it changes.
+ */
+public final class TranscriptRepository implements PastSessionPort {
+
+    private static final String CACHE_UNWRITABLE = "cannot write the cache %s: %s";
+
+    private final Path transcriptsRoot;
+    private final TranscriptCacheRepository cache;
+    private final Map<String, CachedTranscript> known = new ConcurrentHashMap<>();
+    private final Object loading = new Object();
+    private volatile boolean loaded;
+
+    public TranscriptRepository(Path transcriptsRoot, TranscriptCacheRepository cache) {
+        this.transcriptsRoot = transcriptsRoot;
+        this.cache = cache;
+    }
+
+    @Override
+    public List<LocatedPastSession> pastSessions() {
+        ensureLoaded();
+        return known.values().stream()
+                .map(CachedTranscript::toLocated)
+                .flatMap(Optional::stream)
+                .toList();
+    }
+
+    /** Reads again every transcript that is new or changed since the cache, and forgets those that are gone. */
+    synchronized void rescanAll(TranscriptLocator locator, CacheFallback unwritable) {
+        ensureLoaded();
+        Set<Path> present = new HashSet<>();
+        Set<Path> unlisted = new HashSet<>();
+        listTranscripts(present, unlisted);
+        boolean changed = known.keySet().removeIf(path -> isGone(Path.of(path), present, unlisted));
+        for (Path file : present) {
+            changed |= refresh(file, locator);
+        }
+        persist(changed, unwritable);
+    }
+
+    /** Reads again each of {@code files} that is new or changed, and forgets those that are gone. */
+    synchronized void rescan(Collection<Path> files, TranscriptLocator locator, CacheFallback unwritable) {
+        ensureLoaded();
+        boolean changed = false;
+        for (Path file : files) {
+            changed |= Files.exists(file) ? refresh(file, locator) : known.remove(file.toString()) != null;
+        }
+        persist(changed, unwritable);
+    }
+
+    /** Loads the cache once, under its own lock rather than the scan's, so a read never waits for a scan to finish. */
+    private void ensureLoaded() {
+        if (loaded) {
+            return;
+        }
+        synchronized (loading) {
+            if (!loaded) {
+                cache.load().forEach(transcript -> known.put(transcript.path(), transcript));
+                loaded = true;
+            }
+        }
+    }
+
+    private void listTranscripts(Set<Path> present, Set<Path> unlisted) {
+        if (!Files.isDirectory(transcriptsRoot)) {
+            return;
+        }
+        try (Stream<Path> folders = Files.list(transcriptsRoot)) {
+            folders.filter(Files::isDirectory).forEach(folder -> listFolder(folder, present, unlisted));
+        } catch (IOException | UncheckedIOException unreadable) {
+            unlisted.add(transcriptsRoot);
+        }
+    }
+
+    private static void listFolder(Path folder, Set<Path> present, Set<Path> unlisted) {
+        try (Stream<Path> files = Files.list(folder)) {
+            files.filter(TranscriptFile::isTranscript)
+                    .filter(Files::isRegularFile)
+                    .forEach(present::add);
+        } catch (IOException | UncheckedIOException unreadable) {
+            unlisted.add(folder);
+        }
+    }
+
+    private static boolean isGone(Path file, Set<Path> present, Set<Path> unlisted) {
+        return !present.contains(file) && !unlisted.contains(file.getParent()) && !unlisted.contains(file.getParent().getParent());
+    }
+
+    private boolean refresh(Path file, TranscriptLocator locator) {
+        String key = file.toString();
+        try {
+            BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
+            String fileKey = String.valueOf(attributes.fileKey());
+            CachedTranscript before = known.get(key);
+            long modified = attributes.lastModifiedTime().toMillis();
+            if (before != null && before.isAt(attributes.size(), modified, fileKey)) {
+                return false;
+            }
+            CachedTranscript after = read(file, before, attributes.size(), modified, fileKey, locator);
+            known.put(key, after);
+            return true;
+        } catch (IOException vanishedOrUnreadable) {
+            return known.remove(key) != null;
+        } catch (ProjectUnavailableException cannotLocate) {
+            return false;
+        }
+    }
+
+    private static CachedTranscript read(
+            Path file, CachedTranscript before, long size, long modified, String fileKey, TranscriptLocator locator)
+            throws IOException {
+        boolean grew = before != null && before.fileKey().equals(fileKey) && size >= before.size();
+        CachedTranscript base = grew ? before : empty(file);
+        TranscriptTail tail = new TranscriptTail(base);
+        long offset = TranscriptLines.read(file, grew ? before.offset() : 0, tail::accept);
+        CachedTranscript read = tail.into(base, size, modified, fileKey, offset);
+        return located(read, before, locator);
+    }
+
+    private static CachedTranscript empty(Path file) {
+        String sessionId = TranscriptFile.sessionIdOf(file);
+        return new CachedTranscript(file.toString(), 0, 0, "", 0, sessionId, null, null, null, null, null, null);
+    }
+
+    private static CachedTranscript located(CachedTranscript read, CachedTranscript before, TranscriptLocator locator) {
+        if (read.cwd() == null) {
+            return read;
+        }
+        if (before != null && read.cwd().equals(before.cwd())) {
+            return withProjectRoot(read, before.projectRoot());
+        }
+        try {
+            ProjectLocation location = locator.locate(new WorkingDirectory(Path.of(read.cwd())));
+            String root = switch (location) {
+                case LocatedInProject inProject -> inProject.project().root().toString();
+                case NotLocated nowhere -> null;
+            };
+            return withProjectRoot(read, root);
+        } catch (InvalidPathException notAPath) {
+            return withProjectRoot(read, null);
+        }
+    }
+
+    private static CachedTranscript withProjectRoot(CachedTranscript transcript, String projectRoot) {
+        return new CachedTranscript(
+                transcript.path(),
+                transcript.size(),
+                transcript.modified(),
+                transcript.fileKey(),
+                transcript.offset(),
+                transcript.sessionId(),
+                transcript.cwd(),
+                projectRoot,
+                transcript.aiTitle(),
+                transcript.firstPrompt(),
+                transcript.startedAt(),
+                transcript.lastActivity());
+    }
+
+    private void persist(boolean changed, CacheFallback unwritable) {
+        if (!changed) {
+            return;
+        }
+        try {
+            cache.write(known.values());
+        } catch (IOException e) {
+            unwritable.unwritable(new Reason(CACHE_UNWRITABLE.formatted(cache.file(), e.getMessage())));
+        }
+    }
+}

@@ -88,12 +88,7 @@ final class DocsRows {
         Optional<RowKey> was = selected;
         int index = selectedIndex();
         docs = next;
-        List<DocsRow> after = visible();
-        if (after.isEmpty()) {
-            selected = Optional.empty();
-        } else if (!was.map(key -> contains(after, key)).orElse(false)) {
-            selected = Optional.of(after.get(Math.min(index, after.size() - 1)).key());
-        }
+        selected = RowSelection.kept(was, index, visible().stream().map(DocsRow::key).toList());
         return !was.equals(selected);
     }
 
@@ -116,10 +111,6 @@ final class DocsRows {
                 list(rows, folder.documents(), folder.folders(), depth + 1);
             }
         }
-    }
-
-    private static boolean contains(List<DocsRow> rows, RowKey key) {
-        return rows.stream().anyMatch(row -> row.key().equals(key));
     }
 
     private static int indexOf(List<DocsRow> rows, RowKey key) {

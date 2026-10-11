@@ -49,7 +49,9 @@ words mean.
 | Sweep | Re-reading the live sessions on a timer (every 2 s), always, watch or not: a session whose process died never rewrites its record, so only the sweep notices. Without a watch, the sweep is all there is. | `session` |
 | Hosted session | A live session lazyclaude spawned: the real `claude` on a pty, drawn in a dock tab. It dies with lazyclaude. | `session` (expected) |
 | Outside session | A live session started anywhere else. lazyclaude shows it read-only and can jump to its terminal window. | `session` (expected) |
-| Past session | A session with no live process, only a transcript. It can be resumed, which makes it hosted. A hosted session whose `claude` exited is past. | `session` (expected) |
+| Past session | A session with no live process, only a transcript. It can be resumed, which makes it hosted. A hosted session whose `claude` exited is past. Until linking lands, every past session is unlinked. | `session` |
+| Transcript | Claude Code's `~/.claude/projects/<folder>/<sessionId>.jsonl`, one per session; internal format, append-only by observation. A `subagents/` file is not one. | `session` |
+| Last activity | The timestamp of a transcript's last entry. It orders past sessions. | `session` |
 | Linked session | A session attributed to a ticket, by the first link rule that matches: `/ticket` args, `pr-link`, or branch. | `session` (expected) |
 | Weak link | A link found only through the branch name; shown as less certain. | `session` (expected) |
 | Unlinked session | A session attributed to no ticket. Started from lazyclaude, it runs in the project root. | `session` (expected) |
@@ -83,7 +85,7 @@ words mean.
 |---|---|---|
 | Document | One markdown file under the project's `docs/`, outside `docs/backlog/`, shown read-only. | `docs` |
 | Docs tree | The project's documents grouped by folder, as the Docs panel shows them: the files directly under `docs/` first, then one header per folder with the count of documents beneath it, each level sorted by name. | `docs` |
-| Polling | Checking the docs on a timer (every 5 s) in place of the watch, only when the watch cannot be set up or kept. Not a sweep: the docs have no polling while the watch holds. | `docs` |
+| Polling | Checking the docs, or the transcripts, on a timer (every 5 s) in place of the watch, only when the watch cannot be set up or kept. Not a sweep: neither has polling while its watch holds. | `docs`, `session` |
 
 ## Words we deliberately avoid
 
