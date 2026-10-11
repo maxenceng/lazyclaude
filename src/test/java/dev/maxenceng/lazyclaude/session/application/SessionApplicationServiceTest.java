@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.application;
 
+import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.boardTickets;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ran;
@@ -10,12 +11,13 @@ import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSes
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedPastSession;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.clock;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.workingDirectoryOf;
+import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
+import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,11 +34,18 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
+import dev.maxenceng.lazyclaude.session.domain.HostPort;
+import dev.maxenceng.lazyclaude.session.domain.HostedTab;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.Sessions;
+import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
+import dev.maxenceng.lazyclaude.session.published.HostStart;
+import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
+import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -61,13 +70,16 @@ class SessionApplicationServiceTest {
     @Mock
     private WarningPort warnings;
 
+    @Mock
+    private HostPort hosts;
+
     @Test
     void shouldReadTheLiveSessionsOfTheProject() {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
         when(locator.locate(workingDirectoryOf(reportedSession())))
                 .thenReturn(project());
 
-        assertThat(new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).sessionsFor(project(), noTickets()))
+        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts).sessionsFor(project(), noTickets()))
                 .isEqualTo(liveSessionsOf(List.of(liveSession())));
     }
 
@@ -76,7 +88,7 @@ class SessionApplicationServiceTest {
         when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable()).thenReturn(List.of());
         List<Sessions> received = new ArrayList<>();
 
-        new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).subscribe(project(), noTickets(), received::add);
+        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts).subscribe(project(), noTickets(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(changed.capture(), any());
         changed.getValue().run();
@@ -92,7 +104,7 @@ class SessionApplicationServiceTest {
         when(sessions.liveSessions(any())).thenReturn(List.of());
         when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
 
-        assertThat(new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).sessionsFor(project(), noTickets()))
+        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts).sessionsFor(project(), noTickets()))
                 .isEqualTo(pastSessionsOf(List.of(pastSession())));
     }
 
@@ -101,7 +113,7 @@ class SessionApplicationServiceTest {
         when(sessions.liveSessions(any())).thenReturn(List.of());
         List<Sessions> received = new ArrayList<>();
 
-        new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).subscribe(project(), noTickets(), received::add);
+        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts).subscribe(project(), noTickets(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(transcriptWatch).watch(any(), changed.capture(), any(), any(), any());
         changed.getValue().run();
@@ -117,7 +129,57 @@ class SessionApplicationServiceTest {
         when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
         when(past.linkFacts()).thenReturn(Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
 
-        assertThat(new SessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, clock()).sessionsFor(project(), boardTickets()))
+        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts).sessionsFor(project(), boardTickets()))
                 .isEqualTo(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+    }
+
+    @Test
+    void shouldStartAnUnlinkedSessionThroughTheHost() {
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+
+        HostStart start = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts)
+                .startUnlinked(project(), paneSize());
+
+        assertThat(start).isInstanceOf(StartedHost.class);
+    }
+
+    @Test
+    void shouldHandTheListenerTheSessionsAgainWhenAHostedSessionOpens() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        List<Sessions> received = new ArrayList<>();
+        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        service.subscribe(project(), noTickets(), received::add);
+
+        service.startUnlinked(project(), paneSize());
+
+        assertThat(received)
+                .as("the registry has not heard of the new claude yet, so only lazyclaude can say a tab opened")
+                .singleElement()
+                .isInstanceOfSatisfying(AvailableSessions.class, available -> assertThat(available.hosted()).hasSize(1));
+    }
+
+    @Test
+    void shouldListAHostedSessionAsStartingBeforeTheRegistryHasIt() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        service.startUnlinked(project(), paneSize());
+
+        assertThat(service.sessionsFor(project(), noTickets()))
+                .isInstanceOfSatisfying(
+                        AvailableSessions.class,
+                        available -> assertThat(available.hosted()).extracting(HostedTab::phase).containsExactly(new StartingPhase()));
+    }
+
+    @Test
+    void shouldEndEveryHostedSessionOnQuit() {
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        HostedSessionId id = ((StartedHost) service.startUnlinked(project(), paneSize())).id();
+
+        service.endAll();
+
+        verify(hosts).end(id);
     }
 }

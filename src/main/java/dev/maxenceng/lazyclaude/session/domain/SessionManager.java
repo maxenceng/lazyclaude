@@ -38,7 +38,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * often its source reports it. A live id hides the past session of the same id, a past session belongs to
  * the project its {@code cwd} was located in (or, when that directory is gone, to the one its path lies in), and
  * past rows run newest activity first. A session is linked to tickets by its transcript, live or past, against the ticket ids it is
- * handed; a live session with no transcript yet is linked to none.
+ * handed; a live session with no transcript yet is linked to none. A live session is hosted when its pid is one lazyclaude
+ * spawned, and each open hosted session is listed as a tab, starting until the registry lists its pid.
  */
 public final class SessionManager {
 
@@ -64,6 +65,7 @@ public final class SessionManager {
     private final TranscriptWatchPort transcriptWatch;
     private final WarningPort warnings;
     private final SessionClock clock;
+    private final HostedSessionsSource hosted;
     private final WarnOnce sweeping = new WarnOnce();
     private final WarnOnce askingAgents = new WarnOnce();
     private final WarnOnce pollingTranscripts = new WarnOnce();
@@ -78,7 +80,8 @@ public final class SessionManager {
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
-            SessionClock clock) {
+            SessionClock clock,
+            HostedSessionsSource hosted) {
         this.sessions = sessions;
         this.pastSessions = pastSessions;
         this.locator = locator;
@@ -86,6 +89,7 @@ public final class SessionManager {
         this.transcriptWatch = transcriptWatch;
         this.warnings = warnings;
         this.clock = clock;
+        this.hosted = hosted;
     }
 
     /** Reads the live sessions again; the past ones come from what the cache already holds. */
@@ -108,6 +112,11 @@ public final class SessionManager {
                 this::warnOfTranscriptPolling,
                 this::warnOfCache,
                 this::warnOfUnlistableRoot);
+    }
+
+    /** Hands {@code listener} the sessions again now, as a change to which sessions are hosted is not one the watchers see. */
+    public void refresh(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
+        deliver(listener, () -> readingLive(project, tickets));
     }
 
     private void deliver(Consumer<Sessions> listener, Supplier<Sessions> read) {
@@ -138,9 +147,17 @@ public final class SessionManager {
 
     private Sessions available(Project project, KnownTickets tickets, RunningSessions running) {
         Map<SessionId, LinkFacts> facts = pastSessions.linkFacts();
+        HostedSessions open = hosted.open();
+        List<LiveSession> live = running.live().stream()
+                .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)).ownedAmong(open.pids()))
+                .toList();
         return AvailableSessions.builder()
-                .live(running.live().stream()
-                        .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))
+                .live(live)
+                .hosted(open.sessions().stream()
+                        .map(session -> HostedTab.builder()
+                                .session(session)
+                                .phase(session.phaseAmong(live))
+                                .build())
                         .toList())
                 .past(pastSessionsOf(project, running.ids()).stream()
                         .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))

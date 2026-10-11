@@ -50,6 +50,15 @@ public final class SessionsFixture {
         return AvailableSessions.builder().live(sessions).past(past).clock(sessionClock()).build();
     }
 
+    public static AvailableSessions availableSessionsHosting(List<LiveSession> sessions, List<HostedTab> hosted) {
+        return AvailableSessions.builder()
+                .live(sessions)
+                .past(List.of())
+                .hosted(hosted)
+                .clock(sessionClock())
+                .build();
+    }
+
     public static SessionsUnavailableException sessionsUnavailable() {
         return new SessionsUnavailableException(reason().value());
     }
@@ -69,7 +78,32 @@ public final class SessionsFixture {
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings) {
-        return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, sessionClock());
+        return sessionManager(sessions, past, locator, watch, transcriptWatch, warnings, noHostedSessions());
+    }
+
+    public static SessionManager sessionManager(
+            LiveSessionPort sessions,
+            ProjectLocatorPort locator,
+            SessionWatchPort watch,
+            WarningPort warnings,
+            HostedSessionsSource hosted) {
+        return sessionManager(
+                sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, hosted);
+    }
+
+    public static SessionManager sessionManager(
+            LiveSessionPort sessions,
+            PastSessionPort past,
+            ProjectLocatorPort locator,
+            SessionWatchPort watch,
+            TranscriptWatchPort transcriptWatch,
+            WarningPort warnings,
+            HostedSessionsSource hosted) {
+        return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, sessionClock(), hosted);
+    }
+
+    public static HostedSessionsSource noHostedSessions() {
+        return () -> new HostedSessions(List.of());
     }
 
     public static WorkingDirectory workingDirectoryOf(ReportedSession session) {

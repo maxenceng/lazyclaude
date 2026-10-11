@@ -7,15 +7,17 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 
 /**
- * The sessions of one project that could be read: the live ones, then the past ones, with the clock their ages are read
+ * The sessions of one project that could be read: the live ones, then the past ones, the hosted ones in tab order, with the clock their ages are read
  * from. That a session is one or the other, never both, and the order, are the manager's.
  */
-public record AvailableSessions(List<LiveSession> live, List<PastSession> past, SessionClock clock)
+public record AvailableSessions(
+        List<LiveSession> live, List<PastSession> past, List<HostedTab> hosted, SessionClock clock)
         implements Sessions {
 
     public AvailableSessions {
         Assert.notNull("live sessions", live);
         Assert.notNull("past sessions", past);
+        Assert.notNull("hosted tabs", hosted);
         Assert.notNull("clock", clock);
     }
 
@@ -46,6 +48,7 @@ public record AvailableSessions(List<LiveSession> live, List<PastSession> past, 
     public static final class AvailableSessionsBuilder {
         private List<LiveSession> live;
         private List<PastSession> past;
+        private List<HostedTab> hosted = List.of();
         private SessionClock clock;
 
         private AvailableSessionsBuilder() {}
@@ -60,13 +63,18 @@ public record AvailableSessions(List<LiveSession> live, List<PastSession> past, 
             return this;
         }
 
+        public AvailableSessionsBuilder hosted(List<HostedTab> hosted) {
+            this.hosted = hosted;
+            return this;
+        }
+
         public AvailableSessionsBuilder clock(SessionClock clock) {
             this.clock = clock;
             return this;
         }
 
         public AvailableSessions build() {
-            return new AvailableSessions(live, past, clock);
+            return new AvailableSessions(live, past, hosted, clock);
         }
     }
 }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
+import dev.maxenceng.lazyclaude.session.published.Hosting;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
@@ -23,7 +24,8 @@ public record LiveSession(
         StartedAt startedAt,
         ClaudeVersion version,
         SessionState state,
-        List<TicketLink> links) {
+        List<TicketLink> links,
+        Hosting hosting) {
 
     public LiveSession {
         Assert.notNull("id", id);
@@ -34,10 +36,17 @@ public record LiveSession(
         Assert.notNull("version", version);
         Assert.notNull("state", state);
         Assert.notNull("links", links);
+        Assert.notNull("hosting", hosting);
     }
 
     public LiveSession linkedTo(List<TicketLink> links) {
-        return new LiveSession(id, pid, name, directory, startedAt, version, state, links);
+        return new LiveSession(id, pid, name, directory, startedAt, version, state, links, hosting);
+    }
+
+    /** This session as lazyclaude knows it to be owned: hosted when its pid is one of {@code hostedPids}, else outside. */
+    public LiveSession ownedAmong(List<ProcessId> hostedPids) {
+        Hosting owner = hostedPids.contains(pid) ? Hosting.HOSTED : Hosting.OUTSIDE;
+        return new LiveSession(id, pid, name, directory, startedAt, version, state, links, owner);
     }
 
     public static LiveSessionBuilder builder() {
@@ -53,6 +62,7 @@ public record LiveSession(
         private ClaudeVersion version;
         private SessionState state;
         private List<TicketLink> links = List.of();
+        private Hosting hosting = Hosting.OUTSIDE;
 
         private LiveSessionBuilder() {}
 
@@ -96,8 +106,13 @@ public record LiveSession(
             return this;
         }
 
+        public LiveSessionBuilder hosting(Hosting hosting) {
+            this.hosting = hosting;
+            return this;
+        }
+
         public LiveSession build() {
-            return new LiveSession(id, pid, name, directory, startedAt, version, state, links);
+            return new LiveSession(id, pid, name, directory, startedAt, version, state, links, hosting);
         }
     }
 }

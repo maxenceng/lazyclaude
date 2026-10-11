@@ -19,11 +19,13 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsRepository;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchRepository;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeAgentsRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LiveSessionRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptCacheFile;
@@ -52,6 +54,7 @@ public final class LazyClaude {
     private static final String CACHE_FILE = "past-sessions.json";
     private static final Path PROC = Path.of("/proc");
     private static final Path MACHINE_ID = Path.of("/etc/machine-id");
+    private static final List<String> CLAUDE = List.of("claude");
     private static final List<String> CLAUDE_AGENTS = List.of("claude", "agents", "--json");
     private static final Duration CLAUDE_AGENTS_PATIENCE = Duration.ofSeconds(10);
 
@@ -67,7 +70,9 @@ public final class LazyClaude {
                 warnOfStoppedThreads(Thread.currentThread(), new WarningCommand(warningService), System.err));
         DocsQuery docs = new DocsQuery(
                 new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(), warningRepository));
-        SessionQuery sessions = sessionQuery(warningRepository);
+        SessionApplicationService sessionService = sessionService(warningRepository);
+        SessionQuery sessions = new SessionQuery(sessionService);
+        HostedSessionCommand hosting = new HostedSessionCommand(sessionService);
         int exit = start(
                 Path.of("").toAbsolutePath(),
                 board,
@@ -95,7 +100,7 @@ public final class LazyClaude {
         };
     }
 
-    private static SessionQuery sessionQuery(WarningPort warnings) {
+    private static SessionApplicationService sessionService(WarningPort warnings) {
         Path home = Path.of(System.getProperty(USER_HOME));
         Path registry = home.resolve(REGISTRY);
         TranscriptRepository transcripts = new TranscriptRepository(
@@ -106,14 +111,15 @@ public final class LazyClaude {
         LiveSessionRepository live = new LiveSessionRepository(
                 new SessionRegistryRepository(registry, PROC, MACHINE_ID),
                 new ClaudeAgentsRepository(CLAUDE_AGENTS, CLAUDE_AGENTS_PATIENCE));
-        return new SessionQuery(new SessionApplicationService(
+        return new SessionApplicationService(
                 live,
                 transcripts,
                 new ProjectLocatorRepository(),
                 new SessionWatchRepository(registry),
                 new TranscriptWatchRepository(home.resolve(TRANSCRIPTS), transcripts),
                 warnings,
-                Clock.systemDefaultZone()));
+                new PtyHostRepository(CLAUDE, System.getenv()),
+                Clock.systemDefaultZone());
     }
 
     /** {@code $XDG_CACHE_HOME} when it is set to an absolute path, else {@code ~/.cache}, as the XDG base directory spec has it. */
