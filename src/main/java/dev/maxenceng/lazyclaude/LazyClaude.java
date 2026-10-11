@@ -105,8 +105,7 @@ public final class LazyClaude {
                         .resolve(CACHE_FILE)));
         LiveSessionRepository live = new LiveSessionRepository(
                 new SessionRegistryRepository(registry, PROC, MACHINE_ID),
-                new ClaudeAgentsRepository(CLAUDE_AGENTS, CLAUDE_AGENTS_PATIENCE),
-                SessionWatchRepository.SWEEP_INTERVAL);
+                new ClaudeAgentsRepository(CLAUDE_AGENTS, CLAUDE_AGENTS_PATIENCE));
         return new SessionQuery(new SessionApplicationService(
                 live,
                 transcripts,

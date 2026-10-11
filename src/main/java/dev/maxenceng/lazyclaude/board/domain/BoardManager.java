@@ -1,11 +1,12 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
@@ -27,20 +28,20 @@ public record BoardManager(ProjectLocatorPort locator, BacklogPort backlog) {
     }
 
     private static Board board(Project project, List<BacklogEntry> entries) {
-        List<Ticket> tickets = new ArrayList<>();
-        List<UnreadableTicket> unreadable = new ArrayList<>();
-        Set<TicketId> claimed = new HashSet<>();
-        for (BacklogEntry entry : entries) {
-            switch (entry) {
-                case UnreadableTicket refused -> unreadable.add(refused);
-                case TicketFile read when !claimed.add(read.ticket().id()) -> unreadable.add(alreadyClaimed(read));
-                case TicketFile read -> tickets.add(read.ticket());
-            }
-        }
+        Map<TicketId, List<TicketFile>> byId = entries.stream()
+                .flatMap(entry -> entry instanceof TicketFile read ? Stream.of(read) : Stream.empty())
+                .collect(Collectors.groupingBy(read -> read.ticket().id(), LinkedHashMap::new, Collectors.toList()));
+        Stream<UnreadableTicket> refused = entries.stream()
+                .flatMap(entry -> entry instanceof UnreadableTicket unreadable ? Stream.of(unreadable) : Stream.empty());
+        Stream<UnreadableTicket> claimedTwice = byId.values().stream()
+                .flatMap(files -> files.stream().skip(1))
+                .map(BoardManager::alreadyClaimed);
         return Board.builder()
                 .project(project)
-                .groups(groups(tickets))
-                .unreadable(unreadable.stream()
+                .groups(groups(byId.values().stream()
+                        .map(files -> files.getFirst().ticket())
+                        .toList()))
+                .unreadable(Stream.concat(refused, claimedTwice)
                         .sorted(Comparator.comparing(UnreadableTicket::file))
                         .toList())
                 .build();

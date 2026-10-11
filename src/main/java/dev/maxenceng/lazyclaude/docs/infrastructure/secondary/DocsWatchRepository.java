@@ -17,12 +17,12 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
@@ -148,30 +148,33 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     }
 
     private boolean process(WatchService service, WatchKey key, Path backlog, Path docs) {
-        boolean relevant = false;
         Path directory = (Path) key.watchable();
-        for (WatchEvent<?> event : key.pollEvents()) {
-            if (event.kind() == OVERFLOW) {
-                register(service, docs, backlog, docs);
-                relevant = true;
-                continue;
-            }
-            Path entry = directory.resolve((Path) event.context());
-            if (entry.equals(backlog)) {
-                continue;
-            }
-            if (event.kind() == ENTRY_CREATE && Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS)) {
-                register(service, entry, backlog, docs);
-                relevant = true;
-            } else if (event.kind() == ENTRY_DELETE && watched.containsKey(entry)) {
-                forget(entry);
-                relevant = true;
-            } else if (listed(docs, entry)) {
-                relevant = true;
-            }
-        }
+        boolean relevant = key.pollEvents().stream()
+                .map(event -> handle(service, directory, event, backlog, docs))
+                .reduce(false, Boolean::logicalOr);
         key.reset();
         return relevant;
+    }
+
+    /** Whether {@code event} changes what the Docs panel lists; every event is handled, so a relevant one does not stop the rest. */
+    private boolean handle(WatchService service, Path directory, WatchEvent<?> event, Path backlog, Path docs) {
+        if (event.kind() == OVERFLOW) {
+            register(service, docs, backlog, docs);
+            return true;
+        }
+        Path entry = directory.resolve((Path) event.context());
+        if (entry.equals(backlog)) {
+            return false;
+        }
+        if (event.kind() == ENTRY_CREATE && Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS)) {
+            register(service, entry, backlog, docs);
+            return true;
+        }
+        if (event.kind() == ENTRY_DELETE && watched.containsKey(entry)) {
+            forget(entry);
+            return true;
+        }
+        return listed(docs, entry);
     }
 
     private void register(WatchService service, Path tree, Path backlog, Path docs) {
@@ -214,17 +217,13 @@ public final class DocsWatchRepository implements DocsWatchPort, AutoCloseable {
     }
 
     private static Map<String, String> snapshot(Path docs, Map<String, String> previous) {
-        Map<String, String> found = new HashMap<>();
         try (Stream<Path> files = Files.walk(docs)) {
-            for (Path file : files.filter(path -> !path.equals(docs))
+            return files.filter(path -> !path.equals(docs))
                     .filter(path -> listed(docs, path))
-                    .toList()) {
-                found.put(file.toString(), stamp(file));
-            }
+                    .collect(Collectors.toMap(Path::toString, DocsWatchRepository::stamp));
         } catch (IOException | UncheckedIOException unreadable) {
             return previous;
         }
-        return found;
     }
 
     private static boolean listed(Path docs, Path file) {

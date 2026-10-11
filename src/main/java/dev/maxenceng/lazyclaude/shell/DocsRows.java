@@ -1,10 +1,11 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsTreeView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
@@ -32,12 +33,10 @@ final class DocsRows {
     }
 
     List<DocsRow> visible() {
-        List<DocsRow> rows = new ArrayList<>();
-        switch (docs) {
-            case DocsTreeView tree -> list(rows, tree.documents(), tree.folders(), 0);
-            case UnavailableDocsView unavailable -> {}
-        }
-        return rows;
+        return switch (docs) {
+            case DocsTreeView tree -> list(tree.documents(), tree.folders(), 0).toList();
+            case UnavailableDocsView unavailable -> List.of();
+        };
     }
 
     /** Why there is no tree to show, when {@code docs/} could not be listed. */
@@ -101,24 +100,23 @@ final class DocsRows {
         selected = Optional.of(rows.get(target).key());
     }
 
-    private void list(List<DocsRow> rows, List<DocumentView> documents, List<FolderView> folders, int depth) {
-        documents.forEach(document -> rows.add(new DocumentRow(document, depth)));
-        for (FolderView folder : folders) {
-            String path = folder.path().value();
-            boolean isFolded = folded.contains(new RowKey(RowKind.FOLDER, path));
-            rows.add(new FolderRow(path, folder.name().value(), folder.count(), isFolded, depth));
-            if (!isFolded) {
-                list(rows, folder.documents(), folder.folders(), depth + 1);
-            }
-        }
+    private Stream<DocsRow> list(List<DocumentView> documents, List<FolderView> folders, int depth) {
+        return Stream.concat(
+                documents.stream().map(document -> new DocumentRow(document, depth)),
+                folders.stream().flatMap(folder -> folderRows(folder, depth)));
+    }
+
+    private Stream<DocsRow> folderRows(FolderView folder, int depth) {
+        String path = folder.path().value();
+        boolean isFolded = folded.contains(new RowKey(RowKind.FOLDER, path));
+        Stream<DocsRow> header = Stream.of(new FolderRow(path, folder.name().value(), folder.count(), isFolded, depth));
+        return isFolded ? header : Stream.concat(header, list(folder.documents(), folder.folders(), depth + 1));
     }
 
     private static int indexOf(List<DocsRow> rows, RowKey key) {
-        for (int index = 0; index < rows.size(); index++) {
-            if (rows.get(index).key().equals(key)) {
-                return index;
-            }
-        }
-        throw new SelectedRowNotVisibleException(key);
+        return IntStream.range(0, rows.size())
+                .filter(index -> rows.get(index).key().equals(key))
+                .findFirst()
+                .orElseThrow(() -> new SelectedRowNotVisibleException(key));
     }
 }

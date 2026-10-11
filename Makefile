@@ -54,6 +54,9 @@ lint: ## Verify formatting without touching files
 dup: ## Fail on copy-pasted code
 	$(MVN) pmd:cpd-check
 
+rules: ## Fail on a source rule ArchUnit cannot see: a for loop, a magic number
+	$(MVN) pmd:check checkstyle:check
+
 config-check: ## Fail on a config comment that explains the tool rather than the choice
 	@python3 scripts/check-config-comments.py
 
@@ -81,7 +84,7 @@ package: ## Build the runnable jar into target/lazyclaude.jar
 run: package ## Start the TUI in this terminal
 	@$(JAVA) --enable-native-access=ALL-UNNAMED -jar $(JAR)
 
-ci: lint config-check adr-check ticket-check test-comment-check guard-fixtures guard-harness test dup ## CI's first step, cheapest check first
+ci: lint config-check adr-check ticket-check test-comment-check guard-fixtures guard-harness test dup rules ## CI's first step, cheapest check first
 
 # CI runs these targets in this order. Adding a step to one without the other is what
 # makes "it passed locally" stop meaning anything.

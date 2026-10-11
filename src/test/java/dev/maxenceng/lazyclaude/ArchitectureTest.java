@@ -208,7 +208,7 @@ class ArchitectureTest {
             .areNotAssignableTo(Throwable.class)
             .and()
             .haveSimpleNameNotEndingWith("Builder")
-            .should(holdOnlyDomainTypesWhenTheyHoldMoreThanOne())
+            .should(holdOnlyDomainTypes())
             .allowEmptyShould(true);
 
     // With two fields or more, a builder names each argument; a reordered constructor call would compile and lie.
@@ -288,6 +288,40 @@ class ArchitectureTest {
             .haveNameMatching("set[A-Z].*")
             .allowEmptyShould(true);
 
+    // A constant another class reads is a dependency nobody can see in a constructor; it is passed in, or kept in the package.
+    @ArchTest
+    static final ArchRule no_public_static_fields = fields()
+            .that()
+            .areDeclaredInClassesThat()
+            .areNotEnums()
+            .and()
+            .areStatic()
+            .should()
+            .notBePublic()
+            .allowEmptyShould(true);
+
+    // A constructor only checks what it is handed, through Assert; a business rule that can fail belongs to the manager.
+    @ArchTest
+    static final ArchRule domain_constructors_throw_nothing_of_their_own = classes()
+            .that()
+            .resideInAnyPackage("..domain..", "..published..")
+            .and()
+            .resideOutsideOfPackage(ROOT + ".error..")
+            .and()
+            .areNotAssignableTo(Throwable.class)
+            .should(throwNothingFromTheirConstructors())
+            .allowEmptyShould(true);
+
+    // A view answers the shell in the context's own types; a raw string parameter is a value object the caller skipped.
+    @ArchTest
+    static final ArchRule views_take_domain_types_as_parameters = classes()
+            .that()
+            .resideInAPackage("..infrastructure.primary..")
+            .and()
+            .haveSimpleNameEndingWith("View")
+            .should(takeNoRawValueInAPublicMethod())
+            .allowEmptyShould(true);
+
     // A manager orders its rules and raises its own context's exceptions; asserting is second-guessing what it was handed.
     @ArchTest
     static final ArchRule managers_assert_nothing = noClasses()
@@ -328,6 +362,7 @@ class ArchitectureTest {
     // A list, a map and a pair are shapes rather than values; what they carry must still be a domain type.
     private static final List<String> CARRIERS = List.of(List.class.getName(), Map.class.getName());
     private static final String PAIR = "Pair";
+    private static final String EQUALS = "equals";
 
     private static List<JavaField> nonStaticFields(JavaClass type) {
         return type.getAllFields().stream()
@@ -335,14 +370,11 @@ class ArchitectureTest {
                 .toList();
     }
 
-    private static ArchCondition<JavaClass> holdOnlyDomainTypesWhenTheyHoldMoreThanOne() {
-        return new ArchCondition<>("hold only domain types when they hold more than one") {
+    private static ArchCondition<JavaClass> holdOnlyDomainTypes() {
+        return new ArchCondition<>("carry only domain types, and hold a raw value only as their single field") {
             @Override
             public void check(JavaClass owner, ConditionEvents events) {
                 List<JavaField> components = nonStaticFields(owner);
-                if (components.size() < 2) {
-                    return;
-                }
                 for (JavaField component : components) {
                     JavaClass type = component.getRawType();
                     if (CARRIERS.contains(type.getName()) || type.getSimpleName().equals(PAIR)) {
@@ -352,7 +384,7 @@ class ArchitectureTest {
                                         component,
                                         "%s holds %s<%s>; the carrier is fine, what it carries is a raw value"
                                                 .formatted(owner.getSimpleName(), type.getSimpleName(), carried.getSimpleName()))));
-                    } else if (isRawValue(type)) {
+                    } else if (components.size() > 1 && isRawValue(type)) {
                         events.add(SimpleConditionEvent.violated(
                                 component,
                                 "%s holds %s directly; wrap it in a value object"
@@ -425,6 +457,38 @@ class ArchitectureTest {
 
     private static boolean isBuiltThroughItsBuilder(JavaClass type, JavaClass origin) {
         return origin.equals(type) || isOwnBuilder(type, origin);
+    }
+
+    private static ArchCondition<JavaClass> throwNothingFromTheirConstructors() {
+        return new ArchCondition<>("throw nothing of their own from a constructor") {
+            @Override
+            public void check(JavaClass type, ConditionEvents events) {
+                type.getConstructors().stream()
+                        .flatMap(constructor -> constructor.getConstructorCallsFromSelf().stream())
+                        .filter(call -> call.getTargetOwner().isAssignableTo(Throwable.class))
+                        .forEach(call -> events.add(SimpleConditionEvent.violated(
+                                call,
+                                "%s's constructor throws %s; check inputs through Assert and leave business rules to the manager"
+                                        .formatted(type.getSimpleName(), call.getTargetOwner().getSimpleName()))));
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> takeNoRawValueInAPublicMethod() {
+        return new ArchCondition<>("take no raw value as a parameter of a public method") {
+            @Override
+            public void check(JavaClass view, ConditionEvents events) {
+                view.getMethods().stream()
+                        .filter(method -> method.getModifiers().contains(JavaModifier.PUBLIC))
+                        .filter(method -> !method.getName().equals(EQUALS))
+                        .forEach(method -> method.getRawParameterTypes().stream()
+                                .filter(ArchitectureTest::isRawValue)
+                                .forEach(raw -> events.add(SimpleConditionEvent.violated(
+                                        method,
+                                        "%s takes %s; ask in the domain's type for it"
+                                                .formatted(method.getFullName(), raw.getSimpleName())))));
+            }
+        };
     }
 
     private static ArchCondition<JavaClass> takeNoOtherManagerAsAConstructorParameter() {

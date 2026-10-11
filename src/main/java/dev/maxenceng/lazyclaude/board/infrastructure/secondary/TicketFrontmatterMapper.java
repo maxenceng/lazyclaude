@@ -1,6 +1,5 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -63,17 +62,17 @@ final class TicketFrontmatterMapper {
     }
 
     private static Frontmatter otherKeys(List<NodeTuple> tuples) {
-        List<FrontmatterEntry> entries = new ArrayList<>();
-        for (NodeTuple tuple : tuples) {
-            String key = display(tuple.getKeyNode());
-            if (!key.isBlank() && !MODELLED.contains(key)) {
-                entries.add(FrontmatterEntry.builder()
-                        .key(new FrontmatterKey(key))
+        return new Frontmatter(tuples.stream()
+                .filter(tuple -> isOther(display(tuple.getKeyNode())))
+                .map(tuple -> FrontmatterEntry.builder()
+                        .key(new FrontmatterKey(display(tuple.getKeyNode())))
                         .value(new FrontmatterValue(display(tuple.getValueNode())))
-                        .build());
-            }
-        }
-        return new Frontmatter(entries);
+                        .build())
+                .toList());
+    }
+
+    private static boolean isOther(String key) {
+        return !key.isBlank() && !MODELLED.contains(key);
     }
 
     private static String field(List<NodeTuple> tuples, String key) {

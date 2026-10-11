@@ -12,6 +12,6 @@ record DocumentRow(DocumentView document, int depth) implements DocsRow {
 
     @Override
     public String text() {
-        return INDENT.repeat(depth) + document.path().fileName();
+        return Indent.STEP.repeat(depth) + document.path().fileName();
     }
 }

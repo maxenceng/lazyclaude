@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
@@ -33,19 +34,21 @@ final class RowsElement implements Element {
             return;
         }
         int first = Math.max(0, Math.min(selected - height + 1, lines.size() - height));
-        for (int row = 0; row < height && first + row < lines.size(); row++) {
-            int index = first + row;
-            RowLine entry = lines.get(index);
-            String line = fit(entry.whole(), area.width());
-            boolean reversed = index == selected && highlighted;
-            Style style = reversed ? Style.EMPTY.reversed() : Style.EMPTY;
-            String padded = reversed ? line + PADDING.repeat(area.width() - line.codePointCount(0, line.length())) : line;
-            frame.buffer().setString(area.x(), area.y() + row, padded, style);
-            int gutterWidth = Math.min(entry.gutter().codePointCount(0, entry.gutter().length()), line.codePointCount(0, line.length()));
-            if (gutterWidth > 0) {
-                Style gutterStyle = reversed ? entry.gutterStyle().reversed() : entry.gutterStyle();
-                frame.buffer().setString(area.x(), area.y() + row, line.substring(0, line.offsetByCodePoints(0, gutterWidth)), gutterStyle);
-            }
+        IntStream.range(0, Math.min(height, lines.size() - first))
+                .forEach(row -> renderRow(frame, area, row, first + row));
+    }
+
+    private void renderRow(Frame frame, Rect area, int row, int index) {
+        RowLine entry = lines.get(index);
+        String line = fit(entry.whole(), area.width());
+        boolean reversed = index == selected && highlighted;
+        Style style = reversed ? Style.EMPTY.reversed() : Style.EMPTY;
+        String padded = reversed ? line + PADDING.repeat(area.width() - line.codePointCount(0, line.length())) : line;
+        frame.buffer().setString(area.x(), area.y() + row, padded, style);
+        int gutterWidth = Math.min(entry.gutter().codePointCount(0, entry.gutter().length()), line.codePointCount(0, line.length()));
+        if (gutterWidth > 0) {
+            Style gutterStyle = reversed ? entry.gutterStyle().reversed() : entry.gutterStyle();
+            frame.buffer().setString(area.x(), area.y() + row, line.substring(0, line.offsetByCodePoints(0, gutterWidth)), gutterStyle);
         }
     }
 

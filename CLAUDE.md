@@ -29,6 +29,7 @@ Use `make`, never `mvn` directly — the Makefile selects the Java 25 toolchain.
 - `make test-one T=SomeTest` — one class or method, when the full run is too slow to iterate on
 - `make contract` — the `@Tag("contract")` tests `make test` and CI exclude; run after a Claude Code upgrade
 - `make fmt` / `make lint` — apply / verify formatting
+- `make rules` — PMD and Checkstyle: no `for` loop, no magic number (ADR 0025)
 - `make adr-check` — fail on a duplicate or missing ADR number; run it before choosing one
 - `make verify` — everything CI runs, in CI's order; `make ci` is its first step
 - `make verify-report` — the same run, into a log, printing the exit code and the totals
@@ -74,6 +75,7 @@ an ADR.
 - A value a file may lack is a sealed value object with an explicit absent shape (`Title | NoTitle`),
   never `null` or a stand-in.
 - A domain failure is a `DomainException`; an input check goes through `Assert`.
+- A review correction made twice becomes a check that fails the build, not a note (ADR 0025).
 - A screen is tested by rendering it into a buffer (`Screen` in the shell's tests) and
   asserting on its text, not by driving a real terminal.
 - A `*Test` class holds tests only; values come from the `<Type>Fixture` beside the type, and

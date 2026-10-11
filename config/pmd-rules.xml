@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<ruleset name="lazyclaude"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>Review corrections that kept coming back, as rules the build runs.</description>
+
+    <!-- Streams, not loops. A loop whose body throws a checked exception is suppressed, with the reason. -->
+    <rule name="UseStreamsNotForLoops"
+          language="java"
+          message="Use a stream rather than a for loop"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <priority>1</priority>
+        <properties>
+            <property name="xpath">
+                <value>//ForStatement | //ForeachStatement</value>
+            </property>
+        </properties>
+    </rule>
+</ruleset>

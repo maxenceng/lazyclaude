@@ -76,20 +76,17 @@ public final class TranscriptRepository implements PastSessionPort {
         Set<Path> present = new HashSet<>();
         Set<Path> unlisted = new HashSet<>();
         listTranscripts(present, unlisted, unlistable);
-        boolean changed = known.keySet().removeIf(path -> isGone(Path.of(path), present, unlisted));
-        for (Path file : present) {
-            changed |= refresh(file, locator);
-        }
-        persist(changed, unwritable);
+        boolean forgot = known.keySet().removeIf(path -> isGone(Path.of(path), present, unlisted));
+        boolean refreshed = present.stream().map(file -> refresh(file, locator)).reduce(false, Boolean::logicalOr);
+        persist(forgot || refreshed, unwritable);
     }
 
     /** Reads again each of {@code files} that is new or changed, and forgets those that are gone. */
     synchronized void rescan(Collection<Path> files, TranscriptLocator locator, CacheFallback unwritable) {
         ensureLoaded();
-        boolean changed = false;
-        for (Path file : files) {
-            changed |= Files.exists(file) ? refresh(file, locator) : known.remove(file.toString()) != null;
-        }
+        boolean changed = files.stream()
+                .map(file -> Files.exists(file) ? refresh(file, locator) : known.remove(file.toString()) != null)
+                .reduce(false, Boolean::logicalOr);
         persist(changed, unwritable);
     }
 

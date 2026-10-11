@@ -116,12 +116,9 @@ final class TranscriptTail {
             return commandArgsOf(content.asString()).flatMap(CachedTicketRun::parse);
         }
         if (ASSISTANT.equals(entry.type())) {
-            for (JsonNode block : content) {
-                Optional<CachedTicketRun> run = skillArgsOf(block).flatMap(CachedTicketRun::parse);
-                if (run.isPresent()) {
-                    return run;
-                }
-            }
+            return content.valueStream()
+                    .flatMap(block -> skillArgsOf(block).flatMap(CachedTicketRun::parse).stream())
+                    .findFirst();
         }
         return Optional.empty();
     }
@@ -178,13 +175,11 @@ final class TranscriptTail {
         if (content.isString()) {
             return nonBlank(content.asString());
         }
-        for (JsonNode block : content) {
-            JsonNode text = block.get(TEXT);
-            if (text != null && text.isString() && nonBlank(text.asString()).isPresent()) {
-                return Optional.of(text.asString());
-            }
-        }
-        return Optional.empty();
+        return content.valueStream()
+                .map(block -> block.get(TEXT))
+                .filter(text -> text != null && text.isString())
+                .flatMap(text -> nonBlank(text.asString()).stream())
+                .findFirst();
     }
 
     private static Optional<String> nonBlank(String text) {

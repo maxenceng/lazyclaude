@@ -1,6 +1,6 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
-import java.util.List;
+import java.util.regex.Pattern;
 
 import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
@@ -24,7 +24,7 @@ public record Ticket(
         TicketBody body) {
 
     private static final String TITLE_PREFIX = "# ";
-    private static final List<String> CODE_FENCES = List.of("```", "~~~");
+    private static final Pattern FENCED_BLOCK = Pattern.compile("(?ms)^(?:```|~~~).*?(?:^(?:```|~~~)[^\\n]*$|\\z)");
 
     public Ticket {
         Assert.notNull("id", id);
@@ -44,17 +44,13 @@ public record Ticket(
     }
 
     private static TicketTitle titleIn(String text) {
-        boolean inCode = false;
         // deferred: any fence marker closes a fence, not only its own, so a `~~~` inside ``` ends it — close it when a ticket is mis-titled by one.
-        for (String line : text.lines().toList()) {
-            if (CODE_FENCES.stream().anyMatch(line::startsWith)) {
-                inCode = !inCode;
-            } else if (!inCode && line.startsWith(TITLE_PREFIX)) {
-                String heading = line.substring(TITLE_PREFIX.length()).strip();
-                return heading.isEmpty() ? new NoTitle() : new Title(heading);
-            }
-        }
-        return new NoTitle();
+        return FENCED_BLOCK.matcher(text).replaceAll("").lines()
+                .filter(line -> line.startsWith(TITLE_PREFIX))
+                .map(line -> line.substring(TITLE_PREFIX.length()).strip())
+                .findFirst()
+                .<TicketTitle>map(heading -> heading.isEmpty() ? new NoTitle() : new Title(heading))
+                .orElseGet(NoTitle::new);
     }
 
     public static TicketBuilder builder() {
