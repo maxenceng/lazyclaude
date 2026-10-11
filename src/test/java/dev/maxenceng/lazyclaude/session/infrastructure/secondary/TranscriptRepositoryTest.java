@@ -418,7 +418,7 @@ class TranscriptRepositoryTest {
         TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         assertThat(repository.pastSessions()).isEmpty();
-        verifyNoInteractions(locator, unwritable);
+        verifyNoInteractions(locator, unwritable, unlistable);
     }
 
     @Test
