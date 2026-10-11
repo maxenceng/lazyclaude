@@ -6,6 +6,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
+import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,8 +44,8 @@ class AvailableSessionsViewTest {
                 linkedSessionView(sessionIdOf(2), new YourTurn(), strong("PROJ-1", "start")),
                 linkedSessionView(sessionIdOf(3), waitingForInput(), weak("PROJ-1"))));
 
-        assertThat(view.strongestMarkerOf("PROJ-1")).contains(Marker.WAITING_FOR_INPUT);
-        assertThat(view.strongestMarkerOf("PROJ-2")).contains(Marker.WAITING_FOR_PERMISSION);
+        assertThat(view.strongestMarkerOf(linkedTicketId("PROJ-1"))).contains(Marker.WAITING_FOR_INPUT);
+        assertThat(view.strongestMarkerOf(linkedTicketId("PROJ-2"))).contains(Marker.WAITING_FOR_PERMISSION);
     }
 
     @Test
@@ -53,8 +54,8 @@ class AvailableSessionsViewTest {
                 linkedSessionView(sessionIdOf(1), new Busy(), strong("PROJ-1", "start")),
                 linkedSessionView(sessionIdOf(2), new YourTurn())));
 
-        assertThat(view.strongestMarkerOf("PROJ-1")).isEmpty();
-        assertThat(view.strongestMarkerOf("PROJ-3")).isEmpty();
+        assertThat(view.strongestMarkerOf(linkedTicketId("PROJ-1"))).isEmpty();
+        assertThat(view.strongestMarkerOf(linkedTicketId("PROJ-3"))).isEmpty();
     }
 
     @Test
@@ -65,7 +66,7 @@ class AvailableSessionsViewTest {
                 strongest,
                 linkedSessionView(sessionIdOf(3), new WaitingForPermission(), strong("PROJ-2", "start"))));
 
-        assertThat(view.strongestSessionOf("PROJ-1")).contains(strongest);
+        assertThat(view.strongestSessionOf(linkedTicketId("PROJ-1"))).contains(strongest);
     }
 
     @Test
@@ -74,14 +75,14 @@ class AvailableSessionsViewTest {
         AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
                 first, linkedSessionView(sessionIdOf(2), waitingForInput(), strong("PROJ-1", "review"))));
 
-        assertThat(view.strongestSessionOf("PROJ-1")).as("the Sessions panel lists them in this order, so enter lands on the top one").contains(first);
+        assertThat(view.strongestSessionOf(linkedTicketId("PROJ-1"))).as("the Sessions panel lists them in this order, so enter lands on the top one").contains(first);
     }
 
     @Test
     void shouldAnswerNoSessionForATicketWhoseSessionsCarryNoMarker() {
         AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new Busy(), strong("PROJ-1", "start"))));
 
-        assertThat(view.strongestSessionOf("PROJ-1")).isEmpty();
+        assertThat(view.strongestSessionOf(linkedTicketId("PROJ-1"))).isEmpty();
     }
 
     @Test

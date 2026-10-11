@@ -39,7 +39,6 @@ final class TranscriptTail {
     private static final Pattern TICKET_SKILL = Pattern.compile("(?:.+:)?ticket");
     private static final Pattern TICKET_COMMAND = Pattern.compile("<command-name>/(?:[^:<]+:)?ticket</command-name>");
     private static final Pattern COMMAND_ARGS = Pattern.compile("<command-args>(.*?)</command-args>", Pattern.DOTALL);
-    private static final Pattern BRANCH_TICKET = Pattern.compile("^(" + NamedTicketId.SHAPE.pattern() + ")(?!\\d)");
     private static final String CONTENT = "content";
     private static final String TEXT = "text";
 
@@ -97,10 +96,10 @@ final class TranscriptTail {
         if (gitBranch == null) {
             return;
         }
-        Matcher ticket = BRANCH_TICKET.matcher(gitBranch);
-        if (ticket.find() && !branchIds.contains(ticket.group(1))) {
-            branchIds.add(ticket.group(1));
-        }
+        NamedTicketId.prefixOf(gitBranch)
+                .map(NamedTicketId::value)
+                .filter(id -> !branchIds.contains(id))
+                .ifPresent(branchIds::add);
     }
 
     private void ran(CachedTicketRun run) {

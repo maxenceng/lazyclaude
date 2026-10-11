@@ -92,6 +92,7 @@ final class SessionRowsElement implements Element {
                 .orElse(0);
     }
 
+    // deferred: a panel narrower than verb and branch suffix draws both whole and the age overwrites them — close it when someone runs a panel that narrow.
     private static void line(Frame frame, Rect area, int y, String glyph, Style glyphStyle, MiddleText middle, String age, Style ageStyle) {
         int ageWidth = age.isEmpty() ? 0 : GAP.length() + age.length();
         int textWidth = Math.max(0, area.width() - glyph.length() - GAP.length() - ageWidth);

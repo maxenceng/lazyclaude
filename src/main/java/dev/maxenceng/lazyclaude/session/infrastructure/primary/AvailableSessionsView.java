@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 
 /** The project's sessions: the live ones newest start first, then the past ones newest activity first. */
@@ -26,12 +27,12 @@ public record AvailableSessionsView(List<LiveSessionView> live, List<PastSession
     }
 
     /** The strongest marker among the live sessions linked to {@code ticket}, weak links included. */
-    public Optional<Marker> strongestMarkerOf(String ticket) {
+    public Optional<Marker> strongestMarkerOf(LinkedTicketId ticket) {
         return strongestSessionOf(ticket).flatMap(LiveSessionView::marker);
     }
 
     /** The live session linked to {@code ticket}, weak links included, with the strongest marker; the first of any tied. */
-    public Optional<LiveSessionView> strongestSessionOf(String ticket) {
+    public Optional<LiveSessionView> strongestSessionOf(LinkedTicketId ticket) {
         return live.stream()
                 .filter(session -> session.linkTo(ticket).isPresent() && session.marker().isPresent())
                 .reduce((best, next) -> next.marker().orElseThrow().compareTo(best.marker().orElseThrow()) > 0 ? next : best);

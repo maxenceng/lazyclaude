@@ -9,7 +9,7 @@ public sealed interface TicketLink permits StrongLink, WeakLink {
     LinkedTicketId ticket();
 
     /** The link among {@code links} to the ticket spelt {@code ticket}, if there is one. */
-    static Optional<TicketLink> to(List<TicketLink> links, String ticket) {
-        return links.stream().filter(link -> link.ticket().value().equals(ticket)).findFirst();
+    static Optional<TicketLink> to(List<TicketLink> links, LinkedTicketId ticket) {
+        return links.stream().filter(link -> link.ticket().equals(ticket)).findFirst();
     }
 }

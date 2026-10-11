@@ -10,6 +10,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnavailableSessionsView;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 
@@ -27,7 +28,7 @@ final class SessionRows {
     private static final int PAST_SHOWN = 5;
 
     private SessionsView sessions;
-    private Optional<String> ticket = Optional.empty();
+    private Optional<LinkedTicketId> ticket = Optional.empty();
     private Optional<RowKey> selected;
     private boolean expanded;
 
@@ -50,8 +51,8 @@ final class SessionRows {
         return rows;
     }
 
-    private void addTicketSection(List<SessionRow> rows, AvailableSessionsView available, String selectedTicket) {
-        rows.add(new SectionHeaderRow(selectedTicket));
+    private void addTicketSection(List<SessionRow> rows, AvailableSessionsView available, LinkedTicketId selectedTicket) {
+        rows.add(new SectionHeaderRow(selectedTicket.value()));
         int header = rows.size();
         for (LiveSessionView session : available.live()) {
             session.linkTo(selectedTicket).ifPresent(link -> rows.add(new LiveSessionRow(session, Optional.of(link))));
@@ -107,7 +108,7 @@ final class SessionRows {
     }
 
     /** The strongest marker among the live sessions linked to {@code ticketId}, for the ticket's row on the board. */
-    Optional<Marker> markerOf(String ticketId) {
+    Optional<Marker> markerOf(LinkedTicketId ticketId) {
         return sessions instanceof AvailableSessionsView available ? available.strongestMarkerOf(ticketId) : Optional.empty();
     }
 
@@ -117,7 +118,7 @@ final class SessionRows {
     }
 
     /** Shows {@code next}'s section, the selection going to its first row. Says whether the ticket changed. */
-    boolean showTicket(Optional<String> next) {
+    boolean showTicket(Optional<LinkedTicketId> next) {
         if (next.equals(ticket)) {
             return false;
         }

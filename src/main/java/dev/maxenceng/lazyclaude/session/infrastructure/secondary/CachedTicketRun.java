@@ -16,6 +16,9 @@ import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 record CachedTicketRun(String verb, List<String> ids) {
 
     private static final Pattern WORDS = Pattern.compile("\\s+");
+    private static final int VERB = 0;
+    private static final int FIRST_ID = VERB + 1;
+    private static final int VERB_AND_ONE_ID = FIRST_ID + 1;
 
     boolean isWhole() {
         return verb != null && !verb.isBlank() && ids != null && !ids.isEmpty() && ids.stream().allMatch(id -> id != null && !id.isBlank());
@@ -23,11 +26,16 @@ record CachedTicketRun(String verb, List<String> ids) {
 
     static Optional<CachedTicketRun> parse(String args) {
         String[] words = WORDS.split(args.strip());
-        if (words.length < 2 || NamedTicketId.SHAPE.matcher(words[0]).matches()) {
+        if (words.length < VERB_AND_ONE_ID || NamedTicketId.fromWord(words[VERB]).isPresent()) {
             return Optional.empty();
         }
-        List<String> ids = Arrays.stream(words).skip(1).filter(word -> NamedTicketId.SHAPE.matcher(word).matches()).toList();
-        return ids.isEmpty() ? Optional.empty() : Optional.of(new CachedTicketRun(words[0], ids));
+        List<String> ids = Arrays.stream(words)
+                .skip(FIRST_ID)
+                .map(NamedTicketId::fromWord)
+                .flatMap(Optional::stream)
+                .map(NamedTicketId::value)
+                .toList();
+        return ids.isEmpty() ? Optional.empty() : Optional.of(new CachedTicketRun(words[VERB], ids));
     }
 
     TicketRun toDomain() {

@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketIds;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -13,7 +15,7 @@ public final class LinkFactsFixture {
     private LinkFactsFixture() {}
 
     public static KnownTickets knownTickets(String... ids) {
-        return new KnownTickets(List.of(ids));
+        return new KnownTickets(linkedTicketIds(ids));
     }
 
     public static KnownTickets noTickets() {

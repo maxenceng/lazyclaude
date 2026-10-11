@@ -16,6 +16,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.app.ToolkitApp;
@@ -249,8 +250,8 @@ public final class Shell extends ToolkitApp {
     }
 
     private void showSelectedTicketsSessions() {
-        Optional<String> ticket = board.selected() instanceof TicketRow row
-                ? Optional.of(row.ticket().id().value())
+        Optional<LinkedTicketId> ticket = board.selected() instanceof TicketRow row
+                ? Optional.of(new LinkedTicketId(row.ticket().id().value()))
                 : Optional.empty();
         sessions.showTicket(ticket);
     }
@@ -351,7 +352,7 @@ public final class Shell extends ToolkitApp {
 
     private RowLine boardLine(Row row) {
         return row instanceof TicketRow ticket
-                ? ticket.line(sessions.markerOf(ticket.ticket().id().value()))
+                ? ticket.line(sessions.markerOf(new LinkedTicketId(ticket.ticket().id().value())))
                 : RowLine.plain(row.text());
     }
 

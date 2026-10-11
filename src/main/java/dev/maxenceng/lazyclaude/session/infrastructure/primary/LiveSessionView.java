@@ -8,6 +8,7 @@ import java.util.Optional;
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.LiveSession;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
@@ -48,7 +49,7 @@ public record LiveSessionView(
     }
 
     /** How the session is linked to {@code ticket}, if it is. */
-    public Optional<TicketLink> linkTo(String ticket) {
+    public Optional<TicketLink> linkTo(LinkedTicketId ticket) {
         return TicketLink.to(links, ticket);
     }
 

@@ -24,6 +24,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewBuilder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
+import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketIds;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,7 +52,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 class SessionQueryTest {
 
     private static final SessionPayload OF_THE_PROJECT = new SessionPayload(project().root(), List.of());
-    private static final SessionPayload WITH_TICKETS = new SessionPayload(project().root(), List.of("PROJ-1", "PROJ-2"));
+    private static final SessionPayload WITH_TICKETS = new SessionPayload(project().root(), linkedTicketIds("PROJ-1", "PROJ-2"));
 
     @Mock
     private LiveSessionPort sessions;

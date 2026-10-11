@@ -29,6 +29,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRep
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptCacheFile;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchRepository;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.shared.application.WarningApplicationService;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.StoppedThreadPayload;
@@ -153,7 +154,7 @@ public final class LazyClaude {
                 view.root().value(),
                 view.groups().stream()
                         .flatMap(group -> group.tickets().stream())
-                        .map(ticket -> ticket.id().value())
+                        .map(ticket -> new LinkedTicketId(ticket.id().value()))
                         .toList());
     }
 

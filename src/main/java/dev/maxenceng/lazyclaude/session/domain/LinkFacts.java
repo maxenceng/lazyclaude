@@ -1,10 +1,10 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.LinkVerb;
@@ -40,15 +40,15 @@ public record LinkFacts(List<TicketRun> runs, List<NamedTicketId> branchIds) {
     }
 
     private List<TicketLink> strongLinks(KnownTickets tickets) {
-        Map<LinkedTicketId, LinkVerb> lastVerbs = new LinkedHashMap<>();
-        for (TicketRun run : runs) {
-            for (NamedTicketId named : run.ids()) {
-                tickets.find(named).ifPresent(ticket -> lastVerbs.put(ticket, run.verb()));
-            }
-        }
-        List<TicketLink> links = new ArrayList<>();
-        lastVerbs.forEach((ticket, verb) -> links.add(StrongLink.builder().ticket(ticket).verb(verb).build()));
-        return links;
+        Map<LinkedTicketId, LinkVerb> lastVerbs = runs.stream()
+                .flatMap(run -> run.ids().stream()
+                        .map(tickets::find)
+                        .flatMap(Optional::stream)
+                        .map(ticket -> Map.entry(ticket, run.verb())))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (first, last) -> last, LinkedHashMap::new));
+        return lastVerbs.entrySet().stream()
+                .<TicketLink>map(link -> StrongLink.builder().ticket(link.getKey()).verb(link.getValue()).build())
+                .toList();
     }
 
     private List<TicketLink> weakLinks(KnownTickets tickets) {

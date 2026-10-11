@@ -20,6 +20,7 @@ import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUn
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
+import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketIds;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.warning;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningCommandFixture.warningCommand;
@@ -270,7 +271,7 @@ class LazyClaudeTest {
         BoardView board = boardViewOf(ticketView(), secondTicketView(), doneTicketView());
 
         assertThat(LazyClaude.sessionPayload(board))
-                .isEqualTo(new SessionPayload(project().root(), List.of(ticketId().value(), secondTicketId().value(), ticketId().value())));
+                .isEqualTo(new SessionPayload(project().root(), linkedTicketIds(ticketId().value(), secondTicketId().value(), ticketId().value())));
     }
 
     @Test

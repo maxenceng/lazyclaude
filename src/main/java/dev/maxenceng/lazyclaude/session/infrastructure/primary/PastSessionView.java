@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.PastSession;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
@@ -35,7 +36,7 @@ public record PastSessionView(
     }
 
     /** How the session is linked to {@code ticket}, if it is. */
-    public Optional<TicketLink> linkTo(String ticket) {
+    public Optional<TicketLink> linkTo(LinkedTicketId ticket) {
         return TicketLink.to(links, ticket);
     }
 
