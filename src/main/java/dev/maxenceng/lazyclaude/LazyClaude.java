@@ -182,6 +182,7 @@ public final class LazyClaude {
             WarningQuery warnings) {
         Shell shell = new Shell(view, tree, live);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
+        // deferred: the ticket ids are the board's at start-up, so a ticket created while running links its sessions only at the next start — close it when the board is watched for changes.
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);
         warnings.subscribe(shell::warningsChanged);
         return shell;
