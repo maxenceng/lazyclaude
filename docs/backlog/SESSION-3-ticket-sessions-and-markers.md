@@ -1,6 +1,6 @@
 ---
 id: SESSION-3
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 80
@@ -118,3 +118,12 @@ The Sessions panel with SESSION-3 selected on the board:
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-3](LAZY-3-session-ticket-link.md), [LAZY-18](LAZY-18-ordering-a-tickets-sessions.md), markers from [LAZY-10](LAZY-10-screen-layout-and-keys.md). The marker on the board is `shell`'s join.
+
+Closed after [#16](https://github.com/maxenceng/lazyclaude/pull/16). Review changed the Model decision in a few places. ADR 0024 records them as built, and the section above is left as decided:
+
+- The branch prefix is the board's own id shape (`NamedTicketId`), not the criterion's `^([A-Za-z]+-\d+)`: the board accepts `V2-4`, and that regex could not read it from a branch. Args and branch use the same shape.
+- The link rule lives in the domain's `LinkFacts`, which `SessionManager` applies against the handed-over ids wrapped as `KnownTickets`.
+- The per-ticket marker, and which session holds it for `enter`, are answered by `AvailableSessionsView`, not by the domain. The ranking itself (`Marker` from `SessionState`) is still the domain's. The rule moves into `AvailableSessions` when a second reader needs it, such as SESSION-7's notifications.
+- A first word shaped like a ticket id is not a verb, so a bare `/ticket SESSION-3` is not a run and the branch decides. `session` does not know `board`'s verbs.
+- The ticket ids are the board's at start-up. A ticket created while lazyclaude runs links its sessions at the next start, which is a `deferred:` note in `LazyClaude`.
+- The cache records (`CachedTicketRun`, the cached branch ids) keep raw strings, because they are the JSON shape. Every other ticket id is a `LinkedTicketId` or a `NamedTicketId`.
