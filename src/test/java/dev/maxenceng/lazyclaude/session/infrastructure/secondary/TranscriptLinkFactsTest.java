@@ -186,7 +186,7 @@ class TranscriptLinkFactsTest {
                 folder(),
                 sessionId(),
                 branchLine(cwd(), started(), "main"),
-                branchLine(cwd(), later(), "close-SESSION-1"),
+                branchLine(cwd(), later(), "close-PROJ-1"),
                 branchLine(cwd(), latest(), "feature/PROJ-1"));
 
         assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).linkFacts())
