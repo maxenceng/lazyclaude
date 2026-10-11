@@ -15,6 +15,7 @@ import static dev.maxenceng.lazyclaude.docs.published.DocumentPathFixture.adrPat
 import static dev.maxenceng.lazyclaude.docs.published.DocumentPathFixture.secondAdrPath;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,6 +31,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.docs.domain.DocsPort;
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 @ExtendWith(MockitoExtension.class)
 class DocsQueryTest {
@@ -42,11 +44,14 @@ class DocsQueryTest {
     @Mock
     private DocsWatchPort watch;
 
+    @Mock
+    private WarningPort warnings;
+
     @Test
     void shouldViewAnEmptyTreeWhenThereAreNoDocuments() {
         when(docs.paths(project())).thenReturn(List.of());
 
-        assertThat(docsQuery(docs, watch).docsFor(OF_THE_PROJECT)).isEqualTo(emptyDocsView());
+        assertThat(docsQuery(docs, watch, warnings).docsFor(OF_THE_PROJECT)).isEqualTo(emptyDocsView());
     }
 
     @Test
@@ -57,7 +62,7 @@ class DocsQueryTest {
         when(docs.read(project(), readDocument().path())).thenReturn(readDocument());
         when(docs.read(project(), unreadableDocument().path())).thenReturn(unreadableDocument());
 
-        assertThat(docsQuery(docs, watch).docsFor(OF_THE_PROJECT))
+        assertThat(docsQuery(docs, watch, warnings).docsFor(OF_THE_PROJECT))
                 .isEqualTo(docsViewOf(List.of(documentView(), unreadableDocumentView()), List.of(adrFolderView())));
     }
 
@@ -65,7 +70,7 @@ class DocsQueryTest {
     void shouldViewWhyWhenTheDocsCannotBeListed() {
         when(docs.paths(project())).thenThrow(docsUnavailable());
 
-        assertThat(docsQuery(docs, watch).docsFor(OF_THE_PROJECT)).isEqualTo(unavailableDocsView());
+        assertThat(docsQuery(docs, watch, warnings).docsFor(OF_THE_PROJECT)).isEqualTo(unavailableDocsView());
     }
 
     @Test
@@ -73,9 +78,9 @@ class DocsQueryTest {
         when(docs.paths(project())).thenReturn(List.of());
         List<DocsView> received = new ArrayList<>();
 
-        docsQuery(docs, watch).subscribe(OF_THE_PROJECT, received::add);
+        docsQuery(docs, watch, warnings).subscribe(OF_THE_PROJECT, received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(watch).watch(eq(project()), changed.capture());
+        verify(watch).watch(eq(project()), changed.capture(), any());
         changed.getValue().run();
 
         assertThat(received).containsExactly(emptyDocsView());

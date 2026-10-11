@@ -26,7 +26,13 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeAgentsRep
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LiveSessionRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRepository;
+import dev.maxenceng.lazyclaude.shared.application.WarningApplicationService;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.StoppedThreadPayload;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningCommand;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.ProjectLocatorRepository;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepository;
 import dev.maxenceng.lazyclaude.shell.Shell;
 
 /** Composition root: the one place that builds adapters and hands them to the shell. */
@@ -45,32 +51,52 @@ public final class LazyClaude {
     static void main() throws Exception {
         BoardQuery board = new BoardQuery(
                 new BoardApplicationService(new ProjectLocatorRepository(), new BacklogRepository()));
+        WarningRepository warningRepository = new WarningRepository();
+        WarningApplicationService warningService = new WarningApplicationService(warningRepository, warningRepository);
+        WarningQuery warnings = new WarningQuery(warningService);
+        Thread.setDefaultUncaughtExceptionHandler(
+                warnOfStoppedThreads(Thread.currentThread(), new WarningCommand(warningService), System.err));
         DocsQuery docs = new DocsQuery(
-                new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(System.err)));
-        SessionQuery sessions = sessionQuery();
+                new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(), warningRepository));
+        SessionQuery sessions = sessionQuery(warningRepository);
         int exit = start(
                 Path.of("").toAbsolutePath(),
                 board,
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, docs, sessions));
+                (view, tree, live) -> run(view, tree, live, docs, sessions, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
     }
 
-    private static SessionQuery sessionQuery() {
+    /**
+     * A thread other than {@code main} that ends on a failure nobody caught raises a warning, since the
+     * screen is up and a stack trace would print over it. {@code main} carries the shell, so the screen
+     * is gone by the time a failure reaches here, and it is printed as the JVM would.
+     */
+    static Thread.UncaughtExceptionHandler warnOfStoppedThreads(Thread main, WarningCommand warnings, PrintStream err) {
+        return (thread, failure) -> {
+            if (thread == main) {
+                failure.printStackTrace(err);
+            } else {
+                warnings.threadStopped(new StoppedThreadPayload(thread.getName(), failure));
+            }
+        };
+    }
+
+    private static SessionQuery sessionQuery(WarningPort warnings) {
         Path registry = Path.of(System.getProperty(USER_HOME)).resolve(REGISTRY);
         LiveSessionRepository live = new LiveSessionRepository(
                 new SessionRegistryRepository(registry, PROC, MACHINE_ID),
                 new ClaudeAgentsRepository(CLAUDE_AGENTS, CLAUDE_AGENTS_PATIENCE),
-                System.err,
                 SessionWatchRepository.SWEEP_INTERVAL);
         return new SessionQuery(new SessionApplicationService(
                 live,
                 new ProjectLocatorRepository(),
-                new SessionWatchRepository(registry, System.err),
+                new SessionWatchRepository(registry),
+                warnings,
                 Clock.systemDefaultZone()));
     }
 
@@ -97,20 +123,33 @@ public final class LazyClaude {
         return 0;
     }
 
-    private static void run(BoardView view, DocsView tree, SessionsView live, DocsQuery docs, SessionQuery sessions)
+    private static void run(
+            BoardView view,
+            DocsView tree,
+            SessionsView live,
+            DocsQuery docs,
+            SessionQuery sessions,
+            WarningQuery warnings)
             throws Exception {
-        shellOn(view, tree, live, docs, sessions).run();
+        shellOn(view, tree, live, docs, sessions, warnings).run();
     }
 
     /**
      * The shell on {@code view}, {@code tree} and {@code live}, handed the project's docs and sessions again
-     * after each change from now on.
+     * after each change from now on, and every warning raised, those raised before it opened included.
      */
     // deferred: a change between the first read and the watch starting is shown only at the next change — close it when a doc edited during start-up is seen stale.
-    static Shell shellOn(BoardView view, DocsView tree, SessionsView live, DocsQuery docs, SessionQuery sessions) {
+    static Shell shellOn(
+            BoardView view,
+            DocsView tree,
+            SessionsView live,
+            DocsQuery docs,
+            SessionQuery sessions,
+            WarningQuery warnings) {
         Shell shell = new Shell(view, tree, live);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         sessions.subscribe(new SessionPayload(view.root().value()), shell::sessionsChanged);
+        warnings.subscribe(shell::warningsChanged);
         return shell;
     }
 }

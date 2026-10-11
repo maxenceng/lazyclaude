@@ -5,6 +5,7 @@ import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.docsUn
 import static dev.maxenceng.lazyclaude.docs.domain.UnavailableDocsFixture.unavailableDocs;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -23,6 +24,7 @@ import dev.maxenceng.lazyclaude.docs.domain.Docs;
 import dev.maxenceng.lazyclaude.docs.domain.DocsPort;
 import dev.maxenceng.lazyclaude.docs.domain.DocsTree;
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 @ExtendWith(MockitoExtension.class)
 class DocsApplicationServiceTest {
@@ -32,6 +34,9 @@ class DocsApplicationServiceTest {
 
     @Mock
     private DocsWatchPort watch;
+
+    @Mock
+    private WarningPort warnings;
 
     @InjectMocks
     private DocsApplicationService service;
@@ -52,7 +57,7 @@ class DocsApplicationServiceTest {
 
         service.subscribe(project(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(watch).watch(eq(project()), changed.capture());
+        verify(watch).watch(eq(project()), changed.capture(), any());
         changed.getValue().run();
         changed.getValue().run();
 
@@ -68,7 +73,7 @@ class DocsApplicationServiceTest {
 
         service.subscribe(project(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(watch).watch(eq(project()), changed.capture());
+        verify(watch).watch(eq(project()), changed.capture(), any());
         changed.getValue().run();
         changed.getValue().run();
 

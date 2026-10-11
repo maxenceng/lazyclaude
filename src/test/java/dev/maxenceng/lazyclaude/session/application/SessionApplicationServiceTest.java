@@ -9,6 +9,7 @@ import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailabl
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.workingDirectoryOf;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -25,6 +26,7 @@ import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.Sessions;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 @ExtendWith(MockitoExtension.class)
 class SessionApplicationServiceTest {
@@ -38,24 +40,27 @@ class SessionApplicationServiceTest {
     @Mock
     private SessionWatchPort watch;
 
+    @Mock
+    private WarningPort warnings;
+
     @Test
     void shouldReadTheLiveSessionsOfTheProject() {
-        when(sessions.liveSessions()).thenReturn(List.of(reportedSession()));
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
         when(locator.locate(workingDirectoryOf(reportedSession())))
                 .thenReturn(project());
 
-        assertThat(new SessionApplicationService(sessions, locator, watch, clock()).sessionsFor(project()))
+        assertThat(new SessionApplicationService(sessions, locator, watch, warnings, clock()).sessionsFor(project()))
                 .isEqualTo(liveSessionsOf(List.of(liveSession())));
     }
 
     @Test
     void shouldHandTheListenerWhyAndKeepWatchingWhenARereadCannotAnswer() {
-        when(sessions.liveSessions()).thenThrow(sessionsUnavailable()).thenReturn(List.of());
+        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable()).thenReturn(List.of());
         List<Sessions> received = new ArrayList<>();
 
-        new SessionApplicationService(sessions, locator, watch, clock()).subscribe(project(), received::add);
+        new SessionApplicationService(sessions, locator, watch, warnings, clock()).subscribe(project(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(watch).watch(changed.capture());
+        verify(watch).watch(changed.capture(), any());
         changed.getValue().run();
         changed.getValue().run();
 

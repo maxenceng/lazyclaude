@@ -16,6 +16,9 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQue
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionViewFixture.unavailableSessionsView;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.warning;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningCommandFixture.warningCommand;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQueryFixture.warningQuery;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.linkedWorktree;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.removeBacklog;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithBacklog;
@@ -56,7 +59,9 @@ import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.ProjectLocatorRepository;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepository;
 import dev.maxenceng.lazyclaude.shell.Screen;
 import dev.maxenceng.lazyclaude.shell.Shell;
 
@@ -66,6 +71,7 @@ class LazyClaudeTest {
     private final BoardQuery realBoard = boardQuery(new ProjectLocatorRepository(), new BacklogRepository());
     private final ByteArrayOutputStream said = new ByteArrayOutputStream();
     private final PrintStream err = new PrintStream(said, true, StandardCharsets.UTF_8);
+    private final WarningRepository raised = new WarningRepository();
     private final List<BoardView> opened = new ArrayList<>();
     private final List<DocsView> openedDocs = new ArrayList<>();
     private final List<SessionsView> openedSessions = new ArrayList<>();
@@ -93,7 +99,7 @@ class LazyClaudeTest {
 
     @Test
     void shouldSayWhyAndExitNonZeroWithoutOpeningTheShellOutsideAGitRepository() throws Exception {
-        int exit = LazyClaude.start(sandbox, realBoard, docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> opened.add(view));
+        int exit = LazyClaude.start(sandbox, realBoard, docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> opened.add(view));
 
         assertThat(exit).as("a missing project is a failed start").isNotZero();
         assertThat(said.toString(StandardCharsets.UTF_8))
@@ -106,7 +112,7 @@ class LazyClaudeTest {
     void shouldSayWhyAndExitNonZeroWithoutOpeningTheShellWhenTheMainWorktreeHasNoBacklog() throws Exception {
         Path repository = repositoryWithoutBacklog(sandbox.resolve("app"));
 
-        int exit = LazyClaude.start(repository, realBoard, docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> opened.add(view));
+        int exit = LazyClaude.start(repository, realBoard, docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> opened.add(view));
 
         assertThat(exit).isNotZero();
         assertThat(said.toString(StandardCharsets.UTF_8))
@@ -120,7 +126,7 @@ class LazyClaudeTest {
         Path worktree = linkedWorktree(repository, sandbox.resolve("app.worktrees/PROJ-1-ticket"));
         removeBacklog(repository);
 
-        int exit = LazyClaude.start(worktree, realBoard, docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> opened.add(view));
+        int exit = LazyClaude.start(worktree, realBoard, docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> opened.add(view));
 
         assertThat(exit).as("the main worktree's backlog is the one that counts").isNotZero();
         assertThat(said.toString(StandardCharsets.UTF_8)).contains(repository.resolve("docs/backlog").toString());
@@ -133,7 +139,7 @@ class LazyClaudeTest {
         when(locator.locate(any())).thenReturn(project());
         when(backlog.entries(project())).thenThrow(new BacklogUnavailableException(listed, new IOException("denied")));
 
-        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> opened.add(view));
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> opened.add(view));
 
         assertThat(exit).isNotZero();
         assertThat(said.toString(StandardCharsets.UTF_8))
@@ -148,7 +154,7 @@ class LazyClaudeTest {
         when(backlog.entries(project())).thenReturn(List.of());
         when(docs.paths(project())).thenReturn(List.of());
 
-        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> {
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> {
                     opened.add(view);
                     openedDocs.add(docsView);
                 });
@@ -165,7 +171,7 @@ class LazyClaudeTest {
         when(backlog.entries(project())).thenReturn(List.of());
         when(docs.paths(project())).thenThrow(docsUnavailable());
 
-        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> {
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> {
                     opened.add(view);
                     openedDocs.add(docsView);
                 });
@@ -178,9 +184,9 @@ class LazyClaudeTest {
     @Test
     void shouldHandTheShellTheDocsAgainWhenTheWatcherReportsAChange() {
         when(docs.paths(project())).thenReturn(List.of());
-        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch));
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), warningQuery(raised));
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(watch).watch(eq(project()), changed.capture());
+        verify(watch).watch(eq(project()), changed.capture(), any());
         when(docs.paths(project())).thenReturn(List.of(readDocument().path()));
         when(docs.read(project(), readDocument().path())).thenReturn(readDocument());
 
@@ -192,22 +198,65 @@ class LazyClaudeTest {
     }
 
     @Test
-    void shouldStartWatchingWithOneWarningWhenTheWatchCannotBeSetUp() throws Exception {
+    void shouldStartWatchingAndShowTheWarningOnTheFirstFrameWhenTheWatchCannotBeSetUp() throws Exception {
         Path repository = repositoryWithBacklog(sandbox.resolve("app"));
         write(docsIn(repository), "glossary.md", markdown());
-        ByteArrayOutputStream warned = new ByteArrayOutputStream();
         List<Shell> shells = new ArrayList<>();
 
-        try (DocsWatchRepository watcher = watcherWithoutInotify(warned)) {
-            DocsQuery realDocs = docsQuery(new DocsRepository(), watcher);
-            int exit = LazyClaude.start(repository, realBoard, realDocs, sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> shells.add(LazyClaude.shellOn(view, docsView, sessionsView, realDocs, sessionQuery(sessions, locator, sessionWatch))));
+        try (DocsWatchRepository watcher = watcherWithoutInotify()) {
+            DocsQuery realDocs = docsQuery(new DocsRepository(), watcher, raised);
+            int exit = LazyClaude.start(repository, realBoard, realDocs, sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> shells.add(LazyClaude.shellOn(view, docsView, sessionsView, realDocs, sessionQuery(sessions, locator, sessionWatch, raised), warningQuery(raised))));
 
             assertThat(exit).isZero();
         }
-        assertThat(warned.toString(StandardCharsets.UTF_8))
-                .as("a watch that cannot be set up costs a warning, not the start")
-                .contains("fs.inotify.max_user_watches");
-        assertThat(Screen.of(shells.getFirst()).boardPanelText()).contains("glossary.md");
+        Screen first = Screen.of(shells.getFirst());
+        assertThat(first.statusLine())
+                .as("a watch that cannot be set up costs a warning on the screen, raised before the screen existed")
+                .contains("⚠ docs: cannot watch");
+        assertThat(first.boardPanelText()).as("and not the start").contains("glossary.md");
+        assertThat(said.size()).as("nothing reaches stderr while the screen is up").isZero();
+    }
+
+    @Test
+    void shouldShowAWarningRaisedAfterTheShellWasComposed() {
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), warningQuery(raised));
+        assertThat(Screen.of(shell).statusLine()).isBlank();
+
+        raised.raise(warning());
+
+        assertThat(Screen.of(shell).statusLine()).endsWith(warning().text());
+        assertThat(said.size()).as("nothing reaches stderr while the screen is up").isZero();
+    }
+
+    @Test
+    void shouldShowAWarningWhenAThreadOtherThanMainStopsOnAFailureNobodyCaught() throws Exception {
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), warningQuery(raised));
+        Thread.UncaughtExceptionHandler handler = LazyClaude.warnOfStoppedThreads(Thread.currentThread(), warningCommand(raised), err);
+
+        Thread.ofPlatform()
+                .name("docs-watch")
+                .uncaughtExceptionHandler(handler)
+                .start(() -> {
+                    throw new IllegalStateException("gone");
+                })
+                .join();
+
+        assertThat(Screen.of(shell).statusLine()).contains("⚠ docs-watch stopped (java.lang.IllegalStateException: gone)");
+        assertThat(said.size()).as("a dying watcher must not print its stack trace over the screen").isZero();
+    }
+
+    @Test
+    void shouldPrintAFailureThatEndsTheMainThreadSinceTheScreenIsGoneByThen() {
+        Thread.UncaughtExceptionHandler handler = LazyClaude.warnOfStoppedThreads(Thread.currentThread(), warningCommand(raised), err);
+
+        handler.uncaughtException(Thread.currentThread(), new IllegalStateException("gone"));
+
+        assertThat(said.toString(StandardCharsets.UTF_8))
+                .as("main carries the shell, so a failure there would otherwise vanish into a warning nobody sees")
+                .contains("java.lang.IllegalStateException: gone");
+        List<WarningView> shown = new ArrayList<>();
+        warningQuery(raised).subscribe(shown::add);
+        assertThat(shown).isEmpty();
     }
 
     @Test
@@ -215,9 +264,9 @@ class LazyClaudeTest {
         when(locator.locate(any())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
         when(docs.paths(project())).thenReturn(List.of());
-        when(sessions.liveSessions()).thenReturn(List.of());
+        when(sessions.liveSessions(any())).thenReturn(List.of());
 
-        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> openedSessions.add(sessionsView));
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> openedSessions.add(sessionsView));
 
         assertThat(exit).isZero();
         assertThat(openedSessions).containsExactly(emptySessionsView());
@@ -228,9 +277,9 @@ class LazyClaudeTest {
         when(locator.locate(any())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
         when(docs.paths(project())).thenReturn(List.of());
-        when(sessions.liveSessions()).thenThrow(sessionsUnavailable());
+        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
 
-        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch), err, (view, docsView, sessionsView) -> openedSessions.add(sessionsView));
+        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> openedSessions.add(sessionsView));
 
         assertThat(exit).as("the sessions stand alone; the board still opens").isZero();
         assertThat(openedSessions).containsExactly(unavailableSessionsView());
@@ -239,10 +288,10 @@ class LazyClaudeTest {
 
     @Test
     void shouldHandTheShellTheSessionsAgainWhenTheWatcherReportsAChange() {
-        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), docsQuery(docs, watch), sessionQuery(sessions, locator, sessionWatch));
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), warningQuery(raised));
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(sessionWatch).watch(changed.capture());
-        when(sessions.liveSessions()).thenThrow(sessionsUnavailable());
+        verify(sessionWatch).watch(changed.capture(), any());
+        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
 
         changed.getValue().run();
 

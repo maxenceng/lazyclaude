@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 
 import dev.maxenceng.lazyclaude.session.domain.LiveSession;
@@ -10,14 +11,13 @@ import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
-import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /** One live session as the shell reads it: what its row and the main view show. */
 public record SessionView(
         SessionId id,
         ProcessId pid,
         SessionName name,
-        WorkingDirectory directory,
+        Path directory,
         LocalDateTime startedAt,
         SessionAge age,
         ClaudeVersion version,
@@ -28,7 +28,7 @@ public record SessionView(
                 .id(session.id())
                 .pid(session.pid())
                 .name(session.name())
-                .directory(session.directory())
+                .directory(session.directory().path())
                 .startedAt(live.startedLocally(session))
                 .age(live.ageOf(session))
                 .version(session.version())
@@ -44,7 +44,7 @@ public record SessionView(
         private SessionId id;
         private ProcessId pid;
         private SessionName name;
-        private WorkingDirectory directory;
+        private Path directory;
         private LocalDateTime startedAt;
         private SessionAge age;
         private ClaudeVersion version;
@@ -67,7 +67,7 @@ public record SessionView(
             return this;
         }
 
-        public SessionViewBuilder directory(WorkingDirectory directory) {
+        public SessionViewBuilder directory(Path directory) {
             this.directory = directory;
             return this;
         }

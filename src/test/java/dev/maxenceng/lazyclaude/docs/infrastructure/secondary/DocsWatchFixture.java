@@ -1,14 +1,12 @@
 package dev.maxenceng.lazyclaude.docs.infrastructure.secondary;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.time.Duration;
 
+import dev.maxenceng.lazyclaude.docs.domain.WatchFallback;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 public final class DocsWatchFixture {
@@ -24,45 +22,46 @@ public final class DocsWatchFixture {
         return Duration.ofSeconds(5);
     }
 
+    public static Duration pollInterval() {
+        return SHORT_POLL;
+    }
+
     public static Duration settled() {
         return Duration.ofMillis(700);
     }
 
-    static DocsWatchRepository watching(DocsWatchRepository watcher, Path root, ChangeProbe probe) {
-        watcher.watch(new Project(root), probe.listener());
+    static DocsWatchRepository watching(DocsWatchRepository watcher, Path root, ChangeProbe probe, WatchFallback fallback) {
+        watcher.watch(new Project(root), probe.listener(), fallback);
         return watcher;
     }
 
-    public static DocsWatchRepository watcher(ByteArrayOutputStream said) {
+    public static DocsWatchRepository watcher() {
         return new DocsWatchRepository(
                 () -> FileSystems.getDefault().newWatchService(),
                 REAL_REGISTRAR,
-                new PrintStream(said, true, StandardCharsets.UTF_8),
                 SHORT_BATCH,
                 SHORT_POLL);
     }
 
-    public static DocsWatchRepository watcherWithoutInotify(ByteArrayOutputStream said) {
+    public static DocsWatchRepository watcherWithoutInotify() {
         return new DocsWatchRepository(
                 () -> {
                     throw new IOException("User limit of inotify watches reached");
                 },
                 REAL_REGISTRAR,
-                new PrintStream(said, true, StandardCharsets.UTF_8),
                 SHORT_BATCH,
                 SHORT_POLL);
     }
 
-    static DocsWatchRepository watcherOver(FakeWatchService service, DirectoryRegistrar registrar, ByteArrayOutputStream said) {
+    static DocsWatchRepository watcherOver(FakeWatchService service, DirectoryRegistrar registrar) {
         return new DocsWatchRepository(
-                () -> service, registrar, new PrintStream(said, true, StandardCharsets.UTF_8), SHORT_BATCH, SHORT_POLL);
+                () -> service, registrar, SHORT_BATCH, SHORT_POLL);
     }
 
-    static DocsWatchRepository watcherRegisteringWith(DirectoryRegistrar registrar, ByteArrayOutputStream said) {
+    static DocsWatchRepository watcherRegisteringWith(DirectoryRegistrar registrar) {
         return new DocsWatchRepository(
                 () -> FileSystems.getDefault().newWatchService(),
                 registrar,
-                new PrintStream(said, true, StandardCharsets.UTF_8),
                 SHORT_BATCH,
                 SHORT_POLL);
     }

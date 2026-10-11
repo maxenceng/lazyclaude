@@ -17,11 +17,13 @@ words mean.
 |---|---|---|
 | Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; sessions group under the one their `cwd` belongs to, so a ticket worktree's sessions sit under its project. A session whose `cwd` is outside git is grouped on its own. | `shared` |
 | Working directory | The directory lazyclaude was started in, or a session's `cwd`; the project is located from it. | `shared` |
+| Warning | A degraded mode lazyclaude carries on in (the docs watch fell back to polling, the sessions watch left to its sweep, live sessions read from `claude agents`), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, and is never printed over the screen. | `shared` |
 
 ## shell
 
 | Term | Meaning | Where it lives |
 |---|---|---|
+| Status line | The top row of the screen: the newest warning on the right (`⚠ <text>`, or `⚠ 2 · <text>` once there are two), cut with `…` rather than wrapped. | `shell` |
 | Main view | The right column's top pane, which shows the selection of whichever left panel last had focus; for a ticket, its frontmatter and its body rendered as markdown, for a document, its markdown rendered. | `shell` |
 | Ticket detail | What the main view shows for a ticket: its facts line, its other frontmatter keys, a rule, then its body rendered as markdown. It scrolls as one unit. | `shell` |
 
@@ -44,6 +46,7 @@ words mean.
 |---|---|---|
 | Live session | A session whose process runs, as the registry lists it after the liveness check, or `claude agents --json` when the registry is unusable. `sdk-cli` sessions are not listed from the registry. | `session` |
 | Registry | Claude Code's `~/.claude/sessions/<pid>.json` records, one per running process; internal and undocumented, so never trusted without the liveness check. | `session` |
+| Sweep | Re-reading the live sessions on a timer (every 2 s), always, watch or not: a session whose process died never rewrites its record, so only the sweep notices. Without a watch, the sweep is all there is. | `session` |
 | Hosted session | A live session lazyclaude spawned: the real `claude` on a pty, drawn in a dock tab. It dies with lazyclaude. | `session` (expected) |
 | Outside session | A live session started anywhere else. lazyclaude shows it read-only and can jump to its terminal window. | `session` (expected) |
 | Past session | A session with no live process, only a transcript. It can be resumed, which makes it hosted. A hosted session whose `claude` exited is past. | `session` (expected) |
@@ -80,6 +83,7 @@ words mean.
 |---|---|---|
 | Document | One markdown file under the project's `docs/`, outside `docs/backlog/`, shown read-only. | `docs` |
 | Docs tree | The project's documents grouped by folder, as the Docs panel shows them: the files directly under `docs/` first, then one header per folder with the count of documents beneath it, each level sorted by name. | `docs` |
+| Polling | Checking the docs on a timer (every 5 s) in place of the watch, only when the watch cannot be set up or kept. Not a sweep: the docs have no polling while the watch holds. | `docs` |
 
 ## Words we deliberately avoid
 

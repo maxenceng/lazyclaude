@@ -1,8 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -137,7 +135,7 @@ public final class RegistryFixture {
                 .build();
     }
 
-    public static LiveSessionRepository repositoryOver(SessionRegistryRepository registry, ByteArrayOutputStream said, ClaudeAgentsRepository agents) {
-        return new LiveSessionRepository(registry, agents, new PrintStream(said, true, StandardCharsets.UTF_8), Duration.ofSeconds(2));
+    public static LiveSessionRepository repositoryOver(SessionRegistryRepository registry, ClaudeAgentsRepository agents) {
+        return new LiveSessionRepository(registry, agents, Duration.ofSeconds(2));
     }
 }

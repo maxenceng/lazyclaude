@@ -11,6 +11,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.Registry
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.RegistryFixture.reportedByAgents;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,12 +19,21 @@ import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
+import dev.maxenceng.lazyclaude.session.domain.SourceFallback;
 
+@ExtendWith(MockitoExtension.class)
 class ClaudeAgentsRepositoryTest {
+
+    @Mock
+    private SourceFallback fallback;
+
 
     private static final Path CWD = Path.of("/work/app");
     private static final Duration PATIENCE = Duration.ofSeconds(10);
@@ -78,5 +88,13 @@ class ClaudeAgentsRepositoryTest {
         assertThatThrownBy(() -> new ClaudeAgentsRepository(List.of(claude.toString()), Duration.ofMillis(300)).liveSessions())
                 .isInstanceOf(SessionsUnavailableException.class)
                 .hasMessageContaining("did not answer");
+    }
+
+    @Test
+    void shouldTellTheFallbackNothingSinceThereIsNoOtherSourceToFallBackTo() throws IOException {
+        Path claude = claudePrinting(root, "[]");
+
+        assertThat(new ClaudeAgentsRepository(List.of(claude.toString()), PATIENCE).liveSessions(fallback)).isEmpty();
+        verifyNoInteractions(fallback);
     }
 }

@@ -37,7 +37,7 @@ public final class SessionViewFixture {
                 .id(sessionId())
                 .pid(processId())
                 .name(sessionName())
-                .directory(projectRootDirectory())
+                .directory(projectRootDirectory().path())
                 .startedAt(LocalDateTime.of(2026, 10, 10, 12, 0))
                 .age(new SessionAge(Duration.ofHours(2)))
                 .version(version())

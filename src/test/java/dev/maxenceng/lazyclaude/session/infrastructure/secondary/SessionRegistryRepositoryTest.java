@@ -17,6 +17,7 @@ import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.input
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.permissionPrompt;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,14 +25,23 @@ import java.nio.file.Path;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SdkCliEntrypoint;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
+import dev.maxenceng.lazyclaude.session.domain.SourceFallback;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 
+@ExtendWith(MockitoExtension.class)
 class SessionRegistryRepositoryTest {
+
+    @Mock
+    private SourceFallback fallback;
+
 
     private static final Path CWD = Path.of("/work/app");
     private static final String PROC_START = "175781";
@@ -217,5 +227,14 @@ class SessionRegistryRepositoryTest {
         Files.createDirectories(sessions);
 
         assertThat(registry.liveSessions()).isEmpty();
+    }
+
+    @Test
+    void shouldTellTheFallbackNothingSinceThereIsNoOtherSourceToFallBackTo() throws IOException {
+        writeRecord(sessions, registeredPid() + ".json", record(registeredPid(), registeredSessionId(), CWD, "busy"));
+        runningProcess(proc, registeredPid(), "claude", PROC_START);
+
+        assertThat(registry.liveSessions(fallback)).containsExactly(registeredBusy(CWD));
+        verifyNoInteractions(fallback);
     }
 }

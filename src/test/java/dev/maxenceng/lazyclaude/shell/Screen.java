@@ -85,6 +85,10 @@ public final class Screen {
         return String.join("\n", lines);
     }
 
+    public String statusLine() {
+        return lines.getFirst();
+    }
+
     List<String> lines() {
         return lines;
     }

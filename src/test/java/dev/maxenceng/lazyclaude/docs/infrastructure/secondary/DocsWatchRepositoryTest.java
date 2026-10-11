@@ -4,6 +4,7 @@ import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.docsIn;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.markdown;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsFixture.write;
+import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.pollInterval;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.settled;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watcher;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watcherOver;
@@ -12,21 +13,35 @@ import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFi
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.watching;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchFixture.within;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.docs.domain.WatchFallback;
+import dev.maxenceng.lazyclaude.docs.published.Reason;
+
+@ExtendWith(MockitoExtension.class)
 class DocsWatchRepositoryTest {
 
-    private final ByteArrayOutputStream said = new ByteArrayOutputStream();
+    @Mock
+    private WatchFallback fallback;
+
+
     private final ChangeProbe probe = new ChangeProbe();
     private DocsWatchRepository watcher;
 
@@ -50,7 +65,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldReportASavedDocument() throws Exception {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
         write(docs, "glossary.md", "# Glossary\n");
 
@@ -59,7 +74,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldReportAnAddedDocument() throws Exception {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
         write(docs, "new.md", markdown());
 
@@ -68,7 +83,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldReportADeletedDocument() throws Exception {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
         Files.delete(docs.resolve("adr/0001-record.md"));
 
@@ -77,7 +92,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldReportAFolderMovedOutOfTheTree() throws Exception {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
         Files.move(docs.resolve("adr"), root.resolve("adr"));
 
@@ -88,7 +103,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldReportOnceForABurstOfSaves() throws Exception {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
         for (int save = 0; save < 5; save++) {
             write(docs, "burst-%d.md".formatted(save), markdown());
@@ -102,7 +117,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldWatchAFolderAddedAfterItStarted() throws Exception {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
         Files.createDirectories(docs.resolve("research"));
         assertThat(probe.changedWithin(within())).isTrue();
@@ -116,7 +131,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldWatchAFolderNestedInAnAddedFolder() throws Exception {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
         Files.createDirectories(docs.resolve("research/old"));
         assertThat(probe.changedWithin(within())).isTrue();
@@ -128,7 +143,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldWatchAFolderAddedInsideARenamedFolder() throws Exception {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
         Files.move(docs.resolve("adr"), docs.resolve("decisions"));
         assertThat(probe.changedWithin(within())).isTrue();
@@ -145,7 +160,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldIgnoreChangesUnderTheBacklog() throws Exception {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
         write(docs, "backlog/ticket.md", markdown());
         write(docs, "backlog/nested/DOCS-2.md", markdown());
@@ -155,7 +170,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldIgnoreAChangeToAFileThatIsNotMarkdown() throws Exception {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
         write(docs, "adr/.0001-record.md.swp", "x");
 
@@ -164,34 +179,34 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldSayNothingWhenTheWatchIsSetUp() {
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
-        assertThat(said.size()).isZero();
+        verifyNoInteractions(fallback);
     }
 
     @Test
     void shouldStartWithoutAnythingToWatchWhenTheProjectHasNoDocs() throws Exception {
         deleteTree(docs);
 
-        watcher = watching(watcher(said), root, probe);
+        watcher = watching(watcher(), root, probe, fallback);
 
-        assertThat(said.size()).as("no docs is not a failed watch").isZero();
+        verifyNoInteractions(fallback);
     }
 
     @Test
     void shouldWarnOnceNamingTheTreeAndTheSysctlWhenTheWatchCannotBeSetUp() {
-        watcher = watching(watcherWithoutInotify(said), root, probe);
+        watcher = watching(watcherWithoutInotify(), root, probe, fallback);
 
-        assertThat(said.toString(StandardCharsets.UTF_8))
-                .contains(docs.toString())
-                .contains("fs.inotify.max_user_watches")
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
+        verify(fallback).polling(cause.capture(), eq(pollInterval()));
+        assertThat(cause.getValue().value()).contains(docs.toString())
                 .contains("User limit of inotify watches reached")
-                .hasLineCount(1);
+                .contains("fs.inotify.max_user_watches");
     }
 
     @Test
     void shouldPollForChangesWhenTheWatchCannotBeSetUp() throws Exception {
-        watcher = watching(watcherWithoutInotify(said), root, probe);
+        watcher = watching(watcherWithoutInotify(), root, probe, fallback);
 
         write(docs, "glossary.md", "# Glossary, edited\n");
 
@@ -200,7 +215,7 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldPollForAnAddedDocumentInANewFolder() throws Exception {
-        watcher = watching(watcherWithoutInotify(said), root, probe);
+        watcher = watching(watcherWithoutInotify(), root, probe, fallback);
 
         write(docs, "research/tamboui.md", markdown());
 
@@ -209,26 +224,26 @@ class DocsWatchRepositoryTest {
 
     @Test
     void shouldNotWarnAgainWhileItKeepsPolling() throws Exception {
-        watcher = watching(watcherWithoutInotify(said), root, probe);
+        watcher = watching(watcherWithoutInotify(), root, probe, fallback);
 
         write(docs, "one.md", markdown());
         assertThat(probe.changedWithin(within())).isTrue();
         write(docs, "two.md", markdown());
         assertThat(probe.changedWithin(within())).isTrue();
 
-        assertThat(said.toString(StandardCharsets.UTF_8)).hasLineCount(1);
+        verify(fallback, times(1)).polling(any(), any());
     }
 
     @Test
     void shouldNotReportWhenPollingFindsNothingChanged() throws Exception {
-        watcher = watching(watcherWithoutInotify(said), root, probe);
+        watcher = watching(watcherWithoutInotify(), root, probe, fallback);
 
         assertThat(probe.quietFor(settled())).isTrue();
     }
 
     @Test
     void shouldPollIgnoringTheBacklog() throws Exception {
-        watcher = watching(watcherWithoutInotify(said), root, probe);
+        watcher = watching(watcherWithoutInotify(), root, probe, fallback);
 
         write(docs, "backlog/ticket.md", markdown());
 
@@ -239,7 +254,7 @@ class DocsWatchRepositoryTest {
     void shouldRegisterTheTreeAgainAndReportOnceOnOverflow() throws Exception {
         FakeWatchService service = new FakeWatchService();
         RecordingRegistrar registrar = RecordingRegistrar.neverFailing();
-        watcher = watching(watcherOver(service, registrar, said), root, probe);
+        watcher = watching(watcherOver(service, registrar), root, probe, fallback);
         assertThat(registrar.registered()).containsExactly(docs, docs.resolve("adr"));
 
         service.offer(new OverflowKey(docs));
@@ -254,21 +269,20 @@ class DocsWatchRepositoryTest {
     @Test
     void shouldPollWithOneWarningWhenRegistrationFailsOnTheSecondDirectory() throws Exception {
         RecordingRegistrar registrar = RecordingRegistrar.failingOnCall(2);
-        watcher = watching(watcherRegisteringWith(registrar, said), root, probe);
+        watcher = watching(watcherRegisteringWith(registrar), root, probe, fallback);
 
         write(docs, "glossary.md", "# Glossary, edited\n");
 
         assertThat(probe.changedWithin(within())).isTrue();
-        assertThat(said.toString(StandardCharsets.UTF_8))
-                .contains(docs.toString())
-                .contains("fs.inotify.max_user_watches")
-                .hasLineCount(1);
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
+        verify(fallback).polling(cause.capture(), any());
+        assertThat(cause.getValue().value()).contains(docs.toString());
     }
 
     @Test
     void shouldLetGoOfTheWatchWhenItCannotBeSetUp() throws Exception {
         FakeWatchService service = new FakeWatchService();
-        watcher = watching(watcherOver(service, RecordingRegistrar.failingOnCall(1), said), root, probe);
+        watcher = watching(watcherOver(service, RecordingRegistrar.failingOnCall(1)), root, probe, fallback);
 
         assertThat(service.isClosed())
                 .as("the watches registered before the failure count against the limit polling was chosen to spare")
@@ -278,7 +292,7 @@ class DocsWatchRepositoryTest {
     @Test
     void shouldFallBackToPollingWithOneWarningWhenAFolderAddedWhileWatchingCannotBeWatched() throws Exception {
         RecordingRegistrar registrar = RecordingRegistrar.failingOnCall(3);
-        watcher = watching(watcherRegisteringWith(registrar, said), root, probe);
+        watcher = watching(watcherRegisteringWith(registrar), root, probe, fallback);
 
         Files.createDirectories(docs.resolve("research"));
         assertThat(probe.quietFor(settled())).isTrue();
@@ -287,9 +301,8 @@ class DocsWatchRepositoryTest {
         assertThat(probe.changedWithin(within()))
                 .as("the watch limit is hit only on the new folder, so polling must take over from the running watcher")
                 .isTrue();
-        assertThat(said.toString(StandardCharsets.UTF_8))
-                .contains(docs.toString())
-                .contains("fs.inotify.max_user_watches")
-                .hasLineCount(1);
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
+        verify(fallback).polling(cause.capture(), any());
+        assertThat(cause.getValue().value()).contains(docs.toString());
     }
 }

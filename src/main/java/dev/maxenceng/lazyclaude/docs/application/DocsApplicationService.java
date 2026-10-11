@@ -7,14 +7,15 @@ import dev.maxenceng.lazyclaude.docs.domain.DocsManager;
 import dev.maxenceng.lazyclaude.docs.domain.DocsPort;
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 /** Reads a project's docs, and keeps a listener handed them again as they change. */
 public final class DocsApplicationService {
 
     private final DocsManager manager;
 
-    public DocsApplicationService(DocsPort docs, DocsWatchPort watch) {
-        this.manager = new DocsManager(docs, watch);
+    public DocsApplicationService(DocsPort docs, DocsWatchPort watch, WarningPort warnings) {
+        this.manager = new DocsManager(docs, watch, warnings);
     }
 
     public Docs docsFor(Project project) {

@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.error.domain;
 
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.regex.Pattern;
 
 /**
@@ -21,6 +22,13 @@ public final class Assert {
         notNull(field, input);
         if (input.isBlank()) {
             throw new BlankValueException(field);
+        }
+    }
+
+    public static void notEmpty(String field, Collection<?> input) {
+        notNull(field, input);
+        if (input.isEmpty()) {
+            throw new EmptyValueException(field);
         }
     }
 
