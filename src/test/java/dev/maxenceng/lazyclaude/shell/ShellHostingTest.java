@@ -10,6 +10,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTabNumbered;
 import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.leftPressAt;
 import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.wheelUpAt;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningViewFixture.warningViewOf;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
@@ -266,6 +267,18 @@ class ShellHostingTest {
     }
 
     @Test
+    void shouldShowTheQuitPromptOverAWarningRaisedEarlier() {
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        shell.warningsChanged(warningViewOf("resume: " + "/gone".repeat(40) + " is gone; running in the project root instead.", 1));
+
+        shell.press(key('q'));
+
+        assertThat(Screen.of(shell).statusLine())
+                .as("a warning drawn over the question would hide what the next key answers")
+                .contains("1 hosted session is busy or waiting — quit? y/n");
+    }
+
+    @Test
     void shouldQuitOnYes() {
         Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
         shell.press(key('q'));
@@ -426,6 +439,15 @@ class ShellHostingTest {
 
         assertThat(bindings.triggersFor("focusNext")).isEmpty();
         assertThat(bindings.triggersFor("focusPrevious")).isEmpty();
+    }
+
+    @Test
+    void shouldLeaveQuitUnboundSoOnlyTheShellDecidesWhenToQuit() {
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+
+        assertThat(shell.config().bindings().triggersFor("quit"))
+                .as("TamboUI's own quit binding takes Q too, and would end busy hosted sessions without asking")
+                .isEmpty();
     }
 
     @Test

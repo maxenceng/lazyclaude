@@ -32,7 +32,7 @@ final class DockText {
 
     private static List<Span> tab(HostedSessionView tab, boolean selected) {
         Style label = selected ? Style.EMPTY.reversed() : Style.EMPTY;
-        return tab.registered()
+        return tab.live()
                 .<List<Span>>map(live -> List.of(glyph(live), Span.raw(GAP), Span.styled(live.name().value(), label)))
                 .orElseGet(() -> List.of(Span.styled(STARTING, label.dim())));
     }

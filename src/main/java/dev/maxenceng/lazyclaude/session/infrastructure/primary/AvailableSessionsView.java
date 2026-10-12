@@ -42,11 +42,6 @@ public record AvailableSessionsView(
                 .reduce((best, next) -> next.marker().orElseThrow().compareTo(best.marker().orElseThrow()) > 0 ? next : best);
     }
 
-    /** How many hosted sessions are busy or waiting on you, which quitting would cut off. */
-    public long busyOrWaitingHosted() {
-        return hosted.stream().filter(HostedSessionView::busyOrWaiting).count();
-    }
-
     /** The live sessions linked to no ticket. */
     public List<LiveSessionView> unlinkedLive() {
         return live.stream().filter(LiveSessionView::isUnlinked).toList();

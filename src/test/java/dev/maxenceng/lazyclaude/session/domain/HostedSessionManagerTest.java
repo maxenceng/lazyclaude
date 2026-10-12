@@ -115,6 +115,18 @@ class HostedSessionManagerTest {
     }
 
     @Test
+    void shouldAnswerWithTheOpenSessionInsteadOfResumingTheSameSessionTwice() {
+        when(hosts.exists(worktreeDirectory())).thenReturn(true);
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        HostStart first = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
+
+        HostStart second = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
+
+        assertThat(second).as("two claude resuming one session would both write its transcript").isEqualTo(first);
+        verify(hosts).spawn(any(), any());
+    }
+
+    @Test
     void shouldResumeInTheProjectRootAndWarnWhenTheRecordedDirectoryIsGone() {
         when(hosts.exists(worktreeDirectory())).thenReturn(false);
         when(hosts.spawn(any(), any())).thenReturn(processId());
@@ -218,8 +230,9 @@ class HostedSessionManagerTest {
             return processId();
         });
 
-        manager.startUnlinked(project(), paneSize());
+        HostStart start = manager.startUnlinked(project(), paneSize());
 
+        assertThat(start).as("the shell would focus a tab that never opens").isEqualTo(new NotStartedHost());
         assertThat(manager.open().sessions())
                 .as("a claude that dies at once never shows up as a tab that nothing will close")
                 .isEmpty();

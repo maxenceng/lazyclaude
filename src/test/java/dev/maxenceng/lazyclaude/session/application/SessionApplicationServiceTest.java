@@ -36,8 +36,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
-import dev.maxenceng.lazyclaude.session.domain.HostedTab;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.Sessions;
@@ -169,7 +169,7 @@ class SessionApplicationServiceTest {
         assertThat(service.sessionsFor(project(), noTickets()))
                 .isInstanceOfSatisfying(
                         AvailableSessions.class,
-                        available -> assertThat(available.hosted()).extracting(HostedTab::phase).containsExactly(new StartingPhase()));
+                        available -> assertThat(available.hosted()).extracting(OpenHostedSession::phase).containsExactly(new StartingPhase()));
     }
 
     @Test

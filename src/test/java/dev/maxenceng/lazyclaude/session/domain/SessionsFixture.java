@@ -50,7 +50,7 @@ public final class SessionsFixture {
         return AvailableSessions.builder().live(sessions).past(past).clock(sessionClock()).build();
     }
 
-    public static AvailableSessions availableSessionsHosting(List<LiveSession> sessions, List<HostedTab> hosted) {
+    public static AvailableSessions availableSessionsHosting(List<LiveSession> sessions, List<OpenHostedSession> hosted) {
         return AvailableSessions.builder()
                 .live(sessions)
                 .past(List.of())
@@ -67,7 +67,7 @@ public final class SessionsFixture {
         return unavailableSessionsHosting(List.of());
     }
 
-    public static UnavailableSessions unavailableSessionsHosting(List<HostedTab> hosted) {
+    public static UnavailableSessions unavailableSessionsHosting(List<OpenHostedSession> hosted) {
         return UnavailableSessions.builder().reason(reason()).hosted(hosted).build();
     }
 

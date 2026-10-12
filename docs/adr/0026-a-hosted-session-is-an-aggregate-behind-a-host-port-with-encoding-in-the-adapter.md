@@ -19,7 +19,8 @@ outer terminal reports the mouse, and what is lost on the way from the keyboard 
   owns: *starting* while no registry record carries its pid, then the live session that record describes, dropped when the
   process exits. `HostedSessionManager` holds the open ones in start order and decides the working directory: the project
   root for a new unlinked session, the recorded `cwd` for a resume, the root with a warning when that directory is gone.
-  It warns when a start fails or a `claude` exits non-zero. `SessionManager` learns which live sessions are hosted from
+  It warns when a start fails or a `claude` exits non-zero, and a resume of a session an open one already resumes
+  answers with that one, since two `claude` on one transcript would both write to it. `SessionManager` learns which live sessions are hosted from
   their pids, so `LiveSessionView` says hosted or outside.
 - **`HostPort` is the domain's whole view of the pty:** spawn, directory check, send, resize, screen, end, and the exit
   and screen-changed signals. `PtyHostRepository` implements it and is the only place that knows pty4j and jediterm-core;
@@ -30,7 +31,7 @@ outer terminal reports the mouse, and what is lost on the way from the keyboard 
   `TerminalMouse`) and reads a published `TerminalScreen`; no TamboUI type crosses into `session` and no jediterm type
   crosses out. A paste is bracketed when the child turned on mode 2004, and any closing bracket inside it is dropped; the
   mouse is sent as SGR only for the events the child asked for (clicks, drags, motion); arrows follow the child's cursor-key
-  mode. The child's environment is lazyclaude's less every `CLAUDE*`, `KITTY*`, `TMUX*` and `TERMINFO` variable, with
+  mode. The child's environment is lazyclaude's less every `CLAUDE*`, `KITTY*`, `TMUX*`, `TERMINFO` and `TERM_PROGRAM*` variable, with
   `TERM=xterm-256color` and `COLORTERM=truecolor`.
 - **Mouse capture is on.** Without it a wheel and a click never reach `claude`'s fullscreen UI. The cost is that the outer
   terminal's own text selection needs its bypass modifier (shift in most terminals), and that the shell sees every mouse
@@ -54,4 +55,8 @@ outer terminal reports the mouse, and what is lost on the way from the keyboard 
 - **A hosted session still starting has no Sessions row,** since it has no session id yet; its tab says *starting*.
 - **Reading the sessions again after a tab opens or closes runs on the thread that caused it,** so starting a session
   pays for one registry read and the `git` call per distinct `cwd`.
+- **A screen is read on demand, not carried on the sessions view.** `SessionQuery` hands out a session's screen when the
+  shell draws its tab, since a screen changes on every byte `claude` prints and the session list does not.
+- **A reader that stops ends its `claude`,** whether the pty closed under it or the emulator threw, so no tab outlives
+  the output that drew it.
 - **Sessions do not survive lazyclaude,** as ADR 0007 said; a holder process would be a separate, deliberate change.

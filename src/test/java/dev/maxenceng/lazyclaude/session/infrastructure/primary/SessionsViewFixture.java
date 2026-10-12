@@ -64,16 +64,16 @@ public final class SessionsViewFixture {
         return HostedSessionView.builder()
                 .id(hostedSessionId())
                 .pid(processId())
-                .registered(Optional.empty())
+                .live(Optional.empty())
                 .busyOrWaiting(false)
                 .build();
     }
 
-    public static HostedSessionView registeredHostedSessionView(LiveSessionView live, boolean busyOrWaiting) {
+    public static HostedSessionView liveHostedSessionView(LiveSessionView live, boolean busyOrWaiting) {
         return HostedSessionView.builder()
                 .id(hostedSessionId())
                 .pid(live.pid())
-                .registered(Optional.of(live))
+                .live(Optional.of(live))
                 .busyOrWaiting(busyOrWaiting)
                 .build();
     }
@@ -89,7 +89,7 @@ public final class SessionsViewFixture {
         return HostedSessionView.builder()
                 .id(hostedSessionIdOf(number))
                 .pid(live.pid())
-                .registered(Optional.of(live))
+                .live(Optional.of(live))
                 .busyOrWaiting(state instanceof Busy || state instanceof WaitingForPermission)
                 .build();
     }
@@ -98,7 +98,7 @@ public final class SessionsViewFixture {
         return HostedSessionView.builder()
                 .id(hostedSessionIdOf(number))
                 .pid(new ProcessId(1000L + number))
-                .registered(Optional.empty())
+                .live(Optional.empty())
                 .busyOrWaiting(false)
                 .build();
     }
@@ -109,7 +109,7 @@ public final class SessionsViewFixture {
 
     public static SessionsView sessionsViewWithTabs(HostedSessionView... tabs) {
         return sessionsViewHosting(
-                List.of(tabs).stream().flatMap(tab -> tab.registered().stream()).toList(), List.of(tabs));
+                List.of(tabs).stream().flatMap(tab -> tab.live().stream()).toList(), List.of(tabs));
     }
 
     public static SessionsView sessionsViewHosting(List<LiveSessionView> live, List<HostedSessionView> hosted) {

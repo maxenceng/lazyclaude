@@ -4,29 +4,29 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.HostedPhase;
-import dev.maxenceng.lazyclaude.session.domain.HostedTab;
-import dev.maxenceng.lazyclaude.session.domain.RegisteredPhase;
+import dev.maxenceng.lazyclaude.session.domain.LivePhase;
+import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
 import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 
 /** One hosted session as the dock's tab reads it: starting, or the live session the registry says it is. */
 public record HostedSessionView(
-        HostedSessionId id, ProcessId pid, Optional<LiveSessionView> registered, boolean busyOrWaiting) {
+        HostedSessionId id, ProcessId pid, Optional<LiveSessionView> live, boolean busyOrWaiting) {
 
-    static HostedSessionView from(AvailableSessions available, HostedTab tab) {
+    static HostedSessionView from(AvailableSessions available, OpenHostedSession open) {
         return builder()
-                .id(tab.session().id())
-                .pid(tab.session().pid())
-                .registered(registeredOf(available, tab.phase()))
-                .busyOrWaiting(tab.phase().isBusyOrWaiting())
+                .id(open.session().id())
+                .pid(open.session().pid())
+                .live(liveOf(available, open.phase()))
+                .busyOrWaiting(open.phase().isBusyOrWaiting())
                 .build();
     }
 
-    private static Optional<LiveSessionView> registeredOf(AvailableSessions available, HostedPhase phase) {
+    private static Optional<LiveSessionView> liveOf(AvailableSessions available, HostedPhase phase) {
         return switch (phase) {
             case StartingPhase starting -> Optional.empty();
-            case RegisteredPhase registered -> Optional.of(LiveSessionView.from(available, registered.session()));
+            case LivePhase live -> Optional.of(LiveSessionView.from(available, live.session()));
         };
     }
 
@@ -37,7 +37,7 @@ public record HostedSessionView(
     public static final class HostedSessionViewBuilder {
         private HostedSessionId id;
         private ProcessId pid;
-        private Optional<LiveSessionView> registered = Optional.empty();
+        private Optional<LiveSessionView> live = Optional.empty();
         private boolean busyOrWaiting;
 
         private HostedSessionViewBuilder() {}
@@ -52,8 +52,8 @@ public record HostedSessionView(
             return this;
         }
 
-        public HostedSessionViewBuilder registered(Optional<LiveSessionView> registered) {
-            this.registered = registered;
+        public HostedSessionViewBuilder live(Optional<LiveSessionView> live) {
+            this.live = live;
             return this;
         }
 
@@ -63,7 +63,7 @@ public record HostedSessionView(
         }
 
         public HostedSessionView build() {
-            return new HostedSessionView(id, pid, registered, busyOrWaiting);
+            return new HostedSessionView(id, pid, live, busyOrWaiting);
         }
     }
 }

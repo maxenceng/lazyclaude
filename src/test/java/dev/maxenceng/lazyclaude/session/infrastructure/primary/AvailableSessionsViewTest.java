@@ -1,7 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.registeredTab;
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.startingTab;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openLive;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openStarting;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.strong;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.hostedLiveSession;
@@ -11,9 +11,8 @@ import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailabl
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedLiveSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedSessionView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.registeredHostedSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.liveHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionIdOf;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewHosting;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsViewHosting;
@@ -110,7 +109,7 @@ class AvailableSessionsViewTest {
 
     @Test
     void shouldViewAStartingHostedSessionWithNoLiveSessionBehindIt() {
-        AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(List.of(), List.of(startingTab())));
+        AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(List.of(), List.of(openStarting())));
 
         assertThat(view.hosted()).containsExactly(startingHostedSessionView());
     }
@@ -118,9 +117,9 @@ class AvailableSessionsViewTest {
     @Test
     void shouldViewARegisteredHostedSessionWithTheLiveSessionItIs() {
         AvailableSessionsView view = AvailableSessionsView.from(
-                availableSessionsHosting(List.of(hostedLiveSession()), List.of(registeredTab(hostedLiveSession()))));
+                availableSessionsHosting(List.of(hostedLiveSession()), List.of(openLive(hostedLiveSession()))));
 
-        assertThat(view.hosted()).containsExactly(registeredHostedSessionView(hostedLiveSessionView(), true));
+        assertThat(view.hosted()).containsExactly(liveHostedSessionView(hostedLiveSessionView(), true));
         assertThat(view.live()).singleElement().satisfies(live -> assertThat(live.isHosted()).isTrue());
     }
 
@@ -132,28 +131,8 @@ class AvailableSessionsViewTest {
     }
 
     @Test
-    void shouldCountNoHostedSessionWhenNoneIsBusyOrWaiting() {
-        AvailableSessionsView view = (AvailableSessionsView) sessionsViewHosting(
-                List.of(), List.of(startingHostedSessionView(), registeredHostedSessionView(hostedLiveSessionView(), false)));
-
-        assertThat(view.busyOrWaitingHosted()).isZero();
-    }
-
-    @Test
-    void shouldCountTheHostedSessionsThatAreBusyOrWaiting() {
-        AvailableSessionsView view = (AvailableSessionsView) sessionsViewHosting(
-                List.of(),
-                List.of(
-                        startingHostedSessionView(),
-                        registeredHostedSessionView(hostedLiveSessionView(), true),
-                        registeredHostedSessionView(hostedLiveSessionView(), true)));
-
-        assertThat(view.busyOrWaitingHosted()).isEqualTo(2);
-    }
-
-    @Test
     void shouldViewTheHostedSessionsOfSessionsThatCouldNotBeRead() {
-        UnavailableSessionsView view = UnavailableSessionsView.from(unavailableSessionsHosting(List.of(startingTab())));
+        UnavailableSessionsView view = UnavailableSessionsView.from(unavailableSessionsHosting(List.of(openStarting())));
 
         assertThat(view).isEqualTo(unavailableSessionsViewHosting(List.of(startingHostedSessionView())));
     }

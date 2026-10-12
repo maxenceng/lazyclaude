@@ -10,7 +10,7 @@ import dev.maxenceng.lazyclaude.session.published.Reason;
  * are not shown either: without the live ones, a session still running cannot be told from its past row. The hosted ones
  * are still lazyclaude's own, so their tabs stay open, starting for want of a registry to say otherwise.
  */
-public record UnavailableSessions(Reason reason, List<HostedTab> hosted) implements Sessions {
+public record UnavailableSessions(Reason reason, List<OpenHostedSession> hosted) implements Sessions {
 
     public UnavailableSessions {
         Assert.notNull("reason", reason);
@@ -23,7 +23,7 @@ public record UnavailableSessions(Reason reason, List<HostedTab> hosted) impleme
 
     public static final class UnavailableSessionsBuilder {
         private Reason reason;
-        private List<HostedTab> hosted = List.of();
+        private List<OpenHostedSession> hosted = List.of();
 
         private UnavailableSessionsBuilder() {}
 
@@ -32,7 +32,7 @@ public record UnavailableSessions(Reason reason, List<HostedTab> hosted) impleme
             return this;
         }
 
-        public UnavailableSessionsBuilder hosted(List<HostedTab> hosted) {
+        public UnavailableSessionsBuilder hosted(List<OpenHostedSession> hosted) {
             this.hosted = hosted;
             return this;
         }

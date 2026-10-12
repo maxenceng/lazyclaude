@@ -20,7 +20,8 @@ public final class HostedSessionFixture {
         return HostedSession.builder()
                 .id(hostedSessionId())
                 .pid(processId())
-                .directory(projectRootDirectory());
+                .directory(projectRootDirectory())
+                .command(new NewClaude());
     }
 
     public static HostedSession hostedSession() {
@@ -42,14 +43,14 @@ public final class HostedSessionFixture {
         return new HostedSessions(List.of(sessions));
     }
 
-    public static HostedTab startingTab() {
-        return HostedTab.builder().session(hostedSession()).phase(new StartingPhase()).build();
+    public static OpenHostedSession openStarting() {
+        return OpenHostedSession.builder().session(hostedSession()).phase(new StartingPhase()).build();
     }
 
-    public static HostedTab registeredTab(LiveSession live) {
-        return HostedTab.builder()
+    public static OpenHostedSession openLive(LiveSession live) {
+        return OpenHostedSession.builder()
                 .session(hostedSession())
-                .phase(new RegisteredPhase(live))
+                .phase(new LivePhase(live))
                 .build();
     }
 }

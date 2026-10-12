@@ -189,6 +189,19 @@ class ShellDockKeysTest {
     }
 
     @Test
+    void shouldShowAHiddenMainViewWithAltKFromADockWithNoTab() {
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        shell.press(key('m'));
+        shell.press(alt('l'));
+        assertThat(shell.focus()).isEqualTo(Focus.DOCK);
+
+        shell.press(alt('k'));
+
+        assertThat(shell.focus()).isEqualTo(Focus.MAIN);
+        assertThat(Screen.of(shell).text()).contains("╭main view");
+    }
+
+    @Test
     void shouldGoToTheDockWithAltJFromTheMainView() {
         Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
         shell.press(alt('l'));

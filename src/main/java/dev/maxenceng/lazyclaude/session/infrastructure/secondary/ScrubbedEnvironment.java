@@ -11,7 +11,7 @@ import java.util.Map;
 final class ScrubbedEnvironment {
 
     private static final List<String> INHERITED_FROM_THE_OUTER_TERMINAL =
-            List.of("CLAUDE", "KITTY", "TMUX", "TERMINFO");
+            List.of("CLAUDE", "KITTY", "TMUX", "TERMINFO", "TERM_PROGRAM");
     private static final String TERM = "TERM";
     private static final String COLORTERM = "COLORTERM";
     private static final String EMULATED_TERM = "xterm-256color";

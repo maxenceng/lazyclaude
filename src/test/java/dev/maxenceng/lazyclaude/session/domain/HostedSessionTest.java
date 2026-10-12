@@ -1,10 +1,13 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSession;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.sessionWith;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,7 +40,7 @@ class HostedSessionTest {
         LiveSession ours = liveSession();
         List<LiveSession> live = List.of(liveSessionBuilder().pid(secondProcessId()).build(), ours);
 
-        assertThat(hostedSession().phaseAmong(live)).isEqualTo(new RegisteredPhase(ours));
+        assertThat(hostedSession().phaseAmong(live)).isEqualTo(new LivePhase(ours));
     }
 
     @Test
@@ -47,28 +50,43 @@ class HostedSessionTest {
 
     @Test
     void shouldBeBusyOrWaitingWhenBusy() {
-        assertThat(new RegisteredPhase(sessionWith(new Busy())).isBusyOrWaiting()).isTrue();
+        assertThat(new LivePhase(sessionWith(new Busy())).isBusyOrWaiting()).isTrue();
     }
 
     @Test
     void shouldBeBusyOrWaitingWhenWaitingForPermission() {
-        assertThat(new RegisteredPhase(sessionWith(new WaitingForPermission())).isBusyOrWaiting()).isTrue();
+        assertThat(new LivePhase(sessionWith(new WaitingForPermission())).isBusyOrWaiting()).isTrue();
     }
 
     @Test
     void shouldBeBusyOrWaitingWhenWaitingForInput() {
-        assertThat(new RegisteredPhase(sessionWith(new WaitingForInput(inputNeeded()))).isBusyOrWaiting()).isTrue();
+        assertThat(new LivePhase(sessionWith(new WaitingForInput(inputNeeded()))).isBusyOrWaiting()).isTrue();
     }
 
     @Test
     void shouldNotBeBusyOrWaitingOnYourTurn() {
-        assertThat(new RegisteredPhase(sessionWith(new YourTurn())).isBusyOrWaiting())
+        assertThat(new LivePhase(sessionWith(new YourTurn())).isBusyOrWaiting())
                 .as("a session that waits for your next prompt loses nothing when lazyclaude quits")
                 .isFalse();
     }
 
     @Test
     void shouldNotBeBusyOrWaitingWhenItsStateIsUnknown() {
-        assertThat(new RegisteredPhase(sessionWith(new Unknown())).isBusyOrWaiting()).isFalse();
+        assertThat(new LivePhase(sessionWith(new Unknown())).isBusyOrWaiting()).isFalse();
+    }
+
+    @Test
+    void shouldResumeTheSessionItWasStartedToResume() {
+        assertThat(hostedSessionBuilder().command(new ResumeClaude(sessionId())).build().resumes(sessionId())).isTrue();
+    }
+
+    @Test
+    void shouldNotResumeAnotherSession() {
+        assertThat(hostedSessionBuilder().command(new ResumeClaude(sessionId())).build().resumes(secondSessionId())).isFalse();
+    }
+
+    @Test
+    void shouldResumeNothingWhenStartedAsANewClaude() {
+        assertThat(hostedSession().resumes(sessionId())).isFalse();
     }
 }

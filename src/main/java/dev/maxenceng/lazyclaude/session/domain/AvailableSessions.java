@@ -11,7 +11,7 @@ import dev.maxenceng.lazyclaude.session.published.SessionAge;
  * from. That a session is one or the other, never both, and the order, are the manager's.
  */
 public record AvailableSessions(
-        List<LiveSession> live, List<PastSession> past, List<HostedTab> hosted, SessionClock clock)
+        List<LiveSession> live, List<PastSession> past, List<OpenHostedSession> hosted, SessionClock clock)
         implements Sessions {
 
     public AvailableSessions {
@@ -48,7 +48,7 @@ public record AvailableSessions(
     public static final class AvailableSessionsBuilder {
         private List<LiveSession> live;
         private List<PastSession> past;
-        private List<HostedTab> hosted = List.of();
+        private List<OpenHostedSession> hosted = List.of();
         private SessionClock clock;
 
         private AvailableSessionsBuilder() {}
@@ -63,7 +63,7 @@ public record AvailableSessions(
             return this;
         }
 
-        public AvailableSessionsBuilder hosted(List<HostedTab> hosted) {
+        public AvailableSessionsBuilder hosted(List<OpenHostedSession> hosted) {
             this.hosted = hosted;
             return this;
         }

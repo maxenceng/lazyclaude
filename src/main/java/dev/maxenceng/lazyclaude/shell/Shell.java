@@ -224,7 +224,8 @@ public final class Shell extends ToolkitApp {
 
     /**
      * Bracketed paste and mouse capture are on, so a paste arrives whole and the wheel and clicks reach a session; Tab and
-     * Shift+Tab are unbound from focus, so they reach it too.
+     * Shift+Tab are unbound from focus, so they reach it too. Quit is unbound, since the shell decides when {@code q} and Ctrl+C
+     * may quit.
      */
     TuiConfig config() {
         return TuiConfig.defaults()
@@ -235,6 +236,7 @@ public final class Shell extends ToolkitApp {
                         .toBuilder()
                         .unbind(Actions.FOCUS_NEXT)
                         .unbind(Actions.FOCUS_PREVIOUS)
+                        .unbind(Actions.QUIT)
                         .build())
                 .build();
     }
@@ -340,8 +342,7 @@ public final class Shell extends ToolkitApp {
             return true;
         }
         if (key.isChar(UP)) {
-            mainViewHidden = false;
-            return focusOn(Focus.MAIN);
+            return goUp(Focus.MAIN);
         }
         if (key.isChar(TOGGLE_MAIN_VIEW)) {
             return toggleMainView();
@@ -514,7 +515,7 @@ public final class Shell extends ToolkitApp {
             return focusOn(focus.below());
         }
         if (key.isChar(UP)) {
-            return focusOn(focus.above());
+            return goUp(focus.above());
         }
         if (key.isChar(TOGGLE_MAIN_VIEW)) {
             return toggleMainView();
@@ -557,7 +558,7 @@ public final class Shell extends ToolkitApp {
 
     private boolean focusTabOf(LiveSessionView session) {
         dock.tabs().stream()
-                .filter(tab -> tab.registered().map(LiveSessionView::id).filter(session.id()::equals).isPresent())
+                .filter(tab -> tab.live().map(LiveSessionView::id).filter(session.id()::equals).isPresent())
                 .findFirst()
                 .ifPresent(tab -> {
                     dock.select(tab.id());
@@ -568,6 +569,13 @@ public final class Shell extends ToolkitApp {
 
     private boolean resume(PastSessionView session) {
         return opened(hosting.resume(new ResumeHostedPayload(root, session.id(), session.directory(), paneSize())));
+    }
+
+    private boolean goUp(Focus above) {
+        if (above == Focus.MAIN) {
+            mainViewHidden = false;
+        }
+        return focusOn(above);
     }
 
     private boolean focusOn(Focus requested) {

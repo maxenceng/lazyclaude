@@ -13,7 +13,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
 
-/** The top row: the strongest marker of the project's live sessions on the left in its colour, then the warning, if one was raised, flush right in the warning colour and cut with an ellipsis rather than wrapped. */
+/** The top row: the strongest marker of the project's live sessions on the left in its colour, then a question awaiting y/n, or else the warning, if one was raised, flush right in the warning colour and cut with an ellipsis rather than wrapped. */
 final class StatusLineElement implements Element {
 
     private static final String MARK = "⚠ ";
@@ -42,7 +42,7 @@ final class StatusLineElement implements Element {
         int reserved = marker.isPresent() ? MARKER_WIDTH : 0;
         prompt.ifPresent(question -> frame.buffer().setString(
                 area.x() + reserved, area.y(), RowsElement.fit(question, Math.max(0, area.width() - reserved)), Style.EMPTY.bold()));
-        if (warning.isEmpty()) {
+        if (warning.isEmpty() || prompt.isPresent()) {
             return;
         }
         String label = RowsElement.fit(label(warning.get()), Math.max(0, area.width() - reserved));

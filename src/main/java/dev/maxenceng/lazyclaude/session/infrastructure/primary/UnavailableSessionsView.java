@@ -2,7 +2,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.util.List;
 
-import dev.maxenceng.lazyclaude.session.domain.HostedTab;
+import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
 import dev.maxenceng.lazyclaude.session.domain.UnavailableSessions;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 
@@ -12,15 +12,15 @@ public record UnavailableSessionsView(Reason reason, List<HostedSessionView> hos
     static UnavailableSessionsView from(UnavailableSessions sessions) {
         return builder()
                 .reason(sessions.reason())
-                .hosted(sessions.hosted().stream().map(UnavailableSessionsView::tab).toList())
+                .hosted(sessions.hosted().stream().map(UnavailableSessionsView::hostedOf).toList())
                 .build();
     }
 
-    private static HostedSessionView tab(HostedTab tab) {
+    private static HostedSessionView hostedOf(OpenHostedSession open) {
         return HostedSessionView.builder()
-                .id(tab.session().id())
-                .pid(tab.session().pid())
-                .busyOrWaiting(tab.phase().isBusyOrWaiting())
+                .id(open.session().id())
+                .pid(open.session().pid())
+                .busyOrWaiting(open.phase().isBusyOrWaiting())
                 .build();
     }
 

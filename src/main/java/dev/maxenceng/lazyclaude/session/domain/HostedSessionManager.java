@@ -50,8 +50,16 @@ public final class HostedSessionManager {
         return start(new NewClaude(), new WorkingDirectory(project.root()), size);
     }
 
-    /** {@code claude --resume} of {@code session}, in {@code recorded} when it still exists, else in the project root. */
+    /**
+     * {@code claude --resume} of {@code session}, in {@code recorded} when it still exists, else in the project root; the open
+     * session already resuming it when there is one, since two {@code claude} on one transcript would both write to it.
+     */
     public HostStart resume(Project project, SessionId session, WorkingDirectory recorded, PaneSize size) {
+        Optional<HostedSession> resuming =
+                open().sessions().stream().filter(hosted -> hosted.resumes(session)).findFirst();
+        if (resuming.isPresent()) {
+            return new StartedHost(resuming.get().id());
+        }
         WorkingDirectory root = new WorkingDirectory(project.root());
         if (hosts.exists(recorded)) {
             return start(new ResumeClaude(session), recorded, size);
@@ -106,7 +114,12 @@ public final class HostedSessionManager {
         }
         try {
             ProcessId pid = hosts.spawn(launch, code -> exited(id, code));
-            return registered(HostedSession.builder().id(id).pid(pid).directory(directory).build());
+            return registered(HostedSession.builder()
+                    .id(id)
+                    .pid(pid)
+                    .directory(directory)
+                    .command(command)
+                    .build());
         } catch (HostUnavailableException unavailable) {
             synchronized (open) {
                 spawning.remove(id);
@@ -126,7 +139,11 @@ public final class HostedSessionManager {
                 open.add(session);
             }
         }
-        earlyExit.ifPresentOrElse(this::warnOfFailure, this::changed);
+        if (earlyExit.isPresent()) {
+            warnOfFailure(earlyExit.get());
+            return new NotStartedHost();
+        }
+        changed();
         return new StartedHost(session.id());
     }
 

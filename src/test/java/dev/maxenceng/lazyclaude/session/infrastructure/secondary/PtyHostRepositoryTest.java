@@ -109,6 +109,32 @@ class PtyHostRepositoryTest {
     }
 
     @Test
+    void shouldEndAndReportAChildThatClosedItsOutputButKeptRunning() throws Exception {
+        CompletableFuture<ExitCode> exit = exitOf();
+
+        hostRunning("exec </dev/null >/dev/null 2>&1; sleep 60").spawn(newLaunch(id), exit::complete);
+
+        assertThat(awaited(exit).isFailure())
+                .as("a claude nothing reads any more would leave a frozen tab that never closes")
+                .isTrue();
+    }
+
+    @Test
+    void shouldEndAndReportAChildWhoseScreenCouldNotBeHandled() throws Exception {
+        CompletableFuture<ExitCode> exit = exitOf();
+        PtyHostRepository host = hostRunning("printf 'drawn'; read line");
+        host.onScreenChange(drawn -> {
+            throw new IllegalStateException("screen listener failed");
+        });
+
+        host.spawn(newLaunch(id), exit::complete);
+
+        assertThat(awaited(exit).isFailure())
+                .as("a reader that stopped on a failure still closes the tab and ends the claude behind it")
+                .isTrue();
+    }
+
+    @Test
     void shouldEndTheChildOnRequest() throws Exception {
         CompletableFuture<ExitCode> exit = exitOf();
         PtyHostRepository host = hostRunning("exec sleep 60");

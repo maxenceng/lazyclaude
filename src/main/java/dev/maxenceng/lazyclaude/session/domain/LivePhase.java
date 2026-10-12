@@ -8,9 +8,9 @@ import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 
 /** The registry lists the hosted session's pid: this is the live session that record describes. */
-public record RegisteredPhase(LiveSession session) implements HostedPhase {
+public record LivePhase(LiveSession session) implements HostedPhase {
 
-    public RegisteredPhase {
+    public LivePhase {
         Assert.notNull("session", session);
     }
 

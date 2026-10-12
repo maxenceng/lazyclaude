@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -60,17 +61,30 @@ final class HostedPty {
      * @throws HostUnavailableException when the process cannot be started
      */
     static HostedPty spawn(List<String> argv, Map<String, String> environment, Path directory, PaneSize size) {
+        PtyProcess process = started(argv, environment, directory, size);
         try {
-            PtyProcess process = new PtyProcessBuilder(argv.toArray(String[]::new))
+            return new HostedPty(process, size);
+        } catch (RuntimeException failure) {
+            process.destroyForcibly();
+            throw failure;
+        }
+    }
+
+    private static PtyProcess started(List<String> argv, Map<String, String> environment, Path directory, PaneSize size) {
+        try {
+            return new PtyProcessBuilder(argv.toArray(String[]::new))
                     .setEnvironment(environment)
                     .setDirectory(directory.toString())
                     .setInitialColumns(size.width().cells())
                     .setInitialRows(size.height().cells())
                     .start();
-            return new HostedPty(process, size);
         } catch (IOException | RuntimeException failure) {
-            throw new HostUnavailableException(START_FAILURE.formatted(failure.getMessage()), failure);
+            throw new HostUnavailableException(START_FAILURE.formatted(reason(failure)), failure);
         }
+    }
+
+    private static String reason(Exception failure) {
+        return Objects.requireNonNullElse(failure.getMessage(), failure.getClass().getSimpleName());
     }
 
     ProcessId pid() {
@@ -90,8 +104,11 @@ final class HostedPty {
             }
         } catch (IOException closed) {
             // the pty closing under the reader is how a child's end shows up, so the exit code below is the news
+        } finally {
+            // a child still running once nothing reads it — its output closed, or the emulator threw — is a tab nothing closes
+            end();
+            onExit.accept(new ExitCode(exitCode()));
         }
-        onExit.accept(new ExitCode(exitCode()));
     }
 
     private int exitCode() {
@@ -112,9 +129,14 @@ final class HostedPty {
         write(bytes);
     }
 
+    /** The emulator first, so what the child redraws on its SIGWINCH lands in a buffer of the new size. */
     void resize(PaneSize size) {
-        process.setWinSize(new WinSize(size.width().cells(), size.height().cells()));
         terminal.resize(new TermSize(size.width().cells(), size.height().cells()), RequestOrigin.User);
+        try {
+            process.setWinSize(new WinSize(size.width().cells(), size.height().cells()));
+        } catch (IllegalStateException closed) {
+            // pty4j's answer for a pty whose child just exited; the reader is about to close its tab
+        }
     }
 
     TerminalScreen screen() {
@@ -142,7 +164,7 @@ final class HostedPty {
         try {
             connector.write(bytes);
         } catch (IOException gone) {
-            // the child has exited and the reader is about to say so; what was typed at it has nowhere to go
+            // the pty is closed, and the reader ends the child and closes its tab; what was typed at it has nowhere to go
         }
     }
 

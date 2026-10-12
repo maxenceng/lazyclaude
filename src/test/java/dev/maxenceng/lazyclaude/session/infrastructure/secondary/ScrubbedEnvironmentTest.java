@@ -37,6 +37,13 @@ class ScrubbedEnvironmentTest {
     }
 
     @Test
+    void shouldDropTheNameOfTheOuterTerminalProgram() {
+        assertThat(ScrubbedEnvironment.of(Map.of("TERM_PROGRAM", "ghostty", "TERM_PROGRAM_VERSION", "1.2.0")))
+                .as("claude picks terminal features by TERM_PROGRAM, and the emulator is not the outer terminal")
+                .doesNotContainKeys("TERM_PROGRAM", "TERM_PROGRAM_VERSION");
+    }
+
+    @Test
     void shouldTellTheChildItRunsOnAnXtermWithTruecolor() {
         assertThat(ScrubbedEnvironment.of(Map.of("TERM", "xterm-kitty", "COLORTERM", "24bit")))
                 .containsEntry("TERM", "xterm-256color")

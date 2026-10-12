@@ -2,8 +2,8 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSession;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionsOf;
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.registeredTab;
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.startingTab;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openLive;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openStarting;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.boardTickets;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.onBranches;
@@ -710,7 +710,7 @@ class SessionManagerTest {
         Sessions read = sessionManager(sessions, locator, watch, warnings, () -> hostedSessionsOf(hostedSession()))
                 .sessionsFor(project(), noTickets());
 
-        assertThat(read).isEqualTo(availableSessionsHosting(List.of(hostedLiveSession()), List.of(registeredTab(hostedLiveSession()))));
+        assertThat(read).isEqualTo(availableSessionsHosting(List.of(hostedLiveSession()), List.of(openLive(hostedLiveSession()))));
     }
 
     @Test
@@ -731,7 +731,7 @@ class SessionManagerTest {
         Sessions read = sessionManager(sessions, locator, watch, warnings, () -> hostedSessionsOf(hostedSession()))
                 .sessionsFor(project(), noTickets());
 
-        assertThat(read).isEqualTo(availableSessionsHosting(List.of(), List.of(startingTab())));
+        assertThat(read).isEqualTo(availableSessionsHosting(List.of(), List.of(openStarting())));
     }
 
     @Test
@@ -744,7 +744,7 @@ class SessionManagerTest {
 
         assertThat(manager.sessionsFor(project(), noTickets()))
                 .as("a tab opened between two reads shows up in the second")
-                .isEqualTo(availableSessionsHosting(List.of(), List.of(startingTab())));
+                .isEqualTo(availableSessionsHosting(List.of(), List.of(openStarting())));
     }
 
     @Test
@@ -765,6 +765,6 @@ class SessionManagerTest {
 
         assertThat(read)
                 .as("a registry that cannot be read must not close the tabs of claudes that are running")
-                .isEqualTo(unavailableSessionsHosting(List.of(startingTab())));
+                .isEqualTo(unavailableSessionsHosting(List.of(openStarting())));
     }
 }
