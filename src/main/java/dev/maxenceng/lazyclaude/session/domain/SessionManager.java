@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
@@ -38,7 +39,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * often its source reports it. A live id hides the past session of the same id, a past session belongs to
  * the project its {@code cwd} was located in (or, when that directory is gone, to the one its path lies in), and
  * past rows run newest activity first. A session is linked to tickets by its transcript, live or past, against the ticket ids it is
- * handed; a live session with no transcript yet is linked to none.
+ * handed; a live session with no transcript yet is linked to none. Which of them lazyclaude hosts is not
+ * this manager's to know: the application service lays the open hosted sessions over what it reads.
  */
 public final class SessionManager {
 
@@ -78,14 +80,14 @@ public final class SessionManager {
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
-            SessionClock clock) {
+            Clock clock) {
         this.sessions = sessions;
         this.pastSessions = pastSessions;
         this.locator = locator;
         this.watch = watch;
         this.transcriptWatch = transcriptWatch;
         this.warnings = warnings;
-        this.clock = clock;
+        this.clock = new SessionClock(clock);
     }
 
     /** Reads the live sessions again; the past ones come from what the cache already holds. */
@@ -110,6 +112,11 @@ public final class SessionManager {
                 this::warnOfUnlistableRoot);
     }
 
+    /** Hands {@code listener} the sessions again now, for a change none of the watchers sees: a hosted session opening or closing. */
+    public void refresh(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
+        deliver(listener, () -> readingLive(project, tickets));
+    }
+
     private void deliver(Consumer<Sessions> listener, Supplier<Sessions> read) {
         synchronized (lastLive) {
             listener.accept(read.get());
@@ -123,11 +130,15 @@ public final class SessionManager {
             return available(project, tickets, running);
         } catch (SessionsUnavailableException noSource) {
             lastLive.forget();
-            return new UnavailableSessions(new Reason(noSource.getMessage()));
+            return unavailable(noSource.getMessage());
         } catch (ProjectUnavailableException noLocator) {
             lastLive.forget();
-            return new UnavailableSessions(new Reason(noLocator.getMessage()));
+            return unavailable(noLocator.getMessage());
         }
+    }
+
+    private Sessions unavailable(String reason) {
+        return UnavailableSessions.builder().reason(new Reason(reason)).build();
     }
 
     private Sessions reusingLive(Project project, KnownTickets tickets) {

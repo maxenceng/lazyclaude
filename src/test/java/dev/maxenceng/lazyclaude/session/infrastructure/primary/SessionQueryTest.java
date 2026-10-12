@@ -13,6 +13,7 @@ import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.old
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryHosting;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.newestSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.oldestSessionView;
@@ -24,16 +25,20 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewBuilder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
+import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketIds;
+import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSaying;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,10 +46,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
+import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -160,5 +167,26 @@ class SessionQueryTest {
 
         assertThat(sessionQuery(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT))
                 .isEqualTo(sessionsViewOf(List.of(sessionView())));
+    }
+
+    @Test
+    void shouldAnswerWithTheScreenTheHostHolds() {
+        HostPort hosts = mock(HostPort.class);
+        when(hosts.screenOf(hostedSessionId())).thenReturn(screenSaying("hello"));
+
+        assertThat(sessionQueryHosting(hosts).screenOf(hostedSessionId())).isEqualTo(screenSaying("hello"));
+    }
+
+    @Test
+    void shouldTellAListenerWhenAHostedSessionDrew() {
+        HostPort hosts = mock(HostPort.class);
+        Runnable listener = mock(Runnable.class);
+        ArgumentCaptor<Consumer<HostedSessionId>> drew = ArgumentCaptor.captor();
+        sessionQueryHosting(hosts).onScreenChange(listener);
+        verify(hosts).onScreenChange(drew.capture());
+
+        drew.getValue().accept(hostedSessionId());
+
+        verify(listener).run();
     }
 }

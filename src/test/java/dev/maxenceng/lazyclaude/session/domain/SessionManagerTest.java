@@ -125,7 +125,7 @@ class SessionManagerTest {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
         when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
 
-        AvailableSessions read = (AvailableSessions) new SessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, new SessionClock(advancingClock())).sessionsFor(project(), noTickets());
+        AvailableSessions read = (AvailableSessions) new SessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, advancingClock()).sessionsFor(project(), noTickets());
 
         assertThat(read.ageOf(liveSession()))
                 .as("rows of one read drawn at different instants would disagree on how long ago they started")
@@ -690,5 +690,14 @@ class SessionManagerTest {
 
         verify(listener).accept(liveSessionsOf(List.of(liveSession())));
         verify(listener).accept(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+    }
+
+    @Test
+    void shouldDeliverTheSessionsOnRefresh() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+
+        sessionManager(sessions, locator, watch, warnings).refresh(project(), noTickets(), listener);
+
+        verify(listener).accept(liveSessionsOf(List.of()));
     }
 }

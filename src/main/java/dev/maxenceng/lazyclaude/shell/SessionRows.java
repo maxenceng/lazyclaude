@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.AvailableSessionsView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
@@ -83,6 +84,16 @@ final class SessionRows {
     /** Why there are no sessions to show, when no source answered. */
     Optional<Reason> unavailable() {
         return sessions instanceof UnavailableSessionsView unavailable ? Optional.of(unavailable.reason()) : Optional.empty();
+    }
+
+    /** The hosted sessions, in tab order, whether or not the registry could be read. */
+    List<HostedSessionView> hosted() {
+        return sessions.hosted();
+    }
+
+    /** How many hosted sessions are busy or waiting on you, which quitting would cut off. */
+    long busyOrWaitingHosted() {
+        return sessions.hosted().stream().filter(HostedSessionView::busyOrWaiting).count();
     }
 
     boolean isEmpty() {

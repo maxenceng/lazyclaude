@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.session.published.ClaudeVersionFixture.version;
+import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.thirdProcessId;
@@ -18,11 +19,16 @@ import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.pro
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
+import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
+import dev.maxenceng.lazyclaude.session.published.Hosting;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
+import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
@@ -48,6 +54,66 @@ public final class SessionsViewFixture {
                 .version(version())
                 .state(new Busy())
                 .links(List.of());
+    }
+
+    public static LiveSessionView hostedLiveSessionView() {
+        return sessionViewBuilder().hosting(Hosting.HOSTED).build();
+    }
+
+    public static HostedSessionView startingHostedSessionView() {
+        return HostedSessionView.builder()
+                .id(hostedSessionId())
+                .pid(processId())
+                .live(Optional.empty())
+                .busyOrWaiting(false)
+                .build();
+    }
+
+    public static HostedSessionView liveHostedSessionView(LiveSessionView live, boolean busyOrWaiting) {
+        return HostedSessionView.builder()
+                .id(hostedSessionId())
+                .pid(live.pid())
+                .live(Optional.of(live))
+                .busyOrWaiting(busyOrWaiting)
+                .build();
+    }
+
+    public static HostedSessionView hostedTab(int number, String name, SessionState state) {
+        LiveSessionView live = sessionViewBuilder()
+                .id(sessionIdOf(number))
+                .pid(new ProcessId(1000L + number))
+                .name(new SessionName(name))
+                .state(state)
+                .hosting(Hosting.HOSTED)
+                .build();
+        return HostedSessionView.builder()
+                .id(hostedSessionIdOf(number))
+                .pid(live.pid())
+                .live(Optional.of(live))
+                .busyOrWaiting(state instanceof Busy || state instanceof WaitingForPermission)
+                .build();
+    }
+
+    public static HostedSessionView startingTabNumbered(int number) {
+        return HostedSessionView.builder()
+                .id(hostedSessionIdOf(number))
+                .pid(new ProcessId(1000L + number))
+                .live(Optional.empty())
+                .busyOrWaiting(false)
+                .build();
+    }
+
+    public static HostedSessionId hostedSessionIdOf(int number) {
+        return new HostedSessionId(UUID.fromString("00000000-0000-0000-0000-%012d".formatted(number)));
+    }
+
+    public static SessionsView sessionsViewWithTabs(HostedSessionView... tabs) {
+        return sessionsViewHosting(
+                List.of(tabs).stream().flatMap(tab -> tab.live().stream()).toList(), List.of(tabs));
+    }
+
+    public static SessionsView sessionsViewHosting(List<LiveSessionView> live, List<HostedSessionView> hosted) {
+        return AvailableSessionsView.builder().live(live).past(List.of()).hosted(hosted).build();
     }
 
     public static LiveSessionView sessionView() {
@@ -146,7 +212,11 @@ public final class SessionsViewFixture {
     }
 
     public static SessionsView unavailableSessionsView() {
-        return new UnavailableSessionsView(reason());
+        return unavailableSessionsViewHosting(List.of());
+    }
+
+    public static SessionsView unavailableSessionsViewHosting(List<HostedSessionView> hosted) {
+        return UnavailableSessionsView.builder().reason(reason()).hosted(hosted).build();
     }
 
     public static List<LiveSessionView> everyStateSessionViews() {

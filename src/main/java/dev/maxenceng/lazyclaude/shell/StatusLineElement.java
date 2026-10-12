@@ -13,7 +13,7 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
 
-/** The top row: the strongest marker of the project's live sessions on the left in its colour, then the warning, if one was raised, flush right in the warning colour and cut with an ellipsis rather than wrapped. */
+/** The top row: the strongest marker of the project's live sessions on the left in its colour, then a question awaiting y/n, or else the warning, if one was raised, flush right in the warning colour and cut with an ellipsis rather than wrapped. */
 final class StatusLineElement implements Element {
 
     private static final String MARK = "⚠ ";
@@ -24,10 +24,12 @@ final class StatusLineElement implements Element {
 
     private final Optional<Marker> marker;
     private final Optional<WarningView> warning;
+    private final Optional<String> prompt;
 
-    StatusLineElement(Optional<Marker> marker, Optional<WarningView> warning) {
+    StatusLineElement(Optional<Marker> marker, Optional<WarningView> warning, Optional<String> prompt) {
         this.marker = marker;
         this.warning = warning;
+        this.prompt = prompt;
     }
 
     @Override
@@ -37,10 +39,12 @@ final class StatusLineElement implements Element {
         }
         marker.ifPresent(strongest ->
                 frame.buffer().setString(area.x(), area.y(), SessionText.glyph(strongest), Style.EMPTY.fg(SessionText.colour(strongest))));
-        if (warning.isEmpty()) {
+        int reserved = marker.isPresent() ? MARKER_WIDTH : 0;
+        prompt.ifPresent(question -> frame.buffer().setString(
+                area.x() + reserved, area.y(), RowsElement.fit(question, Math.max(0, area.width() - reserved)), Style.EMPTY.bold()));
+        if (warning.isEmpty() || prompt.isPresent()) {
             return;
         }
-        int reserved = marker.isPresent() ? MARKER_WIDTH : 0;
         String label = RowsElement.fit(label(warning.get()), Math.max(0, area.width() - reserved));
         int x = area.x() + area.width() - label.codePointCount(0, label.length());
         frame.buffer().setString(x, area.y(), label, Style.EMPTY.fg(Color.YELLOW));

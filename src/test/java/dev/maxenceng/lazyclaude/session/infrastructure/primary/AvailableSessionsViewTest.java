@@ -1,11 +1,21 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openLive;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openStarting;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.strong;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
+import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.hostedLiveSession;
+import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessionsHosting;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedLiveSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.liveHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingHostedSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsViewHosting;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -95,5 +105,35 @@ class AvailableSessionsViewTest {
 
         assertThat(view.unlinkedLive()).containsExactly(unlinkedLive);
         assertThat(view.unlinkedPast()).containsExactly(unlinkedPast);
+    }
+
+    @Test
+    void shouldViewAStartingHostedSessionWithNoLiveSessionBehindIt() {
+        AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(List.of(), List.of(openStarting())));
+
+        assertThat(view.hosted()).containsExactly(startingHostedSessionView());
+    }
+
+    @Test
+    void shouldViewARegisteredHostedSessionWithTheLiveSessionItIs() {
+        AvailableSessionsView view = AvailableSessionsView.from(
+                availableSessionsHosting(List.of(hostedLiveSession()), List.of(openLive(hostedLiveSession()))));
+
+        assertThat(view.hosted()).containsExactly(liveHostedSessionView(hostedLiveSessionView(), true));
+        assertThat(view.live()).singleElement().satisfies(live -> assertThat(live.isHosted()).isTrue());
+    }
+
+    @Test
+    void shouldViewAnOutsideLiveSessionAsNotHosted() {
+        AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(List.of(liveSession()), List.of()));
+
+        assertThat(view.live()).singleElement().satisfies(live -> assertThat(live.isHosted()).isFalse());
+    }
+
+    @Test
+    void shouldViewTheHostedSessionsOfSessionsThatCouldNotBeRead() {
+        UnavailableSessionsView view = UnavailableSessionsView.from(unavailableSessionsHosting(List.of(openStarting())));
+
+        assertThat(view).isEqualTo(unavailableSessionsViewHosting(List.of(startingHostedSessionView())));
     }
 }

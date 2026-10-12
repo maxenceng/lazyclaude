@@ -50,12 +50,25 @@ public final class SessionsFixture {
         return AvailableSessions.builder().live(sessions).past(past).clock(sessionClock()).build();
     }
 
+    public static AvailableSessions availableSessionsHosting(List<LiveSession> sessions, List<OpenHostedSession> hosted) {
+        return AvailableSessions.builder()
+                .live(sessions)
+                .past(List.of())
+                .hosted(hosted)
+                .clock(sessionClock())
+                .build();
+    }
+
     public static SessionsUnavailableException sessionsUnavailable() {
         return new SessionsUnavailableException(reason().value());
     }
 
     public static UnavailableSessions unavailableSessions() {
-        return new UnavailableSessions(reason());
+        return unavailableSessionsHosting(List.of());
+    }
+
+    public static UnavailableSessions unavailableSessionsHosting(List<OpenHostedSession> hosted) {
+        return UnavailableSessions.builder().reason(reason()).hosted(hosted).build();
     }
 
     public static SessionManager sessionManager(LiveSessionPort sessions, ProjectLocatorPort locator, SessionWatchPort watch, WarningPort warnings) {
@@ -69,7 +82,7 @@ public final class SessionsFixture {
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings) {
-        return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, sessionClock());
+        return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, clock());
     }
 
     public static WorkingDirectory workingDirectoryOf(ReportedSession session) {

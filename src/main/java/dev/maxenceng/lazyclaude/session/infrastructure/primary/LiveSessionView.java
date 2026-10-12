@@ -8,6 +8,7 @@ import java.util.Optional;
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.LiveSession;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
+import dev.maxenceng.lazyclaude.session.published.Hosting;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
@@ -27,7 +28,8 @@ public record LiveSessionView(
         SessionAge age,
         ClaudeVersion version,
         SessionState state,
-        List<TicketLink> links) {
+        List<TicketLink> links,
+        Hosting hosting) {
 
     static LiveSessionView from(AvailableSessions available, LiveSession session) {
         return builder()
@@ -40,6 +42,7 @@ public record LiveSessionView(
                 .version(session.version())
                 .state(session.state())
                 .links(session.links())
+                .hosting(session.hosting())
                 .build();
     }
 
@@ -51,6 +54,11 @@ public record LiveSessionView(
     /** How the session is linked to {@code ticket}, if it is. */
     public Optional<TicketLink> linkTo(LinkedTicketId ticket) {
         return TicketLink.to(links, ticket);
+    }
+
+    /** Whether lazyclaude spawned the session, so that it runs in a dock tab. */
+    public boolean isHosted() {
+        return hosting == Hosting.HOSTED;
     }
 
     /** Whether the session is linked to no ticket. */
@@ -72,6 +80,7 @@ public record LiveSessionView(
         private ClaudeVersion version;
         private SessionState state;
         private List<TicketLink> links;
+        private Hosting hosting = Hosting.OUTSIDE;
 
         private LiveSessionViewBuilder() {}
 
@@ -120,8 +129,13 @@ public record LiveSessionView(
             return this;
         }
 
+        public LiveSessionViewBuilder hosting(Hosting hosting) {
+            this.hosting = hosting;
+            return this;
+        }
+
         public LiveSessionView build() {
-            return new LiveSessionView(id, pid, name, directory, startedAt, age, version, state, links);
+            return new LiveSessionView(id, pid, name, directory, startedAt, age, version, state, links, hosting);
         }
     }
 }

@@ -7,8 +7,9 @@ import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 
-/** The project's sessions: the live ones newest start first, then the past ones newest activity first. */
-public record AvailableSessionsView(List<LiveSessionView> live, List<PastSessionView> past) implements SessionsView {
+/** The project's sessions: the live ones newest start first, then the past ones newest activity first, and the hosted ones in tab order. */
+public record AvailableSessionsView(
+        List<LiveSessionView> live, List<PastSessionView> past, List<HostedSessionView> hosted) implements SessionsView {
 
     static AvailableSessionsView from(AvailableSessions available) {
         return builder()
@@ -17,6 +18,9 @@ public record AvailableSessionsView(List<LiveSessionView> live, List<PastSession
                         .toList())
                 .past(available.past().stream()
                         .map(session -> PastSessionView.from(available, session))
+                        .toList())
+                .hosted(available.hosted().stream()
+                        .map(tab -> HostedSessionView.from(available, tab))
                         .toList())
                 .build();
     }
@@ -55,6 +59,7 @@ public record AvailableSessionsView(List<LiveSessionView> live, List<PastSession
     public static final class AvailableSessionsViewBuilder {
         private List<LiveSessionView> live;
         private List<PastSessionView> past;
+        private List<HostedSessionView> hosted = List.of();
 
         private AvailableSessionsViewBuilder() {}
 
@@ -68,8 +73,13 @@ public record AvailableSessionsView(List<LiveSessionView> live, List<PastSession
             return this;
         }
 
+        public AvailableSessionsViewBuilder hosted(List<HostedSessionView> hosted) {
+            this.hosted = hosted;
+            return this;
+        }
+
         public AvailableSessionsView build() {
-            return new AvailableSessionsView(live, past);
+            return new AvailableSessionsView(live, past, hosted);
         }
     }
 }

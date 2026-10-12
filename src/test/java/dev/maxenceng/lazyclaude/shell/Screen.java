@@ -2,11 +2,13 @@ package dev.maxenceng.lazyclaude.shell;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import dev.tamboui.buffer.Buffer;
 import dev.tamboui.buffer.Cell;
+import dev.tamboui.layout.Position;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Modifier;
@@ -22,13 +24,16 @@ public final class Screen {
     private static final int LEFT_COLUMN_WIDTH = 28;
     private static final char BORDER = '│';
     private static final String BOTTOM_LEFT_CORNER = "╰";
+    private static final String DOCK_BORDER = "╭dock";
 
     private final List<String> lines;
     private final Buffer buffer;
+    private final Optional<Position> cursor;
 
-    private Screen(List<String> lines, Buffer buffer) {
+    private Screen(List<String> lines, Buffer buffer, Optional<Position> cursor) {
         this.lines = lines;
         this.buffer = buffer;
+        this.cursor = cursor;
     }
 
     public static Screen of(Shell shell) {
@@ -36,10 +41,13 @@ public final class Screen {
     }
 
     static Screen of(Element element, int width, int height) {
+        return of(element, width, height, Rect.of(width, height));
+    }
+
+    static Screen of(Element element, int width, int height, Rect area) {
         Buffer buffer = Buffer.empty(Rect.of(width, height));
         Frame frame = Frame.forTesting(buffer);
-        RenderThreadForTests.runAsRenderThread(
-                () -> element.render(frame, frame.area(), DefaultRenderContext.createEmpty()));
+        RenderThreadForTests.runAsRenderThread(() -> element.render(frame, area, DefaultRenderContext.createEmpty()));
         List<String> lines = new ArrayList<>();
         for (int y = 0; y < height; y++) {
             StringBuilder line = new StringBuilder();
@@ -48,7 +56,7 @@ public final class Screen {
             }
             lines.add(line.toString());
         }
-        return new Screen(lines, buffer);
+        return new Screen(lines, buffer, frame.cursorPosition());
     }
 
     List<String> boardPanelLines() {
@@ -88,6 +96,30 @@ public final class Screen {
 
     public String statusLine() {
         return lines.getFirst();
+    }
+
+    String dockTitle() {
+        return lines.get(lineOf(DOCK_BORDER));
+    }
+
+    Position dockContentOrigin() {
+        int line = lineOf(DOCK_BORDER);
+        return new Position(lines.get(line).indexOf(DOCK_BORDER) + 1, line + 1);
+    }
+
+    String reversedTextOnLine(int line) {
+        StringBuilder found = new StringBuilder();
+        for (int x = 0; x < Math.min(WIDTH, lines.get(line).length()); x++) {
+            Cell cell = buffer.get(x, line);
+            if (cell.style().effectiveModifiers().contains(Modifier.REVERSED)) {
+                found.append(cell.symbol());
+            }
+        }
+        return found.toString().strip();
+    }
+
+    Optional<Position> cursor() {
+        return cursor;
     }
 
     List<String> lines() {

@@ -16,6 +16,7 @@ import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.thir
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 
 import dev.maxenceng.lazyclaude.session.published.Busy;
+import dev.maxenceng.lazyclaude.session.published.Hosting;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
@@ -56,6 +57,10 @@ public final class LiveSessionFixture {
                 .startedAt(earlierStartedAt())
                 .state(new YourTurn())
                 .build();
+    }
+
+    public static LiveSession hostedLiveSession() {
+        return liveSessionBuilder().hosting(Hosting.HOSTED).build();
     }
 
     public static LiveSession sessionIn(WorkingDirectory directory) {

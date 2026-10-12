@@ -18,6 +18,8 @@
 		<assertj.version>3.27.7</assertj.version>
 		<archunit.version>1.5.1</archunit.version>
 		<mockito.version>5.20.0</mockito.version>
+		<pty4j.version>0.14.0</pty4j.version>
+		<jediterm.version>3.76</jediterm.version>
 		<dependency-plugin.version>3.9.0</dependency-plugin.version>
 		<snakeyaml-engine.version>3.2</snakeyaml-engine.version>
 		<jackson.version>3.2.3</jackson.version>
@@ -32,6 +34,16 @@
 		<!-- Contract tests need a live claude; `make contract` overrides this on the command line. -->
 		<excludedGroups>contract</excludedGroups>
 	</properties>
+
+	<repositories>
+		<!-- jediterm-core is published here only; pty4j comes from Central, where it is newer. -->
+		<repository>
+			<id>intellij-dependencies</id>
+			<url>https://packages.jetbrains.team/maven/p/ij/intellij-dependencies</url>
+			<releases><enabled>true</enabled></releases>
+			<snapshots><enabled>false</enabled></snapshots>
+		</repository>
+	</repositories>
 
 	<dependencyManagement>
 		<dependencies>
@@ -80,6 +92,16 @@
 		<dependency>
 			<groupId>tools.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.jetbrains.pty4j</groupId>
+			<artifactId>pty4j</artifactId>
+			<version>${pty4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jetbrains.jediterm</groupId>
+			<artifactId>jediterm-core</artifactId>
+			<version>${jediterm.version}</version>
 		</dependency>
 
 		<dependency>
@@ -138,7 +160,7 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>${surefire.version}</version>
 				<configuration>
-					<argLine>-javaagent:${org.mockito:mockito-core:jar}</argLine>
+					<argLine>-javaagent:${org.mockito:mockito-core:jar} --enable-native-access=ALL-UNNAMED</argLine>
 				</configuration>
 			</plugin>
 
