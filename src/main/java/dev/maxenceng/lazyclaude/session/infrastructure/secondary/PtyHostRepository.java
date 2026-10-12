@@ -39,7 +39,7 @@ public final class PtyHostRepository implements HostPort {
 
     /** {@code claude} is the command and arguments that start Claude Code; {@code environment} is what the child inherits, less what it must not. */
     public PtyHostRepository(List<String> claude, Map<String, String> environment) {
-        this.claude = List.copyOf(claude);
+        this.claude = claude;
         this.environment = environment;
     }
 
