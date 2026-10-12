@@ -1,6 +1,6 @@
 ---
 id: SESSION-4
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 81
@@ -118,3 +118,13 @@ The right column with two hosted sessions, the second focused:
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-7](LAZY-7-handing-over-to-a-session.md), [LAZY-14](LAZY-14-embedding-claude-on-a-pty.md), ADR 0007, ADR 0008. pty4j and jediterm-core come from the JetBrains repo, not Central.
+
+Closed after [#19](https://github.com/maxenceng/lazyclaude/pull/19). Review changed the Model decision in a few places. ADR 0026 and ADR 0027 record them as built, and the section above is left as decided:
+
+- `SessionManager` does not learn the hosted pids. A manager takes only ports and the clock, so `SessionApplicationService` lays `HostedSessionManager.open()` over every read with `Sessions.hosting` (ADR 0027, enforced by `managers_take_only_ports_and_the_clock`). A `HostedSessionsSource` callback into `SessionManager` was tried and rejected in review.
+- `SessionQuery`'s views do not carry the screens. A screen changes on every byte `claude` prints, so the shell asks for one when it draws its tab.
+- `HostPort` has no separate resume: a resume is a spawn whose `HostLaunch` command is `ResumeClaude`, which the adapter turns into `--resume <id>`. The port is spawn, directory check, send, resize, screen, end, and the two signals.
+- Resuming a session that an open tab already resumes focuses that tab. Two `claude` processes on one transcript would both write to it.
+- The scrubbed environment also drops `TMUX*`, `TERMINFO` and `TERM_PROGRAM*`, and sets `TERM=xterm-256color` and `COLORTERM=truecolor`.
+- TamboUI's own quit binding (`q`, `Q`, Ctrl+C) is unbound. Without that, `Q` quit without the y/n prompt.
+- A `@Tag("contract")` test pins that a hosted `claude` registers under the pid it was spawned with. If a Claude Code upgrade makes the launcher fork, tabs stay *starting*, and `make contract` shows it.
