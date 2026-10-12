@@ -5,11 +5,25 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFi
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedTab;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+import org.mockito.ArgumentCaptor;
+import org.mockito.invocation.InvocationOnMock;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.session.published.Busy;
+import dev.maxenceng.lazyclaude.session.published.HostStart;
+import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
+import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
@@ -19,8 +33,36 @@ final class ShellFixture {
 
     private ShellFixture() {}
 
+    static Shell newShell(BoardView board, DocsView docs, SessionsView sessions) {
+        return new Shell(board, docs, sessions, mock(HostedSessionCommand.class, ShellFixture::noHostStarted), blankScreens());
+    }
+
+    static Object noHostStarted(InvocationOnMock invocation) {
+        return invocation.getMethod().getReturnType() == HostStart.class ? new NotStartedHost() : null;
+    }
+
+    static SessionQuery blankScreens() {
+        return mock(SessionQuery.class, invocation -> TerminalScreen.blank());
+    }
+
+    static Shell shellHosting(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
+        return new Shell(boardViewOf(ticketView()), emptyDocsView(), sessions, hosting, screens);
+    }
+
+    static Shell shellInDock(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
+        Shell shell = shellHosting(sessions, hosting, screens);
+        Screen.of(shell);
+        shell.press(alt('l'));
+        shell.press(alt('j'));
+        return shell;
+    }
+
+    static Shell oneTabInDock(HostedSessionCommand hosting, SessionQuery screens) {
+        return shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+    }
+
     static Shell shellOn(BoardView board) {
-        return new Shell(board, emptyDocsView(), emptySessionsView());
+        return newShell(board, emptyDocsView(), emptySessionsView());
     }
 
     static Shell shellWarning(WarningView... warnings) {
@@ -32,15 +74,15 @@ final class ShellFixture {
     }
 
     static Shell shellOnDocs(DocsView docs) {
-        return pressed(new Shell(boardViewOf(ticketView()), docs, emptySessionsView()), alt('j'), 2);
+        return pressed(newShell(boardViewOf(ticketView()), docs, emptySessionsView()), alt('j'), 2);
     }
 
     static Shell shellOnSessions(SessionsView sessions) {
-        return pressed(new Shell(boardViewOf(ticketView()), emptyDocsView(), sessions), alt('j'), 1);
+        return pressed(newShell(boardViewOf(ticketView()), emptyDocsView(), sessions), alt('j'), 1);
     }
 
     static Shell shellOnTicketSessions(SessionsView sessions) {
-        Shell shell = new Shell(boardViewOf(ticketView(), secondTicketView()), emptyDocsView(), sessions);
+        Shell shell = newShell(boardViewOf(ticketView(), secondTicketView()), emptyDocsView(), sessions);
         shell.press(key('j'));
         return shell;
     }
@@ -65,6 +107,20 @@ final class ShellFixture {
 
     static Shell shellOn(TicketView... tickets) {
         return shellOn(boardViewOf(tickets));
+    }
+
+    static NewHostedPayload startedPayload(HostedSessionCommand hosting) {
+        ArgumentCaptor<NewHostedPayload> payload = ArgumentCaptor.forClass(NewHostedPayload.class);
+        verify(hosting).startUnlinked(payload.capture());
+        return payload.getValue();
+    }
+
+    static KeyEvent namedKey(KeyCode code) {
+        return KeyEvent.ofKey(code);
+    }
+
+    static KeyEvent shiftTab() {
+        return KeyEvent.ofKey(KeyCode.TAB, KeyModifiers.SHIFT);
     }
 
     static KeyEvent key(char c) {

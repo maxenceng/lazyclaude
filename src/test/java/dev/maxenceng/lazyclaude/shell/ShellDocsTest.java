@@ -21,6 +21,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.newShell;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.pressed;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellFocusedOnMainViewOfDocs;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOnDocs;
@@ -325,7 +326,7 @@ class ShellDocsTest {
 
     @Test
     void shouldShowNoDocsOnlyInTheDocsPanelWhileTheBoardHasFocus() {
-        Shell shell = new Shell(boardViewOf(ticketView()), emptyDocsView(), emptySessionsView());
+        Shell shell = newShell(boardViewOf(ticketView()), emptyDocsView(), emptySessionsView());
 
         assertThat(Screen.of(shell).dimText()).contains("no docs");
     }

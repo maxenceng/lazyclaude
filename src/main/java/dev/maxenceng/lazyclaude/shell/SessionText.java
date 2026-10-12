@@ -37,6 +37,9 @@ final class SessionText {
     private static final String UNKNOWN_GLYPH = "·";
     private static final String PAST_GLYPH = "○";
     private static final String BRANCH_SUFFIX = "(branch)";
+    private static final String PANE_LABEL = "pane";
+    private static final String QUIT_PROMPT_ONE = "1 hosted session is busy or waiting — quit? y/n";
+    private static final String QUIT_PROMPT_MANY = "%d hosted sessions are busy or waiting — quit? y/n";
     private static final String NO_SESSION_LABEL = "no session";
     private static final String UNLINKED_LABEL = "unlinked";
     private static final String OLDER_GLYPH = "…";
@@ -109,6 +112,15 @@ final class SessionText {
 
     static String branchSuffix() {
         return BRANCH_SUFFIX;
+    }
+
+    /** What a hosted session's row says where a session started elsewhere says its age. */
+    static String paneLabel() {
+        return PANE_LABEL;
+    }
+
+    static String quitPrompt(long busyOrWaiting) {
+        return busyOrWaiting == 1 ? QUIT_PROMPT_ONE : QUIT_PROMPT_MANY.formatted(busyOrWaiting);
     }
 
     static String noSessionLabel() {

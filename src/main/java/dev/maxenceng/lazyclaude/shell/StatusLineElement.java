@@ -24,10 +24,12 @@ final class StatusLineElement implements Element {
 
     private final Optional<Marker> marker;
     private final Optional<WarningView> warning;
+    private final Optional<String> prompt;
 
-    StatusLineElement(Optional<Marker> marker, Optional<WarningView> warning) {
+    StatusLineElement(Optional<Marker> marker, Optional<WarningView> warning, Optional<String> prompt) {
         this.marker = marker;
         this.warning = warning;
+        this.prompt = prompt;
     }
 
     @Override
@@ -37,10 +39,12 @@ final class StatusLineElement implements Element {
         }
         marker.ifPresent(strongest ->
                 frame.buffer().setString(area.x(), area.y(), SessionText.glyph(strongest), Style.EMPTY.fg(SessionText.colour(strongest))));
+        int reserved = marker.isPresent() ? MARKER_WIDTH : 0;
+        prompt.ifPresent(question -> frame.buffer().setString(
+                area.x() + reserved, area.y(), RowsElement.fit(question, Math.max(0, area.width() - reserved)), Style.EMPTY.bold()));
         if (warning.isEmpty()) {
             return;
         }
-        int reserved = marker.isPresent() ? MARKER_WIDTH : 0;
         String label = RowsElement.fit(label(warning.get()), Math.max(0, area.width() - reserved));
         int x = area.x() + area.width() - label.codePointCount(0, label.length());
         frame.buffer().setString(x, area.y(), label, Style.EMPTY.fg(Color.YELLOW));

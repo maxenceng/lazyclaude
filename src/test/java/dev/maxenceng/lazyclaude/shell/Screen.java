@@ -24,6 +24,7 @@ public final class Screen {
     private static final int LEFT_COLUMN_WIDTH = 28;
     private static final char BORDER = '│';
     private static final String BOTTOM_LEFT_CORNER = "╰";
+    private static final String DOCK_BORDER = "╭dock";
 
     private final List<String> lines;
     private final Buffer buffer;
@@ -95,6 +96,26 @@ public final class Screen {
 
     public String statusLine() {
         return lines.getFirst();
+    }
+
+    String dockTitle() {
+        return lines.get(lineOf(DOCK_BORDER));
+    }
+
+    Position dockContentOrigin() {
+        int line = lineOf(DOCK_BORDER);
+        return new Position(lines.get(line).indexOf(DOCK_BORDER) + 1, line + 1);
+    }
+
+    String reversedTextOnLine(int line) {
+        StringBuilder found = new StringBuilder();
+        for (int x = 0; x < Math.min(WIDTH, lines.get(line).length()); x++) {
+            Cell cell = buffer.get(x, line);
+            if (cell.style().effectiveModifiers().contains(Modifier.REVERSED)) {
+                found.append(cell.symbol());
+            }
+        }
+        return found.toString().strip();
     }
 
     Optional<Position> cursor() {

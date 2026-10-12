@@ -16,6 +16,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.waitingSessionView;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.newShell;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.pressed;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellFocusedOnMainViewOfSessions;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOnSessions;
@@ -84,10 +85,7 @@ class ShellSessionsTest {
 
     @Test
     void shouldReachThePanelWithAltJFromTheBoardAndLeaveItWithAltK() {
-        Shell shell = new Shell(
-                boardViewOf(ticketView()),
-                emptyDocsView(),
-                emptySessionsView());
+        Shell shell = newShell(boardViewOf(ticketView()), emptyDocsView(), emptySessionsView());
 
         shell.press(alt('j'));
         assertThat(shell.focus()).isEqualTo(Focus.SESSIONS);

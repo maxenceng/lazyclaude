@@ -79,7 +79,7 @@ public final class LazyClaude {
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, docs, sessions, warnings));
+                (view, tree, live) -> run(view, tree, live, docs, sessions, hosting, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -169,14 +169,25 @@ public final class LazyClaude {
             SessionsView live,
             DocsQuery docs,
             SessionQuery sessions,
+            HostedSessionCommand hosting,
             WarningQuery warnings)
             throws Exception {
-        shellOn(view, tree, live, docs, sessions, warnings).run();
+        runThenEndHosted(shellOn(view, tree, live, docs, sessions, hosting, warnings)::run, hosting);
+    }
+
+    /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
+    static void runThenEndHosted(ShellRun shell, HostedSessionCommand hosting) throws Exception {
+        try {
+            shell.run();
+        } finally {
+            hosting.endAll();
+        }
     }
 
     /**
      * The shell on {@code view}, {@code tree} and {@code live}, handed the project's docs and sessions again
-     * after each change from now on, and every warning raised, those raised before it opened included.
+     * after each change from now on, a repaint whenever a hosted session draws, and every warning raised, those raised
+     * before it opened included.
      */
     // deferred: a change between the first read and the watch starting is shown only at the next change — close it when a doc edited during start-up is seen stale.
     static Shell shellOn(
@@ -185,11 +196,13 @@ public final class LazyClaude {
             SessionsView live,
             DocsQuery docs,
             SessionQuery sessions,
+            HostedSessionCommand hosting,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live);
+        Shell shell = new Shell(view, tree, live, hosting, sessions);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         // deferred: the ticket ids are the board's at start-up, so a ticket created while running links its sessions only at the next start — close it when the board is watched for changes.
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);
+        sessions.onScreenChange(shell::screensChanged);
         warnings.subscribe(shell::warningsChanged);
         return shell;
     }

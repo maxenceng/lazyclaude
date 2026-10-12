@@ -6,26 +6,54 @@ import static dev.tamboui.toolkit.Toolkit.richText;
 import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.text;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.session.published.HostStart;
+import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
+import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
+import dev.maxenceng.lazyclaude.session.published.PaneHeight;
+import dev.maxenceng.lazyclaude.session.published.PaneSize;
+import dev.maxenceng.lazyclaude.session.published.PaneWidth;
+import dev.maxenceng.lazyclaude.session.published.PastedText;
+import dev.maxenceng.lazyclaude.session.published.StartedHost;
+import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
+import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.Panel;
 import dev.tamboui.toolkit.event.EventResult;
+import dev.tamboui.tui.TuiConfig;
+import dev.tamboui.tui.bindings.Actions;
+import dev.tamboui.tui.bindings.BindingSets;
+import dev.tamboui.tui.event.Event;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseEvent;
 
 /**
  * The terminal application itself. It owns the screen and the keyboard, and composes what
@@ -51,7 +79,15 @@ public final class Shell extends ToolkitApp {
     private static final String SESSIONS_UNAVAILABLE = "sessions unavailable: ";
     private static final String EMPTY = "";
 
+    private static final int DEFAULT_PANE_WIDTH = 80;
+    private static final int DEFAULT_PANE_HEIGHT = 24;
+
     private static final char QUIT = 'q';
+    private static final char NEW_SESSION = 'N';
+    private static final char TOGGLE_MAIN_VIEW = 'm';
+    private static final char SUSPEND = 'z';
+    private static final char NEXT_WAITING = 'w';
+    private static final char YES = 'y';
     private static final char LEFT = 'h';
     private static final char DOWN = 'j';
     private static final char UP = 'k';
@@ -69,6 +105,9 @@ public final class Shell extends ToolkitApp {
     private static final String EXPAND_KEY = "enter expand";
     private static final String FOCUS_KEYS = "alt+h/j/k/l focus";
     private static final String QUIT_KEY = "q quit";
+    private static final String NEW_KEY = "N new";
+    private static final String MAIN_VIEW_KEY = "m main view";
+    private static final String SESSION_KEYS = "alt+h/l tab  alt+h/j/k/l focus  alt+m main view";
     private static final String KEY_BAR_INDENT = " ";
     private static final String KEY_SEPARATOR = "  ";
 
@@ -79,6 +118,15 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
     private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
+    private final HostedSessionCommand hosting;
+    private final SessionQuery screens;
+    private final Path root;
+    private final DockTabs dock = new DockTabs();
+    private final Map<HostedSessionId, PaneSize> paneSizes = new HashMap<>();
+    private final AtomicBoolean repaintPending = new AtomicBoolean();
+    private Optional<Rect> paneArea = Optional.empty();
+    private Optional<Long> quitPrompt = Optional.empty();
+    private boolean mainViewHidden;
     private Focus focus = Focus.BOARD;
     private Focus lastLeft = Focus.BOARD;
     private Focus lastRight = Focus.MAIN;
@@ -86,10 +134,23 @@ public final class Shell extends ToolkitApp {
     private Optional<WarningView> warning = Optional.empty();
     private boolean quitRequested;
 
-    public Shell(BoardView board, DocsView docs, SessionsView sessions) {
+    public Shell(
+            BoardView board, DocsView docs, SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
         this.board = new BoardRows(board);
         this.docs = new DocsRows(docs);
         this.sessions = new SessionRows(sessions);
+        this.hosting = hosting;
+        this.screens = screens;
+        this.root = board.root().value();
+        this.dock.replace(sessions.hosted());
+    }
+
+    /** A hosted session drew something. Callable from any thread; the next frame shows it, and this makes sure one is drawn soon. */
+    public void screensChanged() {
+        ToolkitRunner running = runner();
+        if (running != null && repaintPending.compareAndSet(false, true)) {
+            running.runOnRenderThread(() -> repaintPending.set(false));
+        }
     }
 
     /**
@@ -125,8 +186,15 @@ public final class Shell extends ToolkitApp {
 
     private void applyPendingSessions() {
         SessionsView next = pendingSessions.getAndSet(null);
-        if (next != null && sessions.replace(next) && mainViewOwner == Focus.SESSIONS) {
+        if (next == null) {
+            return;
+        }
+        if (sessions.replace(next) && mainViewOwner == Focus.SESSIONS) {
             mainViewScroll.reset();
+        }
+        TabClosing closing = dock.replace(sessions.hosted());
+        if (focus == Focus.DOCK && closing == TabClosing.LAST_ONE_GONE) {
+            focusOn(lastLeft);
         }
     }
 
@@ -150,13 +218,38 @@ public final class Shell extends ToolkitApp {
     }
 
     @Override
+    protected TuiConfig configure() {
+        return config();
+    }
+
+    /**
+     * Bracketed paste and mouse capture are on, so a paste arrives whole and the wheel and clicks reach a session; Tab and
+     * Shift+Tab are unbound from focus, so they reach it too.
+     */
+    TuiConfig config() {
+        return TuiConfig.defaults()
+                .toBuilder()
+                .bracketedPaste(true)
+                .mouseCapture(true)
+                .bindings(BindingSets.defaults()
+                        .toBuilder()
+                        .unbind(Actions.FOCUS_NEXT)
+                        .unbind(Actions.FOCUS_PREVIOUS)
+                        .build())
+                .build();
+    }
+
+    @Override
     protected void onStart() {
-        runner()
-                .eventRouter()
-                .addGlobalHandler(
-                        event -> event instanceof KeyEvent key && press(key)
-                                ? EventResult.HANDLED
-                                : EventResult.UNHANDLED);
+        runner().eventRouter().addGlobalHandler(event -> handled(event) ? EventResult.HANDLED : EventResult.UNHANDLED);
+    }
+
+    private boolean handled(Event event) {
+        return switch (event) {
+            case KeyEvent key -> press(key);
+            case MouseEvent mouse -> mouse(mouse);
+            default -> false;
+        };
     }
 
     Focus focus() {
@@ -171,8 +264,14 @@ public final class Shell extends ToolkitApp {
         applyPendingDocs();
         applyPendingSessions();
         applyPendingWarning();
+        if (quitPrompt.isPresent()) {
+            return answerQuitPrompt(key);
+        }
+        if (inSession()) {
+            return pressInSession(key);
+        }
         if (key.hasCtrl()) {
-            return focus == Focus.MAIN && pressWithCtrl(key);
+            return key.isCtrlC() ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
         }
         if (key.hasAlt()) {
             return pressWithAlt(key);
@@ -181,9 +280,13 @@ public final class Shell extends ToolkitApp {
             return fold();
         }
         if (key.isChar(QUIT)) {
-            quitRequested = true;
-            quit();
-            return true;
+            return requestQuit();
+        }
+        if (key.isChar(NEW_SESSION)) {
+            return opened(hosting.startUnlinked(new NewHostedPayload(root, paneSize())));
+        }
+        if (key.isChar(TOGGLE_MAIN_VIEW)) {
+            return toggleMainView();
         }
         if (key.isChar(LEFT)) {
             return focusOn(lastLeft);
@@ -210,6 +313,132 @@ public final class Shell extends ToolkitApp {
             return selectSession(sessions::up);
         }
         return focus == Focus.MAIN && scrollMainView(key);
+    }
+
+    /** Whether a hosted session's tab has focus, so that every key but the reserved chords goes to its {@code claude}. */
+    private boolean inSession() {
+        return focus == Focus.DOCK && dock.selectedTab().isPresent();
+    }
+
+    private boolean pressInSession(KeyEvent key) {
+        if (key.hasAlt() && !key.hasCtrl() && pressReservedChord(key)) {
+            return true;
+        }
+        if (key.hasCtrl() && key.isChar(SUSPEND)) {
+            return true;
+        }
+        TerminalInputs.key(key).ifPresent(this::sendToSelectedTab);
+        return true;
+    }
+
+    private boolean pressReservedChord(KeyEvent key) {
+        if (key.isChar(LEFT)) {
+            return dock.selectPrevious() || focusOn(lastLeft);
+        }
+        if (key.isChar(RIGHT)) {
+            dock.selectNext();
+            return true;
+        }
+        if (key.isChar(UP)) {
+            mainViewHidden = false;
+            return focusOn(Focus.MAIN);
+        }
+        if (key.isChar(TOGGLE_MAIN_VIEW)) {
+            return toggleMainView();
+        }
+        return key.isChar(DOWN) || key.isChar(SUSPEND) || key.isChar(NEXT_WAITING);
+    }
+
+    private void sendToSelectedTab(TerminalInput input) {
+        dock.selectedTab().ifPresent(tab -> hosting.send(new HostedInputPayload(tab.id(), input)));
+    }
+
+    /** A paste into the pane, handed to the session whose tab has focus and dropped otherwise. */
+    void paste(PastedText paste) {
+        if (inSession()) {
+            sendToSelectedTab(paste);
+        }
+    }
+
+    /** A mouse event over the pane reaches the selected tab's session at the matching cell, whatever has focus. */
+    boolean mouse(MouseEvent event) {
+        Optional<HostedSessionView> tab = dock.selectedTab();
+        if (tab.isEmpty() || paneArea.isEmpty()) {
+            return false;
+        }
+        return TerminalInputs.mouse(event, paneArea.get())
+                .map(input -> {
+                    hosting.send(new HostedInputPayload(tab.get().id(), input));
+                    return true;
+                })
+                .orElse(false);
+    }
+
+    private boolean requestQuit() {
+        long busy = sessions.busyOrWaitingHosted();
+        if (busy == 0) {
+            quitRequested = true;
+            quit();
+        } else {
+            quitPrompt = Optional.of(busy);
+        }
+        return true;
+    }
+
+    private boolean answerQuitPrompt(KeyEvent key) {
+        quitPrompt = Optional.empty();
+        if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
+            quitRequested = true;
+            quit();
+        }
+        return true;
+    }
+
+    private boolean toggleMainView() {
+        mainViewHidden = !mainViewHidden;
+        if (mainViewHidden && focus == Focus.MAIN) {
+            focusOn(Focus.DOCK);
+        }
+        return true;
+    }
+
+    /** Focuses the tab of a session just started, or does nothing when none was. */
+    private boolean opened(HostStart start) {
+        applyPendingSessions();
+        switch (start) {
+            case StartedHost started -> {
+                dock.select(started.id());
+                paneSizes.put(started.id(), paneSize());
+                focusOn(Focus.DOCK);
+            }
+            case NotStartedHost none -> {}
+        }
+        return true;
+    }
+
+    private PaneSize paneSize() {
+        return paneArea
+                .map(area -> PaneSize.builder()
+                        .width(new PaneWidth(area.width()))
+                        .height(new PaneHeight(area.height()))
+                        .build())
+                .orElseGet(() -> PaneSize.builder()
+                        .width(new PaneWidth(DEFAULT_PANE_WIDTH))
+                        .height(new PaneHeight(DEFAULT_PANE_HEIGHT))
+                        .build());
+    }
+
+    /** The dock was drawn in {@code area}: the pty of every tab takes that size, once, and again whenever it changes. */
+    private void paneDrawn(Rect area) {
+        paneArea = Optional.of(area);
+        PaneSize size = paneSize();
+        dock.tabs().stream()
+                .map(HostedSessionView::id)
+                .filter(id -> !size.equals(paneSizes.get(id)))
+                .forEach(id -> {
+                    hosting.resize(new ResizePayload(id, size));
+                    paneSizes.put(id, size);
+                });
     }
 
     private boolean pressWithCtrl(KeyEvent key) {
@@ -287,6 +516,9 @@ public final class Shell extends ToolkitApp {
         if (key.isChar(UP)) {
             return focusOn(focus.above());
         }
+        if (key.isChar(TOGGLE_MAIN_VIEW)) {
+            return toggleMainView();
+        }
         return false;
     }
 
@@ -308,10 +540,38 @@ public final class Shell extends ToolkitApp {
             mainViewScroll.reset();
             return true;
         }
+        if (focus == Focus.SESSIONS) {
+            return sessions.selected().map(this::enterSession).orElse(false);
+        }
         return false;
     }
 
-    private boolean focusOn(Focus target) {
+    /** Enter on a hosted session focuses its tab; on an unlinked past session it resumes it in a tab of its own. */
+    private boolean enterSession(SessionRow row) {
+        return switch (row) {
+            case LiveSessionRow live when live.session().isHosted() -> focusTabOf(live.session());
+            case PastSessionRow past when past.session().isUnlinked() -> resume(past.session());
+            default -> false;
+        };
+    }
+
+    private boolean focusTabOf(LiveSessionView session) {
+        dock.tabs().stream()
+                .filter(tab -> tab.registered().map(LiveSessionView::id).filter(session.id()::equals).isPresent())
+                .findFirst()
+                .ifPresent(tab -> {
+                    dock.select(tab.id());
+                    focusOn(Focus.DOCK);
+                });
+        return true;
+    }
+
+    private boolean resume(PastSessionView session) {
+        return opened(hosting.resume(new ResumeHostedPayload(root, session.id(), session.directory(), paneSize())));
+    }
+
+    private boolean focusOn(Focus requested) {
+        Focus target = requested == Focus.MAIN && mainViewHidden ? Focus.DOCK : requested;
         focus = target;
         if (target.column() == Column.LEFT) {
             lastLeft = target;
@@ -331,7 +591,7 @@ public final class Shell extends ToolkitApp {
         applyPendingSessions();
         applyPendingWarning();
         return column(
-                new StatusLineElement(sessions.strongestMarker(), warning),
+                new StatusLineElement(sessions.strongestMarker(), warning, quitPrompt.map(SessionText::quitPrompt)),
                 row(
                         column(
                                         boardPanel(),
@@ -339,7 +599,7 @@ public final class Shell extends ToolkitApp {
                                         docsPanel(),
                                         small(ELSEWHERE_TITLE, Focus.ELSEWHERE))
                                 .percent(LEFT_COLUMN_PERCENT),
-                        column(mainView(), dock()).fill()).fill(),
+                        (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
                 text(keyBar()).dim().length(KEY_BAR_HEIGHT));
     }
 
@@ -388,7 +648,14 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element dock() {
-        return framed(DOCK_TITLE, Focus.DOCK, text(NO_HOSTED_SESSION)).fill();
+        Element body = dock.selectedTab()
+                .<Element>map(tab -> new TerminalScreenElement(screens.screenOf(tab.id()), focus == Focus.DOCK, this::paste))
+                .orElseGet(() -> text(NO_HOSTED_SESSION));
+        Panel panel = panel(DOCK_TITLE, new PaneProbe(body, this::paneDrawn))
+                .title(DockText.title(dock.tabs(), dock.selectedIndex()))
+                .rounded()
+                .titleEllipsis();
+        return (focus == Focus.DOCK ? panel.borderColor(Color.CYAN) : panel).fill();
     }
 
     private Panel framed(String title, Focus owner, Element body) {
@@ -445,6 +712,9 @@ public final class Shell extends ToolkitApp {
     }
 
     private String keyBar() {
+        if (inSession()) {
+            return KEY_BAR_INDENT + SESSION_KEYS;
+        }
         List<String> keys = new ArrayList<>();
         if (focus == Focus.BOARD || focus == Focus.SESSIONS || focus == Focus.DOCS) {
             keys.add(MOVE_KEYS);
@@ -464,6 +734,8 @@ public final class Shell extends ToolkitApp {
         }
         keys.add(FOCUS_KEYS);
         keys.add(QUIT_KEY);
+        keys.add(NEW_KEY);
+        keys.add(MAIN_VIEW_KEY);
         return KEY_BAR_INDENT + String.join(KEY_SEPARATOR, keys);
     }
 
