@@ -25,6 +25,8 @@ words mean.
 |---|---|---|
 | Status line | The top row of the screen: the newest warning on the right (`⚠ <text>`, or `⚠ 2 · <text>` once there are two), cut with `…` rather than wrapped. | `shell` |
 | Main view | The right column's top pane, which shows the selection of whichever left panel last had focus; for a ticket, its frontmatter and its body rendered as markdown, for a document, its markdown rendered. | `shell` |
+| Dock | The bottom of the right column, holding every hosted session as a tab. With the main view hidden it fills the column. | `shell` |
+| Dock tab | One hosted session's pane in the dock, labelled with its marker and name, or `starting`. | `shell` |
 | Ticket detail | What the main view shows for a ticket: its facts line, its other frontmatter keys, a rule, then its body rendered as markdown. It scrolls as one unit. | `shell` |
 
 ## board
@@ -47,7 +49,7 @@ words mean.
 | Live session | A session whose process runs, as the registry lists it after the liveness check, or `claude agents --json` when the registry is unusable. `sdk-cli` sessions are not listed from the registry. | `session` |
 | Registry | Claude Code's `~/.claude/sessions/<pid>.json` records, one per running process; internal and undocumented, so never trusted without the liveness check. | `session` |
 | Sweep | Re-reading the live sessions on a timer (every 2 s), always, watch or not: a session whose process died never rewrites its record, so only the sweep notices. Without a watch, the sweep is all there is. | `session` |
-| Hosted session | A live session lazyclaude spawned: the real `claude` on a pty, drawn in a dock tab. It dies with lazyclaude. | `session` (expected) |
+| Hosted session | A live session lazyclaude spawned: the real `claude` on a pty, drawn in a dock tab. Started by `N` or by resuming an unlinked past session; its tab closes when `claude` exits, and it dies with lazyclaude. | `session` |
 | Outside session | A live session started anywhere else. lazyclaude shows it read-only and can jump to its terminal window. | `session` (expected) |
 | Past session | A session with no live process, only a transcript. It can be resumed, which makes it hosted. A hosted session whose `claude` exited is past. | `session` |
 | Transcript | Claude Code's `~/.claude/projects/<folder>/<sessionId>.jsonl`, one per session; internal format, append-only by observation. A `subagents/` file is not one. | `session` |
@@ -57,7 +59,7 @@ words mean.
 | Weak link | A link found only through the branch name; shown as less certain, with a dim `(branch)` and no verb. | `session` |
 | Unlinked session | A session attributed to no ticket. Started from lazyclaude, it runs in the project root. | `session` |
 | Marker | What a live session asks of you, in the board gutter and on the status line: `!` waiting for permission, `?` waiting for input, `•` your turn; the strongest is `!` > `?` > `•`. Busy, unknown and past are not markers. | `session` |
-| Starting | A hosted session with no registry record yet: just spawned, or still on Claude Code's trust dialog. No marker, never notified. | `session` (expected) |
+| Starting | A hosted session with no registry record yet: just spawned, or still on Claude Code's trust dialog. No marker, never notified. | `session` |
 | Busy | The session is working; nothing is asked of you. The registry's `busy` and `shell` both show as busy. | `session` |
 | Your turn | The session finished and waits for your next prompt, without blocking on anything. Shown, never notified. | `session` |
 | Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session. | `session` (expected) |

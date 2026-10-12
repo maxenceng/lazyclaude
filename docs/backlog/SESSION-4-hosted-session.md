@@ -11,36 +11,36 @@ created: 2026-10-10
 
 ## Acceptance criteria
 
-- [ ] `N`, from any panel, starts a plain `claude` in the project root on a pty and opens it as
+- [x] `N`, from any panel, starts a plain `claude` in the project root on a pty and opens it as
       a new dock tab with focus. The tab reads `starting` until its registry record appears,
       then its marker and title, as the Sessions row shows them.
-- [ ] While a dock tab has focus, every key goes to `claude` except the reserved
+- [x] While a dock tab has focus, every key goes to `claude` except the reserved
       `alt+h/j/k/l/m/z/w`. Tab, Shift+Tab, Esc, Ctrl+C and Ctrl+R reach it, and Ctrl+C never
       quits lazyclaude. Ctrl+Z is swallowed, so `claude` is never stopped.
-- [ ] A paste reaches `claude` as one bracketed paste, so its newlines do not submit the
+- [x] A paste reaches `claude` as one bracketed paste, so its newlines do not submit the
       prompt.
-- [ ] Mouse wheel and clicks over the pane reach `claude` at the matching cell, so its
+- [x] Mouse wheel and clicks over the pane reach `claude` at the matching cell, so its
       fullscreen UI scrolls with the wheel.
-- [ ] The pty takes the pane's size, and is resized whenever the pane's size changes.
-- [ ] In the dock, `alt+h`/`alt+l` step through tabs, and `alt+h` on the first tab goes to the
+- [x] The pty takes the pane's size, and is resized whenever the pane's size changes.
+- [x] In the dock, `alt+h`/`alt+l` step through tabs, and `alt+h` on the first tab goes to the
       panels. `alt+k` goes to the main view and shows it if hidden. `alt+j` from the main view
       goes to the dock.
-- [ ] `m` outside a session, or `alt+m` anywhere, hides or shows the main view. Hidden, the
+- [x] `m` outside a session, or `alt+m` anywhere, hides or shows the main view. Hidden, the
       dock fills the right column. It stays hidden until toggled back.
-- [ ] A hosted session is listed in the Sessions panel's unlinked section, with `pane` where an
+- [x] A hosted session is listed in the Sessions panel's unlinked section, with `pane` where an
       outside one shows `kitty`. `enter` on it focuses its dock tab.
-- [ ] `enter` on an unlinked past session resumes it with `claude --resume <id>` in a new dock
+- [x] `enter` on an unlinked past session resumes it with `claude --resume <id>` in a new dock
       tab, in its recorded cwd. If that directory is gone, it runs in the project root and the
       status line warns that it did.
-- [ ] When `claude` exits, its tab closes and the session is listed as past. Focus moves to the
+- [x] When `claude` exits, its tab closes and the session is listed as past. Focus moves to the
       next tab, or to the panels after the last one. A non-zero exit code warns on the status
       line.
-- [ ] Spawning that fails (no `claude` on the PATH, no pty) opens no tab and warns on the
+- [x] Spawning that fails (no `claude` on the PATH, no pty) opens no tab and warns on the
       status line.
-- [ ] `q` outside a session quits at once when no hosted session is busy or waiting, and
+- [x] `q` outside a session quits at once when no hosted session is busy or waiting, and
       otherwise asks y/n first. On yes, every hosted `claude` ends with lazyclaude.
-- [ ] The child's environment carries no `CLAUDE*`, `KITTY*` or `TMUX` variable.
-- [ ] pty4j and jediterm-core types appear only in `session.infrastructure.secondary`, and an
+- [x] The child's environment carries no `CLAUDE*`, `KITTY*` or `TMUX` variable.
+- [x] pty4j and jediterm-core types appear only in `session.infrastructure.secondary`, and an
       architecture rule fails the build otherwise.
 
 ## Model decision
