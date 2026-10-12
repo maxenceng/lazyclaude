@@ -82,32 +82,7 @@ public final class SessionsFixture {
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings) {
-        return sessionManager(sessions, past, locator, watch, transcriptWatch, warnings, noHostedSessions());
-    }
-
-    public static SessionManager sessionManager(
-            LiveSessionPort sessions,
-            ProjectLocatorPort locator,
-            SessionWatchPort watch,
-            WarningPort warnings,
-            HostedSessionsSource hosted) {
-        return sessionManager(
-                sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, hosted);
-    }
-
-    public static SessionManager sessionManager(
-            LiveSessionPort sessions,
-            PastSessionPort past,
-            ProjectLocatorPort locator,
-            SessionWatchPort watch,
-            TranscriptWatchPort transcriptWatch,
-            WarningPort warnings,
-            HostedSessionsSource hosted) {
-        return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, sessionClock(), hosted);
-    }
-
-    public static HostedSessionsSource noHostedSessions() {
-        return () -> new HostedSessions(List.of());
+        return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, clock());
     }
 
     public static WorkingDirectory workingDirectoryOf(ReportedSession session) {

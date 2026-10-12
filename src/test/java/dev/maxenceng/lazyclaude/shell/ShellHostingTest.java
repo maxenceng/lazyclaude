@@ -160,7 +160,6 @@ class ShellHostingTest {
         verify(hosting).resume(payload.capture());
         assertThat(payload.getValue().session()).isEqualTo(pastSessionView().id());
         assertThat(payload.getValue().recordedDirectory()).isEqualTo(pastSessionView().directory());
-        assertThat(payload.getValue().root()).isEqualTo(boardViewOf(ticketView()).root().value());
     }
 
     @Test

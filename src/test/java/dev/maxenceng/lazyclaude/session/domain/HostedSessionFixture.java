@@ -47,6 +47,10 @@ public final class HostedSessionFixture {
         return OpenHostedSession.builder().session(hostedSession()).phase(new StartingPhase()).build();
     }
 
+    public static OpenHostedSession openUnread() {
+        return OpenHostedSession.builder().session(hostedSession()).phase(new UnreadPhase()).build();
+    }
+
     public static OpenHostedSession openLive(LiveSession live) {
         return OpenHostedSession.builder()
                 .session(hostedSession())

@@ -19,7 +19,7 @@ public final class HostedSessionCommand {
 
     /** {@code claude --resume} of a past session, in its recorded directory, or the project root with a warning when that is gone. */
     public HostStart resume(ResumeHostedPayload payload) {
-        return sessions.resume(payload.toDomain(), payload.session(), payload.recorded(), payload.size());
+        return sessions.resume(payload.session(), payload.recorded(), payload.size());
     }
 
     public void send(HostedInputPayload payload) {

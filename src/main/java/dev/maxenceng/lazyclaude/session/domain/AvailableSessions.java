@@ -21,6 +21,23 @@ public record AvailableSessions(
         Assert.notNull("clock", clock);
     }
 
+    @Override
+    public AvailableSessions hosting(HostedSessions open) {
+        List<LiveSession> owned =
+                live.stream().map(session -> session.ownedAmong(open.pids())).toList();
+        return builder()
+                .live(owned)
+                .past(past)
+                .hosted(open.sessions().stream()
+                        .map(session -> OpenHostedSession.builder()
+                                .session(session)
+                                .phase(session.phaseAmong(owned))
+                                .build())
+                        .toList())
+                .clock(clock)
+                .build();
+    }
+
     public SessionAge ageOf(LiveSession session) {
         return clock.ageOf(session.startedAt());
     }

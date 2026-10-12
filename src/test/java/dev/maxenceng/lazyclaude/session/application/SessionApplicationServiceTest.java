@@ -43,6 +43,8 @@ import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.Sessions;
 import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
+import dev.maxenceng.lazyclaude.session.domain.UnavailableSessions;
+import dev.maxenceng.lazyclaude.session.domain.UnreadPhase;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
@@ -170,6 +172,20 @@ class SessionApplicationServiceTest {
                 .isInstanceOfSatisfying(
                         AvailableSessions.class,
                         available -> assertThat(available.hosted()).extracting(OpenHostedSession::phase).containsExactly(new StartingPhase()));
+    }
+
+    @Test
+    void shouldCountAHostedSessionAsBusyWhileTheRegistryCannotBeRead() {
+        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        service.startUnlinked(project(), paneSize());
+
+        assertThat(service.sessionsFor(project(), noTickets()))
+                .as("quitting must ask while nothing says whether a hosted claude is mid-work")
+                .isInstanceOfSatisfying(
+                        UnavailableSessions.class,
+                        unavailable -> assertThat(unavailable.hosted()).extracting(OpenHostedSession::phase).containsExactly(new UnreadPhase()));
     }
 
     @Test

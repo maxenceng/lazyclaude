@@ -9,6 +9,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -369,6 +370,20 @@ class ArchitectureTest {
             .should(takeNoOtherManagerAsAConstructorParameter())
             .allowEmptyShould(true);
 
+    private static final String MANAGER = "Manager";
+    private static final String PORT = "Port";
+
+    // A manager holds ports and the clock, nothing it did not compute itself: another manager's decision, even behind a
+    // callback, is composed by the application service that calls both (ADR 0027).
+    @ArchTest
+    static final ArchRule managers_take_only_ports_and_the_clock = classes()
+            .that()
+            .resideInAPackage("..domain..")
+            .and()
+            .haveSimpleNameEndingWith(MANAGER)
+            .should(takeOnlyPortsAndTheClockAsConstructorParameters())
+            .allowEmptyShould(true);
+
     // A list, a map and a pair are shapes rather than values; what they carry must still be a domain type.
     private static final List<String> CARRIERS = List.of(List.class.getName(), Map.class.getName());
     private static final String PAIR = "Pair";
@@ -513,6 +528,22 @@ class ArchitectureTest {
                                         wiring,
                                         "%s is wired with %s; a manager depends on ports only"
                                                 .formatted(type.getSimpleName(), collaborator.getSimpleName())))));
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> takeOnlyPortsAndTheClockAsConstructorParameters() {
+        return new ArchCondition<>("take only ports and the clock as constructor parameters") {
+            @Override
+            public void check(JavaClass manager, ConditionEvents events) {
+                manager.getConstructors()
+                        .forEach(wiring -> wiring.getRawParameterTypes().stream()
+                                .filter(collaborator -> !collaborator.getSimpleName().endsWith(PORT))
+                                .filter(collaborator -> !collaborator.isEquivalentTo(Clock.class))
+                                .forEach(collaborator -> events.add(SimpleConditionEvent.violated(
+                                        wiring,
+                                        "%s is wired with %s; a manager holds ports, and another manager's answer is the application service's to pass on"
+                                                .formatted(manager.getSimpleName(), collaborator.getSimpleName())))));
             }
         };
     }

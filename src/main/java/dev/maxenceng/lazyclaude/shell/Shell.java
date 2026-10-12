@@ -568,7 +568,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean resume(PastSessionView session) {
-        return opened(hosting.resume(new ResumeHostedPayload(root, session.id(), session.directory(), paneSize())));
+        return opened(hosting.resume(new ResumeHostedPayload(session.id(), session.directory(), paneSize())));
     }
 
     private boolean goUp(Focus above) {

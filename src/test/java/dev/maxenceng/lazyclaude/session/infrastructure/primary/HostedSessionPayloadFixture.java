@@ -18,7 +18,7 @@ public final class HostedSessionPayloadFixture {
     }
 
     public static ResumeHostedPayload resumeHostedPayload() {
-        return new ResumeHostedPayload(project().root(), sessionId(), worktreeDirectory().path(), paneSize());
+        return new ResumeHostedPayload(sessionId(), worktreeDirectory().path(), paneSize());
     }
 
     public static HostedInputPayload typingPayload(HostedSessionId id) {

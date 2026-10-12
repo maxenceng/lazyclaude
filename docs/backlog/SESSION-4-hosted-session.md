@@ -30,16 +30,19 @@ created: 2026-10-10
 - [x] A hosted session is listed in the Sessions panel's unlinked section, with `pane` where an
       outside one shows `kitty`. `enter` on it focuses its dock tab.
 - [x] `enter` on an unlinked past session resumes it with `claude --resume <id>` in a new dock
-      tab, in its recorded cwd. If that directory is gone, it runs in the project root and the
-      status line warns that it did.
+      tab, in its recorded cwd. If that directory is gone, nothing is resumed and the status
+      line warns why.
 - [x] When `claude` exits, its tab closes and the session is listed as past. Focus moves to the
       next tab, or to the panels after the last one. A non-zero exit code warns on the status
       line.
 - [x] Spawning that fails (no `claude` on the PATH, no pty) opens no tab and warns on the
       status line.
 - [x] `q` outside a session quits at once when no hosted session is busy or waiting, and
-      otherwise asks y/n first. On yes, every hosted `claude` ends with lazyclaude.
-- [x] The child's environment carries no `CLAUDE*`, `KITTY*` or `TMUX` variable.
+      otherwise asks y/n first. While the registry cannot be read, a hosted session counts
+      as busy. On yes, every hosted `claude` ends with lazyclaude.
+- [x] The child's environment carries no `KITTY*` or `TMUX` variable and none of the
+      variables an outer Claude Code session sets for its children (`CLAUDECODE`,
+      `CLAUDE_CODE_ENTRYPOINT`, …). Sign-in and configuration variables pass through.
 - [x] pty4j and jediterm-core types appear only in `session.infrastructure.secondary`, and an
       architecture rule fails the build otherwise.
 
@@ -52,7 +55,7 @@ no new edge between contexts.
   registry record), then live with its state read from the registry by the child's pid, then
   exited and dropped, so the transcript lists it as past. `HostedSessionManager` holds the
   open ones in tab order and decides the cwd: the project root for a new unlinked session,
-  the recorded cwd for a resume, the root with a warning when that is gone. `HostPort`
+  the recorded cwd for a resume, and nothing but a warning when that is gone. `HostPort`
   declares spawn, resume, input, resize and the exit and screen-changed signals.
 - **Secondary adapter.** `PtyHostRepository` alone touches pty4j and jediterm-core. It spawns
   with the scrubbed environment, feeds output to the emulator on a reader thread, encodes

@@ -12,7 +12,6 @@ import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.ty
 import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSaying;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.raisedTexts;
-import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
@@ -107,7 +106,7 @@ class HostedSessionManagerTest {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
         when(hosts.spawn(any(), any())).thenReturn(processId());
 
-        HostStart start = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
+        HostStart start = manager.resume(sessionId(), worktreeDirectory(), paneSize());
 
         verify(hosts).spawn(launched.capture(), any());
         assertThat(launched.getValue()).isEqualTo(resumeLaunch(idOf(start), worktreeDirectory()));
@@ -118,25 +117,26 @@ class HostedSessionManagerTest {
     void shouldAnswerWithTheOpenSessionInsteadOfResumingTheSameSessionTwice() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
         when(hosts.spawn(any(), any())).thenReturn(processId());
-        HostStart first = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
+        HostStart first = manager.resume(sessionId(), worktreeDirectory(), paneSize());
 
-        HostStart second = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
+        HostStart second = manager.resume(sessionId(), worktreeDirectory(), paneSize());
 
         assertThat(second).as("two claude resuming one session would both write its transcript").isEqualTo(first);
         verify(hosts).spawn(any(), any());
     }
 
     @Test
-    void shouldResumeInTheProjectRootAndWarnWhenTheRecordedDirectoryIsGone() {
+    void shouldRefuseToResumeAndWarnWhenTheRecordedDirectoryIsGone() {
         when(hosts.exists(worktreeDirectory())).thenReturn(false);
-        when(hosts.spawn(any(), any())).thenReturn(processId());
 
-        HostStart start = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
+        HostStart start = manager.resume(sessionId(), worktreeDirectory(), paneSize());
 
-        verify(hosts).spawn(launched.capture(), any());
-        assertThat(launched.getValue()).isEqualTo(resumeLaunch(idOf(start), projectRootDirectory()));
+        assertThat(start)
+                .as("claude --resume finds a transcript under its directory's project folder, so anywhere else it exits")
+                .isEqualTo(new NotStartedHost());
+        verify(hosts, never()).spawn(any(), any());
         assertThat(raisedTexts(warnings))
-                .containsExactly("resume: /work/app.worktrees/PROJ-1-ticket is gone; running in /work/app instead.");
+                .containsExactly("resume: /work/app.worktrees/PROJ-1-ticket is gone; nothing resumed.");
     }
 
     @Test
@@ -144,7 +144,7 @@ class HostedSessionManagerTest {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
         when(hosts.spawn(any(), any())).thenThrow(new HostUnavailableException("no pty"));
 
-        assertThat(manager.resume(project(), sessionId(), worktreeDirectory(), paneSize()))
+        assertThat(manager.resume(sessionId(), worktreeDirectory(), paneSize()))
                 .isEqualTo(new NotStartedHost());
         assertThat(manager.open().sessions()).isEmpty();
         assertThat(raisedTexts(warnings)).containsExactly("hosted session: no pty.");

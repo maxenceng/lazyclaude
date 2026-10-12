@@ -18,10 +18,12 @@ outer terminal reports the mouse, and what is lost on the way from the keyboard 
 - **`HostedSession` is an aggregate of the `session` context**, not a new context. It is a `claude` process lazyclaude
   owns: *starting* while no registry record carries its pid, then the live session that record describes, dropped when the
   process exits. `HostedSessionManager` holds the open ones in start order and decides the working directory: the project
-  root for a new unlinked session, the recorded `cwd` for a resume, the root with a warning when that directory is gone.
+  root for a new unlinked session, the recorded `cwd` for a resume. When that directory is gone it starts nothing and
+  warns: `claude --resume` looks for the transcript under its directory's project folder, so it would not find it anywhere else.
   It warns when a start fails or a `claude` exits non-zero, and a resume of a session an open one already resumes
-  answers with that one, since two `claude` on one transcript would both write to it. `SessionManager` learns which live sessions are hosted from
-  their pids, so `LiveSessionView` says hosted or outside.
+  answers with that one, since two `claude` on one transcript would both write to it. `SessionManager` never sees the hosted sessions
+  (ADR 0027). `SessionApplicationService` lays them over what it reads with `Sessions.hosting`, which marks a live session
+  hosted when its pid is one lazyclaude spawned, so `LiveSessionView` says hosted or outside.
 - **`HostPort` is the domain's whole view of the pty:** spawn, directory check, send, resize, screen, end, and the exit
   and screen-changed signals. `PtyHostRepository` implements it and is the only place that knows pty4j and jediterm-core;
   `ArchitectureTest` fails the build when those libraries (`com.pty4j..`, `com.jediterm..`) are used outside
@@ -31,8 +33,10 @@ outer terminal reports the mouse, and what is lost on the way from the keyboard 
   `TerminalMouse`) and reads a published `TerminalScreen`; no TamboUI type crosses into `session` and no jediterm type
   crosses out. A paste is bracketed when the child turned on mode 2004, and any closing bracket inside it is dropped; the
   mouse is sent as SGR only for the events the child asked for (clicks, drags, motion); arrows follow the child's cursor-key
-  mode. The child's environment is lazyclaude's less every `CLAUDE*`, `KITTY*`, `TMUX*`, `TERMINFO` and `TERM_PROGRAM*` variable, with
-  `TERM=xterm-256color` and `COLORTERM=truecolor`.
+  mode. The child's environment is lazyclaude's, less every `KITTY*`, `TMUX*`, `TERMINFO` and `TERM_PROGRAM*` variable and the
+  variables an outer Claude Code session sets for its children (`CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, `CLAUDE_PID`, …),
+  with `TERM=xterm-256color` and `COLORTERM=truecolor`. Sign-in and configuration variables (`CLAUDE_CODE_USE_BEDROCK`,
+  `CLAUDE_CODE_OAUTH_TOKEN`, `CLAUDE_CONFIG_DIR`, …) pass through, so a hosted `claude` is signed in as the outer one is.
 - **Mouse capture is on.** Without it a wheel and a click never reach `claude`'s fullscreen UI. The cost is that the outer
   terminal's own text selection needs its bypass modifier (shift in most terminals), and that the shell sees every mouse
   event, which it forwards only when it happens over the pane.
@@ -42,7 +46,8 @@ outer terminal reports the mouse, and what is lost on the way from the keyboard 
   no shell to resume it. Ctrl+C reaches `claude`. Outside a tab, `q` and Ctrl+C quit at once unless a hosted session is
   busy or waiting, in which case the status line asks y/n first.
 - **A hosted session dies with lazyclaude.** The composition root ends every hosted `claude` however the shell returns.
-  Its tab stays open when the registry cannot be read, as *starting*, since the processes are lazyclaude's own.
+  Its tab stays open when the registry cannot be read, since the processes are lazyclaude's own. It is then *unread*,
+  and counts as busy, so `q` asks before ending a `claude` that nothing can say is idle.
 
 ## Consequences
 

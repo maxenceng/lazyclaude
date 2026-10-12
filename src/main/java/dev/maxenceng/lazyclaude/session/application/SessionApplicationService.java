@@ -8,7 +8,6 @@ import dev.maxenceng.lazyclaude.session.domain.HostedSessionManager;
 import dev.maxenceng.lazyclaude.session.domain.KnownTickets;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
-import dev.maxenceng.lazyclaude.session.domain.SessionClock;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.Sessions;
@@ -43,32 +42,25 @@ public final class SessionApplicationService {
             HostPort hosts,
             Clock clock) {
         this.hosted = new HostedSessionManager(hosts, warnings);
-        this.manager = new SessionManager(
-                sessions,
-                pastSessions,
-                locator,
-                watch,
-                transcriptWatch,
-                warnings,
-                new SessionClock(clock),
-                hosted::open);
+        this.manager = new SessionManager(sessions, pastSessions, locator, watch, transcriptWatch, warnings, clock);
     }
 
     public Sessions sessionsFor(Project project, KnownTickets tickets) {
-        return manager.sessionsFor(project, tickets);
+        return manager.sessionsFor(project, tickets).hosting(hosted.open());
     }
 
     public void subscribe(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
-        manager.watch(project, tickets, listener);
-        hosted.onChange(() -> manager.refresh(project, tickets, listener));
+        Consumer<Sessions> hosting = sessions -> listener.accept(sessions.hosting(hosted.open()));
+        manager.watch(project, tickets, hosting);
+        hosted.onChange(() -> manager.refresh(project, tickets, hosting));
     }
 
     public HostStart startUnlinked(Project project, PaneSize size) {
         return hosted.startUnlinked(project, size);
     }
 
-    public HostStart resume(Project project, SessionId session, WorkingDirectory recorded, PaneSize size) {
-        return hosted.resume(project, session, recorded, size);
+    public HostStart resume(SessionId session, WorkingDirectory recorded, PaneSize size) {
+        return hosted.resume(session, recorded, size);
     }
 
     public void send(HostedSessionId id, TerminalInput input) {

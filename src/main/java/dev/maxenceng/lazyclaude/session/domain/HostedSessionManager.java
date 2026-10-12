@@ -23,15 +23,15 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * Holds the hosted sessions that are open, in start order, and decides where each runs: a new unlinked session in the
- * project root, a resumed one in the directory its transcript recorded, or in the root with a warning when that directory
- * is gone. A session whose {@code claude} exits is dropped, with a warning when the exit was not clean; one that could not
+ * project root, a resumed one in the directory its transcript recorded, and none with a warning when that directory is
+ * gone, since {@code claude --resume} anywhere else would not find the transcript. A session whose {@code claude} exits is dropped, with a warning when the exit was not clean; one that could not
  * be started is never held, and says why.
  */
 public final class HostedSessionManager {
 
     private static final String START_WARNING = "hosted session: %s.";
     private static final String EXIT_WARNING = "hosted session: claude exited with code %d.";
-    private static final String GONE_WARNING = "resume: %s is gone; running in %s instead.";
+    private static final String GONE_WARNING = "resume: %s is gone; nothing resumed.";
 
     private final HostPort hosts;
     private final WarningPort warnings;
@@ -51,21 +51,20 @@ public final class HostedSessionManager {
     }
 
     /**
-     * {@code claude --resume} of {@code session}, in {@code recorded} when it still exists, else in the project root; the open
+     * {@code claude --resume} of {@code session}, in {@code recorded} when it still exists, else nothing; the open
      * session already resuming it when there is one, since two {@code claude} on one transcript would both write to it.
      */
-    public HostStart resume(Project project, SessionId session, WorkingDirectory recorded, PaneSize size) {
+    public HostStart resume(SessionId session, WorkingDirectory recorded, PaneSize size) {
         Optional<HostedSession> resuming =
                 open().sessions().stream().filter(hosted -> hosted.resumes(session)).findFirst();
         if (resuming.isPresent()) {
             return new StartedHost(resuming.get().id());
         }
-        WorkingDirectory root = new WorkingDirectory(project.root());
-        if (hosts.exists(recorded)) {
-            return start(new ResumeClaude(session), recorded, size);
+        if (!hosts.exists(recorded)) {
+            warnings.raise(new Warning(GONE_WARNING.formatted(recorded.path())));
+            return new NotStartedHost();
         }
-        warnings.raise(new Warning(GONE_WARNING.formatted(recorded.path(), root.path())));
-        return start(new ResumeClaude(session), root, size);
+        return start(new ResumeClaude(session), recorded, size);
     }
 
     public HostedSessions open() {

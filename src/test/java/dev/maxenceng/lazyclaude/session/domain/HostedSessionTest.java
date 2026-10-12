@@ -49,6 +49,13 @@ class HostedSessionTest {
     }
 
     @Test
+    void shouldCountAnUnreadSessionAsBusySoQuittingAsks() {
+        assertThat(new UnreadPhase().isBusyOrWaiting())
+                .as("with no registry to read, a busy claude cannot be told from an idle one, and ending it cannot be undone")
+                .isTrue();
+    }
+
+    @Test
     void shouldBeBusyOrWaitingWhenBusy() {
         assertThat(new LivePhase(sessionWith(new Busy())).isBusyOrWaiting()).isTrue();
     }

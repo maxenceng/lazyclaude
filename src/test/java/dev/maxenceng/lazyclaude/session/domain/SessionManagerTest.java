@@ -1,9 +1,5 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSession;
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionsOf;
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openLive;
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openStarting;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.boardTickets;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.onBranches;
@@ -12,7 +8,6 @@ import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ranOnBran
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.strong;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ticketRun;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.hostedLiveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.newestSession;
@@ -38,15 +33,12 @@ import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.rep
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.sdkCliSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.sessionWithoutEntrypoint;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.advancingClock;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.noHostedSessions;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionManager;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.workingDirectoryOf;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.cacheUnwritable;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
@@ -72,7 +64,6 @@ import static org.mockito.Mockito.when;
 
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -85,7 +76,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.published.Busy;
-import dev.maxenceng.lazyclaude.session.published.Hosting;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
@@ -135,7 +125,7 @@ class SessionManagerTest {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
         when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
 
-        AvailableSessions read = (AvailableSessions) new SessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, new SessionClock(advancingClock()), noHostedSessions()).sessionsFor(project(), noTickets());
+        AvailableSessions read = (AvailableSessions) new SessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, advancingClock()).sessionsFor(project(), noTickets());
 
         assertThat(read.ageOf(liveSession()))
                 .as("rows of one read drawn at different instants would disagree on how long ago they started")
@@ -703,68 +693,11 @@ class SessionManagerTest {
     }
 
     @Test
-    void shouldMarkALiveSessionHostedWhenItsPidIsOneLazyclaudeSpawned() {
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
-        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
-
-        Sessions read = sessionManager(sessions, locator, watch, warnings, () -> hostedSessionsOf(hostedSession()))
-                .sessionsFor(project(), noTickets());
-
-        assertThat(read).isEqualTo(availableSessionsHosting(List.of(hostedLiveSession()), List.of(openLive(hostedLiveSession()))));
-    }
-
-    @Test
-    void shouldLeaveALiveSessionOutsideWhenItsPidIsNotOneLazyclaudeSpawned() {
-        when(sessions.liveSessions(any())).thenReturn(List.of(newestReportedSession()));
-        when(locator.locate(workingDirectoryOf(newestReportedSession()))).thenReturn(project());
-
-        AvailableSessions read = (AvailableSessions) sessionManager(sessions, locator, watch, warnings, () -> hostedSessionsOf(hostedSession()))
-                .sessionsFor(project(), noTickets());
-
-        assertThat(read.live()).extracting(LiveSession::hosting).containsExactly(Hosting.OUTSIDE);
-    }
-
-    @Test
-    void shouldListAHostedSessionAsStartingWhileTheRegistryHasNoRecordOfIt() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
-
-        Sessions read = sessionManager(sessions, locator, watch, warnings, () -> hostedSessionsOf(hostedSession()))
-                .sessionsFor(project(), noTickets());
-
-        assertThat(read).isEqualTo(availableSessionsHosting(List.of(), List.of(openStarting())));
-    }
-
-    @Test
-    void shouldReadWhichSessionsAreHostedOnEveryRead() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
-        List<HostedSessions> now = new ArrayList<>(List.of(hostedSessionsOf()));
-        SessionManager manager = sessionManager(sessions, locator, watch, warnings, () -> now.getLast());
-        manager.sessionsFor(project(), noTickets());
-        now.add(hostedSessionsOf(hostedSession()));
-
-        assertThat(manager.sessionsFor(project(), noTickets()))
-                .as("a tab opened between two reads shows up in the second")
-                .isEqualTo(availableSessionsHosting(List.of(), List.of(openStarting())));
-    }
-
-    @Test
     void shouldDeliverTheSessionsOnRefresh() {
         when(sessions.liveSessions(any())).thenReturn(List.of());
 
         sessionManager(sessions, locator, watch, warnings).refresh(project(), noTickets(), listener);
 
         verify(listener).accept(liveSessionsOf(List.of()));
-    }
-
-    @Test
-    void shouldKeepTheHostedSessionsWhenNoSourceAnswers() {
-        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
-
-        Sessions read = sessionManager(sessions, locator, watch, warnings, () -> hostedSessionsOf(hostedSession()))
-                .sessionsFor(project(), noTickets());
-
-        assertThat(read)
-                .as("a registry that cannot be read must not close the tabs of claudes that are running")
-                .isEqualTo(unavailableSessionsHosting(List.of(openStarting())));
     }
 }

@@ -176,7 +176,7 @@ class PtyHostRepositoryTest {
     }
 
     @Test
-    void shouldGiveTheChildNoClaudeKittyOrTmuxVariable() throws Exception {
+    void shouldGiveTheChildNoNestedSessionKittyOrTmuxVariable() throws Exception {
         PtyHostRepository host = hostRunning(
                 "env | sort; read line",
                 Map.of(

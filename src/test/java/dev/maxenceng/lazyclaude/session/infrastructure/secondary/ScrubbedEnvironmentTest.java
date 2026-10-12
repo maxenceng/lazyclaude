@@ -9,11 +9,33 @@ import org.junit.jupiter.api.Test;
 class ScrubbedEnvironmentTest {
 
     @Test
-    void shouldDropEveryClaudeVariable() {
-        Map<String, String> scrubbed = ScrubbedEnvironment.of(Map.of(
-                "CLAUDECODE", "1", "CLAUDE_CODE_ENTRYPOINT", "cli", "CLAUDE_CODE_SSE_PORT", "1234", "HOME", "/home/max"));
+    void shouldDropEveryVariableMarkingANestedClaudeSession() {
+        Map<String, String> scrubbed = ScrubbedEnvironment.of(Map.ofEntries(
+                Map.entry("CLAUDECODE", "1"),
+                Map.entry("CLAUDE_CODE_CHILD_SESSION", "1"),
+                Map.entry("CLAUDE_CODE_ENTRYPOINT", "cli"),
+                Map.entry("CLAUDE_CODE_EXECPATH", "/usr/bin/claude"),
+                Map.entry("CLAUDE_CODE_MESSAGING_SOCKET", "/tmp/claude.sock"),
+                Map.entry("CLAUDE_CODE_MESSAGING_TOKEN", "t"),
+                Map.entry("CLAUDE_CODE_SESSION_ATTENDED", "1"),
+                Map.entry("CLAUDE_CODE_SESSION_ID", "a1b2"),
+                Map.entry("CLAUDE_CODE_SSE_PORT", "1234"),
+                Map.entry("CLAUDE_EFFORT", "high"),
+                Map.entry("CLAUDE_PID", "42"),
+                Map.entry("HOME", "/home/max")));
 
         assertThat(scrubbed).containsOnlyKeys("HOME", "TERM", "COLORTERM");
+    }
+
+    @Test
+    void shouldKeepClaudesSignInAndConfigurationVariables() {
+        assertThat(ScrubbedEnvironment.of(Map.of(
+                        "CLAUDE_CODE_USE_BEDROCK", "1",
+                        "CLAUDE_CODE_USE_VERTEX", "1",
+                        "CLAUDE_CODE_OAUTH_TOKEN", "o",
+                        "CLAUDE_CONFIG_DIR", "/home/max/.claude-work")))
+                .as("a hosted claude must come up signed in and configured as the outer one is")
+                .containsKeys("CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR");
     }
 
     @Test

@@ -8,13 +8,26 @@ import dev.maxenceng.lazyclaude.session.published.Reason;
 /**
  * Neither the registry nor {@code claude agents --json} answered; lazyclaude starts anyway and says why. The past sessions
  * are not shown either: without the live ones, a session still running cannot be told from its past row. The hosted ones
- * are still lazyclaude's own, so their tabs stay open, starting for want of a registry to say otherwise.
+ * are still lazyclaude's own, so their tabs stay open, unread for want of a registry to say how they stand.
  */
 public record UnavailableSessions(Reason reason, List<OpenHostedSession> hosted) implements Sessions {
 
     public UnavailableSessions {
         Assert.notNull("reason", reason);
         Assert.notNull("hosted tabs", hosted);
+    }
+
+    @Override
+    public UnavailableSessions hosting(HostedSessions open) {
+        return builder()
+                .reason(reason)
+                .hosted(open.sessions().stream()
+                        .map(session -> OpenHostedSession.builder()
+                                .session(session)
+                                .phase(new UnreadPhase())
+                                .build())
+                        .toList())
+                .build();
     }
 
     public static UnavailableSessionsBuilder builder() {

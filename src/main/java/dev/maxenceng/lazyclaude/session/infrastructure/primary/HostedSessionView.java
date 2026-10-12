@@ -7,6 +7,7 @@ import dev.maxenceng.lazyclaude.session.domain.HostedPhase;
 import dev.maxenceng.lazyclaude.session.domain.LivePhase;
 import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
 import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
+import dev.maxenceng.lazyclaude.session.domain.UnreadPhase;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 
@@ -27,6 +28,7 @@ public record HostedSessionView(
         return switch (phase) {
             case StartingPhase starting -> Optional.empty();
             case LivePhase live -> Optional.of(LiveSessionView.from(available, live.session()));
+            case UnreadPhase unread -> Optional.empty();
         };
     }
 

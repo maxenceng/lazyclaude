@@ -1,13 +1,13 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.ExitCode;
 import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
@@ -39,7 +39,7 @@ public final class PtyHostRepository implements HostPort {
 
     /** {@code claude} is the command and arguments that start Claude Code; {@code environment} is what the child inherits, less what it must not. */
     public PtyHostRepository(List<String> claude, Map<String, String> environment) {
-        this.claude = claude;
+        this.claude = List.copyOf(claude);
         this.environment = environment;
     }
 
@@ -93,11 +93,10 @@ public final class PtyHostRepository implements HostPort {
     }
 
     private List<String> argv(LaunchCommand command) {
-        List<String> argv = new ArrayList<>(claude);
-        switch (command) {
-            case NewClaude plain -> {}
-            case ResumeClaude resume -> argv.addAll(List.of(RESUME_FLAG, resume.session().value()));
-        }
-        return argv;
+        return switch (command) {
+            case NewClaude plain -> claude;
+            case ResumeClaude resume -> Stream.concat(claude.stream(), Stream.of(RESUME_FLAG, resume.session().value()))
+                    .toList();
+        };
     }
 }
