@@ -1,7 +1,6 @@
 package dev.maxenceng.lazyclaude.review.domain;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
-import dev.maxenceng.lazyclaude.review.published.CiResult;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 import dev.maxenceng.lazyclaude.review.published.PullRequestTitle;
@@ -15,11 +14,6 @@ public record PullRequest(
         Assert.notNull("pull request title", title);
         Assert.notNull("head branch", head);
         Assert.notNull("checks", checks);
-    }
-
-    /** Derived from the checks, so it can never disagree with them. */
-    public CiResult result() {
-        return checks.result();
     }
 
     public static PullRequestBuilder builder() {

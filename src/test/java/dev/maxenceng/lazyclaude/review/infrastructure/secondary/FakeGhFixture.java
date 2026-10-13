@@ -75,9 +75,11 @@ public final class FakeGhFixture {
     }
 
     public static String pullRequestJson(int number, String title, String head, boolean draft, String... checks) {
-        return """
-                {"number":%d,"title":"%s","headRefName":"%s","isDraft":%b,"statusCheckRollup":[%s],"unknown":"ignored"}"""
-                .formatted(number, title, head, draft, String.join(",", checks));
+        return pullRequestJsonFrom(false, number, title, head, draft, checks);
+    }
+
+    public static String forkPullRequestJson(int number, String title, String head) {
+        return pullRequestJsonFrom(true, number, title, head, false);
     }
 
     public static String checkRunJson(String name, String status, String conclusion) {
@@ -89,6 +91,12 @@ public final class FakeGhFixture {
     public static String statusContextJson(String context, String state) {
         return """
                 {"__typename":"StatusContext","context":"%s","state":"%s"}""".formatted(context, state);
+    }
+
+    private static String pullRequestJsonFrom(boolean fork, int number, String title, String head, boolean draft, String... checks) {
+        return """
+                {"number":%d,"title":"%s","headRefName":"%s","isDraft":%b,"isCrossRepository":%b,"statusCheckRollup":[%s],"unknown":"ignored"}"""
+                .formatted(number, title, head, draft, fork, String.join(",", checks));
     }
 
     private static Path script(Path directory, String body) throws IOException {

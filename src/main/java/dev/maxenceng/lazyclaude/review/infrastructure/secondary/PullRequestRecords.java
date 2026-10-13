@@ -21,7 +21,9 @@ final class PullRequestRecords {
     static List<PullRequest> pullRequests(byte[] json, String source) {
         PullRequestRecord[] records = records(json, source);
         try {
-            return Arrays.stream(records).map(PullRequestRecord::toPullRequest).toList();
+            return Arrays.stream(records)
+                    .filter(record -> !record.fromAFork())
+                    .map(PullRequestRecord::toPullRequest).toList();
         } catch (DomainException refused) {
             throw new PullRequestsUnavailableException(
                     "%s is not a pull request: %s".formatted(source, refused.getMessage()), refused);

@@ -3,44 +3,28 @@ package dev.maxenceng.lazyclaude.review.domain;
 import static dev.maxenceng.lazyclaude.review.domain.CheckFixture.checksOf;
 import static dev.maxenceng.lazyclaude.review.domain.CheckFixture.failedAnalyse;
 import static dev.maxenceng.lazyclaude.review.domain.CheckFixture.failedBuild;
-import static dev.maxenceng.lazyclaude.review.domain.CheckFixture.noChecks;
 import static dev.maxenceng.lazyclaude.review.domain.CheckFixture.passedLint;
 import static dev.maxenceng.lazyclaude.review.domain.CheckFixture.pendingContract;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import dev.maxenceng.lazyclaude.review.published.Failed;
-import dev.maxenceng.lazyclaude.review.published.NoCiResult;
-import dev.maxenceng.lazyclaude.review.published.Passed;
-import dev.maxenceng.lazyclaude.review.published.Pending;
+import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
 
 class ChecksTest {
 
     @Test
-    void shouldFailWhenOneCheckFailedAndAnotherIsStillPending() {
-        assertThat(checksOf(pendingContract(), failedBuild(), passedLint()).result())
+    void shouldListAFailedCheckBeforeAPendingOneSoTheCiResultIsFailed() {
+        assertThat(checksOf(pendingContract(), failedBuild(), passedLint()).listed().getFirst().outcome())
                 .as("failed wins over pending")
-                .isEqualTo(new Failed());
+                .isEqualTo(CheckOutcome.FAILED);
     }
 
     @Test
-    void shouldBePendingWhenNoneFailedAndOneHasNotFinished() {
-        assertThat(checksOf(passedLint(), pendingContract()).result())
+    void shouldListAPendingCheckBeforeAPassedOneSoTheCiResultIsPending() {
+        assertThat(checksOf(passedLint(), pendingContract()).listed().getFirst().outcome())
                 .as("pending wins over passed")
-                .isEqualTo(new Pending());
-    }
-
-    @Test
-    void shouldPassWhenEveryCheckPassed() {
-        assertThat(checksOf(passedLint()).result()).isEqualTo(new Passed());
-    }
-
-    @Test
-    void shouldHaveNoCiResultWithoutChecks() {
-        assertThat(noChecks().result())
-                .as("passed would claim a green run that never happened")
-                .isEqualTo(new NoCiResult());
+                .isEqualTo(CheckOutcome.PENDING);
     }
 
     @Test

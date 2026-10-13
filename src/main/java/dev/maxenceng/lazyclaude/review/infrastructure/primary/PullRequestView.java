@@ -1,9 +1,10 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
 import java.util.List;
+import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.review.domain.PullRequest;
-import dev.maxenceng.lazyclaude.review.published.CiResult;
+import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 import dev.maxenceng.lazyclaude.review.published.PullRequestTitle;
@@ -14,8 +15,12 @@ public record PullRequestView(
         PullRequestTitle title,
         HeadBranch head,
         boolean draft,
-        CiResult result,
         List<CheckView> checks) {
+
+    /** The outcome of the worst check, since they are listed worst first; none for a pull request with no checks. */
+    public Optional<CheckOutcome> ciResult() {
+        return checks.stream().findFirst().map(CheckView::outcome);
+    }
 
     static PullRequestView from(PullRequest pullRequest) {
         return builder()
@@ -23,7 +28,6 @@ public record PullRequestView(
                 .title(pullRequest.title())
                 .head(pullRequest.head())
                 .draft(pullRequest.draft())
-                .result(pullRequest.result())
                 .checks(pullRequest.checks().listed().stream().map(CheckView::from).toList())
                 .build();
     }
@@ -37,7 +41,6 @@ public record PullRequestView(
         private PullRequestTitle title;
         private HeadBranch head;
         private boolean draft;
-        private CiResult result;
         private List<CheckView> checks;
 
         private PullRequestViewBuilder() {}
@@ -62,18 +65,13 @@ public record PullRequestView(
             return this;
         }
 
-        public PullRequestViewBuilder result(CiResult result) {
-            this.result = result;
-            return this;
-        }
-
         public PullRequestViewBuilder checks(List<CheckView> checks) {
             this.checks = checks;
             return this;
         }
 
         public PullRequestView build() {
-            return new PullRequestView(number, title, head, draft, result, checks);
+            return new PullRequestView(number, title, head, draft, checks);
         }
     }
 }

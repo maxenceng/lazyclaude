@@ -18,14 +18,14 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
  * Asks {@code gh pr list} for the open pull requests of the repository the project's directory belongs to, with their checks, in one
- * call. Any way {@code gh} fails to answer, a missing binary, a login it lacks or a run it was killed in, is the one unavailable
+ * call. A pull request from a fork is left out: its head branch carries no owner, so it could shadow this repository's own. Any way {@code gh} fails to answer, a missing binary, a login it lacks or a run it was killed in, is the one unavailable
  * reason, in the words {@code gh} used where it used any.
  */
 public final class GhPullRequestsRepository implements OpenPullRequestPort {
 
     private static final String SOURCE = "gh pr list";
     private static final List<String> ARGUMENTS =
-            List.of("pr", "list", "--state", "open", "--json", "number,title,headRefName,isDraft,statusCheckRollup");
+            List.of("pr", "list", "--state", "open", "--json", "number,title,headRefName,isDraft,isCrossRepository,statusCheckRollup");
     private static final int SUCCESS = 0;
 
     private final String executable;

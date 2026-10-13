@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.checkRunJson;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.forkPullRequestJson;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghFailing;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghHanging;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghTitlingWithItsArguments;
@@ -30,10 +31,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import dev.maxenceng.lazyclaude.review.domain.PullRequest;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestsUnavailableException;
 import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
-import dev.maxenceng.lazyclaude.review.published.Failed;
-import dev.maxenceng.lazyclaude.review.published.NoCiResult;
-import dev.maxenceng.lazyclaude.review.published.Passed;
-import dev.maxenceng.lazyclaude.review.published.Pending;
 
 class GhPullRequestsRepositoryTest {
 
@@ -52,21 +49,34 @@ class GhPullRequestsRepositoryTest {
     }
 
     @Test
+    void shouldLeaveOutAPullRequestFromAForkEvenOnTheSameHeadBranch() throws IOException {
+        List<PullRequest> read = readPrinted(
+                root,
+                listOfPullRequests(
+                        forkPullRequestJson(31, "from a fork", "REVIEW-1-pr"), pullRequestJson(23, "PR and CI", "REVIEW-1-pr", false)));
+
+        assertThat(read)
+                .as("a fork's head carries no owner, so it would shadow this repository's own pull request")
+                .extracting(pullRequest -> pullRequest.number().value())
+                .containsExactly(23);
+    }
+
+    @Test
     void shouldListNothingWhenNoPullRequestIsOpen() throws IOException {
         assertThat(readPrinted(root, "[]")).isEmpty();
     }
 
     @Test
-    void shouldHaveNoCheckAndNoCiResultForAnEmptyRollup() throws IOException {
-        assertThat(readPrinted(root, listOfPullRequests(pullRequestJson(1, "t", "b", false))).getFirst().result())
-                .isEqualTo(new NoCiResult());
+    void shouldHaveNoChecksForAnEmptyRollup() throws IOException {
+        assertThat(readPrinted(root, listOfPullRequests(pullRequestJson(1, "t", "b", false))).getFirst().checks().listed())
+                .isEmpty();
     }
 
     @Test
     void shouldHaveNoChecksForARollupThatIsNull() throws IOException {
         String output = "[{\"number\":1,\"title\":\"t\",\"headRefName\":\"b\",\"isDraft\":false,\"statusCheckRollup\":null}]";
 
-        assertThat(readPrinted(root, output).getFirst().result()).isEqualTo(new NoCiResult());
+        assertThat(readPrinted(root, output).getFirst().checks().listed()).isEmpty();
     }
 
     @ParameterizedTest
@@ -109,11 +119,11 @@ class GhPullRequestsRepositoryTest {
                 .getFirst();
 
         assertThat(read.checks().checks().getFirst().name().value()).isEqualTo("ci/build");
-        assertThat(read.result()).isEqualTo(new Passed());
+        assertThat(read.checks().checks().getFirst().outcome()).isEqualTo(CheckOutcome.PASSED);
     }
 
     @Test
-    void shouldCollapseMixedChecksFailedOverPendingOverPassed() throws IOException {
+    void shouldListMixedChecksFailedOverPendingOverPassed() throws IOException {
         List<PullRequest> read = readPrinted(
                 root,
                 listOfPullRequests(
@@ -122,8 +132,8 @@ class GhPullRequestsRepositoryTest {
                         pullRequestJson(
                                 2, "t", "c", false, checkRunJson("a", "IN_PROGRESS", ""), statusContextJson("ci", "ERROR"))));
 
-        assertThat(read.get(0).result()).isEqualTo(new Pending());
-        assertThat(read.get(1).result()).isEqualTo(new Failed());
+        assertThat(read.get(0).checks().listed().getFirst().outcome()).isEqualTo(CheckOutcome.PENDING);
+        assertThat(read.get(1).checks().listed().getFirst().outcome()).isEqualTo(CheckOutcome.FAILED);
     }
 
     @Test
@@ -131,7 +141,7 @@ class GhPullRequestsRepositoryTest {
         List<PullRequest> read = repositoryOver(ghTitlingWithItsArguments(root)).openPullRequests(projectAt(root));
 
         assertThat(read.getFirst().title().value())
-                .isEqualTo("pr list --state open --json number,title,headRefName,isDraft,statusCheckRollup");
+                .isEqualTo("pr list --state open --json number,title,headRefName,isDraft,isCrossRepository,statusCheckRollup");
     }
 
     @Test

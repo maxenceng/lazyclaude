@@ -13,12 +13,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailablePullRequestsView;
 import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
-import dev.maxenceng.lazyclaude.review.published.CiResult;
-import dev.maxenceng.lazyclaude.review.published.Failed;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
-import dev.maxenceng.lazyclaude.review.published.NoCiResult;
-import dev.maxenceng.lazyclaude.review.published.Passed;
-import dev.maxenceng.lazyclaude.review.published.Pending;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 
@@ -54,7 +49,7 @@ final class PullRequestText {
     /** The cells at the right edge of a ticket's row: none without a pull request, else the mark slot (draft PR or no checks) and then the CI slot. */
     static List<RowCell> column(TicketView ticket, PullRequestsView pullRequests) {
         return pullRequestOf(ticket, pullRequests)
-                .map(pullRequest -> List.of(markCell(pullRequest), ciCell(pullRequest.result())))
+                .map(pullRequest -> List.of(markCell(pullRequest), ciCell(pullRequest.ciResult())))
                 .orElse(List.of());
     }
 
@@ -109,17 +104,20 @@ final class PullRequestText {
     }
 
     private static RowCell markCell(PullRequestView pullRequest) {
-        return pullRequest.draft() || pullRequest.result() instanceof NoCiResult
+        return pullRequest.draft() || pullRequest.ciResult().isEmpty()
                 ? new RowCell(MARK_GLYPH, Style.EMPTY.dim())
                 : RowCell.blank();
     }
 
-    private static RowCell ciCell(CiResult result) {
-        return switch (result) {
-            case Passed passed -> new RowCell(PASSED_GLYPH, Style.EMPTY.fg(Color.GREEN));
-            case Failed failed -> new RowCell(FAILED_GLYPH, Style.EMPTY.fg(Color.RED));
-            case Pending pending -> new RowCell(PENDING_GLYPH, Style.EMPTY.fg(Color.YELLOW));
-            case NoCiResult none -> RowCell.blank();
+    private static RowCell ciCell(Optional<CheckOutcome> result) {
+        return result.map(outcome -> new RowCell(glyph(outcome), Style.EMPTY.fg(colour(outcome)))).orElseGet(RowCell::blank);
+    }
+
+    private static Color colour(CheckOutcome outcome) {
+        return switch (outcome) {
+            case FAILED -> Color.RED;
+            case PENDING -> Color.YELLOW;
+            case PASSED -> Color.GREEN;
         };
     }
 

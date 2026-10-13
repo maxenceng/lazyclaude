@@ -18,10 +18,6 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView.Pu
 import dev.maxenceng.lazyclaude.review.published.CheckName;
 import dev.maxenceng.lazyclaude.review.published.CheckNameFixture;
 import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
-import dev.maxenceng.lazyclaude.review.published.Failed;
-import dev.maxenceng.lazyclaude.review.published.NoCiResult;
-import dev.maxenceng.lazyclaude.review.published.Passed;
-import dev.maxenceng.lazyclaude.review.published.Pending;
 
 public final class PullRequestsViewFixture {
 
@@ -37,7 +33,6 @@ public final class PullRequestsViewFixture {
                 .title(pullRequestTitle())
                 .head(headBranch())
                 .draft(false)
-                .result(new NoCiResult())
                 .checks(List.of());
     }
 
@@ -55,14 +50,12 @@ public final class PullRequestsViewFixture {
 
     public static PullRequestView passedPullRequestView() {
         return pullRequestViewBuilder()
-                .result(new Passed())
                 .checks(List.of(checkView(CheckNameFixture.lint(), CheckOutcome.PASSED)))
                 .build();
     }
 
     public static PullRequestView failedPullRequestView() {
         return pullRequestViewBuilder()
-                .result(new Failed())
                 .checks(List.of(
                         checkView(CheckNameFixture.build(), CheckOutcome.FAILED),
                         checkView(CheckNameFixture.contract(), CheckOutcome.PENDING),
@@ -72,7 +65,6 @@ public final class PullRequestsViewFixture {
 
     public static PullRequestView pendingPullRequestView() {
         return pullRequestViewBuilder()
-                .result(new Pending())
                 .checks(List.of(
                         checkView(CheckNameFixture.contract(), CheckOutcome.PENDING),
                         checkView(CheckNameFixture.lint(), CheckOutcome.PASSED)))
@@ -82,7 +74,6 @@ public final class PullRequestsViewFixture {
     public static PullRequestView draftFailedPullRequestView() {
         return pullRequestViewBuilder()
                 .draft(true)
-                .result(new Failed())
                 .checks(List.of(checkView(CheckNameFixture.build(), CheckOutcome.FAILED)))
                 .build();
     }
@@ -92,21 +83,20 @@ public final class PullRequestsViewFixture {
                 .number(secondPullRequestNumber())
                 .title(secondPullRequestTitle())
                 .head(siblingHeadBranch())
-                .result(new Passed())
                 .checks(List.of(checkView(CheckNameFixture.lint(), CheckOutcome.PASSED)))
                 .build();
     }
 
     public static PullRequestView sharingTheIdPrefixPullRequestView() {
-        return pullRequestViewBuilder().head(sharingTheIdPrefix()).result(new Passed()).build();
+        return pullRequestViewBuilder().head(sharingTheIdPrefix()).checks(List.of(checkView(CheckNameFixture.lint(), CheckOutcome.PASSED))).build();
     }
 
     public static PullRequestView bareIdPullRequestView() {
-        return pullRequestViewBuilder().head(bareId()).result(new Passed()).build();
+        return pullRequestViewBuilder().head(bareId()).checks(List.of(checkView(CheckNameFixture.lint(), CheckOutcome.PASSED))).build();
     }
 
     public static PullRequestView longerHeadPullRequestView() {
-        return pullRequestViewBuilder().head(longerThanTheBranch()).result(new Passed()).build();
+        return pullRequestViewBuilder().head(longerThanTheBranch()).checks(List.of(checkView(CheckNameFixture.lint(), CheckOutcome.PASSED))).build();
     }
 
     public static OpenPullRequestsView openPullRequestsViewOf(PullRequestView... pullRequests) {

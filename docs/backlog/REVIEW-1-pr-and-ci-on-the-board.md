@@ -17,8 +17,8 @@ created: 2026-10-10
       (beside its CI glyph) or an open PR with no checks.
 - [ ] The match is the ticket branch (the ticket file's name without `.md`) equal to
       `headRefName`, exactly. A PR whose head only shares the id prefix (`REVIEW-10-…` for
-      `REVIEW-1`), or is the bare id, gives no glyph; nor does a merged or closed PR, nor a
-      ticket with no open PR.
+      `REVIEW-1`), or is the bare id, gives no glyph; nor does a merged or closed PR, a PR
+      from a fork (`isCrossRepository`), or a ticket with no open PR.
 - [ ] The CI result is failed if any check is `FAILURE`, `TIMED_OUT`, `CANCELLED`,
       `ACTION_REQUIRED`, `STARTUP_FAILURE` or `ERROR`; otherwise pending if any is not
       complete (`QUEUED`, `IN_PROGRESS`, `PENDING`, `EXPECTED`); otherwise passed. A PR with
@@ -37,7 +37,7 @@ created: 2026-10-10
 - [ ] A fetch that fails after one succeeded clears the glyphs and shows the reason; the
       last good result is never shown as current.
 - [ ] The fetch is one `gh pr list --state open --json
-      number,title,headRefName,isDraft,statusCheckRollup` call at startup, then every 60 s;
+      number,title,headRefName,isDraft,isCrossRepository,statusCheckRollup` call at startup, then every 60 s;
       a PR opened or a check finishing shows within one interval. Two runs never overlap.
 
 ## Model decision
@@ -47,9 +47,10 @@ it creates the package, its `package-info` and its glossary section — not a ne
 raise. It follows `session`'s shape: a query, an application service, a manager, a read
 port and a watch port.
 
-- **Domain.** `PullRequest` (number, title, head branch, draft or not, `Checks`) and
-  `CiResult`, sealed: `Passed | Failed | Pending | NoCiResult`. Collapsing `Checks` into a
-  `CiResult` is the domain's rule, not the adapter's. A fetch's outcome is sealed too:
+- **Domain.** `PullRequest` (number, title, head branch, draft or not, `Checks`). `Checks`
+  list worst first by `CheckOutcome`, so the CI result is the first check's outcome, none
+  without checks — no separate `CiResult` type, which would only restate `CheckOutcome`
+  (settled on the PR's review). A fetch's outcome is sealed too:
   `CheckingPullRequests | OpenPullRequests | UnavailablePullRequests(reason)`, as `session`
   does with `UnavailableSessions`.
 - **Ports.** `OpenPullRequestPort` reads the open pull requests; a watch port calls back on

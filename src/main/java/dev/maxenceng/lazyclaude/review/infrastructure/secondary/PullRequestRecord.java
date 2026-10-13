@@ -11,7 +11,16 @@ import dev.maxenceng.lazyclaude.review.published.PullRequestTitle;
 
 /** One pull request as {@code gh pr list --json} writes it, null where the JSON lacks it. */
 record PullRequestRecord(
-        Integer number, String title, String headRefName, Boolean isDraft, List<CheckRecord> statusCheckRollup) {
+        Integer number,
+        String title,
+        String headRefName,
+        Boolean isDraft,
+        Boolean isCrossRepository,
+        List<CheckRecord> statusCheckRollup) {
+
+    boolean fromAFork() {
+        return Boolean.TRUE.equals(isCrossRepository);
+    }
 
     /** @throws dev.maxenceng.lazyclaude.error.domain.DomainException when a field the domain needs is missing or refused */
     PullRequest toPullRequest() {
