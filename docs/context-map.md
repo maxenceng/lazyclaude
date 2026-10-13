@@ -5,7 +5,7 @@ verified by `ArchitectureTest`, so this document describes intent while the test
 
 ## Contexts
 
-`board`, `docs` and `session` exist in code. The others become real — package, glossary section and all — in the
+`board`, `docs`, `review` and `session` exist in code. The others become real — package, glossary section and all — in the
 change that implements the first ticket refined into them. Their words are already in
 `docs/glossary.md`, marked *expected*.
 
@@ -13,14 +13,14 @@ change that implements the first ticket refined into them. Their words are alrea
 |---|---|---|
 | `board` | A project's backlog: its tickets, their status read from each ticket branch's copy, and the verbs `/ticket` allows for that status. Read-only. Today it reads each ticket from the project's working tree; branch copies and verbs come later. | in code |
 | `session` | Claude Code sessions: which are live (from the registry after a liveness check, else `claude agents --json`) and their state (busy, your turn, waiting), kept current by its own watcher on `~/.claude/sessions/` (ADR 0021); and which are past, from the transcripts under `~/.claude/projects/` through a cache of their own, kept current by a second watcher (ADR 0023). Each is linked to the tickets its `/ticket` args name, else weakly to those its branch names, against the ticket ids the shell hands over (ADR 0024). It also hosts the sessions lazyclaude starts: the real `claude` on a pty, as `HostedSession`s behind a `HostPort` whose one adapter holds pty4j and jediterm (ADR 0026). Still to come: the preselected verb, ticket worktrees, desktop notifications. | in code |
-| `review` | A ticket's pull request: its diff and threads, your pending review on GitHub, submitting it, and whether it is merged. | expected |
+| `review` | A ticket's pull request: its open pull requests and the CI result of their checks, from one `gh pr list` on a 60 s timer of its own, matched by the shell to a ticket's branch. Still to come: its diff and threads, your pending review on GitHub, submitting it, and whether it is merged. | in code |
 | `docs` | The project's `docs/**/*.md` outside `docs/backlog/`, as a tree of documents, read-only, kept current by its own watcher on `docs/**` (ADR 0016). | in code |
 
 Not contexts:
 
 | Package | Role |
 |---|---|
-| `shell` | The TamboUI application. Asks each context through the `*Query` in its `infrastructure.primary`, which answers `*View`s made of the context's `published` value objects (ADR 0011, ADR 0012), composing them into screens and keys, and joins them: it hands `session` the board's ticket ids, and a ticket's marker is the strongest among its linked live sessions. |
+| `shell` | The TamboUI application. Asks each context through the `*Query` in its `infrastructure.primary`, which answers `*View`s made of the context's `published` value objects (ADR 0011, ADR 0012), composing them into screens and keys, and joins them: it hands `session` the board's ticket ids, and a ticket's marker is the strongest among its linked live sessions, and its PR glyphs come from matching its ticket branch to the head of an open pull request. |
 | `shared` | Shared kernel. In `shared.domain` (ADR 0010): `Project`, the main worktree's root that `board`, `docs`, `session` and `review` all work in, and what locates it: `ProjectLocatorPort`, `WorkingDirectory`, `ProjectNotFoundException` and `ProjectUnavailableException` (ADR 0019). In `shared.infrastructure.secondary` (ADR 0017): `Utf8Text`, the decoding both `board`'s and `docs`' adapters read files with, and `ProjectLocatorRepository`, the git lookup `board` and `session` share (ADR 0019). Warnings (ADR 0022): `Warning`, `WarningPort` and `WarnOnce`, raised by the `docs` and `session` managers; `WarningRepository` holds them. The read side (`Warnings`, `WarningWatchPort`, `WarningManager`) is the shell's alone, through `WarningQuery`; the composition root raises one for a stopped thread through `WarningCommand`. |
 | `error` | Error kernel: `DomainException`, its status, and `Assert` (in `error.domain`, ADR 0011). |
 

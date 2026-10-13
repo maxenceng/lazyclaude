@@ -14,6 +14,7 @@ import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.NoType;
 import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.board.published.TypeName;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.tamboui.style.Style;
 
 /**
@@ -36,11 +37,15 @@ final class TicketText {
         };
     }
 
-    /** The rows above a ticket's body: the facts line, the other frontmatter keys, a rule across {@code width}, and "no body" when it has none. */
-    static List<DetailRow> head(TicketView ticket, int width) {
+    /**
+     * The rows above a ticket's body: the facts line, the other frontmatter keys, the rows about its pull request in the same key
+     * column, a rule across {@code width}, and "no body" when it has none.
+     */
+    static List<DetailRow> head(TicketView ticket, PullRequestsView pullRequests, int width) {
         List<DetailRow> head = new ArrayList<>();
         head.add(new DetailRow(facts(ticket), Style.EMPTY.bold()));
         keyRows(ticket).forEach(key -> head.add(new DetailRow(key, Style.EMPTY)));
+        head.addAll(PullRequestText.rows(ticket, pullRequests, keyWidth(ticket), width));
         head.add(new DetailRow(RULE.repeat(width), Style.EMPTY.dim()));
         if (ticket.body() instanceof NoBody) {
             head.add(new DetailRow(NO_BODY, Style.EMPTY.dim()));
@@ -69,9 +74,16 @@ final class TicketText {
     }
 
     static List<String> keyRows(TicketView ticket) {
-        List<FrontmatterEntryView> others = ticket.frontmatter();
-        int keyWidth = others.stream().mapToInt(entry -> entry.key().name().length()).max().orElse(0);
-        return others.stream().map(entry -> keyRow(entry, keyWidth)).toList();
+        return ticket.frontmatter().stream().map(entry -> keyRow(entry, keyWidth(ticket))).toList();
+    }
+
+    /** The width of the key column: the longest frontmatter key, or the longest key of the pull request rows when that is wider. */
+    private static int keyWidth(TicketView ticket) {
+        int longest = ticket.frontmatter().stream()
+                .mapToInt(entry -> entry.key().name().length())
+                .max()
+                .orElse(0);
+        return Math.max(longest, PullRequestText.keyWidth());
     }
 
     private static String keyRow(FrontmatterEntryView entry, int keyWidth) {

@@ -18,6 +18,11 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsRepository;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchRepository;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
+import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestsRepository;
+import dev.maxenceng.lazyclaude.review.infrastructure.secondary.PullRequestWatchRepository;
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
@@ -57,6 +62,8 @@ public final class LazyClaude {
     private static final List<String> CLAUDE = List.of("claude");
     private static final List<String> CLAUDE_AGENTS = List.of("claude", "agents", "--json");
     private static final Duration CLAUDE_AGENTS_PATIENCE = Duration.ofSeconds(10);
+    private static final String GH = "gh";
+    private static final Duration GH_PATIENCE = Duration.ofSeconds(30);
 
     private LazyClaude() {}
 
@@ -73,13 +80,15 @@ public final class LazyClaude {
         SessionApplicationService sessionService = sessionService(warningRepository);
         SessionQuery sessions = new SessionQuery(sessionService);
         HostedSessionCommand hosting = new HostedSessionCommand(sessionService);
+        ReviewQuery reviews = new ReviewQuery(
+                new ReviewApplicationService(new GhPullRequestsRepository(GH, GH_PATIENCE), new PullRequestWatchRepository()));
         int exit = start(
                 Path.of("").toAbsolutePath(),
                 board,
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, docs, sessions, hosting, warnings));
+                (view, tree, live) -> run(view, tree, live, docs, sessions, reviews, hosting, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -169,10 +178,11 @@ public final class LazyClaude {
             SessionsView live,
             DocsQuery docs,
             SessionQuery sessions,
+            ReviewQuery reviews,
             HostedSessionCommand hosting,
             WarningQuery warnings)
             throws Exception {
-        runThenEndHosted(shellOn(view, tree, live, docs, sessions, hosting, warnings)::run, hosting);
+        runThenEndHosted(shellOn(view, tree, live, docs, sessions, reviews, hosting, warnings)::run, hosting);
     }
 
     /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
@@ -186,7 +196,7 @@ public final class LazyClaude {
 
     /**
      * The shell on {@code view}, {@code tree} and {@code live}, handed the project's docs and sessions again
-     * after each change from now on, a repaint whenever a hosted session draws, and every warning raised, those raised
+     * after each change from now on, its open pull requests as each fetch answers, a repaint whenever a hosted session draws, and every warning raised, those raised
      * before it opened included.
      */
     // deferred: a change between the first read and the watch starting is shown only at the next change — close it when a doc edited during start-up is seen stale.
@@ -196,13 +206,15 @@ public final class LazyClaude {
             SessionsView live,
             DocsQuery docs,
             SessionQuery sessions,
+            ReviewQuery reviews,
             HostedSessionCommand hosting,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, hosting, sessions);
+        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, sessions);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         // deferred: the ticket ids are the board's at start-up, so a ticket created while running links its sessions only at the next start — close it when the board is watched for changes.
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);
         sessions.onScreenChange(shell::screensChanged);
+        reviews.subscribe(new ReviewPayload(view.root().value()), shell::pullRequestsChanged);
         warnings.subscribe(shell::warningsChanged);
         return shell;
     }

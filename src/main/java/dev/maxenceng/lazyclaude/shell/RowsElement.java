@@ -16,6 +16,7 @@ final class RowsElement implements Element {
 
     private static final String ELLIPSIS = "…";
     private static final String PADDING = " ";
+    private static final int COLUMN_GAP = 1;
 
     private final List<RowLine> lines;
     private final int selected;
@@ -40,7 +41,8 @@ final class RowsElement implements Element {
 
     private void renderRow(Frame frame, Rect area, int row, int index) {
         RowLine entry = lines.get(index);
-        String line = fit(entry.whole(), area.width());
+        int columnWidth = columnWidth(entry, area.width());
+        String line = fit(entry.whole(), area.width() - reserved(columnWidth));
         boolean reversed = index == selected && highlighted;
         Style style = reversed ? Style.EMPTY.reversed() : Style.EMPTY;
         String padded = reversed ? line + PADDING.repeat(area.width() - line.codePointCount(0, line.length())) : line;
@@ -50,6 +52,21 @@ final class RowsElement implements Element {
             Style gutterStyle = reversed ? entry.gutterStyle().reversed() : entry.gutterStyle();
             frame.buffer().setString(area.x(), area.y() + row, line.substring(0, line.offsetByCodePoints(0, gutterWidth)), gutterStyle);
         }
+        IntStream.range(0, columnWidth)
+                .forEach(cell -> renderCell(frame, area.x() + area.width() - columnWidth + cell, area.y() + row, entry.column().get(cell), reversed));
+    }
+
+    private static void renderCell(Frame frame, int x, int y, RowCell cell, boolean reversed) {
+        frame.buffer().setString(x, y, cell.glyph(), reversed ? cell.style().reversed() : cell.style());
+    }
+
+    /** A column is drawn only when the panel is wide enough to keep a cell of the text before it. */
+    private static int columnWidth(RowLine entry, int width) {
+        return entry.column().size() + COLUMN_GAP < width ? entry.column().size() : 0;
+    }
+
+    private static int reserved(int columnWidth) {
+        return columnWidth == 0 ? 0 : columnWidth + COLUMN_GAP;
     }
 
     // deferred: a wide character (CJK, emoji) counts as one cell, so such a title overruns its panel — close it when one shows up in a backlog.
