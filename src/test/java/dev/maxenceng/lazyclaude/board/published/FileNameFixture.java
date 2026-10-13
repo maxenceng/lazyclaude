@@ -11,4 +11,16 @@ public final class FileNameFixture {
     public static FileName secondFileName() {
         return new FileName("PROJ-2.md");
     }
+
+    public static FileName slugFileName() {
+        return new FileName("PROJ-1-first-slice.md");
+    }
+
+    public static FileName dottedFileName() {
+        return new FileName("PROJ-1-v1.2-notes.md");
+    }
+
+    public static FileName doubleExtensionFileName() {
+        return new FileName("PROJ-1.md.md");
+    }
 }

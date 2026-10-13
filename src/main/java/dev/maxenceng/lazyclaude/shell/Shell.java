@@ -19,6 +19,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
@@ -116,6 +117,7 @@ public final class Shell extends ToolkitApp {
     private final SessionRows sessions;
     private final AtomicReference<DocsView> pendingDocs = new AtomicReference<>();
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
+    private final AtomicReference<PullRequestsView> pendingPullRequests = new AtomicReference<>();
     private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private final HostedSessionCommand hosting;
@@ -124,6 +126,7 @@ public final class Shell extends ToolkitApp {
     private final DockTabs dock = new DockTabs();
     private final Map<HostedSessionId, PaneSize> paneSizes = new HashMap<>();
     private final AtomicBoolean repaintPending = new AtomicBoolean();
+    private PullRequestsView pullRequests;
     private Optional<Rect> paneArea = Optional.empty();
     private Optional<Long> quitPrompt = Optional.empty();
     private boolean mainViewHidden;
@@ -135,10 +138,16 @@ public final class Shell extends ToolkitApp {
     private boolean quitRequested;
 
     public Shell(
-            BoardView board, DocsView docs, SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
+            BoardView board,
+            DocsView docs,
+            SessionsView sessions,
+            PullRequestsView pullRequests,
+            HostedSessionCommand hosting,
+            SessionQuery screens) {
         this.board = new BoardRows(board);
         this.docs = new DocsRows(docs);
         this.sessions = new SessionRows(sessions);
+        this.pullRequests = pullRequests;
         this.hosting = hosting;
         this.screens = screens;
         this.root = board.root().value();
@@ -195,6 +204,25 @@ public final class Shell extends ToolkitApp {
         TabClosing closing = dock.replace(sessions.hosted());
         if (focus == Focus.DOCK && closing == TabClosing.LAST_ONE_GONE) {
             focusOn(lastLeft);
+        }
+    }
+
+    /**
+     * The open pull requests have been fetched again: the open ones, or why they could not be read. Callable from any thread: they are
+     * applied on the UI thread, at the next render or key press, so no glyph changes under a frame being drawn.
+     */
+    public void pullRequestsChanged(PullRequestsView view) {
+        pendingPullRequests.set(view);
+        ToolkitRunner running = runner();
+        if (running != null) {
+            running.runOnRenderThread(this::applyPendingPullRequests);
+        }
+    }
+
+    private void applyPendingPullRequests() {
+        PullRequestsView next = pendingPullRequests.getAndSet(null);
+        if (next != null) {
+            pullRequests = next;
         }
     }
 
@@ -265,6 +293,7 @@ public final class Shell extends ToolkitApp {
     boolean press(KeyEvent key) {
         applyPendingDocs();
         applyPendingSessions();
+        applyPendingPullRequests();
         applyPendingWarning();
         if (quitPrompt.isPresent()) {
             return answerQuitPrompt(key);
@@ -597,6 +626,7 @@ public final class Shell extends ToolkitApp {
     protected Element render() {
         applyPendingDocs();
         applyPendingSessions();
+        applyPendingPullRequests();
         applyPendingWarning();
         return column(
                 new StatusLineElement(sessions.strongestMarker(), warning, quitPrompt.map(SessionText::quitPrompt)),
@@ -620,7 +650,9 @@ public final class Shell extends ToolkitApp {
 
     private RowLine boardLine(Row row) {
         return row instanceof TicketRow ticket
-                ? ticket.line(sessions.markerOf(new LinkedTicketId(ticket.ticket().id().value())))
+                ? ticket.line(
+                        sessions.markerOf(new LinkedTicketId(ticket.ticket().id().value())),
+                        PullRequestText.column(ticket.ticket(), pullRequests))
                 : RowLine.plain(row.text());
     }
 
@@ -716,7 +748,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element ticketDetail(TicketView ticket) {
-        return new DetailElement(width -> TicketText.head(ticket, width), TicketText.markdown(ticket), mainViewScroll);
+        return new DetailElement(width -> TicketText.head(ticket, pullRequests, width), TicketText.markdown(ticket), mainViewScroll);
     }
 
     private String keyBar() {

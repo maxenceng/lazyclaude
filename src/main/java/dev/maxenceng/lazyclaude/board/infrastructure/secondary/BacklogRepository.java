@@ -22,6 +22,7 @@ import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
 import dev.maxenceng.lazyclaude.board.published.FileName;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
+import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Utf8Text;
@@ -104,7 +105,7 @@ public final class BacklogRepository implements BacklogPort {
 
     private static BacklogEntry entry(FileName name, TicketFrontmatter fields, TicketBody body) {
         try {
-            return TicketFile.builder().file(name).ticket(fields.toDomain(body)).build();
+            return TicketFile.builder().file(name).ticket(fields.toDomain(TicketBranch.of(name), body)).build();
         } catch (DomainException e) {
             return unreadable(name, e.getMessage());
         }

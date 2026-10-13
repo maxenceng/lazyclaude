@@ -432,15 +432,17 @@ class ShellTest {
     void shouldScrollTheMainViewOneRowWithJ() {
         Shell shell = shellFocusedOnMainViewOf(longTicketView());
 
-        shell.press(key('j'));
+        pressed(shell, key('j'), 2);
 
-        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("──────");
+        assertThat(Screen.of(shell).mainViewRows().getFirst())
+                .as("the facts and the pull request row precede the rule")
+                .startsWith("──────");
     }
 
     @Test
     void shouldScrollTheMainViewBackUpOneRowWithK() {
         Shell shell = shellFocusedOnMainViewOf(longTicketView());
-        pressed(shell, key('j'), 2);
+        pressed(shell, key('j'), 3);
 
         shell.press(key('k'));
 
@@ -499,8 +501,8 @@ class ShellTest {
         shell.press(ctrl('d'));
 
         assertThat(Screen.of(shell).mainViewRows().getFirst())
-                .as("two head rows precede the body, so row %d is item %d", viewHeight / 2, viewHeight / 2 - 1)
-                .contains("Row %02d".formatted(viewHeight / 2 - 1));
+                .as("three head rows precede the body, so row %d is item %d", viewHeight / 2, viewHeight / 2 - 2)
+                .contains("Row %02d".formatted(viewHeight / 2 - 2));
     }
 
     @Test

@@ -4,8 +4,12 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterE
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryViewFixture.frontmatterViews;
 import static dev.maxenceng.lazyclaude.board.published.BodyFixture.body;
 import static dev.maxenceng.lazyclaude.board.published.ContextNameFixture.contextName;
+import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.secondTicketBranch;
+import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.slugTicketBranch;
+import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.secondTicketId;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
+import static dev.maxenceng.lazyclaude.board.published.TitleFixture.longTitle;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.secondTitle;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
 import static dev.maxenceng.lazyclaude.board.published.TypeNameFixture.typeName;
@@ -28,6 +32,7 @@ public final class TicketViewFixture {
     public static TicketViewBuilder ticketViewBuilder() {
         return TicketView.builder()
                 .id(ticketId())
+                .branch(ticketBranch())
                 .title(title())
                 .status(Status.DRAFT)
                 .context(contextName())
@@ -41,7 +46,23 @@ public final class TicketViewFixture {
     }
 
     public static TicketView secondTicketView() {
-        return ticketViewBuilder().id(secondTicketId()).title(secondTitle()).build();
+        return ticketViewBuilder().id(secondTicketId()).branch(secondTicketBranch()).title(secondTitle()).build();
+    }
+
+    public static TicketView slugTicketView() {
+        return ticketViewBuilder().branch(slugTicketBranch()).build();
+    }
+
+    public static TicketView datedSlugTicketView() {
+        return ticketViewBuilder().branch(slugTicketBranch()).frontmatter(datedFrontmatterViews()).build();
+    }
+
+    public static TicketView inReviewSlugTicketView() {
+        return ticketViewBuilder().branch(slugTicketBranch()).status(Status.IN_REVIEW).build();
+    }
+
+    public static TicketView longTitledSlugTicketView() {
+        return ticketViewBuilder().branch(slugTicketBranch()).title(longTitle()).build();
     }
 
     public static TicketView doneTicketView() {
@@ -73,7 +94,7 @@ public final class TicketViewFixture {
     }
 
     public static TicketView longSecondTicketView() {
-        return ticketViewBuilder().id(secondTicketId()).title(secondTitle()).body(listOfRows(60)).build();
+        return ticketViewBuilder().id(secondTicketId()).branch(secondTicketBranch()).title(secondTitle()).body(listOfRows(60)).build();
     }
 
     public static TicketView wrappingTicketView() {

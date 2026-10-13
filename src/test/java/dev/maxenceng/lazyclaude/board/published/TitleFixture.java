@@ -11,4 +11,8 @@ public final class TitleFixture {
     public static Title secondTitle() {
         return new Title("Plan the next slice");
     }
+
+    public static Title longTitle() {
+        return new Title("PR and CI glyphs on the board and in the ticket detail");
+    }
 }

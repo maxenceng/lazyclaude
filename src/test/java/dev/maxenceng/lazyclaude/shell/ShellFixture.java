@@ -4,11 +4,17 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFix
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedTab;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedNamedSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
+import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+
+import java.util.List;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
@@ -16,6 +22,7 @@ import org.mockito.invocation.InvocationOnMock;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
@@ -24,6 +31,7 @@ import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
+import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
@@ -34,7 +42,41 @@ final class ShellFixture {
     private ShellFixture() {}
 
     static Shell newShell(BoardView board, DocsView docs, SessionsView sessions) {
-        return new Shell(board, docs, sessions, mock(HostedSessionCommand.class, ShellFixture::noHostStarted), blankScreens());
+        return new Shell(
+                board,
+                docs,
+                sessions,
+                checkingPullRequestsView(),
+                mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
+                blankScreens());
+    }
+
+    static Shell shellOnPullRequests(PullRequestsView pullRequests, TicketView... tickets) {
+        Shell shell = new Shell(
+                boardViewOf(tickets),
+                emptyDocsView(),
+                emptySessionsView(),
+                pullRequests,
+                mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
+                blankScreens());
+        shell.press(key('j'));
+        return shell;
+    }
+
+    static Shell shellOnPullRequestsAndSessions(PullRequestsView pullRequests, SessionsView sessions, TicketView... tickets) {
+        Shell shell = new Shell(
+                boardViewOf(tickets),
+                emptyDocsView(),
+                sessions,
+                pullRequests,
+                mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
+                blankScreens());
+        shell.press(key('j'));
+        return shell;
+    }
+
+    static SessionsView yourTurnOnTheFirstTicket() {
+        return sessionsViewOf(List.of(linkedNamedSessionView(1, "calm-one", new YourTurn(), strongLink("PROJ-1", "start"))));
     }
 
     static Object noHostStarted(InvocationOnMock invocation) {
@@ -46,7 +88,7 @@ final class ShellFixture {
     }
 
     static Shell shellHosting(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
-        return new Shell(boardViewOf(ticketView()), emptyDocsView(), sessions, hosting, screens);
+        return new Shell(boardViewOf(ticketView()), emptyDocsView(), sessions, checkingPullRequestsView(), hosting, screens);
     }
 
     static Shell shellInDock(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
