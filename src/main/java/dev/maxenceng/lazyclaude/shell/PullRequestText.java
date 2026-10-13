@@ -29,7 +29,7 @@ import dev.tamboui.style.Style;
  */
 final class PullRequestText {
 
-    private static final String DRAFT_GLYPH = "⊙";
+    private static final String MARK_GLYPH = "⊙";
     private static final String PASSED_GLYPH = "✓";
     private static final String FAILED_GLYPH = "✗";
     private static final String PENDING_GLYPH = "◌";
@@ -51,10 +51,10 @@ final class PullRequestText {
         return CHECKS_KEY.length();
     }
 
-    /** The cells at the right edge of a ticket's row: none without a pull request, else the draft slot and then the CI slot. */
+    /** The cells at the right edge of a ticket's row: none without a pull request, else the mark slot (draft PR or no checks) and then the CI slot. */
     static List<RowCell> column(TicketView ticket, PullRequestsView pullRequests) {
         return pullRequestOf(ticket, pullRequests)
-                .map(pullRequest -> List.of(draftCell(pullRequest), ciCell(pullRequest.result())))
+                .map(pullRequest -> List.of(markCell(pullRequest), ciCell(pullRequest.result())))
                 .orElse(List.of());
     }
 
@@ -108,9 +108,9 @@ final class PullRequestText {
         };
     }
 
-    private static RowCell draftCell(PullRequestView pullRequest) {
+    private static RowCell markCell(PullRequestView pullRequest) {
         return pullRequest.draft() || pullRequest.result() instanceof NoCiResult
-                ? new RowCell(DRAFT_GLYPH, Style.EMPTY.dim())
+                ? new RowCell(MARK_GLYPH, Style.EMPTY.dim())
                 : RowCell.blank();
     }
 

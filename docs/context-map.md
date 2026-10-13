@@ -38,14 +38,13 @@ graph TD
     shell --> review
     shell --> docs
     session -- "PR head branch, merged state" --> review
-    review -- "ticket branch" --> board
 ```
 
 - `board` knows nothing of sessions or pull requests. Who works a ticket is `session`'s
   question; how a ticket looks with its sessions is `shell`'s join.
 - `session` is handed the board's ticket ids by the shell and never reads `board`'s types; `ticket status`, verbs and the ticket branch stay `board`'s until a ticket asks for them. It reads a pull request's head branch to apply the `pr-link` rule, and its state to
   preselect `done`.
-- `review` finds a ticket's pull request by its ticket branch.
+- `review` knows nothing of tickets: it reads every open pull request, and the shell finds a ticket's by its ticket branch.
 - A ticket's PR glyph on the board is `shell`'s join of its ticket branch with `review`'s open
   pull requests and their CI result; `board` still knows nothing of pull requests.
 - Which ticket branches stop being a status source is `review`'s merged state, handed to

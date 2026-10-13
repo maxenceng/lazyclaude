@@ -73,7 +73,7 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Pull request | The open GitHub pull request whose head is a ticket branch. "PR" in UI text, `PullRequest` in code. | `review` |
+| Pull request | An open GitHub pull request; a ticket's pull request is the one whose head is its ticket branch. "PR" in UI text, `PullRequest` in code. | `review` |
 | Draft pull request | A pull request GitHub marks as draft. Always written in full ("draft PR" in UI text), never a bare "draft", which stays the ticket status. | `review` |
 | Checks | The check runs and commit statuses on a pull request's head. | `review` |
 | CI result | The checks collapsed into *passed*, *failed* or *pending*: failed wins over pending, pending over passed. A pull request with no checks has none. | `review` |
