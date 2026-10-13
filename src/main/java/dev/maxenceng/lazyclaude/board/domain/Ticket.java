@@ -7,6 +7,7 @@ import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
+import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.board.published.TicketContext;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.TicketTitle;
@@ -14,9 +15,10 @@ import dev.maxenceng.lazyclaude.board.published.TicketType;
 import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** One backlog ticket as the board shows it; a field the file lacks is an explicit absence, never a stand-in. */
+/** One backlog ticket as the board shows it, with the branch its work happens on; a field the file lacks is an explicit absence, never a stand-in. */
 public record Ticket(
         TicketId id,
+        TicketBranch branch,
         Status status,
         TicketContext context,
         TicketType type,
@@ -28,6 +30,7 @@ public record Ticket(
 
     public Ticket {
         Assert.notNull("id", id);
+        Assert.notNull("branch", branch);
         Assert.notNull("status", status);
         Assert.notNull("context", context);
         Assert.notNull("type", type);
@@ -59,6 +62,7 @@ public record Ticket(
 
     public static final class TicketBuilder {
         private TicketId id;
+        private TicketBranch branch;
         private Status status;
         private TicketContext context;
         private TicketType type;
@@ -69,6 +73,11 @@ public record Ticket(
 
         public TicketBuilder id(TicketId id) {
             this.id = id;
+            return this;
+        }
+
+        public TicketBuilder branch(TicketBranch branch) {
+            this.branch = branch;
             return this;
         }
 
@@ -98,7 +107,7 @@ public record Ticket(
         }
 
         public Ticket build() {
-            return new Ticket(id, status, context, type, frontmatter, body);
+            return new Ticket(id, branch, status, context, type, frontmatter, body);
         }
     }
 }

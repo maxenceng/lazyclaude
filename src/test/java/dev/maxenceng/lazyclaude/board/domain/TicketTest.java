@@ -35,6 +35,13 @@ class TicketTest {
     }
 
     @Test
+    void shouldRefuseATicketWithoutABranch() {
+        assertThatThrownBy(() -> ticketBuilder().branch(null).build())
+                .isExactlyInstanceOf(MissingMandatoryValueException.class)
+                .hasMessageContaining("branch");
+    }
+
+    @Test
     void shouldRefuseATicketWithoutAStatus() {
         assertThatThrownBy(() -> ticketBuilder().status(null).build())
                 .isExactlyInstanceOf(MissingMandatoryValueException.class);

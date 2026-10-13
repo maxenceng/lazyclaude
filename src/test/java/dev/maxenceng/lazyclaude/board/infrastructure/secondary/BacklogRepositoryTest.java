@@ -3,10 +3,13 @@ package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.datedFrontmatter;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFile;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.bareTicketBuilder;
+import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.backlogIn;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.secondTicketMarkdownWithStatus;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.ticketMarkdown;
 import static dev.maxenceng.lazyclaude.board.published.FileNameFixture.secondFileName;
+import static dev.maxenceng.lazyclaude.board.published.FileNameFixture.slugFileName;
+import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.slugTicketBranch;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -48,6 +51,17 @@ class BacklogRepositoryTest {
         Files.writeString(backlog.resolve("PROJ-1.md"), ticketMarkdown());
 
         assertThat(repository.entries(new Project(root))).containsExactly(ticketFile());
+    }
+
+    @Test
+    void shouldTakeTheFileNameWithoutItsExtensionForTheTicketBranch() throws IOException {
+        Files.writeString(backlog.resolve(slugFileName().value()), ticketMarkdown());
+
+        assertThat(repository.entries(new Project(root)))
+                .containsExactly(TicketFile.builder()
+                        .file(slugFileName())
+                        .ticket(ticketBuilder().branch(slugTicketBranch()).build())
+                        .build());
     }
 
     @Test
