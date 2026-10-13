@@ -21,7 +21,7 @@ before any code is written.
 
 | Field | Values | Why it is there |
 |---|---|---|
-| `id` | `CONTEXT-1` | Matches the filename and the branch name. |
+| `id` | `CONTEXT-1` | The filename starts with it; the ticket branch is the filename without `.md`. |
 | `status` | `draft`, `todo`, `in-progress`, `in-review`, `done` | Advanced by `/ticket`, not by hand. |
 | `context` | a bounded context, `cross-context`, or `unassigned` | The first question any work asks. |
 | `type` | `feature`, `fix`, `chore`, `spike`, `map`, `decision` | |

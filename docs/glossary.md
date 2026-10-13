@@ -37,7 +37,7 @@ words mean.
 | Title | The first `# ` line of a ticket's body outside a code fence, stripped; a ticket without one is shown under its id. | `board` |
 | Board | A project's tickets grouped by status, as the Board panel shows them. | `board` |
 | Unreadable ticket | A backlog file with an `id` whose frontmatter or status is refused, or whose `id` another file already claims; listed with its reason, never dropped silently. | `board` |
-| Ticket branch | The branch `<id>-<slug>` a ticket's work happens on, named from the ticket. | `board` (expected) |
+| Ticket branch | The branch `<id>-<slug>` a ticket's work happens on, the ticket file's name without `.md`. | `board` |
 | Branch copy | The ticket's file as its ticket branch has it: the ticket worktree's file, whatever branch the worktree is on, else `git show <branch>:<file>` while the branch's pull request is not merged. | `board` (expected) |
 | Status | A ticket's `status`, read from its branch copy whenever there is one, and from the root checkout otherwise: no ticket branch, or a ticket branch whose pull request is merged and no ticket worktree. There is no separate root status. | `board` |
 | Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` (expected) |
@@ -73,10 +73,10 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Pull request | The open GitHub pull request whose head is a ticket branch. "PR" in UI text, `PullRequest` in code. | `review` (expected) |
-| Draft pull request | A pull request GitHub marks as draft. Always written in full ("draft PR" in UI text), never a bare "draft", which stays the ticket status. | `review` (expected) |
-| Checks | The check runs and commit statuses on a pull request's head. | `review` (expected) |
-| CI result | The checks collapsed into *passed*, *failed* or *pending*: failed wins over pending, pending over passed. A pull request with no checks has none. | `review` (expected) |
+| Pull request | The open GitHub pull request whose head is a ticket branch. "PR" in UI text, `PullRequest` in code. | `review` |
+| Draft pull request | A pull request GitHub marks as draft. Always written in full ("draft PR" in UI text), never a bare "draft", which stays the ticket status. | `review` |
+| Checks | The check runs and commit statuses on a pull request's head. | `review` |
+| CI result | The checks collapsed into *passed*, *failed* or *pending*: failed wins over pending, pending over passed. A pull request with no checks has none. | `review` |
 | Pending review | Your one unsubmitted review on a pull request, kept on GitHub. An existing one is adopted, wherever it was started. | `review` (expected) |
 | Pending comment | A comment in your pending review, on one line or a range of lines inside one hunk. | `review` (expected) |
 | Thread | Comments already on the pull request; *resolved* or *outdated* ones are shown differently. | `review` (expected) |
