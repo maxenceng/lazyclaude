@@ -6,19 +6,26 @@ import dev.maxenceng.lazyclaude.review.published.Reason;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
- * Reads a project's open pull requests whenever the watch says to. It owns the rule that a run which fails is delivered as
+ * Reads a project's open and merged pull requests whenever the watch says to. It owns the rule that a run which fails is delivered as
  * unavailable, never swallowed and never replaced by the last good run: what is shown is always the latest answer.
  */
-public record ReviewManager(OpenPullRequestPort pullRequests, PullRequestWatchPort watch) {
+public record ReviewManager(
+        OpenPullRequestPort pullRequests, MergedPullRequestPort mergedPullRequests, PullRequestWatchPort watch) {
 
     /** What stands until the first run answers. */
     public PullRequests checking() {
         return new CheckingPullRequests();
     }
 
-    /** Hands {@code listener} the outcome of each run of the watch, on the watch's thread. */
-    public void watch(Project project, Consumer<PullRequests> listener) {
-        watch.watch(() -> listener.accept(read(project)));
+    /**
+     * Hands {@code listener} the open pull requests and {@code mergedListener} the merged ones after each run of the watch, on the
+     * watch's thread. Both are read in the one run, so the two fetches share the timer and never overlap.
+     */
+    public void watch(Project project, Consumer<PullRequests> listener, Consumer<MergedPullRequests> mergedListener) {
+        watch.watch(() -> {
+            listener.accept(read(project));
+            mergedListener.accept(readMerged(project));
+        });
     }
 
     private PullRequests read(Project project) {
@@ -26,6 +33,14 @@ public record ReviewManager(OpenPullRequestPort pullRequests, PullRequestWatchPo
             return new OpenPullRequests(pullRequests.openPullRequests(project));
         } catch (PullRequestsUnavailableException noAnswer) {
             return new UnavailablePullRequests(new Reason(noAnswer.getMessage()));
+        }
+    }
+
+    private MergedPullRequests readMerged(Project project) {
+        try {
+            return new KnownMergedPullRequests(mergedPullRequests.mergedPullRequests(project));
+        } catch (PullRequestsUnavailableException noAnswer) {
+            return new UnavailableMergedPullRequests(new Reason(noAnswer.getMessage()));
         }
     }
 }

@@ -19,4 +19,8 @@ public final class TicketBranchFixture {
     public static TicketBranch dottedTicketBranch() {
         return new TicketBranch("PROJ-1-v1.2-notes");
     }
+
+    public static TicketBranch prefixSharingTicketBranch() {
+        return new TicketBranch("PROJ-10-another-ticket");
+    }
 }

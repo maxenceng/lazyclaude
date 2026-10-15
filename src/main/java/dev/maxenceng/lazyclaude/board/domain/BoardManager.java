@@ -5,11 +5,14 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
@@ -18,13 +21,71 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 /**
  * Builds the board of the project a working directory belongs to. It owns the board's rules:
  * one group per status in lifecycle order, tickets in id order, and one ticket per id — a later
- * file claiming an id already read becomes an unreadable ticket, whoever produced the entries.
+ * file claiming an id already read becomes an unreadable ticket, whoever produced the entries —
+ * and which copy of a ticket file is the ticket: a branch copy unless the root copy reads done, a
+ * merged branch read only through a worktree that holds it, and a branch copy that cannot be read
+ * never replaced by the root copy.
  */
-public record BoardManager(ProjectLocatorPort locator, BacklogPort backlog) {
+public record BoardManager(ProjectLocatorPort locator, BacklogPort backlog, BranchCopyPort copies) {
 
-    public Board boardFor(WorkingDirectory from) {
+    private static final String WORKTREES = ".worktrees";
+
+    public Board boardFor(WorkingDirectory from, Set<TicketBranch> merged) {
         Project project = locator.locate(from);
-        return board(project, backlog.entries(project));
+        List<BacklogEntry> entries = backlog.entries(project);
+        List<Worktree> worktrees = copies.worktrees(project);
+        return board(
+                project,
+                entries.stream()
+                        .map(entry -> standingFor(project, worktrees, merged, entry))
+                        .toList());
+    }
+
+    /** The copy that stands for a ticket: its root copy once that reads done, else the branch's, if it has one. */
+    private BacklogEntry standingFor(
+            Project project, List<Worktree> worktrees, Set<TicketBranch> merged, BacklogEntry root) {
+        if (!(root instanceof TicketFile rootCopy) || rootCopy.ticket().status().finished()) {
+            return root;
+        }
+        try {
+            return branchCopy(project, worktrees, merged, rootCopy).orElse(root);
+        } catch (BranchCopyUnavailableException e) {
+            return UnreadableTicket.builder()
+                    .file(rootCopy.file())
+                    .reason(new Reason(e.getMessage()))
+                    .build();
+        }
+    }
+
+    /** A worktree that holds the ticket branch speaks for it, a missing file there included; only without one is an unmerged branch itself read. */
+    private Optional<BacklogEntry> branchCopy(
+            Project project, List<Worktree> worktrees, Set<TicketBranch> merged, TicketFile root) {
+        TicketBranch branch = root.ticket().branch();
+        List<Worktree> holding = worktrees.stream()
+                .filter(worktree -> holds(project, worktree, branch))
+                .toList();
+        if (holding.isEmpty()) {
+            return merged.contains(branch) ? Optional.empty() : copies.onBranch(project, branch, root.file());
+        }
+        return holding.stream()
+                .map(worktree -> copies.inWorktree(worktree, root.file()))
+                .flatMap(Optional::stream)
+                .findFirst();
+    }
+
+    private static boolean holds(Project project, Worktree worktree, TicketBranch branch) {
+        boolean onBranch =
+                switch (worktree.head()) {
+                    case CheckedOutBranch checkedOut -> checkedOut.is(branch);
+                    case DetachedHead _ -> false;
+                };
+        return onBranch || ticketWorktree(project, branch).filter(worktree.path()::equals).isPresent();
+    }
+
+    /** Where a ticket's worktree is kept: {@code ../<repo>.worktrees/<ticket branch>}. */
+    private static Optional<WorktreePath> ticketWorktree(Project project, TicketBranch branch) {
+        return Optional.ofNullable(project.root().getFileName())
+                .map(name -> new WorktreePath(project.root().resolveSibling(name + WORKTREES).resolve(branch.value())));
     }
 
     private static Board board(Project project, List<BacklogEntry> entries) {

@@ -38,8 +38,9 @@ words mean.
 | Board | A project's tickets grouped by status, as the Board panel shows them. | `board` |
 | Unreadable ticket | A backlog file with an `id` whose frontmatter or status is refused, or whose `id` another file already claims; listed with its reason, never dropped silently. | `board` |
 | Ticket branch | The branch `<id>-<slug>` a ticket's work happens on, the ticket file's name without `.md`. | `board` |
-| Branch copy | The ticket's file as its ticket branch has it: the ticket worktree's file, whatever branch the worktree is on, else `git show <branch>:<file>` while the branch's pull request is not merged. | `board` (expected) |
-| Status | A ticket's `status`, read from its branch copy whenever there is one, and from the root checkout otherwise: no ticket branch, or a ticket branch whose pull request is merged and no ticket worktree. There is no separate root status. | `board` |
+| Branch copy | The ticket's file as its ticket branch has it: the file in a worktree checked out on the ticket branch, the root checkout included, or in the ticket worktree whatever branch it is on, uncommitted edits shown; else `git show <branch>:<file>` while the branch's pull request is not merged. | `board` |
+| Root copy | The ticket's file in the root checkout, as the backlog read finds it. | `board` |
+| Status | A ticket's `status`, read from its branch copy whenever there is one, and from the root checkout otherwise: no ticket branch, or a ticket branch whose pull request is merged and no worktree. A root copy reading `done` wins over any branch copy. There is no separate root status. | `board` |
 | Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` (expected) |
 
 ## session
@@ -63,7 +64,7 @@ words mean.
 | Unread | A hosted session while the registry cannot be read: whether it is starting, busy or waiting is unknown. Its tab reads `starting`, and it counts as busy, so `q` asks first. | `session` |
 | Busy | The session is working; nothing is asked of you. The registry's `busy` and `shell` both show as busy. | `session` |
 | Your turn | The session finished and waits for your next prompt, without blocking on anything. Shown, never notified. | `session` |
-| Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session. | `session` (expected) |
+| Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session. | `board` (its path), `session` (expected) |
 | Preselected verb | The allowed verb the new-session picker opens on, from status, past sessions and the pull request's state. | `session` (expected) |
 | Waiting | The session is blocked on you: *waiting for permission* (a permission prompt) or *waiting for input* (any other question). The only state that notifies. | `session` |
 | Unknown (state) | The session reports a `status` lazyclaude does not know, or none, as a newer Claude Code may. Still listed, with a grey `·`; never notified. | `session` |
@@ -74,6 +75,7 @@ words mean.
 | Term | Meaning | Where it lives |
 |---|---|---|
 | Pull request | An open GitHub pull request on this repository, not from a fork; a ticket's pull request is the one whose head is its ticket branch. "PR" in UI text, `PullRequest` in code. | `review` |
+| Merged pull request | A pull request on this repository, not from a fork, that GitHub reports merged. | `review` |
 | Draft pull request | A pull request GitHub marks as draft. Always written in full ("draft PR" in UI text), never a bare "draft", which stays the ticket status. | `review` |
 | Checks | The check runs and commit statuses on a pull request's head. | `review` |
 | CI result | The checks collapsed into *passed*, *failed* or *pending*: failed wins over pending, pending over passed. A pull request with no checks has none. | `review` |

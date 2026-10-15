@@ -1,11 +1,14 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.review.domain.MergedPullRequestFixture.mergedPullRequest;
 import static dev.maxenceng.lazyclaude.review.domain.PullRequestFixture.draftPullRequest;
 import static dev.maxenceng.lazyclaude.review.domain.PullRequestFixture.failingPullRequest;
 import static dev.maxenceng.lazyclaude.review.domain.PullRequestFixture.pendingPullRequest;
 import static dev.maxenceng.lazyclaude.review.domain.PullRequestFixture.pullRequest;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.pullRequestsUnavailable;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.watchedRefresh;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsViewFixture.mergedPullRequestsViewOf;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsViewFixture.noMergedPullRequestsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.draftPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.failedPullRequestView;
@@ -14,6 +17,8 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.pullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.unavailablePullRequestsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQueryFixture.reviewQuery;
+import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBranch;
+import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.siblingHeadBranch;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -27,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.review.domain.MergedPullRequestPort;
 import dev.maxenceng.lazyclaude.review.domain.OpenPullRequestPort;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestWatchPort;
 
@@ -39,14 +45,18 @@ class ReviewQueryTest {
     private OpenPullRequestPort pullRequests;
 
     @Mock
+    private MergedPullRequestPort mergedPullRequests;
+
+    @Mock
     private PullRequestWatchPort watch;
 
     private final List<PullRequestsView> delivered = new ArrayList<>();
+    private final List<MergedPullRequestsView> mergedDelivered = new ArrayList<>();
     private ReviewQuery query;
 
     @BeforeEach
     void createQuery() {
-        query = reviewQuery(pullRequests, watch);
+        query = reviewQuery(pullRequests, mergedPullRequests, watch);
     }
 
     @Test
@@ -57,7 +67,7 @@ class ReviewQueryTest {
     @Test
     void shouldViewAPullRequestWithNoChecksAndNoCiResult() {
         when(pullRequests.openPullRequests(project())).thenReturn(List.of(pullRequest()));
-        query.subscribe(OF_THE_PROJECT, delivered::add);
+        query.subscribe(OF_THE_PROJECT, delivered::add, mergedDelivered::add);
 
         watchedRefresh(watch).run();
 
@@ -67,7 +77,7 @@ class ReviewQueryTest {
     @Test
     void shouldViewAFailedCiResultWithItsChecksFailedFirst() {
         when(pullRequests.openPullRequests(project())).thenReturn(List.of(failingPullRequest()));
-        query.subscribe(OF_THE_PROJECT, delivered::add);
+        query.subscribe(OF_THE_PROJECT, delivered::add, mergedDelivered::add);
 
         watchedRefresh(watch).run();
 
@@ -77,7 +87,7 @@ class ReviewQueryTest {
     @Test
     void shouldViewAPendingCiResult() {
         when(pullRequests.openPullRequests(project())).thenReturn(List.of(pendingPullRequest()));
-        query.subscribe(OF_THE_PROJECT, delivered::add);
+        query.subscribe(OF_THE_PROJECT, delivered::add, mergedDelivered::add);
 
         watchedRefresh(watch).run();
 
@@ -87,7 +97,7 @@ class ReviewQueryTest {
     @Test
     void shouldViewADraftPullRequestAsDraft() {
         when(pullRequests.openPullRequests(project())).thenReturn(List.of(draftPullRequest()));
-        query.subscribe(OF_THE_PROJECT, delivered::add);
+        query.subscribe(OF_THE_PROJECT, delivered::add, mergedDelivered::add);
 
         watchedRefresh(watch).run();
 
@@ -97,10 +107,38 @@ class ReviewQueryTest {
     @Test
     void shouldViewWhyGitHubCannotBeRead() {
         when(pullRequests.openPullRequests(project())).thenThrow(pullRequestsUnavailable());
-        query.subscribe(OF_THE_PROJECT, delivered::add);
+        query.subscribe(OF_THE_PROJECT, delivered::add, mergedDelivered::add);
 
         watchedRefresh(watch).run();
 
         assertThat(delivered).containsExactly(unavailablePullRequestsView());
+    }
+
+    @Test
+    void shouldViewTheMergedPullRequestsByTheirHeadBranch() {
+        when(mergedPullRequests.mergedPullRequests(project())).thenReturn(List.of(mergedPullRequest()));
+        query.subscribe(OF_THE_PROJECT, delivered::add, mergedDelivered::add);
+
+        watchedRefresh(watch).run();
+
+        assertThat(mergedDelivered).containsExactly(mergedPullRequestsViewOf(headBranch()));
+    }
+
+    @Test
+    void shouldViewTheHeadBranchesOfTheMergedPullRequestsAsPlainNames() {
+        assertThat(mergedPullRequestsViewOf(headBranch(), siblingHeadBranch()).headBranches())
+                .containsExactlyInAnyOrder("PROJ-1-first-slice", "PROJ-2");
+    }
+
+    @Test
+    void shouldViewNoMergedPullRequestsWhileGitHubCannotBeRead() {
+        when(mergedPullRequests.mergedPullRequests(project())).thenThrow(pullRequestsUnavailable());
+        query.subscribe(OF_THE_PROJECT, delivered::add, mergedDelivered::add);
+
+        watchedRefresh(watch).run();
+
+        assertThat(mergedDelivered)
+                .as("a branch counts as a source again, and nothing is raised about it")
+                .containsExactly(noMergedPullRequestsView());
     }
 }

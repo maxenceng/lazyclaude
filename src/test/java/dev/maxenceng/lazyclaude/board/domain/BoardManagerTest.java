@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +38,9 @@ class BoardManagerTest {
     @Mock
     private BacklogPort backlog;
 
+    @Mock
+    private BranchCopyPort copies;
+
     @InjectMocks
     private BoardManager manager;
 
@@ -45,7 +49,7 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
 
-        assertThat(manager.boardFor(workingDirectory()).groups())
+        assertThat(manager.boardFor(workingDirectory(), Set.of()).groups())
                 .extracting(StatusGroup::status)
                 .containsExactly(Status.values());
     }
@@ -55,7 +59,7 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
 
-        assertThat(manager.boardFor(workingDirectory()).project()).isEqualTo(project());
+        assertThat(manager.boardFor(workingDirectory(), Set.of()).project()).isEqualTo(project());
     }
 
     @Test
@@ -64,7 +68,7 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket()), ticketFileOf(done)));
 
-        Board board = manager.boardFor(workingDirectory());
+        Board board = manager.boardFor(workingDirectory(), Set.of());
 
         assertThat(board.groups().get(Status.TODO.ordinal()).tickets()).containsExactly(ticket());
         assertThat(board.groups().get(Status.DONE.ordinal()).tickets()).containsExactly(done);
@@ -77,7 +81,7 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(tenth), ticketFileOf(second), ticketFileOf(ticket())));
 
-        assertThat(manager.boardFor(workingDirectory()).groups().get(Status.TODO.ordinal()).tickets())
+        assertThat(manager.boardFor(workingDirectory(), Set.of()).groups().get(Status.TODO.ordinal()).tickets())
                 .containsExactly(ticket(), second, tenth);
     }
 
@@ -86,7 +90,7 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket())));
 
-        assertThat(manager.boardFor(workingDirectory()).groups().get(Status.DRAFT.ordinal()).tickets()).isEmpty();
+        assertThat(manager.boardFor(workingDirectory(), Set.of()).groups().get(Status.DRAFT.ordinal()).tickets()).isEmpty();
     }
 
     @Test
@@ -95,7 +99,7 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(unreadableTicket(), first));
 
-        assertThat(manager.boardFor(workingDirectory()).unreadable()).containsExactly(first, unreadableTicket());
+        assertThat(manager.boardFor(workingDirectory(), Set.of()).unreadable()).containsExactly(first, unreadableTicket());
     }
 
     @Test
@@ -104,7 +108,7 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket()), second));
 
-        Board board = manager.boardFor(workingDirectory());
+        Board board = manager.boardFor(workingDirectory(), Set.of());
 
         assertThat(board.groups().get(Status.TODO.ordinal()).tickets())
                 .as("one id is one ticket, so selection by id stays unambiguous")
@@ -121,7 +125,7 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket())));
 
-        List<Ticket> todo = manager.boardFor(workingDirectory()).groups().get(Status.TODO.ordinal()).tickets();
+        List<Ticket> todo = manager.boardFor(workingDirectory(), Set.of()).groups().get(Status.TODO.ordinal()).tickets();
 
         assertThatThrownBy(todo::clear).isExactlyInstanceOf(UnsupportedOperationException.class);
     }
@@ -130,6 +134,6 @@ class BoardManagerTest {
     void shouldLetTheLocatorsFailureThrough() {
         when(locator.locate(workingDirectory())).thenThrow(new ProjectNotFoundException("not here"));
 
-        assertThatThrownBy(() -> manager.boardFor(workingDirectory())).isExactlyInstanceOf(ProjectNotFoundException.class);
+        assertThatThrownBy(() -> manager.boardFor(workingDirectory(), Set.of())).isExactlyInstanceOf(ProjectNotFoundException.class);
     }
 }

@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
+import dev.maxenceng.lazyclaude.board.domain.BranchCopyPort;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 
@@ -28,6 +30,9 @@ class BoardApplicationServiceTest {
     @Mock
     private BacklogPort backlog;
 
+    @Mock
+    private BranchCopyPort copies;
+
     @InjectMocks
     private BoardApplicationService service;
 
@@ -36,7 +41,7 @@ class BoardApplicationServiceTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
 
-        assertThat(service.boardFor(workingDirectory()).groups().get(Status.TODO.ordinal()).tickets())
+        assertThat(service.boardFor(workingDirectory(), Set.of()).groups().get(Status.TODO.ordinal()).tickets())
                 .containsExactly(ticket());
     }
 }
