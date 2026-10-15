@@ -23,6 +23,14 @@ public final class ReviewManagerFixture {
         return new UnavailablePullRequests(reason());
     }
 
+    public static KnownMergedPullRequests knownMergedPullRequests() {
+        return new KnownMergedPullRequests(List.of(MergedPullRequestFixture.mergedPullRequest()));
+    }
+
+    public static UnavailableMergedPullRequests unavailableMergedPullRequests() {
+        return new UnavailableMergedPullRequests(reason());
+    }
+
     public static Runnable watchedRefresh(PullRequestWatchPort watch) {
         ArgumentCaptor<Runnable> refresh = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(refresh.capture());

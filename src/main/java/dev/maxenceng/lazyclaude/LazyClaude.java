@@ -5,12 +5,14 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogRepository;
+import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchCopyRepository;
 import dev.maxenceng.lazyclaude.docs.application.DocsApplicationService;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
@@ -21,6 +23,7 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhMergedPullRequestsRepository;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestsRepository;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.PullRequestWatchRepository;
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
@@ -69,7 +72,7 @@ public final class LazyClaude {
 
     static void main() throws Exception {
         BoardQuery board = new BoardQuery(
-                new BoardApplicationService(new ProjectLocatorRepository(), new BacklogRepository()));
+                new BoardApplicationService(new ProjectLocatorRepository(), new BacklogRepository(), new BranchCopyRepository()));
         WarningRepository warningRepository = new WarningRepository();
         WarningApplicationService warningService = new WarningApplicationService(warningRepository, warningRepository);
         WarningQuery warnings = new WarningQuery(warningService);
@@ -81,14 +84,17 @@ public final class LazyClaude {
         SessionQuery sessions = new SessionQuery(sessionService);
         HostedSessionCommand hosting = new HostedSessionCommand(sessionService);
         ReviewQuery reviews = new ReviewQuery(
-                new ReviewApplicationService(new GhPullRequestsRepository(GH, GH_PATIENCE), new PullRequestWatchRepository()));
+                new ReviewApplicationService(
+                        new GhPullRequestsRepository(GH, GH_PATIENCE),
+                        new GhMergedPullRequestsRepository(GH, GH_PATIENCE),
+                        new PullRequestWatchRepository()));
         int exit = start(
                 Path.of("").toAbsolutePath(),
                 board,
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, docs, sessions, reviews, hosting, warnings));
+                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, hosting, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -151,7 +157,7 @@ public final class LazyClaude {
         DocsView tree;
         SessionsView live;
         try {
-            view = board.boardFor(new BoardPayload(from));
+            view = board.boardFor(new BoardPayload(from, Set.of()));
             tree = docs.docsFor(new DocsPayload(view.root().value()));
             live = sessions.sessionsFor(sessionPayload(view));
         } catch (DomainException e) {
@@ -176,13 +182,14 @@ public final class LazyClaude {
             BoardView view,
             DocsView tree,
             SessionsView live,
+            BoardQuery board,
             DocsQuery docs,
             SessionQuery sessions,
             ReviewQuery reviews,
             HostedSessionCommand hosting,
             WarningQuery warnings)
             throws Exception {
-        runThenEndHosted(shellOn(view, tree, live, docs, sessions, reviews, hosting, warnings)::run, hosting);
+        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, hosting, warnings)::run, hosting);
     }
 
     /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
@@ -196,7 +203,7 @@ public final class LazyClaude {
 
     /**
      * The shell on {@code view}, {@code tree} and {@code live}, handed the project's docs and sessions again
-     * after each change from now on, its open pull requests as each fetch answers, a repaint whenever a hosted session draws, and every warning raised, those raised
+     * after each change from now on, its open and merged pull requests as each fetch answers, the board read again when the merged ticket branches change, a repaint whenever a hosted session draws, and every warning raised, those raised
      * before it opened included.
      */
     // deferred: a change between the first read and the watch starting is shown only at the next change — close it when a doc edited during start-up is seen stale.
@@ -204,17 +211,19 @@ public final class LazyClaude {
             BoardView view,
             DocsView tree,
             SessionsView live,
+            BoardQuery board,
             DocsQuery docs,
             SessionQuery sessions,
             ReviewQuery reviews,
             HostedSessionCommand hosting,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, sessions);
+        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, sessions, board);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         // deferred: the ticket ids are the board's at start-up, so a ticket created while running links its sessions only at the next start — close it when the board is watched for changes.
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);
         sessions.onScreenChange(shell::screensChanged);
-        reviews.subscribe(new ReviewPayload(view.root().value()), shell::pullRequestsChanged);
+        reviews.subscribe(
+                new ReviewPayload(view.root().value()), shell::pullRequestsChanged, shell::mergedPullRequestsChanged);
         warnings.subscribe(shell::warningsChanged);
         return shell;
     }

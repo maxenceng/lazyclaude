@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.datedFrontmatter;
+import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.inReviewTicketFile;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFile;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFileOf;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
@@ -9,12 +10,17 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFi
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryViewFixture.datedFrontmatterViews;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketViewFixture.unreadableTicketView;
+import static dev.maxenceng.lazyclaude.board.published.FileNameFixture.fileName;
+import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
+import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,21 +28,26 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
+import dev.maxenceng.lazyclaude.board.domain.BranchCopyPort;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class BoardQueryTest {
 
-    private static final BoardPayload FROM_THE_PROJECT = new BoardPayload(workingDirectory().path());
+    private static final BoardPayload FROM_THE_PROJECT = new BoardPayload(workingDirectory().path(), Set.of());
 
     @Mock
     private ProjectLocatorPort locator;
 
     @Mock
     private BacklogPort backlog;
+
+    @Mock
+    private BranchCopyPort copies;
 
     @Test
     void shouldViewEveryStatusGroupInLifecycleOrder() {
@@ -96,5 +107,47 @@ class BoardQueryTest {
 
         assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).unreadable())
                 .containsExactly(unreadableTicketView());
+    }
+
+    @Test
+    void shouldViewTheBranchCopyOfATicketWhoseBranchIsNotMerged() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
+        when(copies.onBranch(project(), ticketBranch(), fileName())).thenReturn(Optional.of(inReviewTicketFile()));
+
+        assertThat(boardQuery(locator, backlog, copies).boardFor(FROM_THE_PROJECT).groups().get(Status.IN_REVIEW.ordinal()).tickets())
+                .extracting(TicketView::id)
+                .containsExactly(ticketId());
+    }
+
+    @Test
+    void shouldViewTheRootCopyOfATicketWhoseBranchIsNamedAsMerged() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
+        BoardPayload merged = new BoardPayload(workingDirectory().path(), Set.of(ticketBranch().value()));
+
+        assertThat(boardQuery(locator, backlog, copies).boardFor(merged).groups().get(Status.TODO.ordinal()).tickets())
+                .extracting(TicketView::id)
+                .containsExactly(ticketId());
+    }
+
+    @Test
+    void shouldViewTheBoardReadAgain() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
+
+        assertThat(boardQuery(locator, backlog).refreshedBoardFor(FROM_THE_PROJECT))
+                .get()
+                .extracting(board -> board.groups().get(Status.TODO.ordinal()).tickets())
+                .isEqualTo(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets());
+    }
+
+    @Test
+    void shouldViewNothingWhenTheBoardCannotBeReadAgain() {
+        when(locator.locate(workingDirectory())).thenThrow(new ProjectNotFoundException("not here"));
+
+        assertThat(boardQuery(locator, backlog).refreshedBoardFor(FROM_THE_PROJECT))
+                .as("a board already on screen stays, rather than being replaced by a failure")
+                .isEmpty();
     }
 }

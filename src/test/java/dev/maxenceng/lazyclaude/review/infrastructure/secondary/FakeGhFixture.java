@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import dev.maxenceng.lazyclaude.review.domain.MergedPullRequest;
 import dev.maxenceng.lazyclaude.review.domain.PullRequest;
 import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
@@ -46,6 +47,22 @@ public final class FakeGhFixture {
         return read.getFirst().checks().checks().getFirst().outcome();
     }
 
+    public static GhMergedPullRequestsRepository mergedRepositoryOver(Path gh) {
+        return new GhMergedPullRequestsRepository(gh.toString(), PATIENCE);
+    }
+
+    public static GhMergedPullRequestsRepository impatientMergedRepositoryOver(Path gh) {
+        return new GhMergedPullRequestsRepository(gh.toString(), IMPATIENCE);
+    }
+
+    public static GhMergedPullRequestsRepository mergedRepositoryOverMissingGh() {
+        return new GhMergedPullRequestsRepository(missingCommand(), PATIENCE);
+    }
+
+    public static List<MergedPullRequest> readMergedPrinted(Path directory, String output) throws IOException {
+        return mergedRepositoryOver(ghPrinting(directory, output)).mergedPullRequests(projectAt(directory));
+    }
+
     public static Path ghPrinting(Path directory, String output) throws IOException {
         return script(directory, "cat <<'JSON'\n%s\nJSON\n".formatted(output));
     }
@@ -64,6 +81,22 @@ public final class FakeGhFixture {
 
     public static Path ghTitlingWithItsDirectory(Path directory) throws IOException {
         return script(directory, "printf '[{\"number\":1,\"title\":\"%s\",\"headRefName\":\"b\",\"isDraft\":false,\"statusCheckRollup\":[]}]' \"$(pwd)\"\n");
+    }
+
+    public static Path ghMergedWithItsArguments(Path directory) throws IOException {
+        return script(directory, "printf '[{\"number\":1,\"headRefName\":\"%s\",\"headRefOid\":\"abc\"}]' \"$*\"\n");
+    }
+
+    public static Path ghMergedWithItsDirectory(Path directory) throws IOException {
+        return script(directory, "printf '[{\"number\":1,\"headRefName\":\"%s\",\"headRefOid\":\"abc\"}]' \"$(pwd)\"\n");
+    }
+
+    public static String mergedPullRequestJson(int number, String head, String oid) {
+        return mergedPullRequestJsonFrom(false, number, head, oid);
+    }
+
+    public static String forkMergedPullRequestJson(int number, String head, String oid) {
+        return mergedPullRequestJsonFrom(true, number, head, oid);
     }
 
     public static String missingCommand() {
@@ -91,6 +124,12 @@ public final class FakeGhFixture {
     public static String statusContextJson(String context, String state) {
         return """
                 {"__typename":"StatusContext","context":"%s","state":"%s"}""".formatted(context, state);
+    }
+
+    private static String mergedPullRequestJsonFrom(boolean fork, int number, String head, String oid) {
+        return """
+                {"number":%d,"headRefName":"%s","headRefOid":"%s","isCrossRepository":%b,"unknown":"ignored"}"""
+                .formatted(number, head, oid, fork);
     }
 
     private static String pullRequestJsonFrom(boolean fork, int number, String title, String head, boolean draft, String... checks) {

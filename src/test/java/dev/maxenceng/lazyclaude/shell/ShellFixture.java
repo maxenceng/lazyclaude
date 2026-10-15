@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.projectRoot;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
@@ -15,10 +16,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.util.List;
+import java.util.Set;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
@@ -48,7 +52,23 @@ final class ShellFixture {
                 sessions,
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankScreens());
+                blankScreens(),
+                mock(BoardQuery.class));
+    }
+
+    static Shell shellReading(BoardQuery boards, TicketView... tickets) {
+        return new Shell(
+                boardViewOf(tickets),
+                emptyDocsView(),
+                emptySessionsView(),
+                checkingPullRequestsView(),
+                mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
+                blankScreens(),
+                boards);
+    }
+
+    static BoardPayload readingBoardWithMerged(String... branches) {
+        return new BoardPayload(projectRoot().value(), Set.of(branches));
     }
 
     static Shell shellOnPullRequests(PullRequestsView pullRequests, TicketView... tickets) {
@@ -58,7 +78,8 @@ final class ShellFixture {
                 emptySessionsView(),
                 pullRequests,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankScreens());
+                blankScreens(),
+                mock(BoardQuery.class));
         shell.press(key('j'));
         return shell;
     }
@@ -70,7 +91,8 @@ final class ShellFixture {
                 sessions,
                 pullRequests,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankScreens());
+                blankScreens(),
+                mock(BoardQuery.class));
         shell.press(key('j'));
         return shell;
     }
@@ -88,7 +110,7 @@ final class ShellFixture {
     }
 
     static Shell shellHosting(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
-        return new Shell(boardViewOf(ticketView()), emptyDocsView(), sessions, checkingPullRequestsView(), hosting, screens);
+        return new Shell(boardViewOf(ticketView()), emptyDocsView(), sessions, checkingPullRequestsView(), hosting, screens, mock(BoardQuery.class));
     }
 
     static Shell shellInDock(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {

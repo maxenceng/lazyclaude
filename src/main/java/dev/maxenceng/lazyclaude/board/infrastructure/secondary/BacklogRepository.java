@@ -1,31 +1,17 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
-import java.util.regex.Pattern;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
 import dev.maxenceng.lazyclaude.board.domain.BacklogNotFoundException;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
-import dev.maxenceng.lazyclaude.board.domain.TicketFile;
-import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
-import dev.maxenceng.lazyclaude.board.published.FileName;
-import dev.maxenceng.lazyclaude.board.published.Reason;
-import dev.maxenceng.lazyclaude.board.published.TicketBody;
-import dev.maxenceng.lazyclaude.board.published.TicketBranch;
-import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
-import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Utf8Text;
 
 /**
  * Reads `docs/backlog/*.md`: YAML frontmatter for the fields, everything after the closing `---` for the body.
@@ -36,17 +22,13 @@ public final class BacklogRepository implements BacklogPort {
     private static final Path BACKLOG = Path.of("docs", "backlog");
     private static final String MARKDOWN = ".md";
     private static final String HIDDEN_PREFIX = "_";
-    private static final String FENCE = "---";
-    private static final String LINE_BREAK = "\n";
-    private static final Pattern ID_LINE = Pattern.compile("(?m)^id:[ \\t]*\\S");
-    private static final String NO_DETAIL = "unreadable";
 
-    private final TicketFrontmatterMapper frontmatterMapper = new TicketFrontmatterMapper();
+    private final TicketFileReader reader = new TicketFileReader();
 
     @Override
     public List<BacklogEntry> entries(Project project) {
         return markdownFiles(project.root().resolve(BACKLOG)).stream()
-                .map(this::entry)
+                .map(reader::read)
                 .flatMap(Optional::stream)
                 .toList();
     }
@@ -66,75 +48,7 @@ public final class BacklogRepository implements BacklogPort {
         }
     }
 
-    private Optional<BacklogEntry> entry(Path file) {
-        FileName name = new FileName(name(file));
-        byte[] bytes;
-        try {
-            bytes = Files.readAllBytes(file);
-        } catch (IOException e) {
-            return refused(name, "cannot be read: %s".formatted(e.getClass().getSimpleName()));
-        }
-        Optional<String> decoded = Utf8Text.decode(bytes);
-        List<String> lines = decoded.orElseGet(() -> new String(bytes, StandardCharsets.ISO_8859_1))
-                .lines()
-                .toList();
-        if (lines.isEmpty() || !lines.getFirst().strip().equals(FENCE)) {
-            return Optional.empty();
-        }
-        OptionalInt closing = closingFence(lines);
-        String frontmatter = String.join("\n", lines.subList(1, closing.orElse(lines.size())));
-        if (decoded.isEmpty()) {
-            return refusedIfClaimed(name, frontmatter, "cannot be read: not valid UTF-8");
-        }
-        if (closing.isEmpty()) {
-            return refusedIfClaimed(name, frontmatter, "frontmatter has no closing %s".formatted(FENCE));
-        }
-        TicketFrontmatter fields;
-        try {
-            fields = frontmatterMapper.read(frontmatter);
-        } catch (YamlEngineException e) {
-            return refusedIfClaimed(
-                    name, frontmatter, "frontmatter is not valid YAML: %s".formatted(firstLine(e.getMessage())));
-        }
-        if (!fields.claimsATicket()) {
-            return Optional.empty();
-        }
-        List<String> body = lines.subList(closing.getAsInt() + 1, lines.size());
-        return Optional.of(entry(name, fields, TicketBody.of(String.join(LINE_BREAK, body))));
-    }
-
-    private static BacklogEntry entry(FileName name, TicketFrontmatter fields, TicketBody body) {
-        try {
-            return TicketFile.builder().file(name).ticket(fields.toDomain(TicketBranch.of(name), body)).build();
-        } catch (DomainException e) {
-            return unreadable(name, e.getMessage());
-        }
-    }
-
-    private static Optional<BacklogEntry> refused(FileName name, String reason) {
-        return Optional.of(unreadable(name, reason));
-    }
-
-    private static UnreadableTicket unreadable(FileName name, String reason) {
-        return UnreadableTicket.builder().file(name).reason(new Reason(reason)).build();
-    }
-
-    /** Frontmatter that cannot be parsed is only an entry when a line of it still claims an `id`. */
-    private static Optional<BacklogEntry> refusedIfClaimed(FileName name, String frontmatter, String reason) {
-        return ID_LINE.matcher(frontmatter).find() ? refused(name, reason) : Optional.empty();
-    }
-
     private static String name(Path file) {
         return file.getFileName().toString();
-    }
-
-    private static OptionalInt closingFence(List<String> lines) {
-        return IntStream.range(1, lines.size())
-                .filter(index -> lines.get(index).strip().equals(FENCE))
-                .findFirst();
-    }
-
-    private static String firstLine(String message) {
-        return message == null ? NO_DETAIL : message.lines().findFirst().orElse(NO_DETAIL);
     }
 }

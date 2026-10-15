@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -18,7 +19,7 @@ final class BoardRows {
     private static final int DOWN = 1;
     private static final int UP = -1;
 
-    private final BoardView board;
+    private BoardView board;
     private final Set<RowKey> folded = new HashSet<>();
     private RowKey selected;
 
@@ -28,6 +29,23 @@ final class BoardRows {
                 .filter(group -> group.status().finished())
                 .forEach(group -> folded.add(groupKey(group.status().label())));
         this.selected = visible().getFirst().key();
+    }
+
+    /** The branches of the tickets on the board, which is how a merged branch is told from one that belongs to no ticket. */
+    static Set<String> ticketBranchesOf(BoardView board) {
+        return board.groups().stream()
+                .flatMap(group -> group.tickets().stream())
+                .map(ticket -> ticket.branch().value())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /** Swaps in a freshly read board; the selection stays on its ticket id, or on the row that took its place. */
+    void replace(BoardView next) {
+        RowKey was = selected;
+        int index = selectedIndex();
+        board = next;
+        List<RowKey> keys = visible().stream().map(Row::key).toList();
+        selected = RowSelection.kept(Optional.of(was), index, keys).orElseGet(() -> keys.getFirst());
     }
 
     List<Row> visible() {
