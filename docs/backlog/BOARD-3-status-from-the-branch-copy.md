@@ -17,7 +17,7 @@ created: 2026-10-10
       the root checkout included, or sits at `../<repo>.worktrees/<ticket branch>` whatever
       branch it is on; an uncommitted edit there shows. With no such worktree it is
       `git show <ticket branch>:docs/backlog/<file>`.
-- [ ] A ticket branch in the merged set is not a source: the root copy is shown.
+- [x] A ticket branch in the merged set is not a source unless a worktree holds it: the root copy is shown.
 - [ ] A root copy reading `done` wins over any branch copy, so a kept local branch never brings
       back an old status — not at startup, not offline, not for a PR beyond the 100 most recent
       merged ones.
