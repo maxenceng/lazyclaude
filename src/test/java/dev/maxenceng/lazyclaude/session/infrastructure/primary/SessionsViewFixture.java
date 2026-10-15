@@ -23,10 +23,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
+import dev.maxenceng.lazyclaude.session.domain.Hosting;
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
-import dev.maxenceng.lazyclaude.session.published.Hosting;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
