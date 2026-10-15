@@ -15,7 +15,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import dev.maxenceng.lazyclaude.session.published.Hosting;
 
 class AvailableSessionsTest {
 

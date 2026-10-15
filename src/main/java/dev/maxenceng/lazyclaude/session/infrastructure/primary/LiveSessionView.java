@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
+import dev.maxenceng.lazyclaude.session.domain.Hosting;
 import dev.maxenceng.lazyclaude.session.domain.LiveSession;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
-import dev.maxenceng.lazyclaude.session.published.Hosting;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;

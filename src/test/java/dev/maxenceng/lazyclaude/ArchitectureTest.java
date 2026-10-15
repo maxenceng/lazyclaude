@@ -164,6 +164,14 @@ class ArchitectureTest {
             .should(onlyReachOtherContextsThroughPublished())
             .allowEmptyShould(true);
 
+    // `published` is what another module reads: a type there that nothing outside reads was built ahead of its reader.
+    @ArchTest
+    static final ArchRule published_types_are_read_outside_their_module = classes()
+            .that()
+            .resideInAPackage("..published..")
+            .should(beReadFromOutsideTheirModule())
+            .allowEmptyShould(true);
+
     // The shell asks a context or a kernel through its primary adapter and reads what that hands back; it never sees a domain (ADR 0022).
     @ArchTest
     static final ArchRule the_shell_reaches_modules_only_through_primary_and_published = classes()
@@ -594,6 +602,41 @@ class ArchitectureTest {
                 }
             }
         };
+    }
+
+    private static final String BUILDER = "Builder";
+
+    private static ArchCondition<JavaClass> beReadFromOutsideTheirModule() {
+        return new ArchCondition<>("be read by a class outside their module") {
+            @Override
+            public void check(JavaClass published, ConditionEvents events) {
+                if (!isReadFromOutside(published)) {
+                    events.add(SimpleConditionEvent.violated(
+                            published, "%s is read by no class outside %s".formatted(published.getName(), moduleNameOf(published))));
+                }
+            }
+        };
+    }
+
+    // Read: an outside class depends on it or calls a method returning it, a sealed parent is read, it builds a read type, or a read type throws it.
+    private static boolean isReadFromOutside(JavaClass type) {
+        String module = moduleNameOf(type);
+        boolean dependedOn = type.getDirectDependenciesToSelf().stream()
+                .anyMatch(dependency -> !module.equals(moduleNameOf(dependency.getOriginClass())));
+        boolean returnedOutside = type.getMethodsWithReturnTypeOfSelf().stream()
+                .flatMap(method -> method.getCallsOfSelf().stream())
+                .anyMatch(call -> !module.equals(moduleNameOf(call.getOriginOwner())));
+        boolean variantOfARead = Stream.concat(type.getRawSuperclass().stream(), type.getRawInterfaces().stream())
+                .filter(parent -> parent.getPermittedSubclasses().isPresent() && module.equals(moduleNameOf(parent)))
+                .anyMatch(ArchitectureTest::isReadFromOutside);
+        boolean builderOfARead = type.getSimpleName().endsWith(BUILDER)
+                && type.getEnclosingClass().filter(ArchitectureTest::isReadFromOutside).isPresent();
+        boolean thrownByARead = type.isAssignableTo(DomainException.class)
+                && type.getConstructorCallsToSelf().stream()
+                        .map(call -> call.getOriginOwner())
+                        .filter(thrower -> !thrower.equals(type) && module.equals(moduleNameOf(thrower)))
+                        .anyMatch(ArchitectureTest::isReadFromOutside);
+        return dependedOn || returnedOutside || variantOfARead || builderOfARead || thrownByARead;
     }
 
     private static ArchCondition<JavaClass> reachModulesOnlyThroughPrimaryAndPublishedFromTheShell() {
