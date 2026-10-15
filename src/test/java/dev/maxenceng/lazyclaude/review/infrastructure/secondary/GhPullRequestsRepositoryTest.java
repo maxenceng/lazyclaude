@@ -39,12 +39,12 @@ class GhPullRequestsRepositoryTest {
 
     @Test
     void shouldReadANumberATitleAHeadAndWhetherItIsDraft() throws IOException {
-        PullRequest read = readPrinted(root, listOfPullRequests(pullRequestJson(23, "PR and CI", "REVIEW-1-pr", true)))
+        PullRequest read = readPrinted(root, listOfPullRequests(pullRequestJson(23, "PR and CI", "PROJ-1-pr", true)))
                 .getFirst();
 
         assertThat(read.number().value()).isEqualTo(23);
         assertThat(read.title().value()).isEqualTo("PR and CI");
-        assertThat(read.head().value()).isEqualTo("REVIEW-1-pr");
+        assertThat(read.head().value()).isEqualTo("PROJ-1-pr");
         assertThat(read.draft()).isTrue();
     }
 
@@ -53,7 +53,7 @@ class GhPullRequestsRepositoryTest {
         List<PullRequest> read = readPrinted(
                 root,
                 listOfPullRequests(
-                        forkPullRequestJson(31, "from a fork", "REVIEW-1-pr"), pullRequestJson(23, "PR and CI", "REVIEW-1-pr", false)));
+                        forkPullRequestJson(31, "from a fork", "PROJ-1-pr"), pullRequestJson(23, "PR and CI", "PROJ-1-pr", false)));
 
         assertThat(read)
                 .as("a fork's head carries no owner, so it would shadow this repository's own pull request")
