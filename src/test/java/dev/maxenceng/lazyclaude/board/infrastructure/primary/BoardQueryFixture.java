@@ -4,7 +4,9 @@ import static org.mockito.Mockito.mock;
 
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
+import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchCopyPort;
+import dev.maxenceng.lazyclaude.board.domain.UnreadChanges;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 
 public final class BoardQueryFixture {
@@ -16,6 +18,15 @@ public final class BoardQueryFixture {
     }
 
     public static BoardQuery boardQuery(ProjectLocatorPort locator, BacklogPort backlog, BranchCopyPort copies) {
-        return new BoardQuery(new BoardApplicationService(locator, backlog, copies));
+        return boardQuery(locator, backlog, copies, unreadChanges());
+    }
+
+    public static BoardQuery boardQuery(
+            ProjectLocatorPort locator, BacklogPort backlog, BranchCopyPort copies, BranchChangesPort changes) {
+        return new BoardQuery(new BoardApplicationService(locator, backlog, copies, changes));
+    }
+
+    public static BranchChangesPort unreadChanges() {
+        return mock(BranchChangesPort.class, invocation -> new UnreadChanges());
     }
 }

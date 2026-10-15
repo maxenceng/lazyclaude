@@ -12,6 +12,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogRepository;
+import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchChangesRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchCopyRepository;
 import dev.maxenceng.lazyclaude.docs.application.DocsApplicationService;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
@@ -39,6 +40,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRep
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptCacheFile;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.WorktreeRepository;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.shared.application.WarningApplicationService;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
@@ -72,7 +74,7 @@ public final class LazyClaude {
 
     static void main() throws Exception {
         BoardQuery board = new BoardQuery(
-                new BoardApplicationService(new ProjectLocatorRepository(), new BacklogRepository(), new BranchCopyRepository()));
+                new BoardApplicationService(new ProjectLocatorRepository(), new BacklogRepository(), new BranchCopyRepository(), new BranchChangesRepository()));
         WarningRepository warningRepository = new WarningRepository();
         WarningApplicationService warningService = new WarningApplicationService(warningRepository, warningRepository);
         WarningQuery warnings = new WarningQuery(warningService);
@@ -134,6 +136,7 @@ public final class LazyClaude {
                 new TranscriptWatchRepository(home.resolve(TRANSCRIPTS), transcripts),
                 warnings,
                 new PtyHostRepository(CLAUDE, System.getenv()),
+                new WorktreeRepository(),
                 Clock.systemDefaultZone());
     }
 

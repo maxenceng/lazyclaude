@@ -1,8 +1,10 @@
 package dev.maxenceng.lazyclaude.session.application;
 
 import java.time.Clock;
+import java.util.List;
 import java.util.function.Consumer;
 
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.HostedSessionManager;
 import dev.maxenceng.lazyclaude.session.domain.KnownTickets;
@@ -11,9 +13,14 @@ import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.Sessions;
+import dev.maxenceng.lazyclaude.session.domain.TicketStart;
+import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
+import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
+import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
@@ -40,8 +47,9 @@ public final class SessionApplicationService {
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
             HostPort hosts,
+            WorktreePort worktrees,
             Clock clock) {
-        this.hosted = new HostedSessionManager(hosts, warnings);
+        this.hosted = new HostedSessionManager(hosts, warnings, worktrees);
         this.manager = new SessionManager(sessions, pastSessions, locator, watch, transcriptWatch, warnings, clock);
     }
 
@@ -57,6 +65,27 @@ public final class SessionApplicationService {
 
     public HostStart startUnlinked(Project project, PaneSize size) {
         return hosted.startUnlinked(project, size);
+    }
+
+    /** A session running {@code verb} on a ticket, in the ticket's worktree, added first when it is missing. */
+    public HostStart startTicket(TicketStart ticket, PaneSize size) {
+        return hosted.startTicket(ticket, size);
+    }
+
+    public HostStart resumeInTicketWorktree(
+            SessionId session, WorkingDirectory recorded, TicketWorktree worktree, PaneSize size) {
+        return hosted.resumeInTicketWorktree(session, recorded, worktree, size);
+    }
+
+    /**
+     * The verbs a ticket allows and the one to start on: {@code design} while no session has run it, {@code done} once the branch
+     * is merged. The sessions are read afresh, and a registry that cannot be read leaves only the hosted ones to go by.
+     */
+    // deferred: the sessions are read on the caller's thread, so an unreadable registry holds the picker up for the claude agents patience — close it when a slow picker is seen.
+    public VerbChoice verbChoiceFor(
+            Project project, KnownTickets tickets, LinkedTicketId ticket, List<Verb> allowed, boolean merged) {
+        Sessions read = sessionsFor(project, tickets);
+        return VerbChoice.of(allowed, read.ranVerb(ticket, Verb.DESIGN), merged);
     }
 
     public HostStart resume(SessionId session, WorkingDirectory recorded, PaneSize size) {

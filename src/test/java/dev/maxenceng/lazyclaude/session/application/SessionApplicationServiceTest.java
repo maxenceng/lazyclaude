@@ -16,9 +16,15 @@ import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessio
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.workingDirectoryOf;
+import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketStart;
+import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketWorktree;
+import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
+import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -27,6 +33,7 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +41,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
@@ -45,6 +53,8 @@ import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.UnavailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.UnreadPhase;
+import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
+import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
@@ -74,6 +84,9 @@ class SessionApplicationServiceTest {
 
     @Mock
     private HostPort hosts;
+
+    @Mock
+    private WorktreePort worktrees;
 
     @Test
     void shouldReadTheLiveSessionsOfTheProject() {
@@ -143,6 +156,63 @@ class SessionApplicationServiceTest {
                 .startUnlinked(project(), paneSize());
 
         assertThat(start).isInstanceOf(StartedHost.class);
+    }
+
+    @Test
+    void shouldStartATicketSessionThroughTheHostInTheWorktreeOfItsBranch() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+
+        HostStart start = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).startTicket(ticketStart(Verb.REVIEW), paneSize());
+
+        assertThat(start).isInstanceOf(StartedHost.class);
+    }
+
+    @Test
+    void shouldResumeATicketSessionThroughTheHost() {
+        when(hosts.exists(worktreeDirectory())).thenReturn(true);
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+
+        HostStart start = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).resumeInTicketWorktree(sessionId(), worktreeDirectory(), ticketWorktree(), paneSize());
+
+        assertThat(start).isInstanceOf(StartedHost.class);
+    }
+
+    @Test
+    void shouldPreselectDesignWhenNoSessionHasRunItOnTheTicket() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+
+        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false))
+                .isEqualTo(VerbChoice.builder().verbs(List.of(Verb.REVIEW, Verb.DESIGN)).preselected(Verb.DESIGN).build());
+    }
+
+    @Test
+    void shouldPreselectReviewWhenAPastSessionRanDesignOnTheTicket() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+        when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
+        when(past.linkFacts()).thenReturn(Map.of(pastSession().id(), ran(ticketRun("design", "PROJ-1"))));
+
+        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
+                        .preselected())
+                .isEqualTo(Verb.REVIEW);
+    }
+
+    @Test
+    void shouldPreselectDoneWhenTheBranchIsMerged() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+
+        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.RESPOND, Verb.DONE), true)
+                        .preselected())
+                .isEqualTo(Verb.DONE);
+    }
+
+    @Test
+    void shouldNotLetAnUnreadableRegistryStopTheChoice() {
+        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
+
+        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
+                        .preselected())
+                .isEqualTo(Verb.DESIGN);
     }
 
     @Test

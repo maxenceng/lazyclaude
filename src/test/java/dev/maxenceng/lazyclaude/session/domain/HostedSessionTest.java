@@ -2,9 +2,12 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSession;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionBuilder;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.sessionWith;
+import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
+import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.secondLinkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
@@ -15,6 +18,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
@@ -95,5 +99,35 @@ class HostedSessionTest {
     @Test
     void shouldResumeNothingWhenStartedAsANewClaude() {
         assertThat(hostedSession().resumes(sessionId())).isFalse();
+    }
+
+    @Test
+    void shouldBeForTheTicketItWasLaunchedFor() {
+        assertThat(hostedSessionRunning(Verb.REVIEW).ticket()).contains(linkedTicketId());
+    }
+
+    @Test
+    void shouldBeForNoTicketWhenItIsAPlainClaude() {
+        assertThat(hostedSession().ticket()).isEmpty();
+    }
+
+    @Test
+    void shouldRunTheVerbItWasLaunchedWithOnItsTicket() {
+        assertThat(hostedSessionRunning(Verb.DESIGN).runs(linkedTicketId(), Verb.DESIGN)).isTrue();
+    }
+
+    @Test
+    void shouldNotRunAnotherVerbOnItsTicket() {
+        assertThat(hostedSessionRunning(Verb.REVIEW).runs(linkedTicketId(), Verb.DESIGN)).isFalse();
+    }
+
+    @Test
+    void shouldNotRunTheVerbOnAnotherTicket() {
+        assertThat(hostedSessionRunning(Verb.DESIGN).runs(secondLinkedTicketId(), Verb.DESIGN)).isFalse();
+    }
+
+    @Test
+    void shouldRunNoVerbWhenItIsAPlainClaude() {
+        assertThat(hostedSession().runs(linkedTicketId(), Verb.DESIGN)).isFalse();
     }
 }

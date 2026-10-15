@@ -14,6 +14,7 @@ import static dev.maxenceng.lazyclaude.board.published.TitleFixture.secondTitle;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
 import static dev.maxenceng.lazyclaude.board.published.TypeNameFixture.typeName;
 
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -38,7 +39,8 @@ public final class TicketViewFixture {
                 .context(contextName())
                 .type(typeName())
                 .frontmatter(frontmatterViews())
-                .body(body());
+                .body(body())
+                .verbs(List.of());
     }
 
     public static TicketView ticketView() {

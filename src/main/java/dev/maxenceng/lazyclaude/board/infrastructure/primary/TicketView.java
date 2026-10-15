@@ -10,8 +10,9 @@ import dev.maxenceng.lazyclaude.board.published.TicketContext;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.TicketTitle;
 import dev.maxenceng.lazyclaude.board.published.TicketType;
+import dev.maxenceng.lazyclaude.board.published.Verb;
 
-/** One ticket as the shell reads it: the fields the board models, then the other frontmatter keys in file order, then the body. */
+/** One ticket as the shell reads it: the fields the board models, then the other frontmatter keys in file order, then the body, and the verbs {@code /ticket} accepts for it. */
 public record TicketView(
         TicketId id,
         TicketBranch branch,
@@ -20,7 +21,8 @@ public record TicketView(
         TicketContext context,
         TicketType type,
         List<FrontmatterEntryView> frontmatter,
-        TicketBody body) {
+        TicketBody body,
+        List<Verb> verbs) {
 
     static TicketView from(Ticket ticket) {
         return builder()
@@ -34,6 +36,7 @@ public record TicketView(
                         .map(FrontmatterEntryView::from)
                         .toList())
                 .body(ticket.body())
+                .verbs(ticket.verbs())
                 .build();
     }
 
@@ -50,6 +53,7 @@ public record TicketView(
         private TicketType type;
         private List<FrontmatterEntryView> frontmatter;
         private TicketBody body;
+        private List<Verb> verbs = List.of();
 
         private TicketViewBuilder() {}
 
@@ -93,8 +97,13 @@ public record TicketView(
             return this;
         }
 
+        public TicketViewBuilder verbs(List<Verb> verbs) {
+            this.verbs = verbs;
+            return this;
+        }
+
         public TicketView build() {
-            return new TicketView(id, branch, title, status, context, type, frontmatter, body);
+            return new TicketView(id, branch, title, status, context, type, frontmatter, body, verbs);
         }
     }
 }

@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.board.domain.BranchChangesFixture.frontendChanges;
 import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.datedFrontmatter;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.inReviewTicketFile;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFile;
@@ -28,10 +29,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
+import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchCopyPort;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
 
@@ -48,6 +51,9 @@ class BoardQueryTest {
 
     @Mock
     private BranchCopyPort copies;
+
+    @Mock
+    private BranchChangesPort changes;
 
     @Test
     void shouldViewEveryStatusGroupInLifecycleOrder() {
@@ -70,12 +76,27 @@ class BoardQueryTest {
     }
 
     @Test
+    void shouldViewTheVerbsAnInProgressTicketIsAllowedWithDesignWhenItsBranchTouchesTheFrontend() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticketBuilder().status(Status.IN_PROGRESS).build())));
+        when(changes.changesOf(project(), ticketBranch())).thenReturn(frontendChanges());
+
+        assertThat(boardQuery(locator, backlog, copies, changes)
+                        .boardFor(FROM_THE_PROJECT)
+                        .groups()
+                        .get(Status.IN_PROGRESS.ordinal())
+                        .tickets())
+                .extracting(TicketView::verbs)
+                .containsExactly(List.of(Verb.REVIEW, Verb.DESIGN));
+    }
+
+    @Test
     void shouldViewATicketsFields() {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
 
         assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets())
-                .containsExactly(ticketViewBuilder().status(Status.TODO).build());
+                .containsExactly(ticketViewBuilder().status(Status.TODO).verbs(List.of(Verb.START)).build());
     }
 
     @Test
@@ -87,6 +108,7 @@ class BoardQueryTest {
                 .containsExactly(ticketViewBuilder()
                         .status(Status.TODO)
                         .frontmatter(datedFrontmatterViews())
+                        .verbs(List.of(Verb.START))
                         .build());
     }
 
@@ -97,7 +119,7 @@ class BoardQueryTest {
 
         assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets())
                 .as("a ticket with no body has no title to derive")
-                .containsExactly(ticketViewBuilder().status(Status.TODO).title(new NoTitle()).body(new NoBody()).build());
+                .containsExactly(ticketViewBuilder().status(Status.TODO).title(new NoTitle()).body(new NoBody()).verbs(List.of(Verb.START)).build());
     }
 
     @Test

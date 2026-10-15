@@ -20,6 +20,16 @@ public final class SessionQuery {
         return SessionsView.from(sessions.sessionsFor(payload.toDomain(), payload.tickets()));
     }
 
+    /** The verbs a ticket allows and the one to start on; the sessions are read afresh for it. */
+    public VerbChoiceView verbChoiceFor(VerbChoicePayload payload) {
+        return VerbChoiceView.from(sessions.verbChoiceFor(
+                payload.sessions().toDomain(),
+                payload.sessions().tickets(),
+                payload.ticket(),
+                payload.verbs(),
+                payload.merged()));
+    }
+
     /** Hands {@code listener} a view on each change and each sweep, on a thread of the watcher's own, not the caller's. */
     public void subscribe(SessionPayload payload, Consumer<SessionsView> listener) {
         sessions.subscribe(payload.toDomain(), payload.tickets(), read -> listener.accept(SessionsView.from(read)));

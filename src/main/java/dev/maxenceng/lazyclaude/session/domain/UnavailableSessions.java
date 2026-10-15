@@ -2,7 +2,9 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import java.util.List;
 
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 
 /**
@@ -28,6 +30,11 @@ public record UnavailableSessions(Reason reason, List<OpenHostedSession> hosted)
                                 .build())
                         .toList())
                 .build();
+    }
+
+    @Override
+    public boolean ranVerb(LinkedTicketId ticket, Verb verb) {
+        return hosted.stream().anyMatch(open -> open.session().runs(ticket, verb));
     }
 
     public static UnavailableSessionsBuilder builder() {

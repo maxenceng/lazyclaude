@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
+import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchCopyPort;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
@@ -32,6 +33,9 @@ class BoardApplicationServiceTest {
 
     @Mock
     private BranchCopyPort copies;
+
+    @Mock
+    private BranchChangesPort changes;
 
     @InjectMocks
     private BoardApplicationService service;

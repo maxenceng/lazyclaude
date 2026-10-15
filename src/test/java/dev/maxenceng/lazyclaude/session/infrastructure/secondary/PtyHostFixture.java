@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaude;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSizeOf;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.ExitCode;
 import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.NewClaude;
@@ -59,6 +61,15 @@ public final class PtyHostFixture {
         return HostLaunch.builder()
                 .id(id)
                 .command(new ResumeClaude(sessionId()))
+                .directory(new WorkingDirectory(Path.of("/tmp")))
+                .size(paneSizeOf(100, 30))
+                .build();
+    }
+
+    public static HostLaunch ticketLaunch(HostedSessionId id) {
+        return HostLaunch.builder()
+                .id(id)
+                .command(ticketClaude(Verb.REVIEW))
                 .directory(new WorkingDirectory(Path.of("/tmp")))
                 .size(paneSizeOf(100, 30))
                 .build();

@@ -7,6 +7,14 @@ public final class LinkedTicketIdFixture {
 
     private LinkedTicketIdFixture() {}
 
+    public static LinkedTicketId linkedTicketId() {
+        return new LinkedTicketId("PROJ-1");
+    }
+
+    public static LinkedTicketId secondLinkedTicketId() {
+        return new LinkedTicketId("PROJ-2");
+    }
+
     public static LinkedTicketId linkedTicketId(String value) {
         return new LinkedTicketId(value);
     }

@@ -67,6 +67,16 @@ public final class GitFixture {
         git(repository, "checkout", "-q", "main");
     }
 
+    public static void branchWithFile(Path repository, String branch, String file, String content) throws Exception {
+        git(repository, "checkout", "-q", "-b", branch);
+        Path path = repository.resolve(file);
+        Files.createDirectories(path.getParent());
+        Files.writeString(path, content);
+        git(repository, "add", ".");
+        git(repository, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "on " + branch);
+        git(repository, "checkout", "-q", "main");
+    }
+
     public static void branchAtHead(Path repository, String branch) throws Exception {
         git(repository, "branch", branch);
     }

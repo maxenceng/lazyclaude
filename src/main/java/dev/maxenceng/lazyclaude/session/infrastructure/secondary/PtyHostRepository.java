@@ -15,6 +15,7 @@ import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LaunchCommand;
 import dev.maxenceng.lazyclaude.session.domain.NewClaude;
 import dev.maxenceng.lazyclaude.session.domain.ResumeClaude;
+import dev.maxenceng.lazyclaude.session.domain.TicketClaude;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
@@ -31,6 +32,9 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 public final class PtyHostRepository implements HostPort {
 
     private static final String RESUME_FLAG = "--resume";
+    private static final String NAME_FLAG = "-n";
+    private static final String SESSION_NAME = "%s %s";
+    private static final String SLASH_COMMAND = "/ticket %s %s";
 
     private final List<String> claude;
     private final Map<String, String> environment;
@@ -96,6 +100,13 @@ public final class PtyHostRepository implements HostPort {
         return switch (command) {
             case NewClaude plain -> claude;
             case ResumeClaude resume -> Stream.concat(claude.stream(), Stream.of(RESUME_FLAG, resume.session().value()))
+                    .toList();
+            case TicketClaude run -> Stream.concat(
+                            claude.stream(),
+                            Stream.of(
+                                    NAME_FLAG,
+                                    SESSION_NAME.formatted(run.ticket().value(), run.verb().label()),
+                                    SLASH_COMMAND.formatted(run.verb().label(), run.ticket().value())))
                     .toList();
         };
     }
