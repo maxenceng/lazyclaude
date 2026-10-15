@@ -1,6 +1,6 @@
 ---
 id: REVIEW-1
-status: in-review
+status: done
 context: review
 type: feature
 tracker_id: 87
@@ -113,3 +113,10 @@ checks   ✗ build
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-19](LAZY-19-pr-and-ci-on-the-board.md), [LAZY-21](LAZY-21-keeping-the-screen-current.md). The merged state also feeds BOARD-3, SESSION-5 and SESSION-8.
 
 Refined 2026-10-13: the merged-PR fetch moved to BOARD-3, so SESSION-5 and SESSION-8 get the merged state from there. The 30 s patience is longer than `claude agents --json`'s 10 s because a `gh pr list` with checks was measured at 3.4 s on 100 PRs.
+
+Closed after [#21](https://github.com/maxenceng/lazyclaude/pull/21). The Model decision above was corrected during review and matches the code. What the code will not show:
+
+- A `CiResult` type (`Passed | Failed | Pending | NoCiResult`, then an enum) was built and removed in review. It restated `CheckOutcome`, so the CI result is now the worst check's outcome, or none when there are no checks.
+- The domain had its own copy of the branch-to-head match, and only its own test ran it. Review removed it, so the shell's join is now the one match. The context map's `review → board` edge was dropped because nothing implements it: `review` never reads `board`.
+- Fork PRs (`isCrossRepository`) are left out of the fetch. Otherwise a fork pushing a branch with the same name as a ticket branch would shadow this repository's PR. SESSION-5's PR link inherits this.
+- The criterion that the CI result is not a marker is only pinned for the status line. `w`/`alt+w` and notifications do not exist yet (`w` is only reserved). SESSION-7, which builds them, has to read session markers only and leave the CI result out.
