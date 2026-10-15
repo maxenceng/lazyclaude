@@ -26,7 +26,7 @@ public record MergedPullRequestsView(List<HeadBranch> heads) {
         return heads.stream().map(HeadBranch::value).collect(Collectors.toUnmodifiableSet());
     }
 
-    // deferred: the unavailable reason is dropped here, so no reader can tell an unknown merged set from an empty one — close it when a session reads the merged fetch and needs the reason.
+    // deferred: the unavailable reason is dropped here, so no reader can tell an unknown merged set from an empty one — close it when the verb picker needs to say the PR state is unknown rather than preselect respond.
     static MergedPullRequestsView from(MergedPullRequests merged) {
         return new MergedPullRequestsView(
                 switch (merged) {

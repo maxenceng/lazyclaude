@@ -25,12 +25,16 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
@@ -53,7 +57,7 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 blankScreens(),
-                mock(BoardQuery.class));
+                mock(BoardQuery.class), Runnable::run);
     }
 
     static Shell shellReading(BoardQuery boards, TicketView... tickets) {
@@ -64,7 +68,7 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 blankScreens(),
-                boards);
+                boards, Runnable::run);
     }
 
     static BoardPayload readingBoardWithMerged(String... branches) {
@@ -79,7 +83,7 @@ final class ShellFixture {
                 pullRequests,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 blankScreens(),
-                mock(BoardQuery.class));
+                mock(BoardQuery.class), Runnable::run);
         shell.press(key('j'));
         return shell;
     }
@@ -92,7 +96,7 @@ final class ShellFixture {
                 pullRequests,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 blankScreens(),
-                mock(BoardQuery.class));
+                mock(BoardQuery.class), Runnable::run);
         shell.press(key('j'));
         return shell;
     }
@@ -106,11 +110,58 @@ final class ShellFixture {
     }
 
     static SessionQuery blankScreens() {
-        return mock(SessionQuery.class, invocation -> TerminalScreen.blank());
+        return mock(SessionQuery.class, ShellFixture::blankScreenOrFirstVerb);
+    }
+
+    static SessionQuery screensChoosing(VerbChoiceView choice) {
+        return mock(SessionQuery.class, invocation -> invocation.getMethod().getReturnType() == VerbChoiceView.class
+                ? choice
+                : TerminalScreen.blank());
+    }
+
+    private static Object blankScreenOrFirstVerb(InvocationOnMock invocation) {
+        if (invocation.getMethod().getReturnType() != VerbChoiceView.class) {
+            return TerminalScreen.blank();
+        }
+        VerbChoicePayload payload = invocation.getArgument(0);
+        Verb preselected = payload.merged() && payload.verbs().contains(Verb.DONE) ? Verb.DONE : payload.verbs().getFirst();
+        return VerbChoiceView.builder().verbs(payload.verbs()).preselected(preselected).build();
+    }
+
+    static Shell shellOnTicket(TicketView ticket, SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
+        Shell shell = new Shell(
+                boardViewOf(ticket),
+                emptyDocsView(),
+                sessions,
+                checkingPullRequestsView(),
+                hosting,
+                screens,
+                mock(BoardQuery.class),
+                Runnable::run);
+        pressed(shell, key('j'), ticket.status().ordinal());
+        if (ticket.status().finished()) {
+            shell.press(enter());
+        }
+        shell.press(key('j'));
+        return shell;
+    }
+
+    static Shell shellOnTicket(TicketView ticket, HostedSessionCommand hosting) {
+        return shellOnTicket(ticket, emptySessionsView(), hosting, blankScreens());
+    }
+
+    static KeyEvent escape() {
+        return KeyEvent.ofKey(KeyCode.ESCAPE);
+    }
+
+    static TicketHostedPayload startedTicketPayload(HostedSessionCommand hosting) {
+        ArgumentCaptor<TicketHostedPayload> payload = ArgumentCaptor.forClass(TicketHostedPayload.class);
+        verify(hosting).startTicket(payload.capture());
+        return payload.getValue();
     }
 
     static Shell shellHosting(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
-        return new Shell(boardViewOf(ticketView()), emptyDocsView(), sessions, checkingPullRequestsView(), hosting, screens, mock(BoardQuery.class));
+        return new Shell(boardViewOf(ticketView()), emptyDocsView(), sessions, checkingPullRequestsView(), hosting, screens, mock(BoardQuery.class), Runnable::run);
     }
 
     static Shell shellInDock(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {

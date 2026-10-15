@@ -1,7 +1,13 @@
 package dev.maxenceng.lazyclaude.shell;
 
 /** One line of the Sessions panel. */
-sealed interface SessionRow permits LiveSessionRow, PastSessionRow, OlderSessionsRow, SectionHeaderRow, NoSessionRow {
+sealed interface SessionRow permits LiveSessionRow,
+                PastSessionRow,
+                OlderSessionsRow,
+                SectionHeaderRow,
+                NoSessionRow,
+                NewSessionRow,
+                StartingSessionRow {
 
     RowKey key();
 

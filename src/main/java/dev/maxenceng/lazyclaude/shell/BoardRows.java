@@ -11,6 +11,7 @@ import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 
 /** The Board panel's rows and the two things the shell remembers about them: the selection and the folded groups. */
 final class BoardRows {
@@ -37,6 +38,14 @@ final class BoardRows {
                 .flatMap(group -> group.tickets().stream())
                 .map(ticket -> ticket.branch().value())
                 .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /** The ids of the tickets on the board, which {@code session} links its sessions against. */
+    static List<LinkedTicketId> ticketIdsOf(BoardView board) {
+        return board.groups().stream()
+                .flatMap(group -> group.tickets().stream())
+                .map(ticket -> new LinkedTicketId(ticket.id().value()))
+                .toList();
     }
 
     /** Swaps in a freshly read board; the selection stays on its ticket id, or on the row that took its place. */

@@ -11,6 +11,9 @@ import dev.maxenceng.lazyclaude.session.domain.WorktreeUnavailableException;
 import dev.maxenceng.lazyclaude.shared.domain.BranchName;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitCommand;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitNotRunException;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitResult;
 
 /**
  * Reads and adds worktrees through {@code git}: {@code git worktree list --porcelain} for where a branch is checked out, and
@@ -26,19 +29,19 @@ public final class WorktreeRepository implements WorktreePort {
     private static final Pattern BLANK_LINE = Pattern.compile("\\R\\R");
     private static final int NO_SUCH_REF = 1;
 
-    private final GitProcess git;
+    private final GitCommand git;
 
     public WorktreeRepository() {
         this(GIT);
     }
 
     WorktreeRepository(String git) {
-        this.git = new GitProcess(git);
+        this.git = new GitCommand(git);
     }
 
     @Override
     public Optional<WorkingDirectory> checkedOutAt(Project project, BranchName branch) {
-        GitRun listed = git.run(project.root(), List.of("worktree", "list", "--porcelain"));
+        GitResult listed = run(project.root(), List.of("worktree", "list", "--porcelain"));
         if (!listed.succeeded()) {
             throw new WorktreeUnavailableException(failure("git worktree list", listed));
         }
@@ -55,7 +58,7 @@ public final class WorktreeRepository implements WorktreePort {
 
     @Override
     public boolean branchExists(Project project, BranchName branch) {
-        GitRun found = git.run(project.root(), List.of("rev-parse", "--verify", "--quiet", LOCAL_BRANCHES + branch.value()));
+        GitResult found = run(project.root(), List.of("rev-parse", "--verify", "--quiet", LOCAL_BRANCHES + branch.value()));
         if (found.exitValue() == NO_SUCH_REF) {
             return false;
         }
@@ -75,16 +78,24 @@ public final class WorktreeRepository implements WorktreePort {
         add(project, List.of("worktree", "add", "-b", branch.value(), at.path().toString(), MAIN));
     }
 
+    private GitResult run(Path in, List<String> arguments) {
+        try {
+            return git.run(in, arguments);
+        } catch (GitNotRunException e) {
+            throw new WorktreeUnavailableException(e.getMessage(), e);
+        }
+    }
+
     private void add(Project project, List<String> arguments) {
-        GitRun added = git.run(project.root(), arguments);
+        GitResult added = run(project.root(), arguments);
         if (!added.succeeded()) {
             throw new WorktreeUnavailableException(failure("git worktree add", added));
         }
     }
 
-    private static String failure(String command, GitRun run) {
-        return run.reason().isEmpty()
+    private static String failure(String command, GitResult run) {
+        return run.lastLine().isEmpty()
                 ? "%s exited with %d".formatted(command, run.exitValue())
-                : "%s: %s".formatted(command, run.reason());
+                : "%s: %s".formatted(command, run.lastLine());
     }
 }

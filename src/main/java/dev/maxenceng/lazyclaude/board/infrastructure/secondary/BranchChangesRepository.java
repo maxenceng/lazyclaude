@@ -11,6 +11,9 @@ import dev.maxenceng.lazyclaude.board.domain.ChangedFiles;
 import dev.maxenceng.lazyclaude.board.domain.UnreadChanges;
 import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitCommand;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitNotRunException;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitResult;
 
 /**
  * Reads what a branch changes from {@code main} with {@code git diff --name-only main...<branch>}. A run that ends non-zero, as for a
@@ -34,7 +37,7 @@ public final class BranchChangesRepository implements BranchChangesPort {
     /** @throws BranchCopyUnavailableException when git cannot be run */
     @Override
     public BranchChanges changesOf(Project project, TicketBranch branch) {
-        GitResult diffed = git.run(project.root(), List.of("diff", "--name-only", "%s...%s".formatted(MAIN, branch.value()), "--"));
+        GitResult diffed = run(project.root(), List.of("diff", "--name-only", "%s...%s".formatted(MAIN, branch.value()), "--"));
         if (!diffed.succeeded()) {
             return new UnreadChanges();
         }
@@ -42,5 +45,13 @@ public final class BranchChangesRepository implements BranchChangesPort {
                 .filter(line -> !line.isBlank())
                 .map(line -> new ChangedFile(Path.of(line)))
                 .toList());
+    }
+
+    private GitResult run(Path in, List<String> arguments) {
+        try {
+            return git.run(in, arguments);
+        } catch (GitNotRunException e) {
+            throw new BranchCopyUnavailableException(e.getMessage(), e);
+        }
     }
 }

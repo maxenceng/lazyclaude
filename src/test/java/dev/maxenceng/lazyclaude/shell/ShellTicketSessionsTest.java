@@ -168,9 +168,12 @@ class ShellTicketSessionsTest {
                         linkedNamedSessionView(2, "loose-one", new Busy()))));
 
         shell.press(key('j'));
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("n new");
+        shell.press(key('j'));
         assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("loose-one");
         shell.press(key('j'));
         assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("loose-one");
+        shell.press(key('k'));
         shell.press(key('k'));
 
         assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("linked-one");

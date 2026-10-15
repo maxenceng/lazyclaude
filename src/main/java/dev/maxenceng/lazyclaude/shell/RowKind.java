@@ -10,5 +10,7 @@ enum RowKind {
     SESSION,
     OLDER,
     HEADER,
-    NO_SESSION
+    NO_SESSION,
+    NEW_SESSION,
+    STARTING
 }
