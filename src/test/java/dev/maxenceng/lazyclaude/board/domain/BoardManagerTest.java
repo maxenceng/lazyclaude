@@ -1,17 +1,20 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
+import static dev.maxenceng.lazyclaude.board.domain.BranchChangesFixture.frontendChanges;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFileOf;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticket;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicket;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicketBuilder;
 import static dev.maxenceng.lazyclaude.board.published.FileNameFixture.fileName;
+import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.secondTicketId;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.tenthTicketId;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -40,6 +43,9 @@ class BoardManagerTest {
 
     @Mock
     private BranchCopyPort copies;
+
+    @Mock
+    private BranchChangesPort changes;
 
     @InjectMocks
     private BoardManager manager;
@@ -135,5 +141,26 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenThrow(new ProjectNotFoundException("not here"));
 
         assertThatThrownBy(() -> manager.boardFor(workingDirectory(), Set.of())).isExactlyInstanceOf(ProjectNotFoundException.class);
+    }
+
+    @Test
+    void shouldReadWhatAnInProgressTicketsBranchChangesAndKeepItOnTheTicket() {
+        Ticket inProgress = ticketBuilder().status(Status.IN_PROGRESS).build();
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(inProgress)));
+        when(changes.changesOf(project(), ticketBranch())).thenReturn(frontendChanges());
+
+        assertThat(manager.boardFor(workingDirectory(), Set.of()).groups().get(Status.IN_PROGRESS.ordinal()).tickets())
+                .containsExactly(inProgress.withChanges(frontendChanges()));
+    }
+
+    @Test
+    void shouldReadNoBranchChangesForTicketsNotInProgress() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket())));
+
+        manager.boardFor(workingDirectory(), Set.of());
+
+        verifyNoInteractions(changes);
     }
 }

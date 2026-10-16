@@ -9,11 +9,16 @@ import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
 import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
 import dev.maxenceng.lazyclaude.session.domain.UnreadPhase;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 
-/** One hosted session as the dock's tab reads it: starting, or the live session the registry says it is. */
+/** One hosted session as the dock's tab reads it: starting, or the live session the registry says it is, and the ticket it was started for. */
 public record HostedSessionView(
-        HostedSessionId id, ProcessId pid, Optional<LiveSessionView> live, boolean busyOrWaiting) {
+        HostedSessionId id,
+        ProcessId pid,
+        Optional<LiveSessionView> live,
+        boolean busyOrWaiting,
+        Optional<LinkedTicketId> ticket) {
 
     static HostedSessionView from(AvailableSessions available, OpenHostedSession open) {
         return builder()
@@ -21,6 +26,7 @@ public record HostedSessionView(
                 .pid(open.session().pid())
                 .live(liveOf(available, open.phase()))
                 .busyOrWaiting(open.phase().isBusyOrWaiting())
+                .ticket(open.session().ticket())
                 .build();
     }
 
@@ -41,6 +47,7 @@ public record HostedSessionView(
         private ProcessId pid;
         private Optional<LiveSessionView> live = Optional.empty();
         private boolean busyOrWaiting;
+        private Optional<LinkedTicketId> ticket = Optional.empty();
 
         private HostedSessionViewBuilder() {}
 
@@ -64,8 +71,13 @@ public record HostedSessionView(
             return this;
         }
 
+        public HostedSessionViewBuilder ticket(Optional<LinkedTicketId> ticket) {
+            this.ticket = ticket;
+            return this;
+        }
+
         public HostedSessionView build() {
-            return new HostedSessionView(id, pid, live, busyOrWaiting);
+            return new HostedSessionView(id, pid, live, busyOrWaiting, ticket);
         }
     }
 }

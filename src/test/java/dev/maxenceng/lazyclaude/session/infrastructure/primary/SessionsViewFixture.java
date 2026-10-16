@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.session.published.ClaudeVersionFixture.version;
 import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
+import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.thirdProcessId;
@@ -66,6 +67,16 @@ public final class SessionsViewFixture {
                 .pid(processId())
                 .live(Optional.empty())
                 .busyOrWaiting(false)
+                .build();
+    }
+
+    public static HostedSessionView startingTicketHostedSessionView() {
+        return HostedSessionView.builder()
+                .id(hostedSessionId())
+                .pid(processId())
+                .live(Optional.empty())
+                .busyOrWaiting(false)
+                .ticket(Optional.of(linkedTicketId()))
                 .build();
     }
 

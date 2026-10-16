@@ -47,7 +47,7 @@ class ShellEnterTicketTest {
     }
 
     @Test
-    void shouldLandOnTheFirstRowOfTheTicketWhenNoSessionHasAMarker() {
+    void shouldLandOnTheNewSessionRowWhenNoSessionHasAMarker() {
         Shell shell = shellOnTicketSessions(sessionsViewOf(
                 List.of(
                         linkedNamedSessionView(1, "busy-one", new Busy(), strongLink("PROJ-1", "start")),
@@ -57,17 +57,17 @@ class ShellEnterTicketTest {
         shell.press(enter());
 
         assertThat(shell.focus()).isEqualTo(Focus.SESSIONS);
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("busy-one");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("n new: /ticket refine");
     }
 
     @Test
-    void shouldLandOnNoSessionWhenTheTicketHasNone() {
+    void shouldLandOnTheNewSessionRowWhenTheTicketHasNoSession() {
         Shell shell = shellOnTicketSessions(sessionsViewOf(List.of(linkedNamedSessionView(1, "loose-asker", waitingForInput()))));
 
         shell.press(enter());
 
         assertThat(shell.focus()).isEqualTo(Focus.SESSIONS);
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("no session");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("n new: /ticket refine");
     }
 
     @Test

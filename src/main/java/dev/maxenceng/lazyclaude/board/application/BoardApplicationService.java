@@ -5,6 +5,7 @@ import java.util.Set;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.Board;
 import dev.maxenceng.lazyclaude.board.domain.BoardManager;
+import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchCopyPort;
 import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
@@ -15,8 +16,9 @@ public final class BoardApplicationService {
 
     private final BoardManager manager;
 
-    public BoardApplicationService(ProjectLocatorPort locator, BacklogPort backlog, BranchCopyPort copies) {
-        this.manager = new BoardManager(locator, backlog, copies);
+    public BoardApplicationService(
+            ProjectLocatorPort locator, BacklogPort backlog, BranchCopyPort copies, BranchChangesPort changes) {
+        this.manager = new BoardManager(locator, backlog, copies, changes);
     }
 
     public Board boardFor(WorkingDirectory from, Set<TicketBranch> merged) {

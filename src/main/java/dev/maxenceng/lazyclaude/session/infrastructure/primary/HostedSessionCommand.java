@@ -17,6 +17,16 @@ public final class HostedSessionCommand {
         return sessions.startUnlinked(payload.toDomain(), payload.size());
     }
 
+    /** {@code /ticket <verb> <ID>} in the ticket's worktree, added first when it is missing; a failure to start it is already a warning. */
+    public HostStart startTicket(TicketHostedPayload payload) {
+        return sessions.startTicket(payload.toDomain(), payload.size());
+    }
+
+    /** {@code claude --resume} of a ticket's past session, its worktree added back first when that is the recorded directory and is gone. */
+    public HostStart resumeInTicketWorktree(ResumeTicketHostedPayload payload) {
+        return sessions.resumeInTicketWorktree(payload.session(), payload.recorded(), payload.worktree(), payload.size());
+    }
+
     /** {@code claude --resume} of a past session, in its recorded directory, or the project root with a warning when that is gone. */
     public HostStart resume(ResumeHostedPayload payload) {
         return sessions.resume(payload.session(), payload.recorded(), payload.size());

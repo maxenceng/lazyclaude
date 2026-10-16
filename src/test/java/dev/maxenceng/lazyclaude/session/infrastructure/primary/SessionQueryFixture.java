@@ -8,6 +8,7 @@ import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
+import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -41,6 +42,10 @@ public final class SessionQueryFixture {
     }
 
     public static HostedSessionCommand hostedSessionCommand(HostPort hosts, WarningPort warnings) {
+        return hostedSessionCommand(hosts, warnings, mock(WorktreePort.class));
+    }
+
+    public static HostedSessionCommand hostedSessionCommand(HostPort hosts, WarningPort warnings, WorktreePort worktrees) {
         return new HostedSessionCommand(sessionApplicationService(
                 mock(LiveSessionPort.class),
                 mock(PastSessionPort.class),
@@ -48,6 +53,7 @@ public final class SessionQueryFixture {
                 mock(SessionWatchPort.class),
                 mock(TranscriptWatchPort.class),
                 warnings,
-                hosts));
+                hosts,
+                worktrees));
     }
 }

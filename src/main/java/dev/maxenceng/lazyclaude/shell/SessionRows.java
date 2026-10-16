@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.AvailableSessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
@@ -30,6 +31,7 @@ final class SessionRows {
 
     private SessionsView sessions;
     private Optional<LinkedTicketId> ticket = Optional.empty();
+    private Optional<Verb> offered = Optional.empty();
     private Optional<RowKey> selected;
     private boolean expanded;
 
@@ -61,9 +63,13 @@ final class SessionRows {
         available.past().stream()
                 .flatMap(session -> session.linkTo(selectedTicket).map(link -> new PastSessionRow(session, Optional.of(link))).stream())
                 .forEach(rows::add);
+        available.hosted().stream()
+                .filter(tab -> tab.live().isEmpty() && tab.ticket().filter(selectedTicket::equals).isPresent())
+                .forEach(tab -> rows.add(new StartingSessionRow(tab)));
         if (rows.size() == header) {
             rows.add(new NoSessionRow(selectedTicket));
         }
+        offered.ifPresent(verb -> rows.add(new NewSessionRow(selectedTicket, verb)));
     }
 
     private void addUnlinkedSection(List<SessionRow> rows, AvailableSessionsView available) {
@@ -128,6 +134,11 @@ final class SessionRows {
         return sessions instanceof AvailableSessionsView available ? available.strongestMarker() : Optional.empty();
     }
 
+    /** The verb the shown ticket's {@code n new} row offers to start, none while it offers no session, as a {@code done} ticket does not. */
+    void offering(Optional<Verb> verb) {
+        offered = verb;
+    }
+
     /** Shows {@code next}'s section, the selection going to its first row. Says whether the ticket changed. */
     boolean showTicket(Optional<LinkedTicketId> next) {
         if (next.equals(ticket)) {
@@ -138,12 +149,12 @@ final class SessionRows {
         return true;
     }
 
-    /** Selects the session of the shown ticket with the strongest marker, the first of any tied, else the first row. */
+    /** Selects the session of the shown ticket with the strongest marker, the first of any tied, else its {@code n new} row, else the first row. */
     void selectStrongestMarker() {
         Optional<RowKey> strongest = sessions instanceof AvailableSessionsView available
                 ? ticket.flatMap(available::strongestSessionOf).map(session -> new LiveSessionRow(session, Optional.empty()).key())
                 : Optional.empty();
-        selected = strongest.or(this::firstSelectable);
+        selected = strongest.or(this::newSessionKey).or(this::firstSelectable);
     }
 
     /** Unfolds every older past session in place; the selection lands on the first of them. */
@@ -178,6 +189,13 @@ final class SessionRows {
         }
         int target = Math.clamp(selectableIndexOfSelected() + (long) step, 0, keys.size() - 1);
         selected = Optional.of(keys.get(target));
+    }
+
+    private Optional<RowKey> newSessionKey() {
+        return visible().stream()
+                .filter(NewSessionRow.class::isInstance)
+                .map(SessionRow::key)
+                .findFirst();
     }
 
     private Optional<RowKey> firstSelectable() {

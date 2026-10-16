@@ -14,6 +14,7 @@ import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
+import dev.maxenceng.lazyclaude.shared.domain.BranchName;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
@@ -26,9 +27,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * merged branch read only through a worktree that holds it, and a branch copy that cannot be read
  * never replaced by the root copy.
  */
-public record BoardManager(ProjectLocatorPort locator, BacklogPort backlog, BranchCopyPort copies) {
-
-    private static final String WORKTREES = ".worktrees";
+public record BoardManager(
+        ProjectLocatorPort locator, BacklogPort backlog, BranchCopyPort copies, BranchChangesPort changes) {
 
     public Board boardFor(WorkingDirectory from, Set<TicketBranch> merged) {
         Project project = locator.locate(from);
@@ -79,16 +79,14 @@ public record BoardManager(ProjectLocatorPort locator, BacklogPort backlog, Bran
                     case CheckedOutBranch checkedOut -> checkedOut.is(branch);
                     case DetachedHead _ -> false;
                 };
-        return onBranch || ticketWorktree(project, branch).filter(worktree.path()::equals).isPresent();
+        return onBranch
+                || project.ticketWorktree(new BranchName(branch.value()))
+                        .map(directory -> new WorktreePath(directory.path()))
+                        .filter(worktree.path()::equals)
+                        .isPresent();
     }
 
-    /** Where a ticket's worktree is kept: {@code ../<repo>.worktrees/<ticket branch>}. */
-    private static Optional<WorktreePath> ticketWorktree(Project project, TicketBranch branch) {
-        return Optional.ofNullable(project.root().getFileName())
-                .map(name -> new WorktreePath(project.root().resolveSibling(name + WORKTREES).resolve(branch.value())));
-    }
-
-    private static Board board(Project project, List<BacklogEntry> entries) {
+    private Board board(Project project, List<BacklogEntry> entries) {
         Map<TicketId, List<TicketFile>> byId = entries.stream()
                 .flatMap(entry -> entry instanceof TicketFile read ? Stream.of(read) : Stream.empty())
                 .collect(Collectors.groupingBy(read -> read.ticket().id(), LinkedHashMap::new, Collectors.toList()));
@@ -100,12 +98,17 @@ public record BoardManager(ProjectLocatorPort locator, BacklogPort backlog, Bran
         return Board.builder()
                 .project(project)
                 .groups(groups(byId.values().stream()
-                        .map(files -> files.getFirst().ticket())
+                        .map(files -> withChanges(project, files.getFirst().ticket()))
                         .toList()))
                 .unreadable(Stream.concat(refused, claimedTwice)
                         .sorted(Comparator.comparing(UnreadableTicket::file))
                         .toList())
                 .build();
+    }
+
+    /** The branch is read only for a ticket whose changes decide what it is offered. */
+    private Ticket withChanges(Project project, Ticket ticket) {
+        return ticket.mayOfferDesign() ? ticket.withChanges(changes.changesOf(project, ticket.branch())) : ticket;
     }
 
     private static UnreadableTicket alreadyClaimed(TicketFile read) {

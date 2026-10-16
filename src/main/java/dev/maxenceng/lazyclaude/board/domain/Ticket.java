@@ -1,6 +1,8 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
+import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
@@ -13,6 +15,7 @@ import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.TicketTitle;
 import dev.maxenceng.lazyclaude.board.published.TicketType;
 import dev.maxenceng.lazyclaude.board.published.Title;
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
 /** One backlog ticket as the board shows it, with the branch its work happens on; a field the file lacks is an explicit absence, never a stand-in. */
@@ -23,7 +26,8 @@ public record Ticket(
         TicketContext context,
         TicketType type,
         Frontmatter frontmatter,
-        TicketBody body) {
+        TicketBody body,
+        BranchChanges changes) {
 
     private static final String TITLE_PREFIX = "# ";
     private static final Pattern FENCED_BLOCK = Pattern.compile("(?ms)^(?:```|~~~).*?(?:^(?:```|~~~)[^\\n]*$|\\z)");
@@ -36,6 +40,23 @@ public record Ticket(
         Assert.notNull("type", type);
         Assert.notNull("frontmatter", frontmatter);
         Assert.notNull("body", body);
+        Assert.notNull("changes", changes);
+    }
+
+    /** The verbs {@code /ticket} accepts for the ticket: those of its status, and {@code design} once an in-progress branch touches the frontend. */
+    public List<Verb> verbs() {
+        return mayOfferDesign() && changes.touchesFrontend()
+                ? Stream.concat(status.verbs().stream(), Stream.of(Verb.DESIGN)).toList()
+                : status.verbs();
+    }
+
+    /** Whether the branch's changes decide what is offered: only while the ticket is in progress. */
+    public boolean mayOfferDesign() {
+        return status == Status.IN_PROGRESS;
+    }
+
+    public Ticket withChanges(BranchChanges changes) {
+        return new Ticket(id, branch, status, context, type, frontmatter, body, changes);
     }
 
     /** The first `# ` line of the body outside a code fence, stripped; derived so it can never disagree with the body. */
@@ -68,6 +89,7 @@ public record Ticket(
         private TicketType type;
         private Frontmatter frontmatter;
         private TicketBody body;
+        private BranchChanges changes = new UnreadChanges();
 
         private TicketBuilder() {}
 
@@ -106,8 +128,13 @@ public record Ticket(
             return this;
         }
 
+        public TicketBuilder changes(BranchChanges changes) {
+            this.changes = changes;
+            return this;
+        }
+
         public Ticket build() {
-            return new Ticket(id, branch, status, context, type, frontmatter, body);
+            return new Ticket(id, branch, status, context, type, frontmatter, body, changes);
         }
     }
 }

@@ -37,4 +37,12 @@ class StatusTest {
     void shouldFinishTheLifecycleAtDoneOnly() {
         assertThat(List.of(Status.values())).filteredOn(Status::finished).containsExactly(Status.DONE);
     }
+
+    @Test
+    void shouldAllowEachStatusTheVerbsTicketAcceptsForIt() {
+        assertThat(List.of(Status.values()))
+                .extracting(status -> status.verbs().stream().map(Verb::label).toList())
+                .containsExactly(
+                        List.of("refine"), List.of("start"), List.of("review"), List.of("respond", "done"), List.of());
+    }
 }

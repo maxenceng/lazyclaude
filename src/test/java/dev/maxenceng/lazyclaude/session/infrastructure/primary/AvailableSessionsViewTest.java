@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openLive;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openStarting;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.strong;
@@ -15,6 +16,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingHostedSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTicketHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsViewHosting;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
@@ -24,6 +26,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.board.published.Verb;
+import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
+import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
@@ -112,6 +117,14 @@ class AvailableSessionsViewTest {
         AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(List.of(), List.of(openStarting())));
 
         assertThat(view.hosted()).containsExactly(startingHostedSessionView());
+    }
+
+    @Test
+    void shouldViewAStartingHostedSessionWithTheTicketItWasStartedFor() {
+        AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(
+                List.of(), List.of(OpenHostedSession.builder().session(hostedSessionRunning(Verb.REVIEW)).phase(new StartingPhase()).build())));
+
+        assertThat(view.hosted()).containsExactly(startingTicketHostedSessionView());
     }
 
     @Test

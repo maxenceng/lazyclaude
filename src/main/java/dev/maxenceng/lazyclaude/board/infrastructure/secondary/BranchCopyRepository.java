@@ -18,6 +18,9 @@ import dev.maxenceng.lazyclaude.board.domain.WorktreePath;
 import dev.maxenceng.lazyclaude.board.published.FileName;
 import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitCommand;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitNotRunException;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitResult;
 
 /**
  * Reads the copies of a ticket file that are not the root checkout's, through {@code git}: {@code git worktree list --porcelain} for
@@ -48,7 +51,7 @@ public final class BranchCopyRepository implements BranchCopyPort {
 
     @Override
     public List<Worktree> worktrees(Project project) {
-        GitResult listed = git.run(project.root(), List.of("worktree", "list", "--porcelain"));
+        GitResult listed = run(project.root(), List.of("worktree", "list", "--porcelain"));
         if (!listed.succeeded()) {
             throw new BranchCopyUnavailableException(
                     "git worktree list exited with %d%s".formatted(listed.exitValue(), listed.reason()));
@@ -69,7 +72,7 @@ public final class BranchCopyRepository implements BranchCopyPort {
     @Override
     public Optional<BacklogEntry> onBranch(Project project, TicketBranch branch, FileName file) {
         String ref = LOCAL_BRANCHES + branch.value();
-        GitResult found = git.run(project.root(), List.of("rev-parse", "--verify", "--quiet", ref));
+        GitResult found = run(project.root(), List.of("rev-parse", "--verify", "--quiet", ref));
         if (found.exitValue() == NO_SUCH_REF) {
             return Optional.empty();
         }
@@ -78,11 +81,11 @@ public final class BranchCopyRepository implements BranchCopyPort {
                     "git rev-parse %s exited with %d%s".formatted(ref, found.exitValue(), found.reason()));
         }
         String path = "%s:%s".formatted(ref, BACKLOG.resolve(file.value()));
-        GitResult shown = git.run(project.root(), List.of("show", path));
+        GitResult shown = run(project.root(), List.of("show", path));
         if (shown.succeeded()) {
             return reader.read(file, shown.output());
         }
-        GitResult listed = git.run(project.root(), List.of("ls-tree", "--name-only", ref, BACKLOG.resolve(file.value()).toString()));
+        GitResult listed = run(project.root(), List.of("ls-tree", "--name-only", ref, BACKLOG.resolve(file.value()).toString()));
         if (listed.succeeded() && listed.outputText().isBlank()) {
             return Optional.empty();
         }
@@ -106,5 +109,13 @@ public final class BranchCopyRepository implements BranchCopyPort {
                 .findFirst()
                 .<WorktreeHead>map(line -> new CheckedOutBranch(line.substring(BRANCH_PREFIX.length())))
                 .orElseGet(DetachedHead::new);
+    }
+
+    private GitResult run(Path in, List<String> arguments) {
+        try {
+            return git.run(in, arguments);
+        } catch (GitNotRunException e) {
+            throw new BranchCopyUnavailableException(e.getMessage(), e);
+        }
     }
 }

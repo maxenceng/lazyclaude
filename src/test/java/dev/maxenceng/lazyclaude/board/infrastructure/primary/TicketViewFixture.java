@@ -14,6 +14,7 @@ import static dev.maxenceng.lazyclaude.board.published.TitleFixture.secondTitle;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
 import static dev.maxenceng.lazyclaude.board.published.TypeNameFixture.typeName;
 
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -24,6 +25,7 @@ import dev.maxenceng.lazyclaude.board.published.NoContext;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.NoType;
 import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.Verb;
 
 public final class TicketViewFixture {
 
@@ -38,7 +40,8 @@ public final class TicketViewFixture {
                 .context(contextName())
                 .type(typeName())
                 .frontmatter(frontmatterViews())
-                .body(body());
+                .body(body())
+                .verbs(List.of(Verb.REFINE));
     }
 
     public static TicketView ticketView() {
@@ -58,7 +61,11 @@ public final class TicketViewFixture {
     }
 
     public static TicketView inReviewSlugTicketView() {
-        return ticketViewBuilder().branch(slugTicketBranch()).status(Status.IN_REVIEW).build();
+        return ticketViewBuilder()
+                .branch(slugTicketBranch())
+                .status(Status.IN_REVIEW)
+                .verbs(Status.IN_REVIEW.verbs())
+                .build();
     }
 
     public static TicketView longTitledSlugTicketView() {
@@ -66,7 +73,18 @@ public final class TicketViewFixture {
     }
 
     public static TicketView doneTicketView() {
-        return ticketViewBuilder().status(Status.DONE).build();
+        return ticketViewBuilder().status(Status.DONE).verbs(List.of()).build();
+    }
+
+    public static TicketView ticketViewIn(Status status) {
+        return ticketViewBuilder().status(status).verbs(status.verbs()).build();
+    }
+
+    public static TicketView inProgressDesignTicketView() {
+        return ticketViewBuilder()
+                .status(Status.IN_PROGRESS)
+                .verbs(List.of(Verb.REVIEW, Verb.DESIGN))
+                .build();
     }
 
     public static TicketView untitledTicketView() {
@@ -90,7 +108,7 @@ public final class TicketViewFixture {
     }
 
     public static TicketView longDoneTicketView() {
-        return ticketViewBuilder().status(Status.DONE).body(listOfRows(60)).build();
+        return ticketViewBuilder().status(Status.DONE).verbs(List.of()).body(listOfRows(60)).build();
     }
 
     public static TicketView longSecondTicketView() {

@@ -1,11 +1,16 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import java.util.List;
+import java.util.Optional;
 
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
+import dev.maxenceng.lazyclaude.session.published.LinkVerb;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
@@ -24,6 +29,26 @@ public record HostedSession(HostedSessionId id, ProcessId pid, WorkingDirectory 
     /** Whether this is {@code claude --resume} of {@code session}, which a second resume must not run beside. */
     public boolean resumes(SessionId session) {
         return command instanceof ResumeClaude resume && resume.session().equals(session);
+    }
+
+    /** The ticket this session was started for, none for a plain or resumed one. */
+    public Optional<LinkedTicketId> ticket() {
+        return command instanceof TicketClaude run ? Optional.of(run.ticket()) : Optional.empty();
+    }
+
+    /** The link to its ticket that starting it gives it before any transcript does. */
+    public Optional<StrongLink> startingLink() {
+        return command instanceof TicketClaude run
+                ? Optional.of(StrongLink.builder()
+                        .ticket(run.ticket())
+                        .verb(new LinkVerb(run.verb().label()))
+                        .build())
+                : Optional.empty();
+    }
+
+    /** Whether this session was started to run {@code verb} on {@code ticket}. */
+    public boolean runs(LinkedTicketId ticket, Verb verb) {
+        return command instanceof TicketClaude run && run.ticket().equals(ticket) && run.verb() == verb;
     }
 
     /** Where the session stands among the live sessions the registry lists: live as the one with its pid, else still starting. */

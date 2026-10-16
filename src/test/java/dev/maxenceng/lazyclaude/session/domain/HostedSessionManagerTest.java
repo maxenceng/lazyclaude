@@ -48,6 +48,9 @@ class HostedSessionManagerTest {
     private WarningPort warnings;
 
     @Mock
+    private WorktreePort worktrees;
+
+    @Mock
     private OpenSessionsListener changed;
 
     @Mock
@@ -63,7 +66,7 @@ class HostedSessionManagerTest {
 
     @BeforeEach
     void setUp() {
-        manager = new HostedSessionManager(hosts, warnings);
+        manager = new HostedSessionManager(hosts, warnings, worktrees);
     }
 
     @Test

@@ -4,6 +4,7 @@ import static dev.tamboui.toolkit.Toolkit.column;
 import static dev.tamboui.toolkit.Toolkit.panel;
 import static dev.tamboui.toolkit.Toolkit.richText;
 import static dev.tamboui.toolkit.Toolkit.row;
+import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 
 import java.nio.file.Path;
@@ -13,8 +14,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
@@ -33,8 +37,13 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeTicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
@@ -90,6 +99,7 @@ public final class Shell extends ToolkitApp {
 
     private static final char QUIT = 'q';
     private static final char NEW_SESSION = 'N';
+    private static final char NEW_TICKET_SESSION = 'n';
     private static final char TOGGLE_MAIN_VIEW = 'm';
     private static final char SUSPEND = 'z';
     private static final char NEXT_WAITING = 'w';
@@ -112,6 +122,7 @@ public final class Shell extends ToolkitApp {
     private static final String FOCUS_KEYS = "alt+h/j/k/l focus";
     private static final String QUIT_KEY = "q quit";
     private static final String NEW_KEY = "N new";
+    private static final String NEW_TICKET_KEY = "n new";
     private static final String MAIN_VIEW_KEY = "m main view";
     private static final String SESSION_KEYS = "alt+h/l tab  alt+h/j/k/l focus  alt+m main view";
     private static final String KEY_BAR_INDENT = " ";
@@ -136,6 +147,12 @@ public final class Shell extends ToolkitApp {
     private PullRequestsView pullRequests;
     private volatile BoardView lastRead;
     private volatile Set<String> mergedTicketBranches = Set.of();
+    private volatile Set<String> mergedHeads = Set.of();
+    private final AtomicReference<Set<String>> pendingMergedHeads = new AtomicReference<>();
+    private final Executor background;
+    private Optional<VerbPicker> picker = Optional.empty();
+    private Optional<Rect> sessionsArea = Optional.empty();
+    private boolean mergedRead;
     private Optional<Rect> paneArea = Optional.empty();
     private Optional<Long> quitPrompt = Optional.empty();
     private boolean mainViewHidden;
@@ -154,6 +171,20 @@ public final class Shell extends ToolkitApp {
             HostedSessionCommand hosting,
             SessionQuery screens,
             BoardQuery boards) {
+        this(board, docs, sessions, pullRequests, hosting, screens, boards, Executors.newVirtualThreadPerTaskExecutor());
+    }
+
+    /** {@code background} runs what must not hold up the frame: adding a worktree, and the start of a session in it. */
+    Shell(
+            BoardView board,
+            DocsView docs,
+            SessionsView sessions,
+            PullRequestsView pullRequests,
+            HostedSessionCommand hosting,
+            SessionQuery screens,
+            BoardQuery boards,
+            Executor background) {
+        this.background = background;
         this.board = new BoardRows(board);
         this.lastRead = board;
         this.docs = new DocsRows(docs);
@@ -213,6 +244,7 @@ public final class Shell extends ToolkitApp {
         if (sessions.replace(next) && mainViewOwner == Focus.SESSIONS) {
             mainViewScroll.reset();
         }
+        refreshOffer();
         TabClosing closing = dock.replace(sessions.hosted());
         if (focus == Focus.DOCK && closing == TabClosing.LAST_ONE_GONE) {
             focusOn(lastLeft);
@@ -244,6 +276,11 @@ public final class Shell extends ToolkitApp {
      * applied on the UI thread, at the next render or key press, so no row changes under a frame being drawn.
      */
     public void mergedPullRequestsChanged(MergedPullRequestsView view) {
+        pendingMergedHeads.set(view.headBranches());
+        ToolkitRunner reading = runner();
+        if (reading != null) {
+            reading.runOnRenderThread(this::applyPendingMergedHeads);
+        }
         Set<String> branches = BoardRows.ticketBranchesOf(lastRead);
         Set<String> merged = view.headBranches().stream()
                 .filter(branches::contains)
@@ -262,10 +299,25 @@ public final class Shell extends ToolkitApp {
         });
     }
 
+    private void applyPendingMergedHeads() {
+        Set<String> heads = pendingMergedHeads.getAndSet(null);
+        if (heads == null) {
+            return;
+        }
+        mergedHeads = heads;
+        mergedRead = true;
+        picker.ifPresent(open -> {
+            open.checked();
+            open.preselecting(choiceFor(open.ticket()));
+        });
+        refreshOffer();
+    }
+
     private void applyPendingBoard() {
         BoardView next = pendingBoard.getAndSet(null);
         if (next != null) {
             board.replace(next);
+            showSelectedTicketsSessions();
         }
     }
 
@@ -338,9 +390,13 @@ public final class Shell extends ToolkitApp {
         applyPendingSessions();
         applyPendingPullRequests();
         applyPendingBoard();
+        applyPendingMergedHeads();
         applyPendingWarning();
         if (quitPrompt.isPresent()) {
             return answerQuitPrompt(key);
+        }
+        if (picker.isPresent()) {
+            return pressInPicker(picker.get(), key);
         }
         if (inSession()) {
             return pressInSession(key);
@@ -356,6 +412,9 @@ public final class Shell extends ToolkitApp {
         }
         if (key.isChar(QUIT)) {
             return requestQuit();
+        }
+        if (key.isChar(NEW_TICKET_SESSION)) {
+            return newFromTicket();
         }
         if (key.isChar(NEW_SESSION)) {
             return opened(hosting.startUnlinked(new NewHostedPayload(root, paneSize())));
@@ -557,6 +616,75 @@ public final class Shell extends ToolkitApp {
                 ? Optional.of(new LinkedTicketId(row.ticket().id().value()))
                 : Optional.empty();
         sessions.showTicket(ticket);
+        refreshOffer();
+    }
+
+    private Optional<TicketView> selectedTicket() {
+        return board.selected() instanceof TicketRow row ? Optional.of(row.ticket()) : Optional.empty();
+    }
+
+    /** Asks {@code session} again which verb the shown ticket's {@code n new} row offers; a ticket with no verb left offers none. */
+    private void refreshOffer() {
+        sessions.offering(selectedTicket()
+                .filter(ticket -> !ticket.verbs().isEmpty())
+                .map(ticket -> choiceFor(ticket).preselected()));
+    }
+
+    private VerbChoiceView choiceFor(TicketView ticket) {
+        return screens.verbChoiceFor(new VerbChoicePayload(
+                new SessionPayload(root, BoardRows.ticketIdsOf(lastRead)),
+                new LinkedTicketId(ticket.id().value()),
+                ticket.verbs(),
+                mergedHeads.contains(ticket.branch().value())));
+    }
+
+    private boolean newFromTicket() {
+        if (focus != Focus.BOARD && focus != Focus.SESSIONS) {
+            return false;
+        }
+        return selectedTicket().map(this::newSessionFor).orElse(false);
+    }
+
+    private boolean newSessionFor(TicketView ticket) {
+        if (ticket.verbs().isEmpty()) {
+            return opened(hosting.startUnlinked(new NewHostedPayload(root, paneSize())));
+        }
+        picker = Optional.of(new VerbPicker(ticket, choiceFor(ticket), !mergedRead));
+        return true;
+    }
+
+    private boolean pressInPicker(VerbPicker open, KeyEvent key) {
+        if (key.isKey(KeyCode.ESCAPE)) {
+            picker = Optional.empty();
+        } else if (key.isKey(KeyCode.ENTER)) {
+            startVerb(open);
+        } else if (key.isChar(DOWN) || key.isKey(KeyCode.DOWN)) {
+            open.down();
+        } else if (key.isChar(UP) || key.isKey(KeyCode.UP)) {
+            open.up();
+        }
+        return true;
+    }
+
+    private void startVerb(VerbPicker open) {
+        picker = Optional.empty();
+        TicketView ticket = open.ticket();
+        TicketHostedPayload payload = new TicketHostedPayload(
+                root, new LinkedTicketId(ticket.id().value()), ticket.branch().value(), open.selected(), paneSize());
+        inBackground(() -> hosting.startTicket(payload));
+    }
+
+    /** Starts off the render thread, since adding a worktree takes git a while, and focuses the tab on the render thread once it is there. */
+    private void inBackground(Supplier<HostStart> start) {
+        background.execute(() -> {
+            HostStart result = start.get();
+            ToolkitRunner running = runner();
+            if (running == null) {
+                opened(result);
+            } else {
+                running.runOnRenderThread(() -> opened(result));
+            }
+        });
     }
 
     private boolean selectDoc(Runnable move) {
@@ -620,13 +748,32 @@ public final class Shell extends ToolkitApp {
         return false;
     }
 
-    /** Enter on a hosted session focuses its tab; on an unlinked past session it resumes it in a tab of its own. */
+    /**
+     * Enter on a hosted session focuses its tab; on a past session it resumes it in a tab of its own, in the ticket's worktree when it is
+     * listed under a ticket; on the {@code n new} row it opens the verb picker.
+     */
     private boolean enterSession(SessionRow row) {
         return switch (row) {
             case LiveSessionRow live when live.session().isHosted() -> focusTabOf(live.session());
             case PastSessionRow past when past.session().isUnlinked() -> resume(past.session());
+            case PastSessionRow past -> selectedTicket().map(ticket -> resumeInTicket(past.session(), ticket)).orElse(false);
+            case StartingSessionRow starting -> focusTab(starting.tab().id());
+            case NewSessionRow newSession -> selectedTicket().map(this::newSessionFor).orElse(false);
             default -> false;
         };
+    }
+
+    private boolean focusTab(HostedSessionId id) {
+        dock.select(id);
+        return focusOn(Focus.DOCK);
+    }
+
+    private boolean resumeInTicket(PastSessionView session, TicketView ticket) {
+        ResumeTicketHostedPayload payload =
+                new ResumeTicketHostedPayload(
+                        session.id(), session.directory(), root, ticket.branch().value(), paneSize());
+        inBackground(() -> hosting.resumeInTicketWorktree(payload));
+        return true;
     }
 
     private boolean focusTabOf(LiveSessionView session) {
@@ -672,8 +819,9 @@ public final class Shell extends ToolkitApp {
         applyPendingSessions();
         applyPendingPullRequests();
         applyPendingBoard();
+        applyPendingMergedHeads();
         applyPendingWarning();
-        return column(
+        Element screen = column(
                 new StatusLineElement(sessions.strongestMarker(), warning, quitPrompt.map(SessionText::quitPrompt)),
                 row(
                         column(
@@ -684,6 +832,8 @@ public final class Shell extends ToolkitApp {
                                 .percent(LEFT_COLUMN_PERCENT),
                         (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
                 text(keyBar()).dim().length(KEY_BAR_HEIGHT));
+        return picker.<Element>map(open -> stack(screen, new VerbPickerElement(open, () -> sessionsArea)))
+                .orElse(screen);
     }
 
     private Element boardPanel() {
@@ -707,7 +857,9 @@ public final class Shell extends ToolkitApp {
                 .orElseGet(() -> sessions.isEmpty()
                         ? text(NO_LIVE_SESSION).dim()
                         : new SessionRowsElement(sessions.visible(), sessions.selectedIndex(), focus == Focus.SESSIONS));
-        return sized(framed(SESSIONS_TITLE, Focus.SESSIONS, body), Focus.SESSIONS);
+        return sized(
+                framed(SESSIONS_TITLE, Focus.SESSIONS, new PaneProbe(body, area -> sessionsArea = Optional.of(area))),
+                Focus.SESSIONS);
     }
 
     private Element docsPanel() {
@@ -766,6 +918,8 @@ public final class Shell extends ToolkitApp {
                     case OlderSessionsRow older -> column();
                     case SectionHeaderRow header -> column();
                     case NoSessionRow none -> column();
+                    case NewSessionRow newSession -> column();
+                    case StartingSessionRow starting -> column();
                 })
                 .orElseGet(() -> column());
     }
@@ -797,6 +951,9 @@ public final class Shell extends ToolkitApp {
     }
 
     private String keyBar() {
+        if (picker.isPresent()) {
+            return KEY_BAR_INDENT + VerbPickerText.keys();
+        }
         if (inSession()) {
             return KEY_BAR_INDENT + SESSION_KEYS;
         }
@@ -819,6 +976,9 @@ public final class Shell extends ToolkitApp {
         }
         keys.add(FOCUS_KEYS);
         keys.add(QUIT_KEY);
+        if ((focus == Focus.BOARD || focus == Focus.SESSIONS) && selectedTicket().isPresent()) {
+            keys.add(NEW_TICKET_KEY);
+        }
         keys.add(NEW_KEY);
         keys.add(MAIN_VIEW_KEY);
         return KEY_BAR_INDENT + String.join(KEY_SEPARATOR, keys);

@@ -12,6 +12,7 @@ import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.new
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.oldestReportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.verbChoicePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryHosting;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
@@ -46,6 +47,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
@@ -188,5 +190,17 @@ class SessionQueryTest {
         drew.getValue().accept(hostedSessionId());
 
         verify(listener).run();
+    }
+
+    @Test
+    void shouldViewTheVerbsAndTheOneToPreselect() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+
+        assertThat(sessionQuery(sessions, locator, watch, warnings)
+                        .verbChoiceFor(verbChoicePayload(List.of(Verb.REVIEW, Verb.DESIGN), false)))
+                .isEqualTo(VerbChoiceView.builder()
+                        .verbs(List.of(Verb.REVIEW, Verb.DESIGN))
+                        .preselected(Verb.DESIGN)
+                        .build());
     }
 }

@@ -41,6 +41,9 @@ final class SessionText {
     private static final String QUIT_PROMPT_ONE = "1 hosted session is busy or waiting — quit? y/n";
     private static final String QUIT_PROMPT_MANY = "%d hosted sessions are busy or waiting — quit? y/n";
     private static final String NO_SESSION_LABEL = "no session";
+    private static final String NEW_SESSION_FORMAT = "n new: /ticket %s";
+    private static final String STARTING_GLYPH = UNKNOWN_GLYPH;
+    private static final String STARTING_LABEL = "starting";
     private static final String UNLINKED_LABEL = "unlinked";
     private static final String OLDER_GLYPH = "…";
     private static final String OLDER_FORMAT = "%d older";
@@ -121,6 +124,18 @@ final class SessionText {
 
     static String quitPrompt(long busyOrWaiting) {
         return busyOrWaiting == 1 ? QUIT_PROMPT_ONE : QUIT_PROMPT_MANY.formatted(busyOrWaiting);
+    }
+
+    static String newSessionLabel(NewSessionRow row) {
+        return NEW_SESSION_FORMAT.formatted(row.verb().label());
+    }
+
+    static String startingGlyph() {
+        return STARTING_GLYPH;
+    }
+
+    static String startingLabel() {
+        return STARTING_LABEL;
     }
 
     static String noSessionLabel() {

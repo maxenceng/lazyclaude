@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
@@ -8,6 +9,7 @@ import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
+import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -40,6 +42,14 @@ public record LiveSession(
 
     public LiveSession linkedTo(List<TicketLink> links) {
         return new LiveSession(id, pid, name, directory, startedAt, version, state, links, hosting);
+    }
+
+    /** This session linked to {@code starting}'s ticket, unless its transcript already links it to that ticket. */
+    public LiveSession linkedBy(StrongLink starting) {
+        if (TicketLink.to(links, starting.ticket()).isPresent()) {
+            return this;
+        }
+        return linkedTo(Stream.concat(links.stream(), Stream.of(starting)).toList());
     }
 
     /** This session as lazyclaude knows it to be owned: hosted when its pid is one of {@code hostedPids}, else outside. */

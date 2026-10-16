@@ -9,6 +9,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostF
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.screenContaining;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.text;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.ticketLaunch;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSizeOf;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.leftPressAt;
@@ -162,6 +163,17 @@ class PtyHostRepositoryTest {
         host.spawn(resumeLaunch(id), code -> {});
 
         assertThat(text(screenContaining(host, id, "args:"))).contains("args: --resume " + sessionId().value());
+        host.end(id);
+    }
+
+    @Test
+    void shouldNameTheSessionAfterItsTicketAndVerbAndPassTheTicketCommandAsOneArgument() throws Exception {
+        PtyHostRepository host = hostRunning("printf 'args:'; printf '[%s]' \"$@\"; read line");
+
+        host.spawn(ticketLaunch(id), code -> {});
+
+        assertThat(text(screenContaining(host, id, "args:")))
+                .contains("args:[-n][PROJ-1 review][/ticket review PROJ-1]");
         host.end(id);
     }
 

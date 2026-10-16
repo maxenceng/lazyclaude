@@ -41,7 +41,7 @@ words mean.
 | Branch copy | The ticket's file as its ticket branch has it: the file in a worktree checked out on the ticket branch, the root checkout included, or in the ticket worktree whatever branch it is on, uncommitted edits shown; else `git show <branch>:<file>` while the branch's pull request is not merged. | `board` |
 | Root copy | The ticket's file in the root checkout, as the backlog read finds it. | `board` |
 | Status | A ticket's `status`, read from its branch copy whenever there is one, and from the root checkout otherwise: no ticket branch, or a ticket branch whose pull request is merged and no worktree. A root copy reading `done` wins over any branch copy. There is no separate root status. | `board` |
-| Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` (expected) |
+| Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` |
 
 ## session
 
@@ -64,8 +64,9 @@ words mean.
 | Unread | A hosted session while the registry cannot be read: whether it is starting, busy or waiting is unknown. Its tab reads `starting`, and it counts as busy, so `q` asks first. | `session` |
 | Busy | The session is working; nothing is asked of you. The registry's `busy` and `shell` both show as busy. | `session` |
 | Your turn | The session finished and waits for your next prompt, without blocking on anything. Shown, never notified. | `session` |
-| Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session. | `board` (its path), `session` (expected) |
-| Preselected verb | The allowed verb the new-session picker opens on, from status, past sessions and the pull request's state. | `session` (expected) |
+| Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session. | `shared` (its path), `session` (creates it) |
+| Verb picker | The popup `n` opens on a ticket, listing its allowed verbs with the preselected one under the cursor. | `shell` |
+| Preselected verb | The allowed verb the verb picker opens on, from status, past sessions and the pull request's state. | `session` |
 | Waiting | The session is blocked on you: *waiting for permission* (a permission prompt) or *waiting for input* (any other question). The only state that notifies. | `session` |
 | Unknown (state) | The session reports a `status` lazyclaude does not know, or none, as a newer Claude Code may. Still listed, with a grey `·`; never notified. | `session` |
 | Reserved chord | A chord lazyclaude takes before `claude` sees it, inside every hosted session: the seven focus, hide, zoom and next-waiting chords, `alt+h/j/k/l/m/z/w` unless `config.yml` rebinds them. | `session` (expected) |

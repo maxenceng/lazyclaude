@@ -32,22 +32,60 @@ public final class HostedSessionManager {
     private static final String START_WARNING = "hosted session: %s.";
     private static final String EXIT_WARNING = "hosted session: claude exited with code %d.";
     private static final String GONE_WARNING = "resume: %s is gone; nothing resumed.";
+    private static final String WORKTREE_WARNING = "ticket worktree: %s; nothing started.";
+    private static final String NOT_A_WORKTREE = "%s exists but is not a worktree of %s";
+    private static final String NO_PLACE = "%s has no folder beside it to keep worktrees in";
 
     private final HostPort hosts;
     private final WarningPort warnings;
+    private final WorktreePort worktrees;
     private final List<HostedSession> open = new ArrayList<>();
     private final List<HostedSessionId> spawning = new ArrayList<>();
     private final Map<HostedSessionId, ExitCode> earlyExits = new HashMap<>();
     private final List<OpenSessionsListener> changeListeners = new CopyOnWriteArrayList<>();
 
-    public HostedSessionManager(HostPort hosts, WarningPort warnings) {
+    public HostedSessionManager(HostPort hosts, WarningPort warnings, WorktreePort worktrees) {
         this.hosts = hosts;
         this.warnings = warnings;
+        this.worktrees = worktrees;
     }
 
     /** A plain {@code claude} in the project root. */
     public HostStart startUnlinked(Project project, PaneSize size) {
         return start(new NewClaude(), new WorkingDirectory(project.root()), size);
+    }
+
+    /**
+     * {@code /ticket <verb> <ID>} in the ticket's worktree: where its branch is already checked out, else a worktree added at the
+     * path the project keeps it at, on the branch when it exists and on a new one from {@code main} when not. None, with a warning,
+     * when that path is taken by something else or git refuses.
+     */
+    public HostStart startTicket(TicketStart ticket, PaneSize size) {
+        try {
+            return start(
+                    TicketClaude.builder().ticket(ticket.ticket()).verb(ticket.verb()).build(),
+                    ticketDirectory(ticket.worktree()),
+                    size);
+        } catch (WorktreeUnavailableException unavailable) {
+            return notStartedFor(unavailable.getMessage());
+        }
+    }
+
+    /**
+     * Like {@link #resume}, but a {@code recorded} directory that is {@code worktree}'s own path and gone is added back first, so
+     * resuming a ticket's session after its worktree was removed finds its transcript again.
+     */
+    public HostStart resumeInTicketWorktree(
+            SessionId session, WorkingDirectory recorded, TicketWorktree worktree, PaneSize size) {
+        boolean gone = !hosts.exists(recorded);
+        if (gone && worktree.path().filter(recorded::equals).isPresent()) {
+            try {
+                addWorktree(worktree, recorded);
+            } catch (WorktreeUnavailableException unavailable) {
+                return notStartedFor(unavailable.getMessage());
+            }
+        }
+        return resume(session, recorded, size);
     }
 
     /**
@@ -98,6 +136,33 @@ public final class HostedSessionManager {
     /** Tells {@code listener} whenever a session drew something. */
     public void onScreenChange(Runnable listener) {
         hosts.onScreenChange(id -> listener.run());
+    }
+
+    private WorkingDirectory ticketDirectory(TicketWorktree worktree) {
+        Optional<WorkingDirectory> held = worktrees.checkedOutAt(worktree.project(), worktree.branch());
+        if (held.isPresent()) {
+            return held.get();
+        }
+        WorkingDirectory planned = worktree.path()
+                .orElseThrow(() -> new WorktreeUnavailableException(NO_PLACE.formatted(worktree.project().root())));
+        if (hosts.exists(planned)) {
+            throw new WorktreeUnavailableException(NOT_A_WORKTREE.formatted(planned.path(), worktree.branch().value()));
+        }
+        addWorktree(worktree, planned);
+        return planned;
+    }
+
+    private void addWorktree(TicketWorktree worktree, WorkingDirectory at) {
+        if (worktrees.branchExists(worktree.project(), worktree.branch())) {
+            worktrees.addOnBranch(worktree.project(), worktree.branch(), at);
+        } else {
+            worktrees.addOnNewBranch(worktree.project(), worktree.branch(), at);
+        }
+    }
+
+    private HostStart notStartedFor(String reason) {
+        warnings.raise(new Warning(WORKTREE_WARNING.formatted(reason)));
+        return new NotStartedHost();
     }
 
     private HostStart start(LaunchCommand command, WorkingDirectory directory, PaneSize size) {

@@ -2,9 +2,15 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.LinkVerb;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
+import dev.maxenceng.lazyclaude.session.published.StrongLink;
+import dev.maxenceng.lazyclaude.session.published.TicketLink;
 
 /**
  * The sessions of one project that could be read: the live ones, then the past ones, the hosted ones in tab order, with the clock their ages are read
@@ -23,8 +29,7 @@ public record AvailableSessions(
 
     @Override
     public AvailableSessions hosting(HostedSessions open) {
-        List<LiveSession> owned =
-                live.stream().map(session -> session.ownedAmong(open.pids())).toList();
+        List<LiveSession> owned = live.stream().map(session -> ownedAmong(open, session)).toList();
         return builder()
                 .live(owned)
                 .past(past)
@@ -36,6 +41,25 @@ public record AvailableSessions(
                         .toList())
                 .clock(clock)
                 .build();
+    }
+
+    private static LiveSession ownedAmong(HostedSessions open, LiveSession session) {
+        LiveSession owned = session.ownedAmong(open.pids());
+        return open.withPid(session.pid())
+                .flatMap(HostedSession::startingLink)
+                .map(owned::linkedBy)
+                .orElse(owned);
+    }
+
+    @Override
+    public boolean ranVerb(LinkedTicketId ticket, Verb verb) {
+        LinkVerb ran = new LinkVerb(verb.label());
+        return Stream.concat(
+                        live.stream().map(LiveSession::links), past.stream().map(PastSession::links))
+                        .anyMatch(links -> TicketLink.to(links, ticket)
+                                .filter(link -> link instanceof StrongLink strong && strong.verb().equals(ran))
+                                .isPresent())
+                || hosted.stream().anyMatch(open -> open.session().runs(ticket, verb));
     }
 
     public SessionAge ageOf(LiveSession session) {

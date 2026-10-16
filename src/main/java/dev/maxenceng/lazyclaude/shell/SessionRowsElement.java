@@ -66,12 +66,18 @@ final class SessionRowsElement implements Element {
                         new MiddleText("", plain, SessionText.olderLabel(older), plain.dim(), ""), "", plain);
             case SectionHeaderRow header ->
                 frame.buffer().setString(area.x(), y, RowsElement.fit(header.label(), area.width()), Style.EMPTY.dim());
-            case NoSessionRow none -> {
-                String label = RowsElement.fit(SessionText.noSessionLabel(), area.width());
-                String padded = label + " ".repeat(Math.max(0, area.width() - label.codePointCount(0, label.length())));
-                frame.buffer().setString(area.x(), y, padded, plain.dim());
-            }
+            case NoSessionRow none -> dimLabel(frame, area, y, SessionText.noSessionLabel(), plain);
+            case NewSessionRow newSession -> dimLabel(frame, area, y, SessionText.newSessionLabel(newSession), plain);
+            case StartingSessionRow starting ->
+                line(frame, area, y, SessionText.startingGlyph(), plain.dim(),
+                        new MiddleText("", plain, SessionText.startingLabel(), plain.dim(), ""), SessionText.paneLabel(), plain);
         }
+    }
+
+    private static void dimLabel(Frame frame, Rect area, int y, String text, Style plain) {
+        String label = RowsElement.fit(text, area.width());
+        String padded = label + " ".repeat(Math.max(0, area.width() - label.codePointCount(0, label.length())));
+        frame.buffer().setString(area.x(), y, padded, plain.dim());
     }
 
     private static MiddleText middle(Optional<TicketLink> link, String title, Style plain, Style titleStyle, int verbWidth) {
