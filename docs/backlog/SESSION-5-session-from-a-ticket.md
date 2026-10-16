@@ -1,6 +1,6 @@
 ---
 id: SESSION-5
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 82
@@ -102,3 +102,10 @@ Refined 2026-10-15. Where it parts from LAZY-9, and the limits it accepts:
   failure apart from an empty list.
 - The merged read is capped at the 100 newest merged pull requests; a ticket branch merged
   before those reads as unmerged, so `respond` is preselected.
+
+Closed after [#25](https://github.com/maxenceng/lazyclaude/pull/25). ADR 0030 records where the verbs, the pick and the worktree live. What the code will not show:
+
+- `git worktree add` refuses a ticket worktree deleted with `rm`, because git still lists it ("missing but already registered"). The adapter runs `git worktree prune` first. This was reproduced against a real git before the fix.
+- `session` imported `board.published.TicketBranch` until review. ADR 0030 allows only `Verb` across that edge, so the ticket payloads take the branch as a `shared` `BranchName`. Nothing in the build enforces that limit yet.
+- `checking PR…` was first keyed on the `in-review` status in the shell. It now follows whether `done` is offered, so the title cannot disagree with the preselection.
+- The preselection was first answered by reading `claude agents` on the render thread for every `n new` row. It is now answered from the sessions the watcher last pushed. The registry is read only before the first push.
