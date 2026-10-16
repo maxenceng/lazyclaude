@@ -6,6 +6,10 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 /** Where what a ticket branch changes from {@code main} is read from. */
 public interface BranchChangesPort {
 
-    /** The files {@code branch} changes from {@code main}; unread when git cannot say, as for a branch that does not exist. */
+    /**
+     * The files {@code branch} changes from {@code main}; unread when git cannot say, as for a branch that does not exist.
+     *
+     * @throws BranchChangesUnavailableException when git cannot be run
+     */
     BranchChanges changesOf(Project project, TicketBranch branch);
 }

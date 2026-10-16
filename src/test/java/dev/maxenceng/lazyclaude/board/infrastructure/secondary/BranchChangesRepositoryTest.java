@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import dev.maxenceng.lazyclaude.board.domain.BranchCopyUnavailableException;
+import dev.maxenceng.lazyclaude.board.domain.BranchChangesUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.ChangedFile;
 import dev.maxenceng.lazyclaude.board.domain.ChangedFiles;
 import dev.maxenceng.lazyclaude.board.domain.UnreadChanges;
@@ -63,6 +63,6 @@ class BranchChangesRepositoryTest {
     @Test
     void shouldFailWhenGitCannotBeRun() {
         assertThatThrownBy(() -> new BranchChangesRepository(missingGit()).changesOf(project, ticketBranch()))
-                .isInstanceOf(BranchCopyUnavailableException.class);
+                .isInstanceOf(BranchChangesUnavailableException.class);
     }
 }

@@ -36,5 +36,6 @@ worktree to run it in. None had a home. `board` knows a ticket's status, `sessio
 - A failed merged read is an empty list, so `respond` is preselected and "PR state unknown" is never shown; showing it needs `review` to keep a failure apart from an empty list.
 - The merged read covers the 100 newest merged pull requests, so an older merged ticket branch reads as unmerged.
 - A session counts as having run `design` by its last verb on the ticket, because a link keeps only that one.
-- The preselection reads the sessions afresh on the shell's thread; an unreadable registry holds it up for the `claude agents` patience.
+- The preselection reads the sessions afresh on the shell's thread, for the picker and for the `n new` row on every selection move and
+  sessions push; an unreadable registry holds each of those up for the `claude agents` patience.
 - Resuming into a gone ticket worktree whose branch is checked out elsewhere fails with git's message, since the transcript is only found from the recorded directory.

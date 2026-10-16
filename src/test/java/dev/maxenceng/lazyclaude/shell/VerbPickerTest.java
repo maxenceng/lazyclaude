@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.shell;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewIn;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceViewFixture.donePreselected;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceViewFixture.respondPreselected;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceViewFixture.reviewPreselected;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,18 @@ class VerbPickerTest {
     }
 
     @Test
+    void shouldFollowAnotherPreselectedVerbWhenAKeyPressLeftTheCursorWhereItWas() {
+        VerbPicker picker = new VerbPicker(ticketViewIn(Status.IN_REVIEW), respondPreselected(), true);
+        picker.up();
+
+        picker.preselecting(donePreselected());
+
+        assertThat(picker.selected())
+                .as("pressing up on the first verb moves nothing, so the cursor is still the preselection's to move")
+                .isEqualTo(Verb.DONE);
+    }
+
+    @Test
     void shouldReadCheckingWhileAnInReviewTicketsPullRequestIsPending() {
         assertThat(new VerbPicker(ticketViewIn(Status.IN_REVIEW), respondPreselected(), true).checking()).isTrue();
     }
@@ -77,6 +90,6 @@ class VerbPickerTest {
 
     @Test
     void shouldNotReadCheckingForATicketWhoseVerbsDoNotDependOnItsPullRequest() {
-        assertThat(new VerbPicker(ticketViewIn(Status.IN_PROGRESS), respondPreselected(), true).checking()).isFalse();
+        assertThat(new VerbPicker(ticketViewIn(Status.IN_PROGRESS), reviewPreselected(), true).checking()).isFalse();
     }
 }

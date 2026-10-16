@@ -3,7 +3,6 @@ package dev.maxenceng.lazyclaude.shell;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
-import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 
@@ -42,9 +41,9 @@ final class VerbPicker {
         return choice.verbs().get(cursor);
     }
 
-    /** Whether the verbs wait on review's first merged read, which only an in-review ticket's depend on. */
+    /** Whether the verbs wait on review's first merged read, which only the preselection of {@code done} depends on. */
     boolean checking() {
-        return mergedPending && ticket.status() == Status.IN_REVIEW;
+        return mergedPending && choice.verbs().contains(Verb.DONE);
     }
 
     void down() {
@@ -66,7 +65,8 @@ final class VerbPicker {
     }
 
     private void moveTo(int target) {
-        cursor = Math.clamp(target, 0, choice.verbs().size() - 1);
-        moved = true;
+        int next = Math.clamp(target, 0, choice.verbs().size() - 1);
+        moved |= next != cursor;
+        cursor = next;
     }
 }

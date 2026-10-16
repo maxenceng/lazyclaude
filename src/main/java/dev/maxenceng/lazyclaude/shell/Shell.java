@@ -670,7 +670,7 @@ public final class Shell extends ToolkitApp {
         picker = Optional.empty();
         TicketView ticket = open.ticket();
         TicketHostedPayload payload = new TicketHostedPayload(
-                root, new LinkedTicketId(ticket.id().value()), ticket.branch(), open.selected(), paneSize());
+                root, new LinkedTicketId(ticket.id().value()), ticket.branch().value(), open.selected(), paneSize());
         inBackground(() -> hosting.startTicket(payload));
     }
 
@@ -770,7 +770,8 @@ public final class Shell extends ToolkitApp {
 
     private boolean resumeInTicket(PastSessionView session, TicketView ticket) {
         ResumeTicketHostedPayload payload =
-                new ResumeTicketHostedPayload(session.id(), session.directory(), root, ticket.branch(), paneSize());
+                new ResumeTicketHostedPayload(
+                        session.id(), session.directory(), root, ticket.branch().value(), paneSize());
         inBackground(() -> hosting.resumeInTicketWorktree(payload));
         return true;
     }

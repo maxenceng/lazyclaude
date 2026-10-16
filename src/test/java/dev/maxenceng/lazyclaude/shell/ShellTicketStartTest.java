@@ -122,7 +122,7 @@ class ShellTicketStartTest {
 
         ArgumentCaptor<ResumeTicketHostedPayload> payload = ArgumentCaptor.forClass(ResumeTicketHostedPayload.class);
         verify(hosting).resumeInTicketWorktree(payload.capture());
-        assertThat(payload.getValue().branch()).isEqualTo(ticketBranch());
+        assertThat(payload.getValue().branch()).isEqualTo(ticketBranch().value());
         assertThat(shell.focus()).isEqualTo(Focus.DOCK);
     }
 

@@ -17,7 +17,8 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitResult;
 
 /**
  * Reads and adds worktrees through {@code git}: {@code git worktree list --porcelain} for where a branch is checked out, and
- * {@code git worktree add} for a new checkout. A worktree git still lists after its directory was deleted is no place to run in.
+ * {@code git worktree add} for a new checkout. A worktree git still lists after its directory was deleted is no place to run in, and
+ * is pruned before adding one, since git refuses to add a worktree where a deleted one is still listed.
  */
 public final class WorktreeRepository implements WorktreePort {
 
@@ -87,6 +88,10 @@ public final class WorktreeRepository implements WorktreePort {
     }
 
     private void add(Project project, List<String> arguments) {
+        GitResult pruned = run(project.root(), List.of("worktree", "prune"));
+        if (!pruned.succeeded()) {
+            throw new WorktreeUnavailableException(failure("git worktree prune", pruned));
+        }
         GitResult added = run(project.root(), arguments);
         if (!added.succeeded()) {
             throw new WorktreeUnavailableException(failure("git worktree add", added));

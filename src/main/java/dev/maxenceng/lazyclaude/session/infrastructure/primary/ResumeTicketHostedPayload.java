@@ -2,7 +2,6 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.nio.file.Path;
 
-import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
@@ -17,7 +16,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * and the pane's size.
  */
 public record ResumeTicketHostedPayload(
-        SessionId session, Path recordedDirectory, Path root, TicketBranch branch, PaneSize size) {
+        SessionId session, Path recordedDirectory, Path root, String branch, PaneSize size) {
 
     public ResumeTicketHostedPayload {
         Assert.notNull("session", session);
@@ -32,7 +31,7 @@ public record ResumeTicketHostedPayload(
     TicketWorktree worktree() {
         return TicketWorktree.builder()
                 .project(new Project(root))
-                .branch(new BranchName(branch.value()))
+                .branch(new BranchName(branch))
                 .build();
     }
 }

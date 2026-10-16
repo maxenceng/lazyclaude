@@ -121,7 +121,7 @@ class ShellVerbPickerTest {
 
         TicketHostedPayload started = startedTicketPayload(hosting);
         assertThat(started.ticket()).isEqualTo(linkedTicketId());
-        assertThat(started.branch()).isEqualTo(ticketBranch());
+        assertThat(started.branch()).isEqualTo(ticketBranch().value());
         assertThat(started.verb()).isEqualTo(Verb.DONE);
     }
 

@@ -1,6 +1,6 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
-/** The branch's changes could not be read, as when it does not exist yet. */
+/** The branch's changes are not known: not read, as for a ticket not in progress, or unreadable, as for a branch not created yet. */
 public record UnreadChanges() implements BranchChanges {
 
     @Override

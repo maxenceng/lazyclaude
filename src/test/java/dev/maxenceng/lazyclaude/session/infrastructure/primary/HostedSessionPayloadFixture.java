@@ -11,7 +11,6 @@ import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.wor
 
 import java.util.List;
 
-import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 
@@ -36,12 +35,12 @@ public final class HostedSessionPayloadFixture {
     }
 
     public static TicketHostedPayload ticketHostedPayload(Verb verb) {
-        return new TicketHostedPayload(project().root(), linkedTicketId(), new TicketBranch(branchName().value()), verb, paneSize());
+        return new TicketHostedPayload(project().root(), linkedTicketId(), branchName().value(), verb, paneSize());
     }
 
     public static ResumeTicketHostedPayload resumeTicketHostedPayload() {
         return new ResumeTicketHostedPayload(
-                sessionId(), worktreeDirectory().path(), project().root(), new TicketBranch(branchName().value()), paneSize());
+                sessionId(), worktreeDirectory().path(), project().root(), branchName().value(), paneSize());
     }
 
     public static VerbChoicePayload verbChoicePayload(List<Verb> verbs, boolean merged) {

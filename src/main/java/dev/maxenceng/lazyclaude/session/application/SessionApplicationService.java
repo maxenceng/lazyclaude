@@ -81,7 +81,7 @@ public final class SessionApplicationService {
      * The verbs a ticket allows and the one to start on: {@code design} while no session has run it, {@code done} once the branch
      * is merged. The sessions are read afresh, and a registry that cannot be read leaves only the hosted ones to go by.
      */
-    // deferred: the sessions are read on the caller's thread, so an unreadable registry holds the picker up for the claude agents patience — close it when a slow picker is seen.
+    // deferred: read on the caller's thread for every n new row and picker, so a slow registry holds up board moves — close it when a move is seen to lag.
     public VerbChoice verbChoiceFor(
             Project project, KnownTickets tickets, LinkedTicketId ticket, List<Verb> allowed, boolean merged) {
         Sessions read = sessionsFor(project, tickets);

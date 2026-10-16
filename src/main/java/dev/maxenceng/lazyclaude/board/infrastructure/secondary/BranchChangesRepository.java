@@ -5,7 +5,7 @@ import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.domain.BranchChanges;
 import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
-import dev.maxenceng.lazyclaude.board.domain.BranchCopyUnavailableException;
+import dev.maxenceng.lazyclaude.board.domain.BranchChangesUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.ChangedFile;
 import dev.maxenceng.lazyclaude.board.domain.ChangedFiles;
 import dev.maxenceng.lazyclaude.board.domain.UnreadChanges;
@@ -34,7 +34,7 @@ public final class BranchChangesRepository implements BranchChangesPort {
         this.git = new GitCommand(git);
     }
 
-    /** @throws BranchCopyUnavailableException when git cannot be run */
+    /** @throws BranchChangesUnavailableException when git cannot be run */
     @Override
     public BranchChanges changesOf(Project project, TicketBranch branch) {
         GitResult diffed = run(project.root(), List.of("diff", "--name-only", "%s...%s".formatted(MAIN, branch.value()), "--"));
@@ -51,7 +51,7 @@ public final class BranchChangesRepository implements BranchChangesPort {
         try {
             return git.run(in, arguments);
         } catch (GitNotRunException e) {
-            throw new BranchCopyUnavailableException(e.getMessage(), e);
+            throw new BranchChangesUnavailableException(e.getMessage(), e);
         }
     }
 }

@@ -102,6 +102,29 @@ class WorktreeRepositoryTest {
     }
 
     @Test
+    void shouldAddAWorktreeBackOnItsBranchWhereGitStillListsTheDeletedOne() throws Exception {
+        Path gone = temp.resolve("app.worktrees").resolve(branchName().value());
+        removedWorktreeOn(root, gone, branchName().value());
+
+        repository.addOnBranch(project, branchName(), new WorkingDirectory(gone));
+
+        assertThat(repository.checkedOutAt(project, branchName()))
+                .as("a worktree deleted without git worktree remove is still listed, and must not block adding it back")
+                .contains(new WorkingDirectory(gone.toRealPath()));
+    }
+
+    @Test
+    void shouldAddAWorktreeOnANewBranchWhereGitStillListsADeletedOne() throws Exception {
+        Path gone = temp.resolve("app.worktrees").resolve(secondBranchName().value());
+        removedWorktreeOn(root, gone, branchName().value());
+
+        repository.addOnNewBranch(project, secondBranchName(), new WorkingDirectory(gone));
+
+        assertThat(repository.checkedOutAt(project, secondBranchName()))
+                .contains(new WorkingDirectory(gone.toRealPath()));
+    }
+
+    @Test
     void shouldRefuseToAddAWorktreeOnABranchCheckedOutElsewhere() throws Exception {
         branchAtHead(root, branchName().value());
         repository.addOnBranch(project, branchName(), new WorkingDirectory(temp.resolve("elsewhere")));
