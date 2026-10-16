@@ -8,6 +8,7 @@ import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.HostedSessionManager;
 import dev.maxenceng.lazyclaude.session.domain.KnownTickets;
+import dev.maxenceng.lazyclaude.session.domain.LastPushedSessions;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
@@ -38,6 +39,7 @@ public final class SessionApplicationService {
 
     private final SessionManager manager;
     private final HostedSessionManager hosted;
+    private final LastPushedSessions lastPushed = new LastPushedSessions();
 
     public SessionApplicationService(
             LiveSessionPort sessions,
@@ -58,7 +60,10 @@ public final class SessionApplicationService {
     }
 
     public void subscribe(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
-        Consumer<Sessions> hosting = sessions -> listener.accept(sessions.hosting(hosted.open()));
+        Consumer<Sessions> hosting = sessions -> {
+            lastPushed.remember(sessions);
+            listener.accept(sessions.hosting(hosted.open()));
+        };
         manager.watch(project, tickets, hosting);
         hosted.onChange(() -> manager.refresh(project, tickets, hosting));
     }
@@ -79,12 +84,16 @@ public final class SessionApplicationService {
 
     /**
      * The verbs a ticket allows and the one to start on: {@code design} while no session has run it, {@code done} once the branch
-     * is merged. The sessions are read afresh, and a registry that cannot be read leaves only the hosted ones to go by.
+     * is merged. The sessions are the watcher's last push, with the hosted ones as they are now, so the render thread asking
+     * on every move never waits on the registry; only before the first push are they read here. A registry that cannot be
+     * read leaves only the hosted ones to go by.
      */
-    // deferred: read on the caller's thread for every n new row and picker, so a slow registry holds up board moves — close it when a move is seen to lag.
+    // deferred: a session that ran design counts one watcher tick late unless lazyclaude hosts it — close it when a preselection is seen stale.
     public VerbChoice verbChoiceFor(
             Project project, KnownTickets tickets, LinkedTicketId ticket, List<Verb> allowed, boolean merged) {
-        Sessions read = sessionsFor(project, tickets);
+        Sessions read = lastPushed.last()
+                .map(pushed -> pushed.hosting(hosted.open()))
+                .orElseGet(() -> sessionsFor(project, tickets));
         return VerbChoice.of(allowed, read.ranVerb(ticket, Verb.DESIGN), merged);
     }
 

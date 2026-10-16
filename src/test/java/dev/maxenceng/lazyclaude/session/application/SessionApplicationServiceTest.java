@@ -27,6 +27,7 @@ import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -204,6 +205,24 @@ class SessionApplicationServiceTest {
         assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.RESPOND, Verb.DONE), true)
                         .preselected())
                 .isEqualTo(Verb.DONE);
+    }
+
+    @Test
+    void shouldAnswerTheChoiceFromTheLastPushWithoutReadingTheRegistryAgain() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+        when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
+        when(past.linkFacts()).thenReturn(Map.of(pastSession().id(), ran(ticketRun("design", "PROJ-1"))));
+        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees);
+        service.subscribe(project(), boardTickets(), read -> {});
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).watch(changed.capture(), any());
+        changed.getValue().run();
+
+        Verb preselected = service.verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
+                .preselected();
+
+        assertThat(preselected).as("the pushed sessions say design ran").isEqualTo(Verb.REVIEW);
+        verify(sessions, times(1)).liveSessions(any());
     }
 
     @Test

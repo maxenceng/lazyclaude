@@ -20,7 +20,7 @@ public final class SessionQuery {
         return SessionsView.from(sessions.sessionsFor(payload.toDomain(), payload.tickets()));
     }
 
-    /** The verbs a ticket allows and the one to start on; the sessions are read afresh for it. */
+    /** The verbs a ticket allows and the one to start on; the sessions are the last pushed, read afresh only before the first push. */
     public VerbChoiceView verbChoiceFor(VerbChoicePayload payload) {
         return VerbChoiceView.from(sessions.verbChoiceFor(
                 payload.sessions().toDomain(),
