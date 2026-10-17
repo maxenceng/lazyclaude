@@ -6,6 +6,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
+import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationManager;
+import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.HostedSessionManager;
 import dev.maxenceng.lazyclaude.session.domain.KnownTickets;
@@ -19,6 +21,7 @@ import dev.maxenceng.lazyclaude.session.domain.TicketStart;
 import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
+import dev.maxenceng.lazyclaude.session.domain.Watched;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
@@ -34,12 +37,13 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * Reads a project's live, past and hosted sessions, linked to the tickets it is handed, and keeps a listener handed them
- * again as they change; and starts, feeds and ends the hosted ones.
+ * again as they change, notifying the desktop of the machine's sessions that enter waiting; and starts, feeds and ends the hosted ones.
  */
 public final class SessionApplicationService {
 
     private final SessionManager manager;
     private final HostedSessionManager hosted;
+    private final DesktopNotificationManager notifying;
     private final LastPushedSessions lastPushed = new LastPushedSessions();
     private final AtomicReference<Consumer<Sessions>> delivering = new AtomicReference<>(sessions -> {});
 
@@ -52,8 +56,10 @@ public final class SessionApplicationService {
             WarningPort warnings,
             HostPort hosts,
             WorktreePort worktrees,
+            DesktopNotificationPort notifications,
             Clock clock) {
         this.hosted = new HostedSessionManager(hosts, warnings, worktrees);
+        this.notifying = new DesktopNotificationManager(notifications, warnings);
         this.manager = new SessionManager(sessions, pastSessions, locator, watch, transcriptWatch, warnings, clock);
     }
 
@@ -64,11 +70,17 @@ public final class SessionApplicationService {
     public void subscribe(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
         Consumer<Sessions> hosting = sessions -> {
             lastPushed.remember(sessions);
+            notifying.seen(project, sessions);
             listener.accept(sessions.hosting(hosted.open()));
         };
         manager.watch(project, tickets, hosting);
         hosted.onChange(() -> manager.refresh(project, hosting));
         delivering.set(hosting);
+    }
+
+    /** From now on {@code watched} is the session the user looks at: it is not notified, and any notification it has is closed. */
+    public void watching(Watched watched) {
+        notifying.watching(watched);
     }
 
     /** From now on sessions are linked against {@code tickets}, the ids of the board as it was last read; the subscriber is handed them linked that way at once. */

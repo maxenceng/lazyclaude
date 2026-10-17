@@ -11,6 +11,7 @@ import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
+import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
  * The sessions of one project that could be read: the live ones, the live ones elsewhere grouped by place, then the past ones, the hosted ones in tab order, with the clock their ages are read
@@ -66,6 +67,20 @@ public record AvailableSessions(
                                 .filter(link -> link instanceof StrongLink strong && strong.verb().equals(ran))
                                 .isPresent())
                 || hosted.stream().anyMatch(open -> open.session().runs(ticket, verb));
+    }
+
+    /** Every live session on the machine with the place it belongs to: the project's own first, then those elsewhere. */
+    public List<PlacedSession> everyone(Project project) {
+        ProjectPlace here = new ProjectPlace(project);
+        return Stream.concat(
+                        live.stream().map(session -> placed(here, session)),
+                        elsewhere.stream()
+                                .flatMap(group -> group.sessions().stream().map(session -> placed(group.place(), session))))
+                .toList();
+    }
+
+    private static PlacedSession placed(SessionPlace place, LiveSession session) {
+        return PlacedSession.builder().place(place).session(session).build();
     }
 
     public SessionAge ageOf(LiveSession session) {

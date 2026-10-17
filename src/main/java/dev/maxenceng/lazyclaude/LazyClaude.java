@@ -36,6 +36,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeAgentsRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LiveSessionRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.NotifySendRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRepository;
@@ -69,6 +70,9 @@ public final class LazyClaude {
     private static final List<String> CLAUDE = List.of("claude");
     private static final List<String> CLAUDE_AGENTS = List.of("claude", "agents", "--json");
     private static final Duration CLAUDE_AGENTS_PATIENCE = Duration.ofSeconds(10);
+    private static final List<String> NOTIFY_SEND = List.of("notify-send");
+    private static final List<String> GDBUS = List.of("gdbus");
+    private static final Duration NOTIFY_PATIENCE = Duration.ofSeconds(5);
     private static final String GH = "gh";
     private static final Duration GH_PATIENCE = Duration.ofSeconds(30);
 
@@ -144,6 +148,7 @@ public final class LazyClaude {
                 warnings,
                 new PtyHostRepository(CLAUDE, System.getenv()),
                 new WorktreeRepository(),
+                new NotifySendRepository(NOTIFY_SEND, GDBUS, NOTIFY_PATIENCE),
                 Clock.systemDefaultZone());
     }
 
