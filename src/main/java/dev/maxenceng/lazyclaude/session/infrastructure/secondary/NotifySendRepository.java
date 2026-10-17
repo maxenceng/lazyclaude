@@ -18,12 +18,13 @@ import dev.maxenceng.lazyclaude.session.domain.NotificationId;
 /**
  * Shows notifications through {@code notify-send -p}, which prints the id the desktop gave, and replaces one with {@code -r}.
  * {@code notify-send} cannot close one, so that goes over D-Bus through {@code gdbus}. A notification the user already
- * dismissed is closed all the same.
+ * dismissed is closed all the same. The title and body follow {@code --}, so a reason that starts with a dash is not an option.
  */
 public final class NotifySendRepository implements DesktopNotificationPort {
 
     private static final String PRINT_ID = "-p";
     private static final String REPLACE = "-r";
+    private static final String END_OF_OPTIONS = "--";
     private static final List<String> CLOSE_ARGUMENTS = List.of(
             "call",
             "--session",
@@ -58,8 +59,8 @@ public final class NotifySendRepository implements DesktopNotificationPort {
     }
 
     @Override
-    public void replace(NotificationId id, DesktopNotification notification) {
-        run(notifySend, Stream.of(PRINT_ID, REPLACE, id.value()), notification);
+    public NotificationId replace(NotificationId id, DesktopNotification notification) {
+        return idOf(run(notifySend, Stream.of(PRINT_ID, REPLACE, id.value()), notification));
     }
 
     @Override
@@ -76,7 +77,7 @@ public final class NotifySendRepository implements DesktopNotificationPort {
                 Stream.of(
                                 program.stream(),
                                 options,
-                                Stream.of(notification.title().value(), notification.body().value()))
+                                Stream.of(END_OF_OPTIONS, notification.title().value(), notification.body().value()))
                         .flatMap(arguments -> arguments)
                         .toList(),
                 program);

@@ -5,6 +5,7 @@ import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.otherProjectNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.permissionNotification;
+import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.secondNotificationId;
 import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.otherProjectGroup;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.sessionWith;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.elsewhereOf;
@@ -119,6 +120,7 @@ class DesktopNotificationManagerTest {
     @Test
     void shouldReplaceTheNotificationInPlaceWhenPermissionBecomesInput() {
         when(notifications.show(permissionNotification())).thenReturn(notificationId());
+        when(notifications.replace(notificationId(), inputNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
         manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))));
 
@@ -126,6 +128,19 @@ class DesktopNotificationManagerTest {
 
         verify(notifications).replace(notificationId(), inputNotification());
         verify(notifications, times(1)).show(any());
+    }
+
+    @Test
+    void shouldCloseTheIdTheReplacementWasGivenWhenTheSessionIsAnswered() {
+        when(notifications.show(permissionNotification())).thenReturn(notificationId());
+        when(notifications.replace(notificationId(), inputNotification())).thenReturn(secondNotificationId());
+        DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))));
+
+        verify(notifications).close(secondNotificationId());
     }
 
     @Test

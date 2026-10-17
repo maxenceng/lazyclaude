@@ -15,4 +15,15 @@ public sealed interface SessionState permits Busy, YourTurn, WaitingForPermissio
             case Unknown unknown -> Optional.empty();
         };
     }
+
+    /** Why the session waits on you, present only while it does. */
+    default Optional<WaitingFor> waitingFor() {
+        return switch (this) {
+            case WaitingForPermission permission -> Optional.of(permission.reason());
+            case WaitingForInput input -> Optional.of(input.reason());
+            case Busy busy -> Optional.empty();
+            case YourTurn yourTurn -> Optional.empty();
+            case Unknown unknown -> Optional.empty();
+        };
+    }
 }

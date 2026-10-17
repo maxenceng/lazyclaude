@@ -21,7 +21,6 @@ import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.Version;
-import dev.maxenceng.lazyclaude.session.published.WaitingFor;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.WaitingReason;
@@ -218,23 +217,14 @@ final class SessionText {
         return Stream.of(
                         facts.stream().limit(1),
                         Stream.of(fact(PROJECT, place.value())),
-                        reasonOf(session.state())
+                        session.state()
+                                .waitingFor()
                                 .filter(WaitingReason.class::isInstance)
                                 .map(reason -> fact(WAITING_FACT, ((WaitingReason) reason).value()))
                                 .stream(),
                         facts.stream().skip(1))
                 .flatMap(Function.identity())
                 .toList();
-    }
-
-    private static Optional<WaitingFor> reasonOf(SessionState state) {
-        return switch (state) {
-            case WaitingForPermission permission -> Optional.of(permission.reason());
-            case WaitingForInput input -> Optional.of(input.reason());
-            case Busy busy -> Optional.empty();
-            case YourTurn yourTurn -> Optional.empty();
-            case Unknown unknown -> Optional.empty();
-        };
     }
 
     /** The rows of the main view for a past session: its title and that it is past, then cwd, last activity, start time and id. */

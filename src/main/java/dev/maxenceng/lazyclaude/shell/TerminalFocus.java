@@ -3,8 +3,8 @@ package dev.maxenceng.lazyclaude.shell;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Whether the terminal window has focus. It counts as focused until a focus-out arrives, so a terminal that never reports focus
- * never silences a notification by mistake. Callable from any thread.
+ * Whether the terminal window has focus. It counts as focused until a focus-out arrives, so in a terminal that never reports
+ * focus the selected dock tab silences its session even while another window is in front. Callable from any thread.
  */
 final class TerminalFocus {
 

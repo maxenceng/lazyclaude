@@ -71,7 +71,7 @@ class WatchedSessionCommandTest {
         changed.getValue().run();
         changed.getValue().run();
 
-        new WatchedSessionCommand(service).watching(new WatchingSessionPayload(sessionId()));
+        new WatchedSessionCommand(service).watching(new WatchedSessionPayload(sessionId()));
 
         verify(notifications).close(notificationId());
     }
@@ -90,7 +90,7 @@ class WatchedSessionCommandTest {
         verify(watch).watch(changed.capture(), any());
         WatchedSessionCommand command = new WatchedSessionCommand(service);
         changed.getValue().run();
-        command.watching(new WatchingSessionPayload(sessionId()));
+        command.watching(new WatchedSessionPayload(sessionId()));
         changed.getValue().run();
 
         command.watching(new NoWatchedSessionPayload());

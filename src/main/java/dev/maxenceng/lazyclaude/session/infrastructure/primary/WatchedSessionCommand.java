@@ -12,7 +12,7 @@ public final class WatchedSessionCommand {
     }
 
     /** From now on the payload's session is the one in view; any notification it has is closed. May run a process, so not on the render thread. */
-    public void watching(WatchedSessionPayload payload) {
+    public void watching(WatchedPayload payload) {
         sessions.watching(payload.toDomain());
     }
 }

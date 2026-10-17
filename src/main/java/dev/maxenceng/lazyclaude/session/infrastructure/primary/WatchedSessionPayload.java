@@ -1,9 +1,19 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.domain.Watched;
+import dev.maxenceng.lazyclaude.session.domain.WatchedSession;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 
-/** What {@link WatchedSessionCommand} is told: the session the user looks at, or that there is none. */
-public sealed interface WatchedSessionPayload permits WatchingSessionPayload, NoWatchedSessionPayload {
+/** The user looks at this live session: its dock tab is selected while the dock and the terminal have focus. */
+public record WatchedSessionPayload(SessionId session) implements WatchedPayload {
 
-    Watched toDomain();
+    public WatchedSessionPayload {
+        Assert.notNull("session id", session);
+    }
+
+    @Override
+    public Watched toDomain() {
+        return new WatchedSession(session);
+    }
 }

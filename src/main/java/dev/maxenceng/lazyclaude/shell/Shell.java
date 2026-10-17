@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,9 +50,9 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionPayload;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchingSessionPayload;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
@@ -149,7 +150,8 @@ public final class Shell extends ToolkitApp {
     private final HostedSessionCommand hosting;
     private final WatchedSessionCommand watching;
     private final TerminalFocus terminalFocus = new TerminalFocus(this::terminalFocusChanged);
-    private WatchedSessionPayload lastWatched = new NoWatchedSessionPayload();
+    private WatchedPayload lastWatched = new NoWatchedSessionPayload();
+    private CompletableFuture<Void> watchUpdates = CompletableFuture.completedFuture(null);
     private final SessionQuery screens;
     private final BoardQuery boards;
     private final DocsQuery docsQuery;
@@ -441,18 +443,19 @@ public final class Shell extends ToolkitApp {
 
     /**
      * Tells {@code session} which session is in view, when that changed: the selected dock tab's live session while the dock and the
-     * terminal both have focus. It runs a process when it closes a notification, so off the render thread.
+     * terminal both have focus. It runs a process when it closes a notification, so off the render thread, and each change waits
+     * for the one before it: otherwise an earlier one could land last and leave a session watched that no longer is.
      */
     private void syncWatched() {
-        WatchedSessionPayload now = inSession() && terminalFocus.focused()
+        WatchedPayload now = inSession() && terminalFocus.focused()
                 ? dock.selectedTab()
                         .flatMap(HostedSessionView::live)
-                        .<WatchedSessionPayload>map(live -> new WatchingSessionPayload(live.id()))
+                        .<WatchedPayload>map(live -> new WatchedSessionPayload(live.id()))
                         .orElseGet(NoWatchedSessionPayload::new)
                 : new NoWatchedSessionPayload();
         if (!now.equals(lastWatched)) {
             lastWatched = now;
-            background.execute(() -> watching.watching(now));
+            watchUpdates = watchUpdates.exceptionally(failed -> null).thenRunAsync(() -> watching.watching(now), background);
         }
     }
 

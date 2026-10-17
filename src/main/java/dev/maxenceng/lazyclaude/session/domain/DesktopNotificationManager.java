@@ -5,16 +5,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
-import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingFor;
-import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
-import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.WaitingReason;
-import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WarnOnce;
 import dev.maxenceng.lazyclaude.shared.domain.Warning;
@@ -71,10 +66,10 @@ public final class DesktopNotificationManager {
         if (was.filter(session.state()::equals).isPresent()) {
             return;
         }
-        Optional<WaitingFor> reason = reasonOf(session.state());
+        Optional<WaitingFor> reason = session.state().waitingFor();
         if (reason.isEmpty()) {
             closeFor(session.id());
-        } else if (was.flatMap(DesktopNotificationManager::reasonOf).isPresent()) {
+        } else if (was.flatMap(SessionState::waitingFor).isPresent()) {
             replaceFor(session.id(), notificationOf(placed, reason.get()));
         } else if (!watched.get().watches(session.id())) {
             fireFor(session.id(), notificationOf(placed, reason.get()));
@@ -91,7 +86,9 @@ public final class DesktopNotificationManager {
 
     private void replaceFor(SessionId session, DesktopNotification notification) {
         try {
-            open.of(session).ifPresent(id -> notifications.replace(id, notification));
+            open.of(session)
+                    .map(id -> notifications.replace(id, notification))
+                    .ifPresent(id -> open.opened(session, id));
         } catch (DesktopNotificationUnavailableException failure) {
             warn(failure);
         }
@@ -121,12 +118,4 @@ public final class DesktopNotificationManager {
                 .build();
     }
 
-    /** Why the session waits on you, present only while it does. */
-    private static Optional<WaitingFor> reasonOf(SessionState state) {
-        return switch (state) {
-            case WaitingForPermission permission -> Optional.of(permission.reason());
-            case WaitingForInput input -> Optional.of(input.reason());
-            case Busy _, YourTurn _, Unknown _ -> Optional.empty();
-        };
-    }
 }

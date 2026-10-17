@@ -218,6 +218,24 @@ final class ShellFixture {
 
     static Shell shellHosting(
             SessionsView sessions, HostedSessionCommand hosting, WatchedSessionCommand watching, SessionQuery screens) {
+        return shellHosting(sessions, hosting, watching, screens, Runnable::run);
+    }
+
+    static Shell shellInDockRunningOn(SessionsView sessions, WatchedSessionCommand watching, Executor background) {
+        Shell shell = shellHosting(
+                sessions, mock(HostedSessionCommand.class, ShellFixture::noHostStarted), watching, blankScreens(), background);
+        Screen.of(shell);
+        shell.press(alt('l'));
+        shell.press(alt('j'));
+        return shell;
+    }
+
+    private static Shell shellHosting(
+            SessionsView sessions,
+            HostedSessionCommand hosting,
+            WatchedSessionCommand watching,
+            SessionQuery screens,
+            Executor background) {
         return new Shell(
                 boardViewOf(ticketView()),
                 emptyDocsView(),
@@ -229,7 +247,7 @@ final class ShellFixture {
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
-                Runnable::run);
+                background);
     }
 
     static Shell shellInDock(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {

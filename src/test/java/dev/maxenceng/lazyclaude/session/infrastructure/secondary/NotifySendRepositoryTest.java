@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
+import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.secondNotificationId;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.FakeClaudeFixture.missingCommand;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.FakeCommandFixture.argumentsGiven;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.FakeCommandFixture.commandFailing;
@@ -38,7 +39,7 @@ class NotifySendRepositoryTest {
         assertThat(new NotifySendRepository(List.of(notifySend.toString()), List.of(gdbus.toString()), PATIENCE)
                         .show(inputNotification()))
                 .isEqualTo(notificationId());
-        assertThat(argumentsGiven(root, "notify-send")).containsExactly("-p app · lazyclaude-b6 input needed");
+        assertThat(argumentsGiven(root, "notify-send")).containsExactly("-p -- app · lazyclaude-b6 input needed");
     }
 
     @Test
@@ -49,7 +50,18 @@ class NotifySendRepositoryTest {
         new NotifySendRepository(List.of(notifySend.toString()), List.of(gdbus.toString()), PATIENCE)
                 .replace(notificationId(), inputNotification());
 
-        assertThat(argumentsGiven(root, "notify-send")).containsExactly("-p -r 42 app · lazyclaude-b6 input needed");
+        assertThat(argumentsGiven(root, "notify-send")).containsExactly("-p -r 42 -- app · lazyclaude-b6 input needed");
+    }
+
+    @Test
+    void shouldAnswerTheNewIdWhenTheReplacedNotificationWasAlreadyDismissed() throws IOException {
+        Path notifySend = commandPrinting(root, "notify-send", "43");
+        Path gdbus = commandPrinting(root, "gdbus", "()");
+
+        assertThat(new NotifySendRepository(List.of(notifySend.toString()), List.of(gdbus.toString()), PATIENCE)
+                        .replace(notificationId(), inputNotification()))
+                .as("the desktop gives a new id when the one replaced is gone, and only that one can be closed later")
+                .isEqualTo(secondNotificationId());
     }
 
     @Test
