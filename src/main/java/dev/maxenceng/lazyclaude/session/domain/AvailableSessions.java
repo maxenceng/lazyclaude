@@ -69,7 +69,7 @@ public record AvailableSessions(
                 .findFirst();
     }
 
-    @Override
+    /** The names of the live sessions whose directory is {@code worktree} or below it, hosted ones that are still starting included. */
     public List<SessionName> namesIn(WorkingDirectory worktree) {
         Stream<SessionName> registered = Stream.concat(
                         live.stream(), elsewhere.stream().flatMap(group -> group.sessions().stream()))

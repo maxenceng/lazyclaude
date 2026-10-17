@@ -23,7 +23,8 @@ would be lost. Carrying it out needed three choices the decision left open.
 - **The ticket worktree is the directory at the project's path that git lists**, whatever branch it is on, since the close-out branch is
   checked out there too. `WorktreeState` is one value: the detail row, the refusal and the removal all read it, and the removal judges it
   again at the yes. Live sessions are counted from the watcher's last push with the hosted ones as they are now (a session started in the
-  worktree within one tick is not seen: a `deferred:` on `worktreeOf`); the registry being unreadable leaves the hosted ones.
+  worktree within one tick is not seen: a `deferred:` on `worktreeOf`). When the sessions cannot be read at all, the state is *no sessions
+  read*, which refuses as *no merged pull request* does: the hosted sessions alone would miss a `claude` started outside lazyclaude.
 - **A hosted `/ticket done` session's end reaches the shell as a callback** (`SessionQuery.onTicketDoneEnded`), raised by
   `HostedSessionManager` only for a session started with that verb, however it exited. The shell reads the board again, and only when
   the ticket now reads `done` runs the same check as `d`. `session` never reads `board`; `board` stays the owner of `done`.
@@ -36,4 +37,5 @@ would be lost. Carrying it out needed three choices the decision left open.
 
 - A merge older than the 100 newest merged pull requests reads as *no merged pull request*, so its worktree is never offered for removal.
 - Each selection of a ticket runs `git worktree list`, `git status` and `git rev-list` once, off the render thread.
+- While neither the registry nor `claude agents --json` answers, no worktree is offered for removal, even one nothing runs in.
 - Untracked files make a worktree dirty, so a scratch file blocks removal until the user deals with it; nothing is forced or stashed.

@@ -43,6 +43,7 @@ import dev.maxenceng.lazyclaude.review.published.NoMergedHead;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.FailedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoMergedPullRequestView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoSessionsReadView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RefusedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemovedWorktreeView;
@@ -231,6 +232,16 @@ class ShellWorktreeTest {
     }
 
     @Test
+    void shouldSayItCannotTellWhichSessionsAreInTheWorktreeWhenTheyCannotBeRead() {
+        Shell shell = shellOnDoneTicketWithWorktree(heldWorktreeView(new NoSessionsReadView(), false), removing);
+
+        shell.press(key('d'));
+
+        assertThat(Screen.of(shell).statusLine()).doesNotContain("remove worktree");
+        assertThat(Screen.of(shell).lines().getLast()).contains("cannot remove: cannot tell which sessions are in it");
+    }
+
+    @Test
     void shouldNameTheLiveSessionsInTheWorktree() {
         Shell shell = shellOnDoneTicketWithWorktree(heldWorktreeView(occupiedWorktreeContentsView(), false), removing);
 
@@ -401,6 +412,13 @@ class ShellWorktreeTest {
         Shell shell = shellOnDoneTicketWithWorktree(heldWorktreeView(new NoMergedPullRequestView(), false), removing);
 
         assertThat(Screen.of(shell).text()).contains("no merged pull request");
+    }
+
+    @Test
+    void shouldShowThatNoSessionsWereReadInTheTicketDetail() {
+        Shell shell = shellOnDoneTicketWithWorktree(heldWorktreeView(new NoSessionsReadView(), false), removing);
+
+        assertThat(Screen.of(shell).text()).contains("no sessions read");
     }
 
     @Test

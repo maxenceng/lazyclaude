@@ -4,6 +4,7 @@ import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCo
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.domain.CommitIdFixture.commitId;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedIn;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ticketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.worktreePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryOver;
@@ -123,6 +124,15 @@ class SessionQueryWorktreeTest {
 
         assertThat(query.worktreeOf(worktreePayload(new NoMergedHead())))
                 .isEqualTo(heldWorktreeView(new NoMergedPullRequestView(), false));
+    }
+
+    @Test
+    void shouldViewNoSessionsReadWhenTheSessionsCannotBeRead() {
+        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
+        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
+
+        assertThat(query.worktreeOf(worktreePayload(headCommit())))
+                .isEqualTo(heldWorktreeView(new NoSessionsReadView(), false));
     }
 
     @Test

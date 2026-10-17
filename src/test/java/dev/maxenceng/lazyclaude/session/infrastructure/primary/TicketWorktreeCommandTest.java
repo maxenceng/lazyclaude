@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedIn;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.worktreePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.ticketWorktreeCommand;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.dirtyWorktreeContentsView;
@@ -86,6 +87,15 @@ class TicketWorktreeCommandTest {
 
         assertThat(command.remove(worktreePayload(new NoMergedHead())))
                 .isEqualTo(new RefusedRemovalView(new NoMergedPullRequestView()));
+        verify(worktrees, never()).remove(any(), any());
+    }
+
+    @Test
+    void shouldRefuseAWorktreeWhenTheSessionsCannotBeRead() {
+        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
+
+        assertThat(command.remove(worktreePayload(headCommit())))
+                .isEqualTo(new RefusedRemovalView(new NoSessionsReadView()));
         verify(worktrees, never()).remove(any(), any());
     }
 

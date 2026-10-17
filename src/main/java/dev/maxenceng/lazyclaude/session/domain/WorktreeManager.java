@@ -9,7 +9,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * Judges a ticket worktree against its merged pull request and removes it only when nothing stands in it: no dirty path, no commit
- * beyond the merged head that no remote ref has, no live session. The state that refuses is the state shown, and it is read again at
+ * beyond the merged head that no remote ref has, no live session. Sessions that cannot be read refuse it as a merge that cannot be
+ * read does. The state that refuses is the state shown, and it is read again at
  * the removal, since it may have changed since it was shown.
  */
 public record WorktreeManager(WorktreePort worktrees) {
@@ -39,11 +40,15 @@ public record WorktreeManager(WorktreePort worktrees) {
         return switch (merged) {
             case NoMergedHead _ -> new NoMergedPullRequest();
             case HeadCommit head ->
-                WorktreeContents.builder()
-                        .dirtyPaths(worktrees.dirtyPaths(at))
-                        .commitsBeyondMerge(worktrees.commitsBeyond(at, head))
-                        .sessions(sessions.namesIn(at))
-                        .build();
+                switch (sessions) {
+                    case UnavailableSessions _ -> new NoSessionsRead();
+                    case AvailableSessions available ->
+                        WorktreeContents.builder()
+                                .dirtyPaths(worktrees.dirtyPaths(at))
+                                .commitsBeyondMerge(worktrees.commitsBeyond(at, head))
+                                .sessions(available.namesIn(at))
+                                .build();
+                };
         };
     }
 }

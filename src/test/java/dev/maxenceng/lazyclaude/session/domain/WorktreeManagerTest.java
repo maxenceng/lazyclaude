@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
 import static dev.maxenceng.lazyclaude.session.domain.CommitIdFixture.commitId;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.nowhereTicketWorktree;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketWorktree;
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeManagerFixture.noSessionsInTheWorktree;
@@ -63,6 +64,15 @@ class WorktreeManagerTest {
 
         assertThat(manager.held(ticketWorktree(), new NoMergedHead(), noSessionsInTheWorktree()))
                 .contains(heldWorktree(new NoMergedPullRequest()));
+        verifyNoMoreInteractions(worktrees);
+    }
+
+    @Test
+    void shouldJudgeAWorktreeWhoseSessionsCannotBeReadWithoutReadingIt() {
+        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
+
+        assertThat(manager.held(ticketWorktree(), headCommit(), unavailableSessions()))
+                .contains(heldWorktree(new NoSessionsRead()));
         verifyNoMoreInteractions(worktrees);
     }
 
@@ -136,6 +146,17 @@ class WorktreeManagerTest {
                 .isInstanceOfSatisfying(
                         WorktreeNotClearException.class,
                         refused -> assertThat(refused.state()).isEqualTo(new NoMergedPullRequest()));
+        verify(worktrees, never()).remove(any(), any());
+    }
+
+    @Test
+    void shouldRefuseToRemoveAWorktreeWhenTheSessionsCannotBeRead() {
+        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
+
+        assertThatThrownBy(() -> manager.remove(ticketWorktree(), headCommit(), unavailableSessions()))
+                .isInstanceOfSatisfying(
+                        WorktreeNotClearException.class,
+                        refused -> assertThat(refused.state()).isEqualTo(new NoSessionsRead()));
         verify(worktrees, never()).remove(any(), any());
     }
 

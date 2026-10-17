@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HeldWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoMergedPullRequestView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoSessionsReadView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadableWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeContentsView;
@@ -36,6 +37,8 @@ final class WorktreeText {
     private static final String LIVE_SESSION = "live session";
     private static final String NO_MERGED_PULL_REQUEST = "no merged pull request";
     private static final String CANNOT_TELL = "cannot tell what the merge covered (no merged pull request found for the branch)";
+    private static final String NO_SESSIONS_READ = "no sessions read";
+    private static final String CANNOT_TELL_SESSIONS = "cannot tell which sessions are in it (the sessions could not be read)";
     private static final String ONE_SESSION = "live session %s is in the worktree";
     private static final String MANY_SESSIONS = "live sessions %s are in the worktree";
     private static final String QUOTED = "\"%s\"";
@@ -84,6 +87,7 @@ final class WorktreeText {
                                 .flatMap(Function.identity())
                                 .collect(Collectors.joining(REASON_SEPARATOR));
                     case NoMergedPullRequestView _ -> CANNOT_TELL;
+                    case NoSessionsReadView _ -> CANNOT_TELL_SESSIONS;
                 });
     }
 
@@ -100,6 +104,7 @@ final class WorktreeText {
                 yield parts.isEmpty() ? CLEAN : parts;
             }
             case NoMergedPullRequestView _ -> NO_MERGED_PULL_REQUEST;
+            case NoSessionsReadView _ -> NO_SESSIONS_READ;
         };
     }
 
