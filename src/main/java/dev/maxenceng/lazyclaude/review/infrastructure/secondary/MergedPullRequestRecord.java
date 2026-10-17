@@ -1,9 +1,9 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.secondary;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
-import dev.maxenceng.lazyclaude.review.domain.HeadCommit;
 import dev.maxenceng.lazyclaude.review.domain.MergedPullRequest;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
+import dev.maxenceng.lazyclaude.review.published.HeadCommit;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 
 /** One merged pull request as {@code gh pr list --json} writes it, null where the JSON lacks it. */

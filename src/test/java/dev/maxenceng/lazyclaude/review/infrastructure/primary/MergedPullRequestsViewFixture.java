@@ -1,5 +1,10 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBranch;
+import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.siblingHeadBranch;
+import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
+import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.secondHeadCommit;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -9,7 +14,15 @@ public final class MergedPullRequestsViewFixture {
 
     private MergedPullRequestsViewFixture() {}
 
-    public static MergedPullRequestsView mergedPullRequestsViewOf(HeadBranch... heads) {
+    public static MergedHeadView mergedHeadView() {
+        return MergedHeadView.builder().branch(headBranch()).commit(headCommit()).build();
+    }
+
+    public static MergedHeadView siblingMergedHeadView() {
+        return MergedHeadView.builder().branch(siblingHeadBranch()).commit(secondHeadCommit()).build();
+    }
+
+    public static MergedPullRequestsView mergedPullRequestsViewOf(MergedHeadView... heads) {
         return new MergedPullRequestsView(List.of(heads));
     }
 
@@ -18,6 +31,8 @@ public final class MergedPullRequestsViewFixture {
     }
 
     public static MergedPullRequestsView mergedPullRequestsViewOn(String... heads) {
-        return new MergedPullRequestsView(Arrays.stream(heads).map(HeadBranch::new).toList());
+        return new MergedPullRequestsView(Arrays.stream(heads)
+                .map(head -> MergedHeadView.builder().branch(new HeadBranch(head)).commit(headCommit()).build())
+                .toList());
     }
 }

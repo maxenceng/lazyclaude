@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.review.domain;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
+import dev.maxenceng.lazyclaude.review.published.HeadCommit;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 
 /** A pull request on this repository, not from a fork, that GitHub reports merged: its head branch, and the commit that head was at. */

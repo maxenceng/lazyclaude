@@ -1,9 +1,9 @@
 package dev.maxenceng.lazyclaude.review.domain;
 
-import static dev.maxenceng.lazyclaude.review.domain.HeadCommitFixture.headCommit;
-import static dev.maxenceng.lazyclaude.review.domain.HeadCommitFixture.secondHeadCommit;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBranch;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.siblingHeadBranch;
+import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
+import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.secondHeadCommit;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.secondPullRequestNumber;
 
