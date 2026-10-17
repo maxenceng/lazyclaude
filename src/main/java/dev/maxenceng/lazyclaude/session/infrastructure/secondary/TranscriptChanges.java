@@ -4,14 +4,14 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
-/** What one drain of the watch saw: the transcripts that changed, or that the watch overflowed and every one must be re-stated. */
-record TranscriptChanges(boolean overflowed, List<Path> files) {
+/** What one drain of the watch saw: the transcripts that changed, or that every one must be re-stated, after an overflow or a new folder. */
+record TranscriptChanges(boolean everything, List<Path> files) {
 
     static TranscriptChanges none() {
         return new TranscriptChanges(false, List.of());
     }
 
-    static TranscriptChanges overflow() {
+    static TranscriptChanges everythingChanged() {
         return new TranscriptChanges(true, List.of());
     }
 
@@ -21,6 +21,6 @@ record TranscriptChanges(boolean overflowed, List<Path> files) {
 
     TranscriptChanges and(TranscriptChanges other) {
         return new TranscriptChanges(
-                overflowed || other.overflowed, Stream.concat(files.stream(), other.files.stream()).toList());
+                everything || other.everything, Stream.concat(files.stream(), other.files.stream()).toList());
     }
 }

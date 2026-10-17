@@ -30,6 +30,7 @@ they were rewritten.
 - State a field holds is not covered: a manager's open sessions, the warnings raised, the watcher's registrations,
   the transcript cache. Each is the object's state rather than a value being built, and can still be changed in place
   until review asks for one of them to be immutable.
-- A loop that must throw a checked exception keeps its `for` and reassigns an immutable value instead of adding, as
-  the transcript watch's `process` does.
+- A loop that must throw a checked exception keeps its `for`, but reassigns nothing, as the transcript watch's
+  `watchFolders` does. Folding a result over a loop needs a stream, so the transcript watch registers folders only
+  there, and a folder created in its root re-states every transcript as an overflow does.
 - A collection mutated through a local alias of a field, or through a method other than the ones named, is not caught.
