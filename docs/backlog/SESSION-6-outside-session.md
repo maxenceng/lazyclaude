@@ -1,6 +1,6 @@
 ---
 id: SESSION-6
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 83
@@ -112,3 +112,10 @@ With a conflict, the body names the file and line that sets the key and the popu
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-5](LAZY-5-kitty-remote-control.md), [LAZY-7](LAZY-7-handing-over-to-a-session.md). Falls back to tmux under `$TMUX`.
+
+Closed after [#32](https://github.com/maxenceng/lazyclaude/pull/32). ADR 0035 records reading where a session lives from its own environment, tmux first. ADR 0036 records the `kitty.conf` edit and its conflict rule, ADR 0037 what the transcript view shows. What the code will not show:
+
+- Nothing was run against a real kitty or tmux. The jump and the `kitty.conf` adapters are tested over fake `kitten`/`tmux` scripts, so the first real jump is also the first test of the command lines.
+- Review widened two criteria: `socket` and `yes` count as allowing socket control, and `$XDG_CONFIG_HOME/kitty/kitty.conf` is looked at between `$KITTY_CONFIG_DIRECTORY` and `~/.config/kitty`, as kitty does.
+- A transcript read that lands after its session was selected again is dropped. Before review it replaced the whole transcript with its own tail. A transcript rewritten in place is only partly detected, and the rest is deferred in ADR 0037.
+- `kitten` is a new runtime dependency that `make doctor` does not check. A missing one only shows up as the jump's warning.
