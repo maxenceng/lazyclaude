@@ -133,7 +133,7 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
                 try {
                     TranscriptChanges changes = drain(service.get());
                     pending = pending.changed(changes.files(), Instant.now());
-                    everything = changes.overflowed() | rescanRequested(Duration.ZERO);
+                    everything = changes.everything() | rescanRequested(Duration.ZERO);
                 } catch (IOException cannotWatchFolder) {
                     closeQuietly(service.get());
                     giveUpWatching(cannotWatchFolder, fallback);
@@ -163,54 +163,54 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
     }
 
     private TranscriptChanges drain(WatchService service) throws InterruptedException, IOException {
-        TranscriptChanges changes = TranscriptChanges.none();
-        WatchKey key = keys.next(service, TICK);
-        while (key != null) {
-            changes = changes.and(process(key, service));
-            key = keys.next(service, Duration.ZERO);
-        }
-        if (changes.overflowed()) {
+        TranscriptChanges changes = Stream.iterate(
+                        Optional.ofNullable(keys.next(service, TICK)), Optional::isPresent, _ -> nextNow(service))
+                .flatMap(Optional::stream)
+                .map(this::process)
+                .reduce(TranscriptChanges.none(), TranscriptChanges::and);
+        if (changes.everything()) {
             watchFolders(service);
         }
         return changes;
     }
 
-    // A loop, not a stream: registering throws IOException, which a lambda cannot throw and the build forbids wrapping.
-    @SuppressWarnings("PMD.UseStreamsNotForLoops")
-    private TranscriptChanges process(WatchKey key, WatchService service) throws IOException {
-        TranscriptChanges changes = TranscriptChanges.none();
-        Path directory = (Path) key.watchable();
-        for (WatchEvent<?> event : key.pollEvents()) {
-            if (event.kind() == OVERFLOW) {
-                changes = changes.and(TranscriptChanges.overflow());
-            } else if (event.context() instanceof Path name) {
-                Path changed = directory.resolve(name);
-                if (directory.equals(transcriptsRoot)) {
-                    changes = changes.and(adoptFolder(changed, event.kind() == ENTRY_CREATE, service));
-                } else if (TranscriptFile.isTranscript(changed)) {
-                    changes = changes.and(TranscriptChanges.of(List.of(changed)));
-                }
-            }
+    /** The next key already signalled; an interrupt ends the drain, and the watch loop stops on the flag it leaves. */
+    private Optional<WatchKey> nextNow(WatchService service) {
+        try {
+            return Optional.ofNullable(keys.next(service, Duration.ZERO));
+        } catch (InterruptedException stopped) {
+            Thread.currentThread().interrupt();
+            return Optional.empty();
         }
+    }
+
+    private TranscriptChanges process(WatchKey key) {
+        Path directory = (Path) key.watchable();
+        TranscriptChanges changes = key.pollEvents().stream()
+                .map(event -> changeOf(directory, event))
+                .reduce(TranscriptChanges.none(), TranscriptChanges::and);
         key.reset();
         return changes;
     }
 
-    // deferred: a folder removed between its create event and its registration gives up the whole watch for polling, with a warning that blames the watch limit — close it when that warning is seen without the limit reached.
-    private TranscriptChanges adoptFolder(Path folder, boolean created, WatchService service) throws IOException {
-        if (!created || !Files.isDirectory(folder)) {
+    /**
+     * A folder created in the root re-states every transcript, as an overflow does: the rescan that follows watches the new
+     * folder and reads what it already holds, so registering stays in one place.
+     */
+    private TranscriptChanges changeOf(Path directory, WatchEvent<?> event) {
+        if (event.kind() == OVERFLOW) {
+            return TranscriptChanges.everythingChanged();
+        }
+        if (!(event.context() instanceof Path name)) {
             return TranscriptChanges.none();
         }
-        folder.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
-        return TranscriptChanges.of(transcriptsIn(folder));
-    }
-
-    private static List<Path> transcriptsIn(Path folder) throws IOException {
-        try (Stream<Path> files = Files.list(folder)) {
-            return files.filter(TranscriptFile::isTranscript).toList();
-        } catch (UncheckedIOException e) {
-            throw e.getCause();
+        Path changed = directory.resolve(name);
+        if (directory.equals(transcriptsRoot)) {
+            return event.kind() == ENTRY_CREATE && Files.isDirectory(changed)
+                    ? TranscriptChanges.everythingChanged()
+                    : TranscriptChanges.none();
         }
+        return TranscriptFile.isTranscript(changed) ? TranscriptChanges.of(List.of(changed)) : TranscriptChanges.none();
     }
 
     private Optional<WatchService> watchOver(PollingFallback fallback) {
@@ -237,6 +237,7 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
     }
 
     /** Watches every folder; one already watched keeps its key, so this also catches a folder whose creation an overflow lost. */
+    // deferred: a folder removed between its listing and its registration gives up the whole watch for polling, with a warning that blames the watch limit — close it when that warning is seen without the limit reached.
     // A loop, not a stream: registering throws IOException, which a lambda cannot throw and the build forbids wrapping.
     @SuppressWarnings("PMD.UseStreamsNotForLoops")
     private void watchFolders(WatchService service) throws IOException {
