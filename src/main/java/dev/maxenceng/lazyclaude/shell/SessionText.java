@@ -1,9 +1,9 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
@@ -184,18 +184,24 @@ final class SessionText {
 
     /** The rows of the main view for a session: its name and state, then cwd, pid, start time and, when its source says, version. */
     static List<DetailRow> facts(LiveSessionView session) {
-        List<DetailRow> rows = new ArrayList<>();
-        rows.add(new DetailRow(
-                HEADING_FORMAT.formatted(session.name().value(), glyph(session.state()), label(session.state())),
-                Style.EMPTY.bold()));
-        rows.add(fact(CWD, session.directory().toString()));
-        rows.add(fact(PID, Long.toString(session.pid().value())));
-        rows.add(fact(STARTED_FACT, STARTED_FORMAT.formatted(STARTED.format(session.startedAt()), session.age().label())));
-        switch (session.version()) {
-            case Version version -> rows.add(fact(VERSION, version.value()));
-            case NoVersion none -> {}
-        }
-        return rows;
+        Stream<DetailRow> version = switch (session.version()) {
+            case Version known -> Stream.of(fact(VERSION, known.value()));
+            case NoVersion none -> Stream.empty();
+        };
+        return Stream.concat(
+                        Stream.of(
+                                new DetailRow(
+                                        HEADING_FORMAT.formatted(
+                                                session.name().value(), glyph(session.state()), label(session.state())),
+                                        Style.EMPTY.bold()),
+                                fact(CWD, session.directory().toString()),
+                                fact(PID, Long.toString(session.pid().value())),
+                                fact(
+                                        STARTED_FACT,
+                                        STARTED_FORMAT.formatted(
+                                                STARTED.format(session.startedAt()), session.age().label()))),
+                        version)
+                .toList();
     }
 
     /** The rows of the main view for a past session: its title and that it is past, then cwd, last activity, start time and id. */

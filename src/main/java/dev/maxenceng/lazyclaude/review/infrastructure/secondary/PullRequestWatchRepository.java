@@ -53,7 +53,7 @@ public final class PullRequestWatchRepository implements PullRequestWatchPort, A
     // deferred: it fetches while the terminal is unfocused too — close it when SESSION-7 decodes ?1004 focus events and the timer can pause.
     private void loop(Runnable refresh) {
         try {
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 running.set(true);
                 try {
                     refresh.run();

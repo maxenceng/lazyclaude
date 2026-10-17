@@ -16,9 +16,7 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Semaphore;
@@ -128,12 +126,14 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
             RootFallback root)
             throws InterruptedException {
         Optional<WatchService> service = initial;
-        Map<Path, Instant> pending = new HashMap<>();
-        while (true) {
+        PendingTranscripts pending = PendingTranscripts.none();
+        while (!Thread.currentThread().isInterrupted()) {
             boolean everything = false;
             if (service.isPresent()) {
                 try {
-                    everything = drain(service.get(), pending) | rescanRequested(Duration.ZERO);
+                    TranscriptChanges changes = drain(service.get());
+                    pending = pending.changed(changes.files(), Instant.now());
+                    everything = changes.overflowed() | rescanRequested(Duration.ZERO);
                 } catch (IOException cannotWatchFolder) {
                     closeQuietly(service.get());
                     giveUpWatching(cannotWatchFolder, fallback);
@@ -143,11 +143,14 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
                 rescanRequested(pollInterval);
                 everything = true;
             }
+            List<Path> settled = pending.quietSince(Instant.now().minus(settle));
             if (everything) {
-                pending.clear();
+                pending = PendingTranscripts.none();
                 transcripts.rescanAll(locator, cache, root);
                 changed.run();
-            } else if (settleInto(pending, locator, cache)) {
+            } else if (!settled.isEmpty()) {
+                pending = pending.without(settled);
+                transcripts.rescan(settled, locator, cache);
                 changed.run();
             }
         }
@@ -159,61 +162,47 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
         return rescans.drainPermits() > 0 || asked;
     }
 
-    private boolean settleInto(Map<Path, Instant> pending, TranscriptLocator locator, CacheFallback cache) {
-        Instant quietSince = Instant.now().minus(settle);
-        List<Path> settled = pending.entrySet().stream()
-                .filter(change -> !change.getValue().isAfter(quietSince))
-                .map(Map.Entry::getKey)
-                .toList();
-        if (settled.isEmpty()) {
-            return false;
-        }
-        settled.forEach(pending::remove);
-        transcripts.rescan(settled, locator, cache);
-        return true;
-    }
-
-    private boolean drain(WatchService service, Map<Path, Instant> pending) throws InterruptedException, IOException {
-        boolean everything = false;
+    private TranscriptChanges drain(WatchService service) throws InterruptedException, IOException {
+        TranscriptChanges changes = TranscriptChanges.none();
         WatchKey key = keys.next(service, TICK);
         while (key != null) {
-            everything |= process(key, service, pending);
+            changes = changes.and(process(key, service));
             key = keys.next(service, Duration.ZERO);
         }
-        if (everything) {
+        if (changes.overflowed()) {
             watchFolders(service);
         }
-        return everything;
+        return changes;
     }
 
     // A loop, not a stream: registering throws IOException, which a lambda cannot throw and the build forbids wrapping.
     @SuppressWarnings("PMD.UseStreamsNotForLoops")
-    private boolean process(WatchKey key, WatchService service, Map<Path, Instant> pending) throws IOException {
-        boolean everything = false;
+    private TranscriptChanges process(WatchKey key, WatchService service) throws IOException {
+        TranscriptChanges changes = TranscriptChanges.none();
         Path directory = (Path) key.watchable();
         for (WatchEvent<?> event : key.pollEvents()) {
             if (event.kind() == OVERFLOW) {
-                everything = true;
+                changes = changes.and(TranscriptChanges.overflow());
             } else if (event.context() instanceof Path name) {
                 Path changed = directory.resolve(name);
                 if (directory.equals(transcriptsRoot)) {
-                    adoptFolder(changed, event.kind() == ENTRY_CREATE, service, pending);
+                    changes = changes.and(adoptFolder(changed, event.kind() == ENTRY_CREATE, service));
                 } else if (TranscriptFile.isTranscript(changed)) {
-                    pending.put(changed, Instant.now());
+                    changes = changes.and(TranscriptChanges.of(List.of(changed)));
                 }
             }
         }
         key.reset();
-        return everything;
+        return changes;
     }
 
     // deferred: a folder removed between its create event and its registration gives up the whole watch for polling, with a warning that blames the watch limit — close it when that warning is seen without the limit reached.
-    private void adoptFolder(Path folder, boolean created, WatchService service, Map<Path, Instant> pending)
-            throws IOException {
-        if (created && Files.isDirectory(folder)) {
-            folder.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
-            transcriptsIn(folder).forEach(file -> pending.put(file, Instant.now()));
+    private TranscriptChanges adoptFolder(Path folder, boolean created, WatchService service) throws IOException {
+        if (!created || !Files.isDirectory(folder)) {
+            return TranscriptChanges.none();
         }
+        folder.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
+        return TranscriptChanges.of(transcriptsIn(folder));
     }
 
     private static List<Path> transcriptsIn(Path folder) throws IOException {

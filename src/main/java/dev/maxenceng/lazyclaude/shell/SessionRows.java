@@ -1,9 +1,10 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.AvailableSessionsView;
@@ -48,43 +49,47 @@ final class SessionRows {
     }
 
     private List<SessionRow> rowsOf(AvailableSessionsView available) {
-        List<SessionRow> rows = new ArrayList<>();
-        ticket.ifPresent(selectedTicket -> addTicketSection(rows, available, selectedTicket));
-        addUnlinkedSection(rows, available);
-        return rows;
+        return Stream.concat(
+                        ticket.stream().flatMap(selectedTicket -> ticketSection(available, selectedTicket)),
+                        unlinkedSection(available))
+                .toList();
     }
 
-    private void addTicketSection(List<SessionRow> rows, AvailableSessionsView available, LinkedTicketId selectedTicket) {
-        rows.add(new SectionHeaderRow(selectedTicket.value()));
-        int header = rows.size();
-        available.live().stream()
-                .flatMap(session -> session.linkTo(selectedTicket).map(link -> new LiveSessionRow(session, Optional.of(link))).stream())
-                .forEach(rows::add);
-        available.past().stream()
-                .flatMap(session -> session.linkTo(selectedTicket).map(link -> new PastSessionRow(session, Optional.of(link))).stream())
-                .forEach(rows::add);
-        available.hosted().stream()
-                .filter(tab -> tab.live().isEmpty() && tab.ticket().filter(selectedTicket::equals).isPresent())
-                .forEach(tab -> rows.add(new StartingSessionRow(tab)));
-        if (rows.size() == header) {
-            rows.add(new NoSessionRow(selectedTicket));
-        }
-        offered.ifPresent(verb -> rows.add(new NewSessionRow(selectedTicket, verb)));
+    private Stream<SessionRow> ticketSection(AvailableSessionsView available, LinkedTicketId selectedTicket) {
+        List<SessionRow> linked = Stream.of(
+                        available.live().stream()
+                                .flatMap(session -> session.linkTo(selectedTicket)
+                                        .<SessionRow>map(link -> new LiveSessionRow(session, Optional.of(link)))
+                                        .stream()),
+                        available.past().stream()
+                                .flatMap(session -> session.linkTo(selectedTicket)
+                                        .<SessionRow>map(link -> new PastSessionRow(session, Optional.of(link)))
+                                        .stream()),
+                        available.hosted().stream()
+                                .filter(tab -> tab.live().isEmpty() && tab.ticket().filter(selectedTicket::equals).isPresent())
+                                .<SessionRow>map(StartingSessionRow::new))
+                .flatMap(Function.identity())
+                .toList();
+        return Stream.of(
+                        Stream.<SessionRow>of(new SectionHeaderRow(selectedTicket.value())),
+                        linked.isEmpty() ? Stream.<SessionRow>of(new NoSessionRow(selectedTicket)) : linked.stream(),
+                        offered.stream().<SessionRow>map(verb -> new NewSessionRow(selectedTicket, verb)))
+                .flatMap(Function.identity());
     }
 
-    private void addUnlinkedSection(List<SessionRow> rows, AvailableSessionsView available) {
+    private Stream<SessionRow> unlinkedSection(AvailableSessionsView available) {
         List<LiveSessionView> live = available.unlinkedLive();
         List<PastSessionView> past = available.unlinkedPast();
         if (live.isEmpty() && past.isEmpty()) {
-            return;
+            return Stream.empty();
         }
-        rows.add(new SectionHeaderRow(SessionText.unlinkedLabel()));
-        live.forEach(session -> rows.add(new LiveSessionRow(session, Optional.empty())));
         int shown = expanded ? past.size() : Math.min(past.size(), PAST_SHOWN);
-        past.stream().limit(shown).forEach(session -> rows.add(new PastSessionRow(session, Optional.empty())));
-        if (shown < past.size()) {
-            rows.add(new OlderSessionsRow(past.size() - shown));
-        }
+        return Stream.of(
+                        Stream.<SessionRow>of(new SectionHeaderRow(SessionText.unlinkedLabel())),
+                        live.stream().<SessionRow>map(session -> new LiveSessionRow(session, Optional.empty())),
+                        past.stream().limit(shown).<SessionRow>map(session -> new PastSessionRow(session, Optional.empty())),
+                        Included.<SessionRow>when(shown < past.size(), new OlderSessionsRow(past.size() - shown)))
+                .flatMap(Function.identity());
     }
 
     /** Why there are no sessions to show, when no source answered. */

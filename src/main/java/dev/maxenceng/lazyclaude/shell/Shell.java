@@ -8,8 +8,6 @@ import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -18,8 +16,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
@@ -146,7 +146,7 @@ public final class Shell extends ToolkitApp {
     private final ReviewQuery reviews;
     private final Path root;
     private final DockTabs dock = new DockTabs();
-    private final Map<HostedSessionId, PaneSize> paneSizes = new HashMap<>();
+    private Map<HostedSessionId, PaneSize> paneSizes = Map.of();
     private final AtomicBoolean repaintPending = new AtomicBoolean();
     private PullRequestsView pullRequests;
     private volatile BoardView lastRead;
@@ -611,7 +611,7 @@ public final class Shell extends ToolkitApp {
         switch (start) {
             case StartedHost started -> {
                 dock.select(started.id());
-                paneSizes.put(started.id(), paneSize());
+                sized(List.of(started.id()), paneSize());
                 focusOn(Focus.DOCK);
             }
             case NotStartedHost none -> {}
@@ -635,13 +635,20 @@ public final class Shell extends ToolkitApp {
     private void paneDrawn(Rect area) {
         paneArea = Optional.of(area);
         PaneSize size = paneSize();
-        dock.tabs().stream()
+        List<HostedSessionId> resized = dock.tabs().stream()
                 .map(HostedSessionView::id)
                 .filter(id -> !size.equals(paneSizes.get(id)))
-                .forEach(id -> {
-                    hosting.resize(new ResizePayload(id, size));
-                    paneSizes.put(id, size);
-                });
+                .toList();
+        resized.forEach(id -> hosting.resize(new ResizePayload(id, size)));
+        sized(resized, size);
+    }
+
+    /** Remembers that the ptys of {@code ids} now have {@code size}. */
+    private void sized(List<HostedSessionId> ids, PaneSize size) {
+        paneSizes = Stream.concat(
+                        paneSizes.entrySet().stream().filter(sized -> !ids.contains(sized.getKey())),
+                        ids.stream().map(id -> Map.entry(id, size)))
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private boolean pressWithCtrl(KeyEvent key) {
@@ -1027,32 +1034,20 @@ public final class Shell extends ToolkitApp {
         if (inSession()) {
             return List.of(SESSION_KEYS);
         }
-        List<String> keys = new ArrayList<>();
-        if (focus == Focus.BOARD || focus == Focus.SESSIONS || focus == Focus.DOCS) {
-            keys.add(MOVE_KEYS);
-        }
-        if (focus == Focus.MAIN) {
-            keys.add(SCROLL_KEYS);
-        }
-        keys.add(PANEL_KEYS);
-        if (foldable()) {
-            keys.add(FOLD_KEY);
-        }
-        if (focus == Focus.BOARD && board.selected() instanceof TicketRow) {
-            keys.add(SESSIONS_KEY);
-        }
-        if (focus == Focus.SESSIONS && sessions.olderSelected()) {
-            keys.add(EXPAND_KEY);
-        }
-        keys.add(FOCUS_KEYS);
-        keys.add(QUIT_KEY);
-        if ((focus == Focus.BOARD || focus == Focus.SESSIONS) && selectedTicket().isPresent()) {
-            keys.add(NEW_TICKET_KEY);
-        }
-        keys.add(NEW_KEY);
-        keys.add(REFRESH_KEY);
-        keys.add(MAIN_VIEW_KEY);
-        return keys;
+        return Stream.of(
+                        Included.when(focus == Focus.BOARD || focus == Focus.SESSIONS || focus == Focus.DOCS, MOVE_KEYS),
+                        Included.when(focus == Focus.MAIN, SCROLL_KEYS),
+                        Stream.of(PANEL_KEYS),
+                        Included.when(foldable(), FOLD_KEY),
+                        Included.when(focus == Focus.BOARD && board.selected() instanceof TicketRow, SESSIONS_KEY),
+                        Included.when(focus == Focus.SESSIONS && sessions.olderSelected(), EXPAND_KEY),
+                        Stream.of(FOCUS_KEYS, QUIT_KEY),
+                        Included.when(
+                                (focus == Focus.BOARD || focus == Focus.SESSIONS) && selectedTicket().isPresent(),
+                                NEW_TICKET_KEY),
+                        Stream.of(NEW_KEY, REFRESH_KEY, MAIN_VIEW_KEY))
+                .flatMap(Function.identity())
+                .toList();
     }
 
     private boolean foldable() {
