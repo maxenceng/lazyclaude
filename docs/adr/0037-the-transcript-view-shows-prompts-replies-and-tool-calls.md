@@ -17,8 +17,9 @@ Selecting an outside or past session should show what it said, without lazyclaud
   `query`, `description`, `skill`, `prompt` the input holds, else its first text, on one line; none when it holds no text.
 - **Hidden:** tool results (user entries of `tool_result` blocks), thinking, meta prompts and every other entry type.
 - **A separate read** (`TranscriptReadPort`) from the metadata read the cache keeps: it keeps nothing, takes an offset and hands back the
-  offset after the last complete line, so a half-written line is read once it is whole. An offset past the end of a shorter file reads
-  from the start, and the result says so, so the shell replaces what it showed.
+  offset after the last complete line, so a half-written line is read once it is whole. An offset the file no longer ends a line at —
+  past the end of a shorter file, or mid-line in one rewritten in place — reads from the start, and the result says so, so the shell
+  replaces what it showed. A read that lands for an offset the shell no longer holds, as after reselecting the session, is dropped.
 - **Found** by session id in the folder of the session's directory, else in any folder.
 - **Tailing is driven by the shell:** each push of the sessions (which the transcript watch and the sweep both cause) reads the selected
   session from its offset, off the render thread, one read at a time. Only the selected session is read; hosted sessions and Elsewhere
@@ -28,4 +29,6 @@ Selecting an outside or past session should show what it said, without lazyclaud
 ## Consequences
 
 - The first read of a very long transcript parses all of it.
+- A file rewritten in place that happens to hold a newline just before the old offset reads on from there; keeping the file's
+  identity with the offset would close it.
 - The facts view of a past session is gone: its row says its title and age, its main view its transcript.

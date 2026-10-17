@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -54,6 +55,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadableTranscriptView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
@@ -67,6 +69,7 @@ import dev.maxenceng.lazyclaude.session.published.PaneHeight;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.PaneWidth;
 import dev.maxenceng.lazyclaude.session.published.PastedText;
+import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.session.published.TranscriptOffset;
@@ -678,15 +681,15 @@ public final class Shell extends ToolkitApp {
         return true;
     }
 
-    /** The session {@code o} would bring forward: the selected one of the Sessions or Elsewhere panel, unless lazyclaude hosts it. */
+    /** The session {@code o} would bring forward: the selected one of the Sessions or Elsewhere panel, when it is jumpable. */
     private Optional<LiveSessionView> jumpTarget() {
         return switch (focus) {
             case SESSIONS ->
                 sessions.selected()
                         .filter(LiveSessionRow.class::isInstance)
                         .map(row -> ((LiveSessionRow) row).session())
-                        .filter(session -> !session.isHosted());
-            case ELSEWHERE -> elsewhere.selected().map(ElsewhereSessionRow::session).filter(session -> !session.isHosted());
+                        .filter(LiveSessionView::isJumpable);
+            case ELSEWHERE -> elsewhere.selected().map(ElsewhereSessionRow::session).filter(LiveSessionView::isJumpable);
             default -> Optional.empty();
         };
     }
@@ -1198,14 +1201,22 @@ public final class Shell extends ToolkitApp {
         });
     }
 
+    /** A read that fails unexpectedly is shown as unreadable, so the next read is not held back by one that never landed. */
     private void readTranscript(TranscriptSubject subject, TranscriptOffset from) {
-        background.execute(() -> {
-            TranscriptView read = screens.transcriptOf(new TranscriptPayload(subject.id(), subject.directory(), from));
-            onRenderThread(() -> {
-                transcript.apply(subject.id(), read);
-                transcriptReading.set(false);
-            });
-        });
+        CompletableFuture.supplyAsync(
+                        () -> screens.transcriptOf(new TranscriptPayload(subject.id(), subject.directory(), from)), background)
+                .exceptionally(Shell::unreadableTranscript)
+                .thenAccept(read -> onRenderThread(() -> {
+                    transcript.apply(subject.id(), from, read);
+                    transcriptReading.set(false);
+                }));
+    }
+
+    private static TranscriptView unreadableTranscript(Throwable failed) {
+        Throwable cause = failed instanceof CompletionException wrapped && wrapped.getCause() != null ? wrapped.getCause() : failed;
+        return new UnreadableTranscriptView(new Reason(Optional.ofNullable(cause.getMessage())
+                .filter(message -> !message.isBlank())
+                .orElseGet(() -> cause.getClass().getSimpleName())));
     }
 
     private void onRenderThread(Runnable task) {

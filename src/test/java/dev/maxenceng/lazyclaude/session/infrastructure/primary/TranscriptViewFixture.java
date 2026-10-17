@@ -46,14 +46,14 @@ public final class TranscriptViewFixture {
     public static AddRemoteControlView addRemoteControlView() {
         return AddRemoteControlView.builder()
                 .file(Path.of(System.getProperty("user.home"), ".config/kitty/kitty.conf"))
-                .lines(List.of("allow_remote_control socket-only", "listen_on unix:@kitty-{kitty_pid}"))
+                .lines(List.of("# added by lazyclaude", "allow_remote_control socket-only", "listen_on unix:@kitty-{kitty_pid}"))
                 .build();
     }
 
     public static AddRemoteControlView addRemoteControlViewOutsideHome() {
         return AddRemoteControlView.builder()
                 .file(Path.of("/etc/kitty-here/kitty.conf"))
-                .lines(List.of("listen_on unix:@kitty-{kitty_pid}"))
+                .lines(List.of("# added by lazyclaude", "listen_on unix:@kitty-{kitty_pid}"))
                 .build();
     }
 

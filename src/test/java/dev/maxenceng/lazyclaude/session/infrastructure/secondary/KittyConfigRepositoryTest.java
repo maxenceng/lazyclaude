@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.addingIn;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.bothLines;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.line;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.listenOnLine;
@@ -136,6 +137,37 @@ class KittyConfigRepositoryTest {
     }
 
     @Test
+    void shouldReadARecursiveGlobincludeThatMatchesNoDirectoryInBetween() throws IOException {
+        confFile(kittyDirectory, "kitty.conf", "globinclude themes/**/*.conf");
+        confFile(kittyDirectory, "themes/x.conf", "allow_remote_control no");
+
+        assertThat(repository.settings(configFile(kittyDirectory, "kitty.conf"), KEYS).found())
+                .as("kitty's ** matches zero directories too, as pathlib's does")
+                .containsExactly(settingOf(line("allow_remote_control", "no"), configFile(kittyDirectory, "themes/x.conf"), 1));
+    }
+
+    @Test
+    void shouldExpandTheEnvironmentInAnIncludedPath() throws IOException {
+        Path elsewhere = confFile(home, "elsewhere/extra.conf", "listen_on unix:@one");
+        confFile(kittyDirectory, "kitty.conf", "include ${EXTRA}/extra.conf", "include $EXTRA/extra.conf");
+        KittyConfigRepository expanding =
+                new KittyConfigRepository(home, Map.of("EXTRA", home.resolve("elsewhere").toString()));
+
+        assertThat(expanding.settings(configFile(kittyDirectory, "kitty.conf"), KEYS).found())
+                .extracting(setting -> setting.place().file().path())
+                .containsExactly(elsewhere, elsewhere);
+    }
+
+    @Test
+    void shouldNotFollowASymlinkedDirectoryBackIntoTheFileForever() throws IOException {
+        confFile(kittyDirectory, "kitty.conf", "include sub/kitty.conf", "listen_on unix:@main");
+        Files.createSymbolicLink(kittyDirectory.resolve("sub"), kittyDirectory);
+
+        assertThat(repository.settings(configFile(kittyDirectory, "kitty.conf"), KEYS).found())
+                .containsExactly(settingOf(line("listen_on", "unix:@main"), configFile(kittyDirectory, "kitty.conf"), 2));
+    }
+
+    @Test
     void shouldSkipAnIncludedFileThatDoesNotExist() throws IOException {
         confFile(kittyDirectory, "kitty.conf", "include missing.conf", "listen_on unix:@here");
 
@@ -167,7 +199,7 @@ class KittyConfigRepositoryTest {
     void shouldAppendTheLinesUnderACommentSayingLazyclaudeAddedThem() throws IOException {
         Path conf = confFile(kittyDirectory, "kitty.conf", "font_size 12");
 
-        repository.append(configFile(kittyDirectory, "kitty.conf"), bothLines());
+        repository.append(addingIn(configFile(kittyDirectory, "kitty.conf"), bothLines()));
 
         assertThat(textOf(conf))
                 .isEqualTo("font_size 12\n\n# added by lazyclaude\nallow_remote_control socket-only\nlisten_on unix:@kitty-{kitty_pid}\n");
@@ -177,14 +209,14 @@ class KittyConfigRepositoryTest {
     void shouldFinishALastLineThatHasNoNewlineBeforeAppending() throws IOException {
         Path conf = confFileWithoutFinalNewline(kittyDirectory, "kitty.conf", "font_size 12");
 
-        repository.append(configFile(kittyDirectory, "kitty.conf"), List.of(listenOnLine()));
+        repository.append(addingIn(configFile(kittyDirectory, "kitty.conf"), List.of(listenOnLine())));
 
         assertThat(textOf(conf)).isEqualTo("font_size 12\n\n# added by lazyclaude\nlisten_on unix:@kitty-{kitty_pid}\n");
     }
 
     @Test
     void shouldCreateTheFileAndItsDirectoryWhenThereIsNone() throws IOException {
-        repository.append(configFile(kittyDirectory, "kitty.conf"), bothLines());
+        repository.append(addingIn(configFile(kittyDirectory, "kitty.conf"), bothLines()));
 
         assertThat(textOf(kittyDirectory.resolve("kitty.conf")))
                 .isEqualTo("# added by lazyclaude\nallow_remote_control socket-only\nlisten_on unix:@kitty-{kitty_pid}\n");
@@ -195,7 +227,7 @@ class KittyConfigRepositoryTest {
         Files.createDirectories(home.resolve(".config"));
         Files.writeString(kittyDirectory, "a file where the directory should be");
 
-        assertThatThrownBy(() -> repository.append(configFile(kittyDirectory, "kitty.conf"), bothLines()))
+        assertThatThrownBy(() -> repository.append(addingIn(configFile(kittyDirectory, "kitty.conf"), bothLines())))
                 .isInstanceOf(KittyConfigUnwritableException.class)
                 .hasMessageContaining("kitty.conf");
     }

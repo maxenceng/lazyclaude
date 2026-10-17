@@ -1,24 +1,19 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
-import java.util.Optional;
-
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
-import dev.maxenceng.lazyclaude.session.published.ResidenceName;
 
 /** The session runs in a kitty window: the kitty process that owns it and the window's id, from {@code KITTY_PID} and {@code KITTY_WINDOW_ID}. */
 public record InKitty(ProcessId kitty, KittyWindowId window) implements Residence {
-
-    private static final ResidenceName NAME = new ResidenceName("kitty");
 
     public InKitty {
         Assert.notNull("kitty", kitty);
         Assert.notNull("kitty window", window);
     }
 
-    @Override
-    public Optional<ResidenceName> name() {
-        return Optional.of(NAME);
+    /** The socket the kitty that owns the window listens on, once {@code kitty.conf} has the lines lazyclaude offers. */
+    public KittySocket socket() {
+        return KittySettings.socketOf(kitty);
     }
 
     public static InKittyBuilder builder() {

@@ -13,10 +13,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.session.domain.AddRemoteControl;
 import dev.maxenceng.lazyclaude.session.domain.ConfigKey;
 import dev.maxenceng.lazyclaude.session.domain.ConfigLine;
 import dev.maxenceng.lazyclaude.session.domain.ConfigLineNumber;
@@ -32,8 +35,9 @@ import dev.maxenceng.lazyclaude.session.domain.KittySettings;
 /**
  * Finds, reads and adds to {@code kitty.conf}. A line is {@code key value}; {@code include} and {@code globinclude} pull in other
  * files where they are written, relative to the file that names them, and a later line overrides an earlier one, which is the
- * order this hands the settings over in. A file already being read is not read again, so an include cycle ends, and an
- * included file that does not exist is skipped, as kitty skips it.
+ * order this hands the settings over in. As kitty does, an included path has {@code ~} and {@code $VAR} or {@code ${VAR}}
+ * expanded, and {@code **} in a glob matches zero directories too. A file already being read, by its real path, is not read
+ * again, so an include cycle ends, a symlinked one included; an included file that does not exist is skipped, as kitty skips it.
  */
 public final class KittyConfigRepository implements KittyConfigPort {
 
@@ -49,8 +53,11 @@ public final class KittyConfigRepository implements KittyConfigPort {
     private static final String GLOB_CHARACTERS = "*?[{";
     private static final String GLOB = "glob:%s";
     private static final String RECURSIVE_GLOB = "**";
-    private static final String ADDED_BY = "# added by lazyclaude";
-    private static final String LINE = "%s %s";
+    private static final String ANY_DIRECTORIES = "/**/";
+    private static final String NO_DIRECTORY = "/";
+    private static final Pattern VARIABLE = Pattern.compile("\\$(?:\\{([^}]+)}|(\\w+))");
+    private static final int BRACED = 1;
+    private static final int BARE = 2;
     private static final String NEWLINE = "\n";
     private static final String CANNOT_READ = "cannot read %s: %s";
     private static final String CANNOT_WRITE = "cannot write %s: %s";
@@ -78,15 +85,13 @@ public final class KittyConfigRepository implements KittyConfigPort {
     }
 
     @Override
-    public void append(KittyConfigFile file, List<ConfigLine> lines) {
+    public void append(AddRemoteControl adding) {
+        KittyConfigFile file = adding.file();
         try {
             Files.createDirectories(file.path().getParent());
             String existing = existingText(file.path());
             String separator = existing.isEmpty() ? "" : existing.endsWith(NEWLINE) ? NEWLINE : NEWLINE + NEWLINE;
-            String added = Stream.concat(
-                            Stream.of(ADDED_BY),
-                            lines.stream().map(line -> LINE.formatted(line.key().value(), line.value().value())))
-                    .collect(Collectors.joining(NEWLINE, separator, NEWLINE));
+            String added = adding.text().stream().collect(Collectors.joining(NEWLINE, separator, NEWLINE));
             Files.writeString(
                     file.path(), added, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException e) {
@@ -103,10 +108,11 @@ public final class KittyConfigRepository implements KittyConfigPort {
     }
 
     private Stream<ConfigSetting> settingsOf(Path file, List<ConfigKey> keys, Set<Path> reading) {
-        if (reading.contains(file)) {
+        Path identity = identityOf(file);
+        if (reading.contains(identity)) {
             return Stream.empty();
         }
-        Set<Path> chain = Stream.concat(reading.stream(), Stream.of(file)).collect(Collectors.toUnmodifiableSet());
+        Set<Path> chain = Stream.concat(reading.stream(), Stream.of(identity)).collect(Collectors.toUnmodifiableSet());
         List<String> lines = linesOf(file);
         return IntStream.range(0, lines.size())
                 .boxed()
@@ -149,9 +155,16 @@ public final class KittyConfigRepository implements KittyConfigPort {
                 .takeWhile(name -> GLOB_CHARACTERS.chars().noneMatch(glob -> name.toString().indexOf(glob) >= 0))
                 .reduce(base, Path::resolve);
         int depth = pattern.contains(RECURSIVE_GLOB) ? Integer.MAX_VALUE : absolute.getNameCount() - prefix.getNameCount();
-        PathMatcher matcher = FileSystems.getDefault().getPathMatcher(GLOB.formatted(absolute));
+        List<PathMatcher> matchers = Stream.of(absolute.toString(), absolute.toString().replace(ANY_DIRECTORIES, NO_DIRECTORY))
+                .distinct()
+                .map(glob -> FileSystems.getDefault().getPathMatcher(GLOB.formatted(glob)))
+                .toList();
         try (Stream<Path> found = Files.walk(prefix, depth)) {
-            return found.filter(Files::isRegularFile).filter(matcher::matches).sorted().toList().stream();
+            return found.filter(Files::isRegularFile)
+                    .filter(candidate -> matchers.stream().anyMatch(matcher -> matcher.matches(candidate)))
+                    .sorted()
+                    .toList()
+                    .stream();
         } catch (NoSuchFileException nothingThere) {
             return Stream.empty();
         } catch (IOException e) {
@@ -162,8 +175,25 @@ public final class KittyConfigRepository implements KittyConfigPort {
     }
 
     private Path resolved(Path file, String path) {
-        Path wanted = path.startsWith(HOME_PREFIX) ? home.resolve(path.substring(HOME_PREFIX.length())) : Path.of(path);
+        String expanded = expanded(path);
+        Path wanted =
+                expanded.startsWith(HOME_PREFIX) ? home.resolve(expanded.substring(HOME_PREFIX.length())) : Path.of(expanded);
         return file.getParent().resolve(wanted).normalize();
+    }
+
+    /** {@code $VAR} and {@code ${VAR}} replaced by their value, one the environment does not set left as written, as kitty leaves it. */
+    private String expanded(String path) {
+        return VARIABLE.matcher(path).replaceAll(variable -> Matcher.quoteReplacement(Optional.ofNullable(
+                        environment.get(Optional.ofNullable(variable.group(BRACED)).orElseGet(() -> variable.group(BARE))))
+                .orElseGet(variable::group)));
+    }
+
+    private static Path identityOf(Path file) {
+        try {
+            return file.toRealPath();
+        } catch (IOException notThere) {
+            return file;
+        }
     }
 
     private static List<String> linesOf(Path file) {

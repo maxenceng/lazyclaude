@@ -5,17 +5,13 @@ import java.util.List;
 
 import dev.maxenceng.lazyclaude.session.domain.AddRemoteControl;
 
-/** The file the lines would be appended to, and the lines as they would read in it. */
+/** The file the lines would be appended to, and the text as it would read in it, the comment saying lazyclaude added it first. */
 public record AddRemoteControlView(Path file, List<String> lines) implements RemoteControlConfigView {
-
-    private static final String LINE = "%s %s";
 
     static AddRemoteControlView from(AddRemoteControl adding) {
         return builder()
                 .file(adding.file().path())
-                .lines(adding.lines().stream()
-                        .map(line -> LINE.formatted(line.key().value(), line.value().value()))
-                        .toList())
+                .lines(adding.text())
                 .build();
     }
 

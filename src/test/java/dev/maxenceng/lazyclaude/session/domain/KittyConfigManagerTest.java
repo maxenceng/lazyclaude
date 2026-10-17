@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.adding;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.allowRemoteControlSetting;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.bothLines;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.conflictingAllowSetting;
@@ -44,7 +45,7 @@ class KittyConfigManagerTest {
 
         manager.add();
 
-        verify(config).append(kittyConfigFile(), bothLines());
+        verify(config).append(adding(bothLines()));
         assertThat(raisedTexts(warnings)).containsExactly("kitty.conf updated; restart kitty to turn remote control on.");
     }
 
@@ -54,7 +55,7 @@ class KittyConfigManagerTest {
 
         manager.add();
 
-        verify(config).append(kittyConfigFile(), List.of(listenOnLine()));
+        verify(config).append(adding(List.of(listenOnLine())));
     }
 
     @Test
@@ -63,7 +64,7 @@ class KittyConfigManagerTest {
 
         manager.add();
 
-        verify(config, never()).append(any(), any());
+        verify(config, never()).append(any());
         assertThat(raisedTexts(warnings))
                 .containsExactly("kitty.conf not changed: line 12 of /home/max/.config/kitty/user.conf sets allow_remote_control to something else.");
     }
@@ -74,7 +75,7 @@ class KittyConfigManagerTest {
 
         manager.add();
 
-        verify(config, never()).append(any(), any());
+        verify(config, never()).append(any());
         assertThat(raisedTexts(warnings)).containsExactly("kitty.conf already allows remote control, so kitty needs a restart.");
     }
 
@@ -83,7 +84,7 @@ class KittyConfigManagerTest {
         settingsRead(config);
         doThrow(new KittyConfigUnwritableException("cannot write /home/max/.config/kitty/kitty.conf: access denied", new IOException()))
                 .when(config)
-                .append(any(), any());
+                .append(any());
 
         manager.add();
 
@@ -99,7 +100,7 @@ class KittyConfigManagerTest {
 
         manager.add();
 
-        verify(config, never()).append(any(), any());
+        verify(config, never()).append(any());
         assertThat(raisedTexts(warnings))
                 .containsExactly("cannot update kitty.conf: cannot read /home/max/.config/kitty/kitty.conf: access denied");
     }

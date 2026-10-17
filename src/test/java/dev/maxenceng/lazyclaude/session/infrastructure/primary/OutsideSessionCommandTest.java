@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.anOutsideSessionInKitty;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.kittyRefusingRemoteControl;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.outsideSessionApplicationService;
+import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.adding;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.allowRemoteControlSetting;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.bothLines;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.conflictingAllowSetting;
@@ -81,7 +82,7 @@ class OutsideSessionCommandTest {
         assertThat(command.jump(jumpPayload()))
                 .contains(AddRemoteControlView.builder()
                         .file(Path.of("/home/max/.config/kitty/kitty.conf"))
-                        .lines(List.of("allow_remote_control socket-only", "listen_on unix:@kitty-{kitty_pid}"))
+                        .lines(List.of("# added by lazyclaude", "allow_remote_control socket-only", "listen_on unix:@kitty-{kitty_pid}"))
                         .build());
     }
 
@@ -115,6 +116,6 @@ class OutsideSessionCommandTest {
 
         command.addRemoteControl();
 
-        verify(kittyConfig).append(kittyConfigFile(), bothLines());
+        verify(kittyConfig).append(adding(bothLines()));
     }
 }

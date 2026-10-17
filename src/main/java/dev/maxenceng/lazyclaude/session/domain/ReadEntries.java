@@ -8,7 +8,7 @@ import dev.maxenceng.lazyclaude.session.published.TranscriptOffset;
 
 /**
  * The entries written between {@code start} and {@code next}. {@code start} is where this read began, which is not the offset
- * asked for when the transcript is shorter than that: it was replaced, and what was shown before no longer holds.
+ * asked for when the transcript no longer ends a line there: it was replaced, and what was shown before no longer holds.
  */
 public record ReadEntries(List<TranscriptEntry> entries, TranscriptOffset start, TranscriptOffset next)
         implements TranscriptRead {

@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.application;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.anOutsideSessionInKitty;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.outsideSessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.transcriptReadingService;
+import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.adding;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.addingBoth;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.bothLines;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.kittyConfigFile;
@@ -135,7 +136,7 @@ class SessionApplicationServiceOutsideTest {
 
         service.addKittyRemoteControl();
 
-        verify(kittyConfig).append(kittyConfigFile(), bothLines());
+        verify(kittyConfig).append(adding(bothLines()));
     }
 
     @Test

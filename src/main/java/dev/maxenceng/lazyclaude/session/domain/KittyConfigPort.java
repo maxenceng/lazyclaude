@@ -17,9 +17,9 @@ public interface KittyConfigPort {
     KittySettings settings(KittyConfigFile file, List<ConfigKey> keys);
 
     /**
-     * Appends {@code lines} to {@code file} under a comment saying lazyclaude added them, creating the file when it is missing.
+     * Appends the text of {@code adding} to its file, creating the file when it is missing.
      *
      * @throws KittyConfigUnwritableException when the file cannot be written, with the reason
      */
-    void append(KittyConfigFile file, List<ConfigLine> lines);
+    void append(AddRemoteControl adding);
 }

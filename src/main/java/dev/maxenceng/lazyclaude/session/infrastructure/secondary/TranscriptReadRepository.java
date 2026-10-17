@@ -21,8 +21,10 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * Reads the entries of a transcript, {@code ~/.claude/projects/<folder>/<sessionId>.jsonl}, from a byte offset. The folder
  * is the session's directory with every character that is not a letter or a digit written as {@code -}; a session that moved
  * directory is found by its id in any folder. This is a second read of the file beside the one that links sessions
- * to tickets (the cache), and keeps nothing: the offset it hands back is the caller's to keep.
+ * to tickets (the cache), and keeps nothing: the offset it hands back is the caller's to keep. An offset the file no longer
+ * ends a line at, past its end or mid-line, means it was replaced, and it is read from the start.
  */
+// deferred: a replacing file that happens to hold a newline just before the old offset reads on from there — close it when a transcript is seen rewritten in place, by keeping the file's identity with the offset.
 // deferred: the first read of a transcript parses all of it, which a very long session makes slow — close it when showing one is seen to lag.
 public final class TranscriptReadRepository implements TranscriptReadPort {
 
@@ -67,7 +69,7 @@ public final class TranscriptReadRepository implements TranscriptReadPort {
     }
 
     private static TranscriptRead readFrom(Path file, TranscriptOffset from) throws IOException {
-        TranscriptOffset start = from.value() > Files.size(file) ? TranscriptOffset.start() : from;
+        TranscriptOffset start = TranscriptLines.endsALine(file, from.value()) ? from : TranscriptOffset.start();
         Stream.Builder<TranscriptEntry> entries = Stream.builder();
         long next = TranscriptLines.read(file, start.value(), line -> TranscriptEntryLine.entriesIn(line).forEach(entries));
         return ReadEntries.builder()

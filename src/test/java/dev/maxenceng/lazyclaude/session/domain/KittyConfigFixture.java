@@ -65,8 +65,12 @@ public final class KittyConfigFixture {
         return adding(bothLines());
     }
 
-    public static RemoteControlConfig adding(List<ConfigLine> lines) {
-        return AddRemoteControl.builder().file(kittyConfigFile()).lines(lines).build();
+    public static AddRemoteControl adding(List<ConfigLine> lines) {
+        return addingIn(kittyConfigFile(), lines);
+    }
+
+    public static AddRemoteControl addingIn(KittyConfigFile file, List<ConfigLine> lines) {
+        return AddRemoteControl.builder().file(file).lines(lines).build();
     }
 
     public static RemoteControlConfig conflictingWith(ConfigSetting found, ConfigLine wanted) {

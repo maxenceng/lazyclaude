@@ -1,6 +1,6 @@
 ---
 id: SESSION-6
-status: in-progress
+status: in-review
 context: session
 type: feature
 tracker_id: 83

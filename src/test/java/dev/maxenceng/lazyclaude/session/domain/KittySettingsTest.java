@@ -12,6 +12,7 @@ import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.line;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.listenOnLine;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.listenOnSetting;
 import static dev.maxenceng.lazyclaude.session.domain.KittyConfigFixture.settingOf;
+import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inKitty;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -19,6 +20,13 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class KittySettingsTest {
+
+    @Test
+    void shouldJumpOverTheSocketTheListenOnLineItAddsMakesKittyListenOn() {
+        assertThat(inKitty().socket())
+                .as("a jump goes where the offered listen_on line makes kitty listen, so the two cannot drift apart")
+                .isEqualTo(new KittySocket("unix:@kitty-1621"));
+    }
 
     @Test
     void shouldAskForBothLinesWhenNeitherKeyIsSet() {

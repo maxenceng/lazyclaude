@@ -11,7 +11,6 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 public final class KittyConfigManager {
 
     private static final String UPDATED = "kitty.conf updated; restart kitty to turn remote control on.";
-    private static final String NEEDS_RESTART = "kitty.conf already allows remote control, so kitty needs a restart.";
     private static final String CONFLICT = "kitty.conf not changed: line %d of %s sets %s to something else.";
     private static final String CANNOT_UPDATE = "cannot update kitty.conf: %s";
 
@@ -29,14 +28,14 @@ public final class KittyConfigManager {
             KittyConfigFile file = config.locate();
             switch (config.settings(file, KittySettings.remoteControlKeys()).remoteControl(file)) {
                 case AddRemoteControl adding -> {
-                    config.append(adding.file(), adding.lines());
+                    config.append(adding);
                     warnings.raise(new Warning(UPDATED));
                 }
                 case ConflictingRemoteControl conflicting -> warnings.raise(new Warning(CONFLICT.formatted(
                         conflicting.found().place().line().value(),
                         conflicting.found().place().file().path(),
                         conflicting.found().line().key().value())));
-                case ConfiguredRemoteControl configured -> warnings.raise(new Warning(NEEDS_RESTART));
+                case ConfiguredRemoteControl configured -> warnings.raise(new Warning(configured.needsRestart()));
             }
         } catch (KittyConfigUnreadableException unreadable) {
             cannotUpdate(unreadable.getMessage());

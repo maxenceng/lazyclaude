@@ -30,8 +30,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -336,5 +338,55 @@ class ShellTranscriptTest {
         held.runNewestFirst();
 
         assertThat(Screen.of(shell).mainViewRows()).noneSatisfy(row -> assertThat(row).contains("from the first"));
+    }
+    @Test
+    void shouldKeepTheWholeTranscriptWhenAReadLandsAfterTheSameSessionWasSelectedAgain() {
+        HeldTasksFixture held = new HeldTasksFixture();
+        SessionQuery screens = ShellFixture.screensReadingByOffset(Map.of(
+                0L, continuingTranscriptView(0, 100, prompt("hello")),
+                100L, continuingTranscriptView(100, 200, reply("later")),
+                200L, continuingTranscriptView(200, 200)));
+        Shell shell = shellWithSessionsFocused(
+                sessionsViewOf(List.of(sessionView(), namedSessionView(sessionIdOf(2), "other", new Busy()))),
+                screens,
+                mock(OutsideSessionCommand.class),
+                held,
+                1);
+        Screen.of(shell);
+        held.runNewestFirst();
+        shell.sessionsChanged(sessionsViewOf(List.of(sessionView(), namedSessionView(sessionIdOf(2), "other", new Busy()))));
+        Screen.of(shell);
+        shell.press(key('j'));
+        Screen.of(shell);
+        shell.press(key('k'));
+        Screen.of(shell);
+
+        held.runNewestFirst();
+        Screen.of(shell);
+        held.runNewestFirst();
+        shell.sessionsChanged(sessionsViewOf(List.of(sessionView(), namedSessionView(sessionIdOf(2), "other", new Busy()))));
+        Screen.of(shell);
+        held.runNewestFirst();
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .as("a read begun before the session was selected again continues an offset the pane no longer holds")
+                .containsSubsequence("› hello", "later");
+    }
+
+    @Test
+    void shouldSayWhyAndReadAgainWhenAReadFailsUnexpectedly() {
+        SessionQuery screens = ShellFixture.blankScreens();
+        when(screens.transcriptOf(any()))
+                .thenThrow(new IllegalStateException("the transcript went away"))
+                .thenReturn(readTranscriptView(prompt("hello")));
+        Shell shell = shellOnSessionsReading(sessionsViewOf(List.of(sessionView())), screens);
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .anySatisfy(row -> assertThat(row).contains("the transcript went away"));
+        shell.sessionsChanged(sessionsViewOf(List.of(sessionView())));
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .as("a failed read must not leave the next one waiting forever")
+                .anySatisfy(row -> assertThat(row).contains("› hello"));
     }
 }

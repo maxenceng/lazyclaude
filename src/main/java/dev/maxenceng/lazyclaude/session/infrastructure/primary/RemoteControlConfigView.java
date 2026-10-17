@@ -10,7 +10,7 @@ import dev.maxenceng.lazyclaude.session.domain.RemoteControlConfig;
 /** What the popup over the main view shows when kitty refused remote control: the lines to add to {@code kitty.conf}, or the line that conflicts. */
 public sealed interface RemoteControlConfigView permits AddRemoteControlView, ConflictingRemoteControlView {
 
-    /** The popup for what {@code kitty.conf} needs; none when nothing in it is to be shown, as when kitty only needs a restart. */
+    /** The popup for what {@code kitty.conf} needs; none for a config already set, which a jump warns about rather than answers. */
     static Optional<RemoteControlConfigView> from(RemoteControlConfig config) {
         return switch (config) {
             case AddRemoteControl adding -> Optional.of(AddRemoteControlView.from(adding));

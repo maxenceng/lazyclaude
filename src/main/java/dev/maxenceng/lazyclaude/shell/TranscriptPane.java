@@ -15,7 +15,8 @@ import dev.maxenceng.lazyclaude.session.published.TranscriptOffset;
 /**
  * What the main view knows of the transcript it shows: whose it is, the entries read so far, and where the last read ended, which the
  * next read starts from. A read that starts where the last one ended adds to the entries; one that starts anywhere else, as a
- * transcript that was replaced does, takes their place. A read for a session no longer shown is dropped.
+ * transcript that was replaced does, takes their place. A read for a session no longer shown, or begun from an offset the pane
+ * no longer holds, as when the session was selected again meanwhile, is dropped.
  */
 final class TranscriptPane {
 
@@ -40,8 +41,8 @@ final class TranscriptPane {
         return offset;
     }
 
-    void apply(SessionId session, TranscriptView read) {
-        if (!shows(session)) {
+    void apply(SessionId session, TranscriptOffset from, TranscriptView read) {
+        if (!shows(session) || !offset.equals(from)) {
             return;
         }
         switch (read) {

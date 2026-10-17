@@ -20,6 +20,7 @@ import static org.mockito.Mockito.when;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -181,6 +182,13 @@ final class ShellFixture {
     static SessionQuery screensReadingTranscripts(TranscriptView first, TranscriptView... later) {
         SessionQuery screens = blankScreens();
         when(screens.transcriptOf(any())).thenReturn(first, later);
+        return screens;
+    }
+
+    static SessionQuery screensReadingByOffset(Map<Long, TranscriptView> byOffset) {
+        SessionQuery screens = blankScreens();
+        when(screens.transcriptOf(any()))
+                .thenAnswer(asked -> byOffset.get(asked.<TranscriptPayload>getArgument(0).offset().value()));
         return screens;
     }
 

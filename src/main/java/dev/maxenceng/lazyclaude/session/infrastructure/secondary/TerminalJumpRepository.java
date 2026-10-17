@@ -11,7 +11,7 @@ import dev.maxenceng.lazyclaude.session.domain.TerminalJumpFailedException;
 import dev.maxenceng.lazyclaude.session.domain.TerminalJumpPort;
 
 /**
- * Brings a window forward with {@code kitten @}, over the socket of the kitty that owns the window, or with
+ * Brings a window forward with {@code kitten @}, over the socket the window's kitty listens on, or with
  * {@code tmux switch-client}. kitty answers a command it will not take with a non-zero exit: {@code Remote control is ...} when
  * it listens but does not allow it, and a connection that fails when it listens on no socket, which is what {@code allow_remote_control no} comes to;
  * those two are told apart from any other failure, which is not about remote control.
@@ -21,7 +21,6 @@ public final class TerminalJumpRepository implements TerminalJumpPort {
     private static final List<String> REMOTE_CONTROL_REFUSALS = List.of("Remote control is", "Failed to connect");
     private static final String REMOTE = "@";
     private static final String TO = "--to";
-    private static final String SOCKET = "unix:@kitty-%d";
     private static final String FOCUS_WINDOW = "focus-window";
     private static final String MATCH = "--match";
     private static final String WINDOW_ID = "id:%d";
@@ -46,7 +45,7 @@ public final class TerminalJumpRepository implements TerminalJumpPort {
                 kitten,
                 REMOTE,
                 TO,
-                SOCKET.formatted(window.kitty().value()),
+                window.socket().value(),
                 FOCUS_WINDOW,
                 MATCH,
                 WINDOW_ID.formatted(window.window().value()));

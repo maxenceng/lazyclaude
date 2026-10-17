@@ -210,7 +210,7 @@ class JumpManagerTest {
         assertThat(manager.jump(sessionLivingIn(inKitty())))
                 .contains(conflictingWith(conflictingAllowSetting(), allowRemoteControlLine()));
 
-        verify(config, never()).append(any(), any());
+        verify(config, never()).append(any());
     }
 
     @Test

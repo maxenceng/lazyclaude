@@ -19,7 +19,6 @@ public final class JumpManager {
     private static final String OTHER_TMUX_SERVER = "the session is in a tmux server lazyclaude is not attached to.";
     private static final String NOT_IN_KITTY =
             "kitty remote control is off, and lazyclaude does not run in kitty to offer turning it on.";
-    private static final String NEEDS_RESTART = "kitty.conf already allows remote control, so kitty needs a restart.";
 
     private final TerminalJumpPort jumps;
     private final ProcessEnvironmentPort environment;
@@ -36,7 +35,7 @@ public final class JumpManager {
 
     /** What {@code kitty.conf} needs for the jump to work next time, when kitty refused it for remote control and lazyclaude runs in kitty; else none. */
     public Optional<RemoteControlConfig> jump(LiveSession session) {
-        if (session.hosting() == Hosting.HOSTED) {
+        if (!session.hosting().isJumpable()) {
             return Optional.empty();
         }
         ProcessEnvironment own = environment.ownEnvironment();
@@ -76,7 +75,7 @@ public final class JumpManager {
             KittyConfigFile file = config.locate();
             RemoteControlConfig needed = config.settings(file, KittySettings.remoteControlKeys()).remoteControl(file);
             return switch (needed) {
-                case ConfiguredRemoteControl configured -> unjumpable(NEEDS_RESTART);
+                case ConfiguredRemoteControl configured -> unjumpable(configured.needsRestart());
                 case AddRemoteControl adding -> Optional.of(adding);
                 case ConflictingRemoteControl conflicting -> Optional.of(conflicting);
             };

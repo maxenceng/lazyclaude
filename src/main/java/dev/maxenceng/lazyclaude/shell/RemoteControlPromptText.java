@@ -16,7 +16,6 @@ final class RemoteControlPromptText {
     private static final String OFFER_TITLE = "kitty remote control is off";
     private static final String CONFLICT_TITLE = "kitty remote control conflicts";
     private static final String APPEND_TO = "append to %s:";
-    private static final String ADDED_BY = "  # added by lazyclaude";
     private static final String INDENTED = "  %s";
     private static final String RESTART = "kitty needs a restart afterwards";
     private static final String SETS = "%s line %d sets";
@@ -41,7 +40,7 @@ final class RemoteControlPromptText {
         return switch (view) {
             case AddRemoteControlView adding ->
                 Stream.of(
-                                Stream.of(APPEND_TO.formatted(file(adding.file())), BLANK, ADDED_BY),
+                                Stream.of(APPEND_TO.formatted(file(adding.file())), BLANK),
                                 adding.lines().stream().map(INDENTED::formatted),
                                 Stream.of(BLANK, RESTART))
                         .flatMap(rows -> rows)

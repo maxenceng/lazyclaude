@@ -1,7 +1,5 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inKitty;
-import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inTmux;
 import static dev.maxenceng.lazyclaude.session.published.ClaudeVersionFixture.version;
 import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
@@ -9,6 +7,8 @@ import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.proces
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.thirdProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
+import static dev.maxenceng.lazyclaude.session.published.ResidenceNameFixture.kittyName;
+import static dev.maxenceng.lazyclaude.session.published.ResidenceNameFixture.tmuxName;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.thirdSessionId;
@@ -297,7 +297,7 @@ public final class SessionsViewFixture {
     }
 
     public static LiveSessionView kittySessionView() {
-        return sessionViewBuilder().name(new SessionName("fix-status")).residence(inKitty()).build();
+        return sessionViewBuilder().name(new SessionName("fix-status")).residenceName(Optional.of(kittyName())).build();
     }
 
     public static LiveSessionView tmuxSessionView() {
@@ -305,7 +305,7 @@ public final class SessionsViewFixture {
                 .id(secondSessionId())
                 .name(new SessionName("lint-pass"))
                 .state(waitingForInput())
-                .residence(inTmux())
+                .residenceName(Optional.of(tmuxName()))
                 .build();
     }
 

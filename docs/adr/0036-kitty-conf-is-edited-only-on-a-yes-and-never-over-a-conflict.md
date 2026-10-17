@@ -16,16 +16,19 @@ sets neither. Editing someone's terminal config is the one write lazyclaude make
 - **The offer is made only when kitty refuses and lazyclaude itself runs in kitty** (its own environment carries `KITTY_PID` and
   `KITTY_WINDOW_ID`, even under tmux). Outside kitty it never offers; it warns that remote control is off.
 - **The file** is `$KITTY_CONFIG_DIRECTORY/kitty.conf`, else `~/.config/kitty/kitty.conf`.
-- **The lines** are `allow_remote_control socket-only` and `listen_on unix:@kitty-{kitty_pid}`. The domain reads `kitty.conf` and every file
-  it `include`s or `globinclude`s, a file's lines applied in order and an included file where the include is written, so the last line
-  for a key is the effective one.
+- **The lines** are `allow_remote_control socket-only` and `listen_on unix:@kitty-{kitty_pid}`; the jump's socket is derived
+  from that same `listen_on` line, so the two cannot drift. The adapter reads `kitty.conf` and every file it `include`s or `globinclude`s,
+  a file's lines applied in order and an included file where the include is written; the domain takes the last line for a key as the
+  effective one and decides offer, conflict or restart.
 - **Conflict.** When either key's effective value is another one, the popup shows the file and line that sets it and what is wanted, and
   only closes; nothing is edited. This holds for a key set in an included file.
 - **Only the lines not yet set are offered.** When both are set as wanted, `o` warns that kitty needs a restart and opens no popup.
 - **`y` appends** the lines under `# added by lazyclaude` and says kitty needs a restart. It reads the file again first, so a key set
   another way since the offer is a conflict and nothing is written. `n` and `esc` close; a refused offer is not remembered, the next
   refused `o` offers again. A failed write warns on the status line.
-- An include that does not exist is skipped, a cycle is not followed twice, and relative includes resolve against the including file.
+- An include that does not exist is skipped, a cycle is not followed twice (by real path, so through a symlink too), and relative
+  includes resolve against the including file. As kitty does, an include path has `~` and `$VAR`/`${VAR}` expanded, and `**` in a
+  glob matches zero directories too.
 
 ## Consequences
 

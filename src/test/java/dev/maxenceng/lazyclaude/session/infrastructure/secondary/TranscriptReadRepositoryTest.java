@@ -186,6 +186,20 @@ class TranscriptReadRepositoryTest {
     }
 
     @Test
+    void shouldReadFromTheStartWhenTheFileWasReplacedByALongerOne() throws IOException {
+        Path file = writeTranscript(projects, folder(), SESSION, userLine(cwd(), started(), "first"));
+        ReadEntries first = (ReadEntries) readFrom(repository, TranscriptOffset.start());
+        rewriteInPlace(file, userLine(cwd(), started(), "a replacing prompt long enough to run past the old offset"));
+
+        ReadEntries again = (ReadEntries) readFrom(repository, first.next());
+
+        assertThat(again.entries()).containsExactly(prompt("a replacing prompt long enough to run past the old offset"));
+        assertThat(again.start())
+                .as("an offset kept from the old file lands mid-line in the new one, which no append could make")
+                .isEqualTo(TranscriptOffset.start());
+    }
+
+    @Test
     void shouldCountBytesNotCharactersInTheOffset() throws IOException {
         Path file = writeTranscript(projects, folder(), SESSION, userLine(cwd(), started(), "é"));
         ReadEntries first = (ReadEntries) readFrom(repository, TranscriptOffset.start());
