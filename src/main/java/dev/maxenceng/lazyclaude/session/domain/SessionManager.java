@@ -48,6 +48,7 @@ public final class SessionManager {
     private static final String SWEEP_WARNING = "sessions: %s; checking every %d s instead.";
     private static final String AGENTS_WARNING = "sessions: %s; asking claude agents --json every %d s instead.";
 
+    private static final String ENVIRONMENT_WARNING = "sessions: %s; where sessions live is unknown.";
     private static final String TRANSCRIPT_WARNING = "past sessions: %s; checking every %d s instead.";
     private static final String CACHE_WARNING = "past sessions: %s; they are read in full on every start.";
     private static final String ROOT_WARNING = "past sessions: %s; only those already read show.";
@@ -78,10 +79,12 @@ public final class SessionManager {
     private final ProjectLocatorPort locator;
     private final SessionWatchPort watch;
     private final TranscriptWatchPort transcriptWatch;
+    private final ProcessEnvironmentPort environments;
     private final WarningPort warnings;
     private final SessionClock clock;
     private final WarnOnce sweeping = new WarnOnce();
     private final WarnOnce askingAgents = new WarnOnce();
+    private final WarnOnce readingEnvironments = new WarnOnce();
     private final WarnOnce pollingTranscripts = new WarnOnce();
     private final WarnOnce cacheUnwritable = new WarnOnce();
     private final WarnOnce rootUnlistable = new WarnOnce();
@@ -95,6 +98,7 @@ public final class SessionManager {
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
+            ProcessEnvironmentPort environments,
             Clock clock) {
         this.sessions = sessions;
         this.pastSessions = pastSessions;
@@ -102,6 +106,7 @@ public final class SessionManager {
         this.watch = watch;
         this.transcriptWatch = transcriptWatch;
         this.warnings = warnings;
+        this.environments = environments;
         this.clock = new SessionClock(clock);
     }
 
@@ -277,7 +282,7 @@ public final class SessionManager {
                 .toList();
     }
 
-    private static LiveSession live(ReportedSession session) {
+    private LiveSession live(ReportedSession session) {
         return LiveSession.builder()
                 .id(session.id())
                 .pid(session.pid())
@@ -286,7 +291,18 @@ public final class SessionManager {
                 .startedAt(session.startedAt())
                 .version(session.version())
                 .state(stateOf(session.status(), session.waitingFor()))
+                .residence(residenceOf(session))
                 .build();
+    }
+
+    /** Where the session lives, from its own environment; a session whose environment cannot be read lives nowhere known. */
+    private Residence residenceOf(ReportedSession session) {
+        try {
+            return environments.of(session.pid()).residence();
+        } catch (EnvironmentUnreadableException unreadable) {
+            readingEnvironments.raise(warnings, new Warning(ENVIRONMENT_WARNING.formatted(unreadable.getMessage())));
+            return new Nowhere();
+        }
     }
 
     /** A waiting session blocked on a permission prompt asks for permission; any other reason asks for input. */

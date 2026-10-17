@@ -12,10 +12,14 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
 import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
@@ -32,10 +36,16 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.JumpPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoTranscriptView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemoteControlConfigView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
@@ -61,6 +71,7 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
+                mock(OutsideSessionCommand.class),
                 blankScreens(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
     }
@@ -73,6 +84,7 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
+                mock(OutsideSessionCommand.class),
                 blankScreens(),
                 boards, mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
     }
@@ -86,6 +98,7 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
+                mock(OutsideSessionCommand.class),
                 screens,
                 boards,
                 docs,
@@ -110,6 +123,7 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
+                mock(OutsideSessionCommand.class),
                 blankScreens(),
                 boards,
                 mock(DocsQuery.class),
@@ -129,6 +143,7 @@ final class ShellFixture {
                 pullRequests,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
+                mock(OutsideSessionCommand.class),
                 blankScreens(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
         shell.press(key('j'));
@@ -143,6 +158,7 @@ final class ShellFixture {
                 pullRequests,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
+                mock(OutsideSessionCommand.class),
                 blankScreens(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
         shell.press(key('j'));
@@ -161,6 +177,63 @@ final class ShellFixture {
         return mock(SessionQuery.class, ShellFixture::blankScreenOrFirstVerb);
     }
 
+    static SessionQuery screensReadingTranscripts(TranscriptView first, TranscriptView... later) {
+        SessionQuery screens = blankScreens();
+        when(screens.transcriptOf(any())).thenReturn(first, later);
+        return screens;
+    }
+
+    static OutsideSessionCommand outsideOffering(RemoteControlConfigView config) {
+        OutsideSessionCommand outside = mock(OutsideSessionCommand.class);
+        when(outside.jump(any())).thenReturn(Optional.of(config));
+        return outside;
+    }
+
+    static Shell shellWithSessionsFocused(
+            SessionsView sessions, SessionQuery screens, OutsideSessionCommand outside, Executor background, int panels) {
+        return pressed(shellWith(sessions, screens, outside, background), alt('j'), panels);
+    }
+
+    static Shell shellOnSessionsReading(SessionsView sessions, SessionQuery screens) {
+        return shellWithSessionsFocused(sessions, screens, mock(OutsideSessionCommand.class), Runnable::run, 1);
+    }
+
+    static Shell shellOnSessionsOutside(SessionsView sessions, OutsideSessionCommand outside) {
+        return shellWithSessionsFocused(sessions, blankScreens(), outside, Runnable::run, 1);
+    }
+
+    static Shell shellOnElsewhereOutside(SessionsView sessions, OutsideSessionCommand outside) {
+        return shellWithSessionsFocused(sessions, blankScreens(), outside, Runnable::run, 3);
+    }
+
+    private static Shell shellWith(SessionsView sessions, SessionQuery screens, OutsideSessionCommand outside, Executor background) {
+        return new Shell(
+                boardViewOf(ticketView()),
+                emptyDocsView(),
+                sessions,
+                checkingPullRequestsView(),
+                mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
+                mock(WatchedSessionCommand.class),
+                outside,
+                screens,
+                mock(BoardQuery.class),
+                mock(DocsQuery.class),
+                mock(ReviewQuery.class),
+                background);
+    }
+
+    static List<TranscriptPayload> transcriptsAsked(SessionQuery screens, int times) {
+        ArgumentCaptor<TranscriptPayload> asked = ArgumentCaptor.forClass(TranscriptPayload.class);
+        verify(screens, times(times)).transcriptOf(asked.capture());
+        return asked.getAllValues();
+    }
+
+    static JumpPayload jumpedWith(OutsideSessionCommand outside) {
+        ArgumentCaptor<JumpPayload> payload = ArgumentCaptor.forClass(JumpPayload.class);
+        verify(outside).jump(payload.capture());
+        return payload.getValue();
+    }
+
     static SessionQuery screensChoosing(VerbChoiceView choice) {
         return mock(SessionQuery.class, invocation -> invocation.getMethod().getReturnType() == VerbChoiceView.class
                 ? choice
@@ -172,6 +245,9 @@ final class ShellFixture {
     }
 
     private static Object blankScreenOrFirstVerb(InvocationOnMock invocation) {
+        if (invocation.getMethod().getReturnType() == TranscriptView.class) {
+            return new NoTranscriptView();
+        }
         if (invocation.getMethod().getReturnType() != VerbChoiceView.class) {
             return blankScreenOrNothing(invocation);
         }
@@ -188,6 +264,7 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 hosting,
                 mock(WatchedSessionCommand.class),
+                mock(OutsideSessionCommand.class),
                 screens,
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
         pressed(shell, key('j'), ticket.status().ordinal());
@@ -243,6 +320,7 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 hosting,
                 watching,
+                mock(OutsideSessionCommand.class),
                 screens,
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
@@ -271,6 +349,7 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 hosting,
                 mock(WatchedSessionCommand.class),
+                mock(OutsideSessionCommand.class),
                 screens,
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),

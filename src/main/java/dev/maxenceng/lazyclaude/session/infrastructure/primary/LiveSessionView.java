@@ -8,10 +8,13 @@ import java.util.Optional;
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.Hosting;
 import dev.maxenceng.lazyclaude.session.domain.LiveSession;
+import dev.maxenceng.lazyclaude.session.domain.Nowhere;
+import dev.maxenceng.lazyclaude.session.domain.Residence;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
+import dev.maxenceng.lazyclaude.session.published.ResidenceName;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
@@ -29,7 +32,8 @@ public record LiveSessionView(
         ClaudeVersion version,
         SessionState state,
         List<TicketLink> links,
-        Hosting hosting) {
+        Hosting hosting,
+        Residence residence) {
 
     static LiveSessionView from(AvailableSessions available, LiveSession session) {
         return builder()
@@ -43,6 +47,7 @@ public record LiveSessionView(
                 .state(session.state())
                 .links(session.links())
                 .hosting(session.hosting())
+                .residence(session.residence())
                 .build();
     }
 
@@ -59,6 +64,11 @@ public record LiveSessionView(
     /** Whether lazyclaude spawned the session, so that it runs in a dock tab. */
     public boolean isHosted() {
         return hosting == Hosting.HOSTED;
+    }
+
+    /** What the session's row says of where it lives, none when it lives in neither kitty nor tmux. */
+    public Optional<ResidenceName> residenceName() {
+        return residence.name();
     }
 
     /** Whether the session is linked to no ticket. */
@@ -81,6 +91,7 @@ public record LiveSessionView(
         private SessionState state;
         private List<TicketLink> links;
         private Hosting hosting = Hosting.OUTSIDE;
+        private Residence residence = new Nowhere();
 
         private LiveSessionViewBuilder() {}
 
@@ -134,8 +145,13 @@ public record LiveSessionView(
             return this;
         }
 
+        public LiveSessionViewBuilder residence(Residence residence) {
+            this.residence = residence;
+            return this;
+        }
+
         public LiveSessionView build() {
-            return new LiveSessionView(id, pid, name, directory, startedAt, age, version, state, links, hosting);
+            return new LiveSessionView(id, pid, name, directory, startedAt, age, version, state, links, hosting, residence);
         }
     }
 }

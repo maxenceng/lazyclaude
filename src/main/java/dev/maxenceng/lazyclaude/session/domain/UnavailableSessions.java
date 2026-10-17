@@ -1,11 +1,13 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import java.util.List;
+import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 
 /**
  * Neither the registry nor {@code claude agents --json} answered; lazyclaude starts anyway and says why. The past sessions
@@ -30,6 +32,11 @@ public record UnavailableSessions(Reason reason, List<OpenHostedSession> hosted)
                                 .build())
                         .toList())
                 .build();
+    }
+
+    @Override
+    public Optional<LiveSession> liveSession(SessionId id) {
+        return Optional.empty();
     }
 
     @Override

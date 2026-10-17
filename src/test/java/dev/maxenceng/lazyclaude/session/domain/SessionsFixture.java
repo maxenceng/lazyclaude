@@ -1,7 +1,10 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.emptyEnvironment;
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -95,12 +98,28 @@ public final class SessionsFixture {
 
     public static SessionManager sessionManager(
             LiveSessionPort sessions,
+            ProjectLocatorPort locator,
+            SessionWatchPort watch,
+            WarningPort warnings,
+            ProcessEnvironmentPort environment) {
+        return new SessionManager(
+                sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, environment, clock());
+    }
+
+    public static ProcessEnvironmentPort emptyEnvironmentPort() {
+        ProcessEnvironmentPort environment = mock(ProcessEnvironmentPort.class);
+        lenient().when(environment.of(any())).thenReturn(emptyEnvironment());
+        return environment;
+    }
+
+    public static SessionManager sessionManager(
+            LiveSessionPort sessions,
             PastSessionPort past,
             ProjectLocatorPort locator,
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings) {
-        return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, clock());
+        return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, emptyEnvironmentPort(), clock());
     }
 
     public static WorkingDirectory workingDirectoryOf(ReportedSession session) {

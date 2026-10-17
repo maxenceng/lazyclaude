@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inKitty;
+import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inTmux;
 import static dev.maxenceng.lazyclaude.session.published.ClaudeVersionFixture.version;
 import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
@@ -60,7 +62,15 @@ public final class SessionsViewFixture {
     }
 
     public static LiveSessionView hostedLiveSessionView() {
-        return sessionViewBuilder().hosting(Hosting.HOSTED).build();
+        return hostedSessionViewBuilder().build();
+    }
+
+    public static LiveSessionView.LiveSessionViewBuilder hostedSessionViewBuilder() {
+        return sessionViewBuilder().hosting(Hosting.HOSTED);
+    }
+
+    public static LiveSessionView hostedSessionViewWith(SessionState state) {
+        return hostedSessionViewBuilder().state(state).build();
     }
 
     public static HostedSessionView startingHostedSessionView() {
@@ -283,6 +293,19 @@ public final class SessionsViewFixture {
                 .name(new SessionName(name))
                 .state(state)
                 .links(List.of(links))
+                .build();
+    }
+
+    public static LiveSessionView kittySessionView() {
+        return sessionViewBuilder().name(new SessionName("fix-status")).residence(inKitty()).build();
+    }
+
+    public static LiveSessionView tmuxSessionView() {
+        return sessionViewBuilder()
+                .id(secondSessionId())
+                .name(new SessionName("lint-pass"))
+                .state(waitingForInput())
+                .residence(inTmux())
                 .build();
     }
 

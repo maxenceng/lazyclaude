@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.Marker;
+import dev.maxenceng.lazyclaude.session.published.ProcessId;
 
 /** The live sessions of one place outside this project. That they are the place's, and their order, are the manager's. */
 public record ElsewhereGroup(SessionPlace place, List<LiveSession> sessions) {
@@ -17,6 +18,11 @@ public record ElsewhereGroup(SessionPlace place, List<LiveSession> sessions) {
     /** What the place asks of you: the strongest marker among its sessions. */
     public Optional<Marker> strongestMarker() {
         return Marker.strongest(sessions.stream().flatMap(session -> session.state().marker().stream()).toList());
+    }
+
+    /** This place with the sessions whose pid is one of {@code hostedPids} marked hosted, as lazyclaude knows them to be owned. */
+    public ElsewhereGroup ownedAmong(List<ProcessId> hostedPids) {
+        return new ElsewhereGroup(place, sessions.stream().map(session -> session.ownedAmong(hostedPids)).toList());
     }
 
     public static ElsewhereGroupBuilder builder() {

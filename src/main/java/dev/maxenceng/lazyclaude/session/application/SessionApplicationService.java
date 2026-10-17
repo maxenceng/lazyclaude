@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.session.application;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -10,15 +11,24 @@ import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationManager;
 import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.HostedSessionManager;
+import dev.maxenceng.lazyclaude.session.domain.JumpManager;
+import dev.maxenceng.lazyclaude.session.domain.KittyConfigManager;
+import dev.maxenceng.lazyclaude.session.domain.KittyConfigPort;
 import dev.maxenceng.lazyclaude.session.domain.KnownTickets;
 import dev.maxenceng.lazyclaude.session.domain.LastPushedSessions;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentPort;
+import dev.maxenceng.lazyclaude.session.domain.RemoteControlConfig;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.Sessions;
+import dev.maxenceng.lazyclaude.session.domain.TerminalJumpPort;
 import dev.maxenceng.lazyclaude.session.domain.TicketStart;
 import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
+import dev.maxenceng.lazyclaude.session.domain.TranscriptManager;
+import dev.maxenceng.lazyclaude.session.domain.TranscriptRead;
+import dev.maxenceng.lazyclaude.session.domain.TranscriptReadPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
 import dev.maxenceng.lazyclaude.session.domain.Watched;
@@ -30,6 +40,7 @@ import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
+import dev.maxenceng.lazyclaude.session.published.TranscriptOffset;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
@@ -44,6 +55,9 @@ public final class SessionApplicationService {
     private final SessionManager manager;
     private final HostedSessionManager hosted;
     private final DesktopNotificationManager notifying;
+    private final JumpManager jumping;
+    private final KittyConfigManager kittyConfiguring;
+    private final TranscriptManager transcribing;
     private final LastPushedSessions lastPushed = new LastPushedSessions();
     private final AtomicReference<Consumer<Sessions>> delivering = new AtomicReference<>(sessions -> {});
 
@@ -57,10 +71,17 @@ public final class SessionApplicationService {
             HostPort hosts,
             WorktreePort worktrees,
             DesktopNotificationPort notifications,
+            ProcessEnvironmentPort environments,
+            TerminalJumpPort jumps,
+            KittyConfigPort kittyConfig,
+            TranscriptReadPort transcripts,
             Clock clock) {
         this.hosted = new HostedSessionManager(hosts, warnings, worktrees);
+        this.jumping = new JumpManager(jumps, environments, kittyConfig, warnings);
+        this.kittyConfiguring = new KittyConfigManager(kittyConfig, warnings);
+        this.transcribing = new TranscriptManager(transcripts);
         this.notifying = new DesktopNotificationManager(notifications, warnings);
-        this.manager = new SessionManager(sessions, pastSessions, locator, watch, transcriptWatch, warnings, clock);
+        this.manager = new SessionManager(sessions, pastSessions, locator, watch, transcriptWatch, warnings, environments, clock);
     }
 
     public Sessions sessionsFor(Project project, KnownTickets tickets) {
@@ -92,6 +113,31 @@ public final class SessionApplicationService {
     public void refresh(Project project, KnownTickets tickets) {
         manager.know(project, tickets, delivering.get());
         manager.rescanTranscripts();
+    }
+
+    /**
+     * Brings an outside session's window forward, and answers what {@code kitty.conf} needs when kitty refused for remote control
+     * and lazyclaude runs in kitty. The session is looked up among the sessions as last pushed with the hosted ones laid over, as
+     * {@link #verbChoiceFor} does, so the render thread's rows and this agree on which sessions are lazyclaude's own; a session no
+     * longer live is no jump. It runs a process, so not on the render thread.
+     */
+    public Optional<RemoteControlConfig> jump(Project project, KnownTickets tickets, SessionId session) {
+        return lastPushed
+                .last()
+                .map(pushed -> pushed.hosting(hosted.open()))
+                .orElseGet(() -> sessionsFor(project, tickets))
+                .liveSession(session)
+                .flatMap(jumping::jump);
+    }
+
+    /** Appends the remote control lines to {@code kitty.conf}, as the user said yes to the offer; the outcome is a warning. */
+    public void addKittyRemoteControl() {
+        kittyConfiguring.add();
+    }
+
+    /** What a session's transcript shows from {@code from}: its entries, none yet, or why they cannot be read. */
+    public TranscriptRead transcriptOf(SessionId session, WorkingDirectory directory, TranscriptOffset from) {
+        return transcribing.read(session, directory, from);
     }
 
     public HostStart startUnlinked(Project project, PaneSize size) {

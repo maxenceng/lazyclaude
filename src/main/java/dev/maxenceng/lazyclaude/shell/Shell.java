@@ -40,6 +40,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
@@ -48,6 +49,8 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
@@ -63,6 +66,7 @@ import dev.maxenceng.lazyclaude.session.published.PaneWidth;
 import dev.maxenceng.lazyclaude.session.published.PastedText;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
+import dev.maxenceng.lazyclaude.session.published.TranscriptOffset;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
@@ -147,8 +151,12 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<BoardView> pendingBoard = new AtomicReference<>();
     private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
+    private final TranscriptPane transcript = new TranscriptPane();
+    private final AtomicBoolean transcriptReading = new AtomicBoolean();
+    private boolean transcriptStale;
     private final HostedSessionCommand hosting;
     private final WatchedSessionCommand watching;
+    private final OutsideSessionCommand outside;
     private final TerminalFocus terminalFocus = new TerminalFocus(this::terminalFocusChanged);
     private WatchedPayload lastWatched = new NoWatchedSessionPayload();
     private CompletableFuture<Void> watchUpdates = CompletableFuture.completedFuture(null);
@@ -188,6 +196,7 @@ public final class Shell extends ToolkitApp {
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
+            OutsideSessionCommand outside,
             SessionQuery screens,
             BoardQuery boards,
             DocsQuery docsQuery,
@@ -199,6 +208,7 @@ public final class Shell extends ToolkitApp {
                 pullRequests,
                 hosting,
                 watching,
+                outside,
                 screens,
                 boards,
                 docsQuery,
@@ -214,6 +224,7 @@ public final class Shell extends ToolkitApp {
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
+            OutsideSessionCommand outside,
             SessionQuery screens,
             BoardQuery boards,
             DocsQuery docsQuery,
@@ -229,6 +240,7 @@ public final class Shell extends ToolkitApp {
         this.pullRequests = pullRequests;
         this.hosting = hosting;
         this.watching = watching;
+        this.outside = outside;
         this.screens = screens;
         this.boards = boards;
         this.docsQuery = docsQuery;
@@ -287,6 +299,7 @@ public final class Shell extends ToolkitApp {
         if (elsewhere.replace(next) && mainViewOwner == Focus.ELSEWHERE) {
             mainViewScroll.reset();
         }
+        transcriptStale = true;
         refreshOffer();
         TabClosing closing = dock.replace(sessions.hosted());
         if (focus == Focus.DOCK && closing == TabClosing.LAST_ONE_GONE) {
@@ -972,6 +985,7 @@ public final class Shell extends ToolkitApp {
         applyPendingMergedHeads();
         applyPendingWarning();
         syncWatched();
+        syncTranscript();
         Element screen = column(
                 new StatusLineElement(
                         StatusText.spans(sessions.markerCounts(), elsewhere.groups()),
@@ -986,7 +1000,14 @@ public final class Shell extends ToolkitApp {
                                 .percent(LEFT_COLUMN_PERCENT),
                         (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
                 new KeyBarElement(keyBar()));
-        return picker.<Element>map(open -> stack(screen, new VerbPickerElement(open, () -> sessionsArea)))
+        return picker.<Element>map(open -> stack(
+                        screen,
+                        new PopupElement(
+                                VerbPickerText.title(open),
+                                VerbPickerText.rows(open),
+                                Optional.of(open.cursor()),
+                                VerbPickerText.hint(),
+                                () -> sessionsArea)))
                 .orElse(screen);
     }
 
@@ -1073,10 +1094,10 @@ public final class Shell extends ToolkitApp {
     private Element sessionsDetail() {
         return sessions.selected()
                 .map(row -> switch (row) {
-                    case LiveSessionRow live ->
+                    case LiveSessionRow live when live.session().isHosted() ->
                         new DetailElement(width -> SessionText.facts(live.session()), Optional.empty(), mainViewScroll);
-                    case PastSessionRow past ->
-                        new DetailElement(width -> SessionText.pastFacts(past.session()), Optional.empty(), mainViewScroll);
+                    case LiveSessionRow live -> transcriptDetail();
+                    case PastSessionRow past -> transcriptDetail();
                     case OlderSessionsRow older -> column();
                     case SectionHeaderRow header -> column();
                     case NoSessionRow none -> column();
@@ -1084,6 +1105,47 @@ public final class Shell extends ToolkitApp {
                     case StartingSessionRow starting -> column();
                 })
                 .orElseGet(() -> column());
+    }
+
+    private Element transcriptDetail() {
+        return DetailElement.tailing(transcript::rows, mainViewScroll);
+    }
+
+    /**
+     * Reads the shown session's transcript from where the last read ended, off the render thread, once the sessions were pushed again
+     * or another session was selected; one read at a time, and its entries land on the render thread.
+     */
+    private void syncTranscript() {
+        Optional<TranscriptSubject> wanted = mainViewOwner == Focus.SESSIONS ? sessions.selectedTranscript() : Optional.empty();
+        wanted.ifPresent(subject -> {
+            if (!transcript.shows(subject.id())) {
+                transcript.show(subject.id());
+                transcriptStale = true;
+            }
+            if (transcriptStale && transcriptReading.compareAndSet(false, true)) {
+                transcriptStale = false;
+                readTranscript(subject, transcript.offset());
+            }
+        });
+    }
+
+    private void readTranscript(TranscriptSubject subject, TranscriptOffset from) {
+        background.execute(() -> {
+            TranscriptView read = screens.transcriptOf(new TranscriptPayload(subject.id(), subject.directory(), from));
+            onRenderThread(() -> {
+                transcript.apply(subject.id(), read);
+                transcriptReading.set(false);
+            });
+        });
+    }
+
+    private void onRenderThread(Runnable task) {
+        ToolkitRunner running = runner();
+        if (running == null) {
+            task.run();
+        } else {
+            running.runOnRenderThread(task);
+        }
     }
 
     private Element elsewhereDetail() {

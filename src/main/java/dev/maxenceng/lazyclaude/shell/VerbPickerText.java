@@ -1,7 +1,6 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 
@@ -35,12 +34,5 @@ final class VerbPickerText {
 
     static String keys() {
         return KEYS;
-    }
-
-    static int width(VerbPicker picker) {
-        return Stream.concat(Stream.of(title(picker), hint()), rows(picker).stream())
-                .mapToInt(String::length)
-                .max()
-                .orElse(0);
     }
 }
