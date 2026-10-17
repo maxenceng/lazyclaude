@@ -34,14 +34,17 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.AddRemoteControlView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.JumpPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemoteControlConfigView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeTicketHostedPayload;
@@ -118,6 +121,8 @@ public final class Shell extends ToolkitApp {
     private static final char SUSPEND = 'z';
     private static final char NEXT_WAITING = 'w';
     private static final char YES = 'y';
+    private static final char NO = 'n';
+    private static final char JUMP = 'o';
     private static final char LEFT = 'h';
     private static final char DOWN = 'j';
     private static final char UP = 'k';
@@ -136,6 +141,7 @@ public final class Shell extends ToolkitApp {
     private static final String FOCUS_KEYS = "alt+h/j/k/l focus";
     private static final String QUIT_KEY = "q quit";
     private static final String REFRESH_KEY = "R refresh";
+    private static final String JUMP_KEY = "o jump";
     private static final String NEW_KEY = "N new";
     private static final String NEW_TICKET_KEY = "n new";
     private static final String MAIN_VIEW_KEY = "m main view";
@@ -181,6 +187,9 @@ public final class Shell extends ToolkitApp {
     private boolean mergedRead;
     private Optional<Rect> paneArea = Optional.empty();
     private Optional<Long> quitPrompt = Optional.empty();
+    private Optional<RemoteControlConfigView> remoteControlPrompt = Optional.empty();
+    private Optional<Rect> mainViewArea = Optional.empty();
+    private CompletableFuture<Void> outsideCommands = CompletableFuture.completedFuture(null);
     private boolean mainViewHidden;
     private Focus focus = Focus.BOARD;
     private Focus lastLeft = Focus.BOARD;
@@ -522,6 +531,9 @@ public final class Shell extends ToolkitApp {
         if (quitPrompt.isPresent()) {
             return answerQuitPrompt(key);
         }
+        if (remoteControlPrompt.isPresent()) {
+            return answerRemoteControlPrompt(remoteControlPrompt.get(), key);
+        }
         if (picker.isPresent()) {
             return pressInPicker(picker.get(), key);
         }
@@ -542,6 +554,9 @@ public final class Shell extends ToolkitApp {
         }
         if (key.isChar(REFRESH)) {
             return refresh();
+        }
+        if (key.isChar(JUMP)) {
+            return jump();
         }
         if (key.isChar(NEW_TICKET_SESSION)) {
             return newFromTicket();
@@ -659,6 +674,50 @@ public final class Shell extends ToolkitApp {
         if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
             quitRequested = true;
             quit();
+        }
+        return true;
+    }
+
+    /** The session {@code o} would bring forward: the selected one of the Sessions or Elsewhere panel, unless lazyclaude hosts it. */
+    private Optional<LiveSessionView> jumpTarget() {
+        return switch (focus) {
+            case SESSIONS ->
+                sessions.selected()
+                        .filter(LiveSessionRow.class::isInstance)
+                        .map(row -> ((LiveSessionRow) row).session())
+                        .filter(session -> !session.isHosted());
+            case ELSEWHERE -> elsewhere.selected().map(ElsewhereSessionRow::session).filter(session -> !session.isHosted());
+            default -> Optional.empty();
+        };
+    }
+
+    private boolean jump() {
+        return jumpTarget()
+                .map(target -> {
+                    JumpPayload payload = new JumpPayload(new SessionPayload(root, linkedTicketIds), target.id());
+                    inOrder(() -> outside.jump(payload).ifPresent(this::offered));
+                    return true;
+                })
+                .orElse(false);
+    }
+
+    private void offered(RemoteControlConfigView offer) {
+        onRenderThread(() -> remoteControlPrompt = Optional.of(offer));
+    }
+
+    /** Commands to {@code session} that touch processes or files run off the render thread, each after the one before it. */
+    private void inOrder(Runnable command) {
+        outsideCommands = outsideCommands.exceptionally(failed -> null).thenRunAsync(command, background);
+    }
+
+    private boolean answerRemoteControlPrompt(RemoteControlConfigView prompt, KeyEvent key) {
+        boolean plain = !key.hasCtrl() && !key.hasAlt();
+        boolean cancelled = key.isKey(KeyCode.ESCAPE) || prompt instanceof AddRemoteControlView && plain && key.isChar(NO);
+        if (cancelled) {
+            remoteControlPrompt = Optional.empty();
+        } else if (prompt instanceof AddRemoteControlView && plain && key.isChar(YES)) {
+            remoteControlPrompt = Optional.empty();
+            inOrder(outside::addRemoteControl);
         }
         return true;
     }
@@ -1000,7 +1059,7 @@ public final class Shell extends ToolkitApp {
                                 .percent(LEFT_COLUMN_PERCENT),
                         (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
                 new KeyBarElement(keyBar()));
-        return picker.<Element>map(open -> stack(
+        Element withPicker = picker.<Element>map(open -> stack(
                         screen,
                         new PopupElement(
                                 VerbPickerText.title(open),
@@ -1009,6 +1068,16 @@ public final class Shell extends ToolkitApp {
                                 VerbPickerText.hint(),
                                 () -> sessionsArea)))
                 .orElse(screen);
+        return remoteControlPrompt
+                .<Element>map(prompt -> stack(
+                        withPicker,
+                        new PopupElement(
+                                RemoteControlPromptText.title(prompt),
+                                RemoteControlPromptText.rows(prompt),
+                                Optional.empty(),
+                                RemoteControlPromptText.hint(prompt),
+                                () -> mainViewArea)))
+                .orElse(withPicker);
     }
 
     private Element boardPanel() {
@@ -1063,7 +1132,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element mainView() {
-        return framed(MAIN_VIEW_TITLE, Focus.MAIN, detail()).fill();
+        return framed(MAIN_VIEW_TITLE, Focus.MAIN, new PaneProbe(detail(), area -> mainViewArea = Optional.of(area))).fill();
     }
 
     private Element dock() {
@@ -1183,6 +1252,9 @@ public final class Shell extends ToolkitApp {
     }
 
     private List<String> keyBar() {
+        if (remoteControlPrompt.isPresent()) {
+            return List.of(RemoteControlPromptText.keys(remoteControlPrompt.get()));
+        }
         if (picker.isPresent()) {
             return List.of(VerbPickerText.keys());
         }
@@ -1196,6 +1268,7 @@ public final class Shell extends ToolkitApp {
                         Included.when(foldable(), FOLD_KEY),
                         Included.when(focus == Focus.BOARD && board.selected() instanceof TicketRow, SESSIONS_KEY),
                         Included.when(focus == Focus.SESSIONS && sessions.olderSelected(), EXPAND_KEY),
+                        Included.when(jumpTarget().isPresent(), JUMP_KEY),
                         Stream.of(FOCUS_KEYS, QUIT_KEY),
                         Included.when(
                                 (focus == Focus.BOARD || focus == Focus.SESSIONS) && selectedTicket().isPresent(),

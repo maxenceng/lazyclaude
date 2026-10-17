@@ -16,6 +16,7 @@ public record ProcessEnvironment(Map<VariableName, VariableValue> variables) {
     private static final VariableName KITTY_WINDOW_ID = new VariableName("KITTY_WINDOW_ID");
     private static final Pattern NUMBER = Pattern.compile("\\d{1,18}");
     private static final String TMUX_FIELD_SEPARATOR = ",";
+    private static final int TMUX_FIELDS_KEPT = 2;
 
     public ProcessEnvironment {
         Assert.notNull("variables", variables);
@@ -40,7 +41,7 @@ public record ProcessEnvironment(Map<VariableName, VariableValue> variables) {
 
     private TmuxServer serverOfTmux() {
         return valueOf(TMUX)
-                .map(value -> value.value().split(TMUX_FIELD_SEPARATOR, 2)[0])
+                .map(value -> value.value().split(TMUX_FIELD_SEPARATOR, TMUX_FIELDS_KEPT)[0])
                 .filter(socket -> !socket.isBlank())
                 .<TmuxServer>map(TmuxSocket::new)
                 .orElseGet(UnknownTmuxServer::new);

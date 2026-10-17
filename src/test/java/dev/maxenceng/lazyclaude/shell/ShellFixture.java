@@ -18,6 +18,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -226,6 +227,10 @@ final class ShellFixture {
         ArgumentCaptor<TranscriptPayload> asked = ArgumentCaptor.forClass(TranscriptPayload.class);
         verify(screens, times(times)).transcriptOf(asked.capture());
         return asked.getAllValues();
+    }
+
+    static Path projectRootPath() {
+        return projectRoot().value();
     }
 
     static JumpPayload jumpedWith(OutsideSessionCommand outside) {
