@@ -1,8 +1,8 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.published.CellColumn;
 import dev.maxenceng.lazyclaude.session.published.CellRow;
@@ -95,17 +95,12 @@ final class TerminalInputs {
     }
 
     private static Modifiers modifiers(KeyModifiers held) {
-        List<Modifier> modifiers = new ArrayList<>();
-        if (held.ctrl()) {
-            modifiers.add(Modifier.CTRL);
-        }
-        if (held.alt()) {
-            modifiers.add(Modifier.ALT);
-        }
-        if (held.shift()) {
-            modifiers.add(Modifier.SHIFT);
-        }
-        return new Modifiers(modifiers);
+        return new Modifiers(Stream.of(
+                        Included.when(held.ctrl(), Modifier.CTRL),
+                        Included.when(held.alt(), Modifier.ALT),
+                        Included.when(held.shift(), Modifier.SHIFT))
+                .flatMap(Function.identity())
+                .toList());
     }
 
     private static MouseAction action(MouseEvent event) {

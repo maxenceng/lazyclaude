@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.docs.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.WatchKey;

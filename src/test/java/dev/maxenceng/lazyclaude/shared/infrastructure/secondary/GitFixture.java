@@ -77,6 +77,32 @@ public final class GitFixture {
         git(repository, "checkout", "-q", "main");
     }
 
+    public static void commitEverything(Path in, String message) throws Exception {
+        git(in, "add", ".");
+        git(in, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", message);
+    }
+
+    public static Path worktreeOnExistingBranch(Path repository, Path at, String branch) throws Exception {
+        git(repository, "worktree", "add", "-q", at.toString(), branch);
+        return at.toRealPath();
+    }
+
+    public static void checkoutNewBranch(Path in, String branch) throws Exception {
+        git(in, "checkout", "-q", "-b", branch);
+    }
+
+    public static void deleteBranch(Path repository, String branch) throws Exception {
+        git(repository, "branch", "-q", "-D", branch);
+    }
+
+    public static void packRefs(Path repository) throws Exception {
+        git(repository, "pack-refs", "--all");
+    }
+
+    public static void removeLinkedWorktree(Path repository, Path worktree) throws Exception {
+        git(repository, "worktree", "remove", "--force", worktree.toString());
+    }
+
     public static void branchAtHead(Path repository, String branch) throws Exception {
         git(repository, "branch", branch);
     }

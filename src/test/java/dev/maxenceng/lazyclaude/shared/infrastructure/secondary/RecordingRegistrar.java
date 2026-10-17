@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.docs.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
@@ -13,29 +13,34 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 final class RecordingRegistrar implements DirectoryRegistrar {
 
-    private static final DirectoryRegistrar RECORD_ONLY = (service, directory) -> new IdleKey(directory);
-    private static final DirectoryRegistrar REAL = (service, directory) ->
-            directory.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
-
     private final List<Path> registered = new CopyOnWriteArrayList<>();
+    private final List<Path> cancelled = new CopyOnWriteArrayList<>();
     private final int failingCall;
-    private final DirectoryRegistrar delegate;
+    private final boolean real;
 
-    private RecordingRegistrar(int failingCall, DirectoryRegistrar delegate) {
+    private RecordingRegistrar(int failingCall, boolean real) {
         this.failingCall = failingCall;
-        this.delegate = delegate;
+        this.real = real;
     }
 
     static RecordingRegistrar neverFailing() {
-        return new RecordingRegistrar(0, RECORD_ONLY);
+        return new RecordingRegistrar(0, false);
     }
 
     static RecordingRegistrar failingOnCall(int call) {
-        return new RecordingRegistrar(call, REAL);
+        return new RecordingRegistrar(call, true);
+    }
+
+    static RecordingRegistrar recordingOnlyFailingOnCall(int call) {
+        return new RecordingRegistrar(call, false);
     }
 
     List<Path> registered() {
         return registered;
+    }
+
+    List<Path> cancelled() {
+        return cancelled;
     }
 
     @Override
@@ -44,6 +49,8 @@ final class RecordingRegistrar implements DirectoryRegistrar {
         if (registered.size() == failingCall) {
             throw new IOException("User limit of inotify watches reached");
         }
-        return delegate.register(service, directory);
+        return real
+                ? directory.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
+                : new IdleKey(directory, cancelled::add);
     }
 }

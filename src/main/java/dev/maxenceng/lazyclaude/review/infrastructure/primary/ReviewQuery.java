@@ -18,6 +18,11 @@ public final class ReviewQuery {
         return PullRequestsView.from(review.checking());
     }
 
+    /** Fetches again now rather than at the next interval; a fetch already under way answers it. */
+    public void refresh() {
+        review.runNow();
+    }
+
     /**
      * Hands {@code listener} the open pull requests and {@code mergedListener} the merged ones after each fetch, the first at once,
      * on a thread of the watcher's own, never a failure.

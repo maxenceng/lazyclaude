@@ -80,4 +80,33 @@ class PullRequestWatchRepositoryTest {
 
         assertThat(probe.nextRunWithin(settled())).isEmpty();
     }
+
+    @Test
+    void shouldRunTheRefreshAgainAtOnceWhenAskedToRunNow() throws InterruptedException {
+        RefreshProbe probe = instantRuns();
+        watcher = watcherWithoutAnotherRun();
+        watcher.watch(probe.refresh());
+        probe.nextRunWithin(within());
+
+        watcher.runNow();
+
+        assertThat(probe.nextRunWithin(within()))
+                .as("the interval is five minutes, so only the request can have caused this run")
+                .isPresent();
+    }
+
+    @Test
+    void shouldNotStartASecondRunWhenAskedToRunNowWhileOneIsUnderWay() throws InterruptedException {
+        RefreshProbe probe = instantRuns();
+        watcher = watcherWithoutAnotherRun();
+        watcher.watch(() -> {
+            watcher.runNow();
+            probe.refresh().run();
+        });
+        probe.nextRunWithin(within());
+
+        assertThat(probe.nextRunWithin(settled()))
+                .as("a gh already under way answers the request, so a second one is never queued behind it")
+                .isEmpty();
+    }
 }

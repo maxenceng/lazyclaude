@@ -1,7 +1,5 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -21,14 +19,15 @@ final class BoardRows {
     private static final int UP = -1;
 
     private BoardView board;
-    private final Set<RowKey> folded = new HashSet<>();
+    private Set<RowKey> folded;
     private RowKey selected;
 
     BoardRows(BoardView board) {
         this.board = board;
-        board.groups().stream()
+        this.folded = board.groups().stream()
                 .filter(group -> group.status().finished())
-                .forEach(group -> folded.add(groupKey(group.status().label())));
+                .map(group -> groupKey(group.status().label()))
+                .collect(Collectors.toUnmodifiableSet());
         this.selected = visible().getFirst().key();
     }
 
@@ -58,16 +57,17 @@ final class BoardRows {
     }
 
     List<Row> visible() {
-        List<Row> rows = new ArrayList<>(
-                board.groups().stream().flatMap(this::groupRows).toList());
-        if (!board.unreadable().isEmpty()) {
-            boolean isFolded = folded.contains(groupKey(UNREADABLE_GROUP));
-            rows.add(new HeaderRow(UNREADABLE_GROUP, board.unreadable().size(), isFolded));
-            if (!isFolded) {
-                board.unreadable().forEach(unreadable -> rows.add(new UnreadableRow(unreadable)));
-            }
+        return Stream.concat(board.groups().stream().flatMap(this::groupRows), unreadableRows())
+                .toList();
+    }
+
+    private Stream<Row> unreadableRows() {
+        if (board.unreadable().isEmpty()) {
+            return Stream.empty();
         }
-        return rows;
+        boolean isFolded = folded.contains(groupKey(UNREADABLE_GROUP));
+        Stream<Row> header = Stream.of(new HeaderRow(UNREADABLE_GROUP, board.unreadable().size(), isFolded));
+        return isFolded ? header : Stream.concat(header, board.unreadable().stream().map(UnreadableRow::new));
     }
 
     Row selected() {
@@ -92,11 +92,7 @@ final class BoardRows {
     }
 
     void toggleFold() {
-        selectedHeader().map(HeaderRow::key).ifPresent(key -> {
-            if (!folded.remove(key)) {
-                folded.add(key);
-            }
-        });
+        selectedHeader().map(HeaderRow::key).ifPresent(key -> folded = FoldedKeys.toggled(folded, key));
     }
 
     private void move(int step) {

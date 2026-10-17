@@ -12,4 +12,7 @@ public interface TranscriptWatchPort {
      */
     void watch(
             TranscriptLocator locator, Runnable changed, PollingFallback fallback, CacheFallback cache, RootFallback root);
+
+    /** Reads every transcript again soon, whether or not anything seems to have changed, and runs {@code changed} once they have landed. */
+    void rescanNow();
 }

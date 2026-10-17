@@ -1,17 +1,20 @@
-package dev.maxenceng.lazyclaude.docs.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.Watchable;
 import java.util.List;
+import java.util.function.Consumer;
 
 final class IdleKey implements WatchKey {
 
     private final Path directory;
+    private final Consumer<Path> onCancel;
 
-    IdleKey(Path directory) {
+    IdleKey(Path directory, Consumer<Path> onCancel) {
         this.directory = directory;
+        this.onCancel = onCancel;
     }
 
     @Override
@@ -30,7 +33,9 @@ final class IdleKey implements WatchKey {
     }
 
     @Override
-    public void cancel() {}
+    public void cancel() {
+        onCancel.accept(directory);
+    }
 
     @Override
     public Watchable watchable() {

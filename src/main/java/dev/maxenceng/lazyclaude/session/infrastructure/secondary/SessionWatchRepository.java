@@ -95,7 +95,7 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
     // deferred: an exception other than a closed or interrupted watch ends this thread, and the sessions stop updating with only a warning to say so — close it when a re-read can fail in a way the domain does not turn into a value.
     private void loop(Optional<WatchService> service, Runnable changed) {
         try {
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 boolean relevant = service.isPresent() ? waitForEvents(service.get()) : sleepThroughSweep();
                 if (relevant) {
                     changed.run();

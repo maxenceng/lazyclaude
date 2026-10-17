@@ -24,6 +24,10 @@ public final class ReviewApplicationService {
         return manager.checking();
     }
 
+    public void runNow() {
+        manager.runNow();
+    }
+
     public void subscribe(Project project, Consumer<PullRequests> listener, Consumer<MergedPullRequests> mergedListener) {
         manager.watch(project, listener, mergedListener);
     }

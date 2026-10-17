@@ -11,7 +11,9 @@ import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardWatchPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogRepository;
+import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BoardWatchRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchChangesRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchCopyRepository;
 import dev.maxenceng.lazyclaude.docs.application.DocsApplicationService;
@@ -73,9 +75,14 @@ public final class LazyClaude {
     private LazyClaude() {}
 
     static void main() throws Exception {
-        BoardQuery board = new BoardQuery(
-                new BoardApplicationService(new ProjectLocatorRepository(), new BacklogRepository(), new BranchCopyRepository(), new BranchChangesRepository()));
         WarningRepository warningRepository = new WarningRepository();
+        BoardQuery board = new BoardQuery(new BoardApplicationService(
+                new ProjectLocatorRepository(),
+                new BacklogRepository(),
+                new BranchCopyRepository(),
+                new BranchChangesRepository(),
+                new BoardWatchRepository(),
+                warningRepository));
         WarningApplicationService warningService = new WarningApplicationService(warningRepository, warningRepository);
         WarningQuery warnings = new WarningQuery(warningService);
         Thread.setDefaultUncaughtExceptionHandler(
@@ -206,7 +213,7 @@ public final class LazyClaude {
 
     /**
      * The shell on {@code view}, {@code tree} and {@code live}, handed the project's docs and sessions again
-     * after each change from now on, its open and merged pull requests as each fetch answers, the board read again when the merged ticket branches change, a repaint whenever a hosted session draws, and every warning raised, those raised
+     * after each change from now on, its open and merged pull requests as each fetch answers, the board read again when the backlog, a ticket worktree's copy of a ticket, the refs or the merged ticket branches change, a repaint whenever a hosted session draws, and every warning raised, those raised
      * before it opened included.
      */
     // deferred: a change between the first read and the watch starting is shown only at the next change — close it when a doc edited during start-up is seen stale.
@@ -220,9 +227,9 @@ public final class LazyClaude {
             ReviewQuery reviews,
             HostedSessionCommand hosting,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, sessions, board);
+        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, sessions, board, docs, reviews);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
-        // deferred: the ticket ids are the board's at start-up, so a ticket created while running links its sessions only at the next start — close it when the board is watched for changes.
+        board.subscribe(new BoardWatchPayload(view.root().value()), shell::boardChanged);
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);
         sessions.onScreenChange(shell::screensChanged);
         reviews.subscribe(

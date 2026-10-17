@@ -18,4 +18,25 @@
             </property>
         </properties>
     </rule>
+    <!-- Collections are built by streams, not by mutation (ADR 0032). State a field holds is exempt. -->
+    <rule name="BuildCollectionsWithoutMutation"
+          language="java"
+          message="Build the collection with a stream rather than creating one and adding to it"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <priority>1</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+//MethodDeclaration//ConstructorCall[ClassType[@SimpleName = ('ArrayList', 'LinkedList', 'ArrayDeque', 'HashSet', 'LinkedHashSet', 'TreeSet', 'EnumSet', 'HashMap', 'LinkedHashMap', 'TreeMap', 'EnumMap')]]
+|
+//MethodCall[@MethodName = 'forEach']/ArgumentList/LambdaExpression[.//MethodCall[@MethodName = ('add', 'addAll', 'put', 'putAll', 'remove', 'removeAll', 'offer')]]
+|
+//MethodCall[@MethodName = 'forEach']/ArgumentList/MethodReference[@MethodName = ('add', 'addAll', 'put', 'putAll', 'remove', 'removeAll', 'offer')]
+|
+//MethodDeclaration//MethodCall[@MethodName = ('add', 'addAll', 'put', 'putAll', 'remove', 'removeAll', 'offer')]
+    [VariableAccess[@Name = ancestor::MethodDeclaration[1]/FormalParameters/FormalParameter/VariableId/@Name]]
+]]></value>
+            </property>
+        </properties>
+    </rule>
 </ruleset>

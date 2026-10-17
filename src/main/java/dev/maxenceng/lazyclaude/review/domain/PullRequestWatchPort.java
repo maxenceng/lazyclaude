@@ -8,4 +8,7 @@ public interface PullRequestWatchPort {
      * run never starts before the one before it has returned.
      */
     void watch(Runnable refresh);
+
+    /** Runs the refresh now rather than at the next interval, unless a run is under way, which answers the request. */
+    void runNow();
 }

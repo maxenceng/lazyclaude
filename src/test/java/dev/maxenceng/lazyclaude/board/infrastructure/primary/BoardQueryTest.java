@@ -17,6 +17,8 @@ import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -25,10 +27,12 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
+import dev.maxenceng.lazyclaude.board.domain.BoardWatchPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchCopyPort;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
@@ -37,6 +41,7 @@ import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 @ExtendWith(MockitoExtension.class)
 class BoardQueryTest {
@@ -54,6 +59,15 @@ class BoardQueryTest {
 
     @Mock
     private BranchChangesPort changes;
+
+    @Mock
+    private BoardWatchPort watch;
+
+    @Mock
+    private WarningPort warnings;
+
+    @Mock
+    private Runnable changed;
 
     @Test
     void shouldViewEveryStatusGroupInLifecycleOrder() {
@@ -158,7 +172,7 @@ class BoardQueryTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
 
-        assertThat(boardQuery(locator, backlog).refreshedBoardFor(FROM_THE_PROJECT))
+        assertThat(boardQuery(locator, backlog).boardReadAgainFor(FROM_THE_PROJECT))
                 .get()
                 .extracting(board -> board.groups().get(Status.TODO.ordinal()).tickets())
                 .isEqualTo(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets());
@@ -168,8 +182,21 @@ class BoardQueryTest {
     void shouldViewNothingWhenTheBoardCannotBeReadAgain() {
         when(locator.locate(workingDirectory())).thenThrow(new ProjectNotFoundException("not here"));
 
-        assertThat(boardQuery(locator, backlog).refreshedBoardFor(FROM_THE_PROJECT))
+        assertThat(boardQuery(locator, backlog).boardReadAgainFor(FROM_THE_PROJECT))
                 .as("a board already on screen stays, rather than being replaced by a failure")
                 .isEmpty();
+    }
+
+    @Test
+    void shouldRunTheListenerWhenTheWatchReportsAChange() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        boardQuery(locator, backlog, copies, changes, watch, warnings)
+                .subscribe(new BoardWatchPayload(workingDirectory().path()), changed);
+        ArgumentCaptor<Runnable> reported = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).watch(any(), reported.capture(), any());
+
+        reported.getValue().run();
+
+        verify(changed).run();
     }
 }

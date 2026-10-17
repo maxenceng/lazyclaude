@@ -17,7 +17,7 @@ words mean.
 |---|---|---|
 | Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; sessions group under the one their `cwd` belongs to, so a ticket worktree's sessions sit under its project. A session whose `cwd` is outside git is grouped on its own. | `shared` |
 | Working directory | The directory lazyclaude was started in, or a session's `cwd`; the project is located from it. | `shared` |
-| Warning | A degraded mode lazyclaude carries on in (the docs watch fell back to polling, the sessions watch left to its sweep, live sessions read from `claude agents`), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, and is never printed over the screen. | `shared` |
+| Warning | A degraded mode lazyclaude carries on in (the docs or board watch fell back to polling, the board on screen kept because it could not be read again, the sessions watch left to its sweep, live sessions read from `claude agents`), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, and is never printed over the screen. | `shared` |
 
 ## shell
 
@@ -27,6 +27,7 @@ words mean.
 | Main view | The right column's top pane, which shows the selection of whichever left panel last had focus; for a ticket, its frontmatter and its body rendered as markdown, for a document, its markdown rendered. | `shell` |
 | Dock | The bottom of the right column, holding every hosted session as a tab. With the main view hidden it fills the column. | `shell` |
 | Dock tab | One hosted session's pane in the dock, labelled with its marker and name, or `starting`. | `shell` |
+| Refresh | `R`: reads the board, the docs tree, the open and merged pull requests, and the sessions and transcripts again at once, off the render thread. It shows only as the rows that changed; nothing flashes and nothing says "refreshed". | `shell` |
 | Ticket detail | What the main view shows for a ticket: its facts line, its other frontmatter keys, a rule, then its body rendered as markdown. It scrolls as one unit. | `shell` |
 
 ## board
@@ -93,7 +94,7 @@ words mean.
 |---|---|---|
 | Document | One markdown file under the project's `docs/`, outside `docs/backlog/`, shown read-only. | `docs` |
 | Docs tree | The project's documents grouped by folder, as the Docs panel shows them: the files directly under `docs/` first, then one header per folder with the count of documents beneath it, each level sorted by name. | `docs` |
-| Polling | Checking the docs, or the transcripts, on a timer (every 5 s) in place of the watch, only when the watch cannot be set up or kept. Not a sweep: neither has polling while its watch holds. | `docs`, `session` |
+| Polling | Checking the docs, the transcripts, or the backlog, the worktrees' backlogs and the refs the board is read from, on a timer (every 5 s) in place of the watch, only when the watch cannot be set up or kept; each tree that cannot be watched is polled and warned of by itself. Not a sweep: none has polling while its watch holds. | `docs`, `session`, `board` |
 
 ## Words we deliberately avoid
 

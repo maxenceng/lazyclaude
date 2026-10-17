@@ -1,6 +1,5 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -23,7 +22,7 @@ final class DocsRows {
     private static final int DOWN = 1;
     private static final int UP = -1;
 
-    private final Set<RowKey> folded = new HashSet<>();
+    private Set<RowKey> folded = Set.of();
     private DocsView docs;
     private Optional<RowKey> selected;
 
@@ -75,11 +74,7 @@ final class DocsRows {
     }
 
     void toggleFold() {
-        selectedFolder().map(FolderRow::key).ifPresent(key -> {
-            if (!folded.remove(key)) {
-                folded.add(key);
-            }
-        });
+        selectedFolder().map(FolderRow::key).ifPresent(key -> folded = FoldedKeys.toggled(folded, key));
     }
 
     /** Swaps in a freshly read tree; the selection stays on its path, or on the row that took its place. Says whether the selection moved. */

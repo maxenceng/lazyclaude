@@ -14,6 +14,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.Transcri
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.thirdSessionId;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.userLine;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.writeTranscript;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchFixture.longPollingWatcherWithoutInotify;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchFixture.pollTime;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchFixture.quietLongerThanTheSettleTime;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchFixture.repositoryOver;
@@ -230,5 +231,32 @@ class TranscriptWatchRepositoryTest {
 
         assertThat(probe.changedWithin(within())).isTrue();
         verifyNoInteractions(fallback);
+    }
+
+    @Test
+    void shouldReadEveryTranscriptAgainAndReportWhenAskedToRescanNow() throws Exception {
+        writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
+        watcher = watcherOver(projects, transcripts);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
+        assertThat(probe.changedWithin(within())).isTrue();
+        assertThat(probe.quietFor(quietLongerThanTheSettleTime())).isTrue();
+
+        watcher.rescanNow();
+
+        assertThat(probe.changedWithin(within()))
+                .as("nothing on disk changed, so only the request can have made the watcher report")
+                .isTrue();
+    }
+
+    @Test
+    void shouldReadEveryTranscriptAgainAtOnceWhenAskedToRescanNowWhileItPollsOnATimer() throws Exception {
+        writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
+        watcher = longPollingWatcherWithoutInotify(projects, transcripts);
+        watcher.watch(locator, probe.listener(), fallback, cache, unlistable);
+        assertThat(probe.changedWithin(within())).isTrue();
+
+        watcher.rescanNow();
+
+        assertThat(probe.changedWithin(within())).as("the timer is a minute, so the wait was cut short").isTrue();
     }
 }

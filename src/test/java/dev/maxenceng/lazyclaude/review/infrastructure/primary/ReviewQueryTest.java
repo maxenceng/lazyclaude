@@ -21,6 +21,7 @@ import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBr
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.siblingHeadBranch;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -140,5 +141,12 @@ class ReviewQueryTest {
         assertThat(mergedDelivered)
                 .as("a branch counts as a source again, and nothing is raised about it")
                 .containsExactly(noMergedPullRequestsView());
+    }
+
+    @Test
+    void shouldRunTheWatchNowWhenRefreshed() {
+        query.refresh();
+
+        verify(watch).runNow();
     }
 }

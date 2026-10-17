@@ -1,12 +1,11 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
-import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.snakeyaml.engine.v2.api.Load;
 import org.snakeyaml.engine.v2.api.LoadSettings;
@@ -91,15 +90,16 @@ final class TicketFrontmatterMapper {
     }
 
     private static String display(Node node) {
-        return display(node, Collections.newSetFromMap(new IdentityHashMap<>()));
+        return display(node, List.of());
     }
 
     /** @throws YamlEngineException when an alias makes a value contain itself, which has no text */
-    private static String display(Node node, Set<Node> enclosing) {
-        if (!enclosing.add(node)) {
+    private static String display(Node node, List<Node> enclosingSoFar) {
+        if (enclosingSoFar.stream().anyMatch(enclosingNode -> enclosingNode == node)) {
             throw new YamlEngineException("a value contains itself through an alias");
         }
-        String text = switch (node) {
+        List<Node> enclosing = Stream.concat(enclosingSoFar.stream(), Stream.of(node)).toList();
+        return switch (node) {
             case ScalarNode scalar -> oneRow(scalar.getValue());
             case SequenceNode sequence ->
                 sequence.getValue().stream()
@@ -113,8 +113,6 @@ final class TicketFrontmatterMapper {
                         .collect(Collectors.joining(ITEM_SEPARATOR, MAP_OPEN, MAP_CLOSE));
             default -> node.toString();
         };
-        enclosing.remove(node);
-        return text;
     }
 
     /** A value written over several lines shows on one row: its lines, stripped, joined by a space. */

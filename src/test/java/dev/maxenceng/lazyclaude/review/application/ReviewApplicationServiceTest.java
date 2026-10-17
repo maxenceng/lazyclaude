@@ -5,6 +5,7 @@ import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.openPu
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.watchedRefresh;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -62,5 +63,12 @@ class ReviewApplicationServiceTest {
         watchedRefresh(watch).run();
 
         assertThat(mergedDelivered).containsExactly(knownMergedPullRequests());
+    }
+
+    @Test
+    void shouldRunTheWatchNowWhenRefreshed() {
+        new ReviewApplicationService(pullRequests, mergedPullRequests, watch).runNow();
+
+        verify(watch).runNow();
     }
 }

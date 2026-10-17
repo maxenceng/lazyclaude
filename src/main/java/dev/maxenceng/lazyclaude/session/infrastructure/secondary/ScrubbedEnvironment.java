@@ -1,9 +1,10 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The environment a hosted {@code claude} runs in: lazyclaude's own, less every variable that would make it believe it runs
@@ -33,11 +34,14 @@ final class ScrubbedEnvironment {
     private ScrubbedEnvironment() {}
 
     static Map<String, String> of(Map<String, String> environment) {
-        Map<String, String> scrubbed = new HashMap<>(environment);
-        scrubbed.keySet().removeIf(name -> isOfTheOuterTerminal(name) || MARKING_A_NESTED_SESSION.contains(name));
-        scrubbed.put(TERM, EMULATED_TERM);
-        scrubbed.put(COLORTERM, TRUECOLOR);
-        return scrubbed;
+        Map<String, String> emulated = Map.of(TERM, EMULATED_TERM, COLORTERM, TRUECOLOR);
+        return Stream.concat(
+                        environment.entrySet().stream()
+                                .filter(variable -> !isOfTheOuterTerminal(variable.getKey())
+                                        && !MARKING_A_NESTED_SESSION.contains(variable.getKey())
+                                        && !emulated.containsKey(variable.getKey())),
+                        emulated.entrySet().stream())
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private static boolean isOfTheOuterTerminal(String name) {

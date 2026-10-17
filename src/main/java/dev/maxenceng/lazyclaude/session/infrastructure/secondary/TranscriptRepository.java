@@ -7,12 +7,11 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -73,11 +72,9 @@ public final class TranscriptRepository implements PastSessionPort {
     /** Reads again every transcript that is new or changed since the cache, and forgets those that are gone. */
     synchronized void rescanAll(TranscriptLocator locator, CacheFallback unwritable, RootFallback unlistable) {
         ensureLoaded();
-        Set<Path> present = new HashSet<>();
-        Set<Path> unlisted = new HashSet<>();
-        listTranscripts(present, unlisted, unlistable);
-        boolean forgot = known.keySet().removeIf(path -> isGone(Path.of(path), present, unlisted));
-        boolean refreshed = present.stream().map(file -> refresh(file, locator)).reduce(false, Boolean::logicalOr);
+        TranscriptListing listing = listTranscripts(unlistable);
+        boolean forgot = known.keySet().removeIf(path -> listing.isGone(Path.of(path)));
+        boolean refreshed = listing.present().stream().map(file -> refresh(file, locator)).reduce(false, Boolean::logicalOr);
         persist(forgot || refreshed, unwritable);
     }
 
@@ -97,42 +94,41 @@ public final class TranscriptRepository implements PastSessionPort {
         }
         synchronized (loading) {
             if (!loaded) {
-                cache.load().forEach(transcript -> known.put(transcript.path(), transcript));
+                known.putAll(cache.load().stream()
+                        .collect(Collectors.toMap(CachedTranscript::path, Function.identity(), (first, second) -> second)));
                 loaded = true;
             }
         }
     }
 
-    private void listTranscripts(Set<Path> present, Set<Path> unlisted, RootFallback unlistable) {
+    private TranscriptListing listTranscripts(RootFallback unlistable) {
         if (!Files.isDirectory(transcriptsRoot)) {
-            return;
+            return TranscriptListing.none();
         }
         try (Stream<Path> folders = Files.list(transcriptsRoot)) {
-            folders.filter(Files::isDirectory).forEach(folder -> listFolder(folder, present, unlisted));
+            return folders.filter(Files::isDirectory)
+                    .map(TranscriptRepository::listFolder)
+                    .reduce(TranscriptListing.none(), TranscriptListing::and);
         } catch (IOException unreadable) {
-            unlisted(unreadable, unlisted, unlistable);
+            return unlisted(unreadable, unlistable);
         } catch (UncheckedIOException unreadable) {
-            unlisted(unreadable.getCause(), unlisted, unlistable);
+            return unlisted(unreadable.getCause(), unlistable);
         }
     }
 
-    private void unlisted(IOException cause, Set<Path> unlisted, RootFallback unlistable) {
-        unlisted.add(transcriptsRoot);
+    private TranscriptListing unlisted(IOException cause, RootFallback unlistable) {
         unlistable.unlistable(new Reason(ROOT_UNLISTABLE.formatted(transcriptsRoot, FileFailure.causeOf(cause))));
+        return TranscriptListing.unlistable(transcriptsRoot);
     }
 
-    private static void listFolder(Path folder, Set<Path> present, Set<Path> unlisted) {
+    private static TranscriptListing listFolder(Path folder) {
         try (Stream<Path> files = Files.list(folder)) {
-            files.filter(TranscriptFile::isTranscript)
+            return TranscriptListing.found(files.filter(TranscriptFile::isTranscript)
                     .filter(Files::isRegularFile)
-                    .forEach(present::add);
+                    .collect(Collectors.toUnmodifiableSet()));
         } catch (IOException | UncheckedIOException unreadable) {
-            unlisted.add(folder);
+            return TranscriptListing.unlistable(folder);
         }
-    }
-
-    private static boolean isGone(Path file, Set<Path> present, Set<Path> unlisted) {
-        return !present.contains(file) && !unlisted.contains(file.getParent()) && !unlisted.contains(file.getParent().getParent());
     }
 
     private boolean refresh(Path file, TranscriptLocator locator) {

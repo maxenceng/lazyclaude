@@ -137,6 +137,8 @@ class ShellTicketStartTest {
                 hosting,
                 blankScreens(),
                 mock(dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery.class),
+                mock(dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery.class),
+                mock(dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery.class),
                 queued::add);
         shell.press(key('j'));
         shell.press(key('j'));

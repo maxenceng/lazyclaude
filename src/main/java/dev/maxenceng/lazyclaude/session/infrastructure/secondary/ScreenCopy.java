@@ -1,6 +1,5 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,7 +32,12 @@ final class ScreenCopy {
 
     private static final int RGB_MASK = 0xFFFFFF;
     private static final String EMPTY_CELL = " ";
-    private static final Map<TextStyle.Option, TextAttribute> ATTRIBUTES = attributes();
+    private static final List<Map.Entry<TextStyle.Option, TextAttribute>> ATTRIBUTES = List.of(
+            Map.entry(TextStyle.Option.BOLD, TextAttribute.BOLD),
+            Map.entry(TextStyle.Option.DIM, TextAttribute.DIM),
+            Map.entry(TextStyle.Option.ITALIC, TextAttribute.ITALIC),
+            Map.entry(TextStyle.Option.UNDERLINED, TextAttribute.UNDERLINED),
+            Map.entry(TextStyle.Option.INVERSE, TextAttribute.REVERSED));
 
     private ScreenCopy() {}
 
@@ -78,7 +82,7 @@ final class ScreenCopy {
         return RunStyle.builder()
                 .foreground(colour(style.getForeground()))
                 .background(colour(style.getBackground()))
-                .attributes(ATTRIBUTES.entrySet().stream()
+                .attributes(ATTRIBUTES.stream()
                         .filter(attribute -> style.hasOption(attribute.getKey()))
                         .map(Map.Entry::getValue)
                         .toList())
@@ -92,15 +96,5 @@ final class ScreenCopy {
         return colour.isIndexed()
                 ? new IndexedColour(colour.getColorIndex())
                 : new RgbColour(colour.toColor().getRGB() & RGB_MASK);
-    }
-
-    private static Map<TextStyle.Option, TextAttribute> attributes() {
-        Map<TextStyle.Option, TextAttribute> attributes = new EnumMap<>(TextStyle.Option.class);
-        attributes.put(TextStyle.Option.BOLD, TextAttribute.BOLD);
-        attributes.put(TextStyle.Option.DIM, TextAttribute.DIM);
-        attributes.put(TextStyle.Option.ITALIC, TextAttribute.ITALIC);
-        attributes.put(TextStyle.Option.UNDERLINED, TextAttribute.UNDERLINED);
-        attributes.put(TextStyle.Option.INVERSE, TextAttribute.REVERSED);
-        return attributes;
     }
 }

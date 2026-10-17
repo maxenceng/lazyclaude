@@ -1,8 +1,10 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
@@ -42,15 +44,14 @@ final class TicketText {
      * column, a rule across {@code width}, and "no body" when it has none.
      */
     static List<DetailRow> head(TicketView ticket, PullRequestsView pullRequests, int width) {
-        List<DetailRow> head = new ArrayList<>();
-        head.add(new DetailRow(facts(ticket), Style.EMPTY.bold()));
-        keyRows(ticket).forEach(key -> head.add(new DetailRow(key, Style.EMPTY)));
-        head.addAll(PullRequestText.rows(ticket, pullRequests, keyWidth(ticket), width));
-        head.add(new DetailRow(RULE.repeat(width), Style.EMPTY.dim()));
-        if (ticket.body() instanceof NoBody) {
-            head.add(new DetailRow(NO_BODY, Style.EMPTY.dim()));
-        }
-        return head;
+        return Stream.of(
+                        Stream.of(new DetailRow(facts(ticket), Style.EMPTY.bold())),
+                        keyRows(ticket).stream().map(key -> new DetailRow(key, Style.EMPTY)),
+                        PullRequestText.rows(ticket, pullRequests, keyWidth(ticket), width).stream(),
+                        Stream.of(new DetailRow(RULE.repeat(width), Style.EMPTY.dim())),
+                        Included.when(ticket.body() instanceof NoBody, new DetailRow(NO_BODY, Style.EMPTY.dim())))
+                .flatMap(Function.identity())
+                .toList();
     }
 
     static Optional<String> markdown(TicketView ticket) {
@@ -61,16 +62,17 @@ final class TicketText {
     }
 
     static String facts(TicketView ticket) {
-        List<String> facts = new ArrayList<>(List.of(ticket.id().value(), ticket.status().label()));
-        switch (ticket.context()) {
-            case ContextName context -> facts.add(context.value());
-            case NoContext noContext -> {}
-        }
-        switch (ticket.type()) {
-            case TypeName type -> facts.add(type.value());
-            case NoType noType -> {}
-        }
-        return String.join(FACT_SEPARATOR, facts);
+        Stream<String> context = switch (ticket.context()) {
+            case ContextName name -> Stream.of(name.value());
+            case NoContext noContext -> Stream.empty();
+        };
+        Stream<String> type = switch (ticket.type()) {
+            case TypeName name -> Stream.of(name.value());
+            case NoType noType -> Stream.empty();
+        };
+        return Stream.of(Stream.of(ticket.id().value(), ticket.status().label()), context, type)
+                .flatMap(Function.identity())
+                .collect(Collectors.joining(FACT_SEPARATOR));
     }
 
     static List<String> keyRows(TicketView ticket) {

@@ -203,4 +203,28 @@ class SessionQueryTest {
                         .preselected(Verb.DESIGN)
                         .build());
     }
+
+    @Test
+    void shouldHandTheListenerAViewOnRefresh() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+        List<SessionsView> received = new ArrayList<>();
+        SessionQuery query = sessionQuery(sessions, locator, watch, warnings);
+        query.subscribe(OF_THE_PROJECT, received::add);
+
+        query.refresh(OF_THE_PROJECT);
+
+        assertThat(received).containsExactly(emptySessionsView());
+    }
+
+    @Test
+    void shouldHandTheListenerAViewWhenToldOfTheTicketsOnTheBoard() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+        List<SessionsView> received = new ArrayList<>();
+        SessionQuery query = sessionQuery(sessions, locator, watch, warnings);
+        query.subscribe(OF_THE_PROJECT, received::add);
+
+        query.knowTickets(OF_THE_PROJECT);
+
+        assertThat(received).containsExactly(emptySessionsView());
+    }
 }
