@@ -7,6 +7,7 @@ import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionComm
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
@@ -47,6 +49,9 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchingSessionPayload;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
@@ -60,6 +65,7 @@ import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
+import dev.tamboui.terminal.BackendFactory;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
@@ -141,6 +147,9 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private final HostedSessionCommand hosting;
+    private final WatchedSessionCommand watching;
+    private final TerminalFocus terminalFocus = new TerminalFocus(this::terminalFocusChanged);
+    private WatchedSessionPayload lastWatched = new NoWatchedSessionPayload();
     private final SessionQuery screens;
     private final BoardQuery boards;
     private final DocsQuery docsQuery;
@@ -176,6 +185,7 @@ public final class Shell extends ToolkitApp {
             SessionsView sessions,
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
+            WatchedSessionCommand watching,
             SessionQuery screens,
             BoardQuery boards,
             DocsQuery docsQuery,
@@ -186,6 +196,7 @@ public final class Shell extends ToolkitApp {
                 sessions,
                 pullRequests,
                 hosting,
+                watching,
                 screens,
                 boards,
                 docsQuery,
@@ -200,6 +211,7 @@ public final class Shell extends ToolkitApp {
             SessionsView sessions,
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
+            WatchedSessionCommand watching,
             SessionQuery screens,
             BoardQuery boards,
             DocsQuery docsQuery,
@@ -214,6 +226,7 @@ public final class Shell extends ToolkitApp {
         this.elsewhere = new ElsewhereRows(sessions);
         this.pullRequests = pullRequests;
         this.hosting = hosting;
+        this.watching = watching;
         this.screens = screens;
         this.boards = boards;
         this.docsQuery = docsQuery;
@@ -401,9 +414,46 @@ public final class Shell extends ToolkitApp {
         }
     }
 
+    /** The terminal reports its focus through a backend wrapped to strip the reports TamboUI's parser cannot read. */
     @Override
     protected TuiConfig configure() {
-        return config();
+        try {
+            return config()
+                    .toBuilder()
+                    .backend(new FocusReportingBackend(BackendFactory.create(), terminalFocus))
+                    .build();
+        } catch (IOException e) {
+            throw new TerminalUnavailableException(e);
+        }
+    }
+
+    TerminalFocus terminalFocus() {
+        return terminalFocus;
+    }
+
+    /** The terminal gained or lost focus, reported on the input thread: the watched session is worked out again on the render thread. */
+    private void terminalFocusChanged() {
+        ToolkitRunner running = runner();
+        if (running != null) {
+            running.runOnRenderThread(this::syncWatched);
+        }
+    }
+
+    /**
+     * Tells {@code session} which session is in view, when that changed: the selected dock tab's live session while the dock and the
+     * terminal both have focus. It runs a process when it closes a notification, so off the render thread.
+     */
+    private void syncWatched() {
+        WatchedSessionPayload now = inSession() && terminalFocus.focused()
+                ? dock.selectedTab()
+                        .flatMap(HostedSessionView::live)
+                        .<WatchedSessionPayload>map(live -> new WatchingSessionPayload(live.id()))
+                        .orElseGet(NoWatchedSessionPayload::new)
+                : new NoWatchedSessionPayload();
+        if (!now.equals(lastWatched)) {
+            lastWatched = now;
+            background.execute(() -> watching.watching(now));
+        }
     }
 
     /**
@@ -918,6 +968,7 @@ public final class Shell extends ToolkitApp {
         applyPendingBoard();
         applyPendingMergedHeads();
         applyPendingWarning();
+        syncWatched();
         Element screen = column(
                 new StatusLineElement(
                         StatusText.spans(sessions.markerCounts(), elsewhere.groups()),
