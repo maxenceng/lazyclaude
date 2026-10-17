@@ -7,11 +7,13 @@ import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,6 +39,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionComm
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
@@ -47,6 +50,9 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
@@ -60,6 +66,7 @@ import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
+import dev.tamboui.terminal.BackendFactory;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
@@ -93,8 +100,8 @@ public final class Shell extends ToolkitApp {
     private static final String NO_DOCS = "no docs";
     private static final String DOCS_UNAVAILABLE = "docs unavailable";
     private static final String NO_LIVE_SESSION = "no live session";
+    private static final String NO_SESSION_ELSEWHERE = "nothing elsewhere";
     private static final String SESSIONS_UNAVAILABLE = "sessions unavailable: ";
-    private static final String EMPTY = "";
 
     private static final int DEFAULT_PANE_WIDTH = 80;
     private static final int DEFAULT_PANE_HEIGHT = 24;
@@ -133,6 +140,7 @@ public final class Shell extends ToolkitApp {
     private final BoardRows board;
     private final DocsRows docs;
     private final SessionRows sessions;
+    private final ElsewhereRows elsewhere;
     private final AtomicReference<DocsView> pendingDocs = new AtomicReference<>();
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
     private final AtomicReference<PullRequestsView> pendingPullRequests = new AtomicReference<>();
@@ -140,6 +148,10 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private final HostedSessionCommand hosting;
+    private final WatchedSessionCommand watching;
+    private final TerminalFocus terminalFocus = new TerminalFocus(this::terminalFocusChanged);
+    private WatchedPayload lastWatched = new NoWatchedSessionPayload();
+    private CompletableFuture<Void> watchUpdates = CompletableFuture.completedFuture(null);
     private final SessionQuery screens;
     private final BoardQuery boards;
     private final DocsQuery docsQuery;
@@ -175,6 +187,7 @@ public final class Shell extends ToolkitApp {
             SessionsView sessions,
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
+            WatchedSessionCommand watching,
             SessionQuery screens,
             BoardQuery boards,
             DocsQuery docsQuery,
@@ -185,6 +198,7 @@ public final class Shell extends ToolkitApp {
                 sessions,
                 pullRequests,
                 hosting,
+                watching,
                 screens,
                 boards,
                 docsQuery,
@@ -199,6 +213,7 @@ public final class Shell extends ToolkitApp {
             SessionsView sessions,
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
+            WatchedSessionCommand watching,
             SessionQuery screens,
             BoardQuery boards,
             DocsQuery docsQuery,
@@ -210,8 +225,10 @@ public final class Shell extends ToolkitApp {
         this.linkedTicketIds = BoardRows.ticketIdsOf(board);
         this.docs = new DocsRows(docs);
         this.sessions = new SessionRows(sessions);
+        this.elsewhere = new ElsewhereRows(sessions);
         this.pullRequests = pullRequests;
         this.hosting = hosting;
+        this.watching = watching;
         this.screens = screens;
         this.boards = boards;
         this.docsQuery = docsQuery;
@@ -265,6 +282,9 @@ public final class Shell extends ToolkitApp {
             return;
         }
         if (sessions.replace(next) && mainViewOwner == Focus.SESSIONS) {
+            mainViewScroll.reset();
+        }
+        if (elsewhere.replace(next) && mainViewOwner == Focus.ELSEWHERE) {
             mainViewScroll.reset();
         }
         refreshOffer();
@@ -396,9 +416,47 @@ public final class Shell extends ToolkitApp {
         }
     }
 
+    /** The terminal reports its focus through a backend wrapped to strip the reports TamboUI's parser cannot read. */
     @Override
     protected TuiConfig configure() {
-        return config();
+        try {
+            return config()
+                    .toBuilder()
+                    .backend(new FocusReportingBackend(BackendFactory.create(), terminalFocus))
+                    .build();
+        } catch (IOException e) {
+            throw new TerminalUnavailableException(e);
+        }
+    }
+
+    TerminalFocus terminalFocus() {
+        return terminalFocus;
+    }
+
+    /** The terminal gained or lost focus, reported on the input thread: the watched session is worked out again on the render thread. */
+    private void terminalFocusChanged() {
+        ToolkitRunner running = runner();
+        if (running != null) {
+            running.runOnRenderThread(this::syncWatched);
+        }
+    }
+
+    /**
+     * Tells {@code session} which session is in view, when that changed: the selected dock tab's live session while the dock and the
+     * terminal both have focus. It runs a process when it closes a notification, so off the render thread, and each change waits
+     * for the one before it: otherwise an earlier one could land last and leave a session watched that no longer is.
+     */
+    private void syncWatched() {
+        WatchedPayload now = inSession() && terminalFocus.focused()
+                ? dock.selectedTab()
+                        .flatMap(HostedSessionView::live)
+                        .<WatchedPayload>map(live -> new WatchedSessionPayload(live.id()))
+                        .orElseGet(NoWatchedSessionPayload::new)
+                : new NoWatchedSessionPayload();
+        if (!now.equals(lastWatched)) {
+            lastWatched = now;
+            watchUpdates = watchUpdates.exceptionally(failed -> null).thenRunAsync(() -> watching.watching(now), background);
+        }
     }
 
     /**
@@ -504,6 +562,12 @@ public final class Shell extends ToolkitApp {
         }
         if (focus == Focus.SESSIONS && key.isChar(UP)) {
             return selectSession(sessions::up);
+        }
+        if (focus == Focus.ELSEWHERE && key.isChar(DOWN)) {
+            return selectElsewhere(elsewhere::down);
+        }
+        if (focus == Focus.ELSEWHERE && key.isChar(UP)) {
+            return selectElsewhere(elsewhere::up);
         }
         return focus == Focus.MAIN && scrollMainView(key);
     }
@@ -773,6 +837,15 @@ public final class Shell extends ToolkitApp {
         return true;
     }
 
+    private boolean selectElsewhere(Runnable move) {
+        Optional<RowKey> before = elsewhere.selectedKey();
+        move.run();
+        if (!elsewhere.selectedKey().equals(before)) {
+            mainViewScroll.reset();
+        }
+        return true;
+    }
+
     private boolean selectSession(Runnable move) {
         Optional<RowKey> before = sessions.selectedKey();
         move.run();
@@ -883,7 +956,7 @@ public final class Shell extends ToolkitApp {
         } else {
             lastRight = target;
         }
-        if ((target == Focus.BOARD || target == Focus.SESSIONS || target == Focus.DOCS) && target != mainViewOwner) {
+        if (target.column() == Column.LEFT && target != mainViewOwner) {
             mainViewOwner = target;
             mainViewScroll.reset();
         }
@@ -898,14 +971,18 @@ public final class Shell extends ToolkitApp {
         applyPendingBoard();
         applyPendingMergedHeads();
         applyPendingWarning();
+        syncWatched();
         Element screen = column(
-                new StatusLineElement(sessions.strongestMarker(), warning, quitPrompt.map(SessionText::quitPrompt)),
+                new StatusLineElement(
+                        StatusText.spans(sessions.markerCounts(), elsewhere.groups()),
+                        warning,
+                        quitPrompt.map(SessionText::quitPrompt)),
                 row(
                         column(
                                         boardPanel(),
                                         sessionsPanel(),
                                         docsPanel(),
-                                        small(ELSEWHERE_TITLE, Focus.ELSEWHERE))
+                                        elsewherePanel())
                                 .percent(LEFT_COLUMN_PERCENT),
                         (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
                 new KeyBarElement(keyBar()));
@@ -953,8 +1030,15 @@ public final class Shell extends ToolkitApp {
         return mainViewOwner == owner ? panel.fill() : panel.length(SHRUNK_PANEL_HEIGHT);
     }
 
-    private Element small(String title, Focus owner) {
-        return framed(title, owner, text(EMPTY)).length(SMALL_PANEL_HEIGHT);
+    private Element elsewherePanel() {
+        Element body = elsewhere.isEmpty()
+                ? text(NO_SESSION_ELSEWHERE).dim()
+                : new RowsElement(
+                        elsewhere.visible().stream().map(ElsewhereRow::line).toList(),
+                        elsewhere.selectedIndex(),
+                        focus == Focus.ELSEWHERE);
+        Panel panel = framed(ELSEWHERE_TITLE, Focus.ELSEWHERE, body);
+        return mainViewOwner == Focus.ELSEWHERE ? panel.fill() : panel.length(SMALL_PANEL_HEIGHT);
     }
 
     private Element mainView() {
@@ -981,6 +1065,7 @@ public final class Shell extends ToolkitApp {
         return switch (mainViewOwner) {
             case BOARD -> boardDetail();
             case SESSIONS -> sessionsDetail();
+            case ELSEWHERE -> elsewhereDetail();
             default -> docsDetail();
         };
     }
@@ -998,6 +1083,14 @@ public final class Shell extends ToolkitApp {
                     case NewSessionRow newSession -> column();
                     case StartingSessionRow starting -> column();
                 })
+                .orElseGet(() -> column());
+    }
+
+    private Element elsewhereDetail() {
+        return elsewhere
+                .selected()
+                .<Element>map(row -> new DetailElement(
+                        width -> SessionText.elsewhereFacts(row.place(), row.session()), Optional.empty(), mainViewScroll))
                 .orElseGet(() -> column());
     }
 
@@ -1035,7 +1128,7 @@ public final class Shell extends ToolkitApp {
             return List.of(SESSION_KEYS);
         }
         return Stream.of(
-                        Included.when(focus == Focus.BOARD || focus == Focus.SESSIONS || focus == Focus.DOCS, MOVE_KEYS),
+                        Included.when(focus.column() == Column.LEFT, MOVE_KEYS),
                         Included.when(focus == Focus.MAIN, SCROLL_KEYS),
                         Stream.of(PANEL_KEYS),
                         Included.when(foldable(), FOLD_KEY),

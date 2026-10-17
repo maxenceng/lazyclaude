@@ -11,6 +11,7 @@ import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.s
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
+import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,7 +23,6 @@ import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
-import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 
 class HostedSessionTest {
@@ -66,7 +66,7 @@ class HostedSessionTest {
 
     @Test
     void shouldBeBusyOrWaitingWhenWaitingForPermission() {
-        assertThat(new LivePhase(sessionWith(new WaitingForPermission())).isBusyOrWaiting()).isTrue();
+        assertThat(new LivePhase(sessionWith(waitingForPermission())).isBusyOrWaiting()).isTrue();
     }
 
     @Test

@@ -39,7 +39,9 @@ not with what changed.
 - **A removed worktree is matched by the path rule.** When the `cwd` no longer exists, git cannot place it,
   and it belongs to the project when it lies under the project root or under `../<repo>.worktrees/`, the
   folder tickets' worktrees are made in. This also admits a directory that exists, is outside git, and sits
-  under those paths; nothing of the kind is expected there.
+  under those paths; nothing of the kind is expected there. Read backwards, the rule places a removed worktree
+  of another project under that project: `<parent>/<repo>.worktrees/<branch>` is `<parent>/<repo>`'s, so a
+  folder named `*.worktrees` that holds no worktrees would be claimed by a project that may not exist.
 - **A live id hides the past session of the same id.** A session is listed once, in the live block. When its
   process dies it moves to the past block with the same session id, so a selection follows it.
 - **Live sessions are placed by the same rule.** A live session's `cwd` is located through git on each read of

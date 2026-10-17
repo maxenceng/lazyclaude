@@ -15,7 +15,7 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; sessions group under the one their `cwd` belongs to, so a ticket worktree's sessions sit under its project. A session whose `cwd` is outside git is grouped on its own. | `shared` |
+| Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; sessions group under the one their `cwd` belongs to, so a ticket worktree's sessions sit under its project. A session whose `cwd` is outside git is grouped on its own, named by that directory. | `shared` |
 | Working directory | The directory lazyclaude was started in, or a session's `cwd`; the project is located from it. | `shared` |
 | Warning | A degraded mode lazyclaude carries on in (the docs or board watch fell back to polling, the board on screen kept because it could not be read again, the sessions watch left to its sweep, live sessions read from `claude agents`), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, and is never printed over the screen. | `shared` |
 
@@ -23,7 +23,7 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Status line | The top row of the screen: the newest warning on the right (`⚠ <text>`, or `⚠ 2 · <text>` once there are two), cut with `…` rather than wrapped. | `shell` |
+| Status line | The top row of the screen. On the left, how many of the project's live sessions carry each marker (`! 1  ? 2  • 1`, only those present), then `elsewhere:` and each other place with a waiting session, an outside-git directory included, under its strongest waiting marker; cut with `…` before the warning. On the right, the newest warning (`⚠ <text>`, or `⚠ 2 · <text>` once there are two), cut with `…` rather than wrapped. | `shell` |
 | Main view | The right column's top pane, which shows the selection of whichever left panel last had focus; for a ticket, its frontmatter and its body rendered as markdown, for a document, its markdown rendered. | `shell` |
 | Dock | The bottom of the right column, holding every hosted session as a tab. With the main view hidden it fills the column. | `shell` |
 | Dock tab | One hosted session's pane in the dock, labelled with its marker and name, or `starting`. | `shell` |
@@ -53,6 +53,10 @@ words mean.
 | Sweep | Re-reading the live sessions on a timer (every 2 s), always, watch or not: a session whose process died never rewrites its record, so only the sweep notices. Without a watch, the sweep is all there is. | `session` |
 | Hosted session | A live session lazyclaude spawned: the real `claude` on a pty, drawn in a dock tab. Started by `N` or by resuming an unlinked past session; its tab closes when `claude` exits, and it dies with lazyclaude. | `session` |
 | Outside session | A live session started anywhere else. lazyclaude shows it read-only and can jump to its terminal window. | `session` (expected) |
+| Elsewhere | Every live session outside this project, grouped by place; places and the sessions in them run strongest marker first, then by name. The Elsewhere panel lists them under always-expanded headers the cursor skips; `enter` does nothing. | `session` (the groups), `shell` (the panel) |
+| Place | Where a live session belongs: its project, ticket worktrees included, removed ones by their `../<repo>.worktrees/` path, or, when its `cwd` is outside git, that directory. Named by the project's or the directory's name; Elsewhere and the status line group by it. | `session` |
+| Watched session | The session whose dock tab is selected while the dock and the terminal both have focus. It is never notified, and becoming watched closes its notification. The terminal counts as focused until it reports a focus-out. | `session` (the rule), `shell` (what is watched) |
+| Desktop notification | The `notify-send` notification a session's transition into waiting fires, titled `<project> · <session name>` with the registry's waiting text as body. Replaced in place when the session moves between waiting for permission and waiting for input; closed, over D-Bus, when it stops waiting or becomes watched. | `session` |
 | Past session | A session with no live process, only a transcript. It can be resumed, which makes it hosted. A hosted session whose `claude` exited is past. | `session` |
 | Transcript | Claude Code's `~/.claude/projects/<folder>/<sessionId>.jsonl`, one per session; internal format, append-only by observation. A `subagents/` file is not one. | `session` |
 | Last activity | The timestamp of a transcript's last entry. It orders past sessions. | `session` |

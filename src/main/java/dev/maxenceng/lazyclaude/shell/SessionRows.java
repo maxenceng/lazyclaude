@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -134,9 +135,9 @@ final class SessionRows {
         return sessions instanceof AvailableSessionsView available ? available.strongestMarkerOf(ticketId) : Optional.empty();
     }
 
-    /** The strongest marker among the project's live sessions, linked or not, for the status line. */
-    Optional<Marker> strongestMarker() {
-        return sessions instanceof AvailableSessionsView available ? available.strongestMarker() : Optional.empty();
+    /** How many of the project's live sessions, linked or not, carry each marker, for the status line. */
+    Map<Marker, Long> markerCounts() {
+        return sessions instanceof AvailableSessionsView available ? available.markerCounts() : Map.of();
     }
 
     /** The verb the shown ticket's {@code n new} row offers to start, none while it offers no session, as a {@code done} ticket does not. */
@@ -188,12 +189,7 @@ final class SessionRows {
     }
 
     private void move(int step) {
-        List<RowKey> keys = selectableKeys();
-        if (keys.isEmpty()) {
-            return;
-        }
-        int target = Math.clamp(selectableIndexOfSelected() + (long) step, 0, keys.size() - 1);
-        selected = Optional.of(keys.get(target));
+        selected = RowSelection.moved(selected, step, selectableKeys());
     }
 
     private Optional<RowKey> newSessionKey() {
@@ -212,8 +208,7 @@ final class SessionRows {
     }
 
     private int selectableIndexOfSelected() {
-        List<RowKey> keys = selectableKeys();
-        return selected.map(keys::indexOf).filter(index -> index >= 0).orElse(0);
+        return RowSelection.indexIn(selected, selectableKeys());
     }
 
     /** Whether {@code key} is an unlinked past session the fold hides, as a selected live session is once it dies idle long enough. */

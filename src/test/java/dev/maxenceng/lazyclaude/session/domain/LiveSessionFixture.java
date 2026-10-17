@@ -39,23 +39,29 @@ public final class LiveSessionFixture {
         return liveSessionBuilder().build();
     }
 
-    public static LiveSession newestSession() {
+    public static LiveSession.LiveSessionBuilder newestSessionBuilder() {
         return liveSessionBuilder()
                 .id(secondSessionId())
                 .pid(secondProcessId())
                 .name(secondSessionName())
-                .startedAt(laterStartedAt())
-                .build();
+                .startedAt(laterStartedAt());
     }
 
-    public static LiveSession oldestSession() {
+    public static LiveSession.LiveSessionBuilder oldestSessionBuilder() {
         return liveSessionBuilder()
                 .id(thirdSessionId())
                 .pid(thirdProcessId())
                 .name(thirdSessionName())
                 .startedAt(earlierStartedAt())
-                .state(new YourTurn())
-                .build();
+                .state(new YourTurn());
+    }
+
+    public static LiveSession newestSession() {
+        return newestSessionBuilder().build();
+    }
+
+    public static LiveSession oldestSession() {
+        return oldestSessionBuilder().build();
     }
 
     public static LiveSession hostedLiveSession() {
@@ -64,6 +70,10 @@ public final class LiveSessionFixture {
 
     public static LiveSession sessionIn(WorkingDirectory directory) {
         return liveSessionBuilder().directory(directory).build();
+    }
+
+    public static LiveSession sessionIn(WorkingDirectory directory, SessionState state) {
+        return liveSessionBuilder().directory(directory).state(state).build();
     }
 
     public static LiveSession sessionWith(SessionState state) {

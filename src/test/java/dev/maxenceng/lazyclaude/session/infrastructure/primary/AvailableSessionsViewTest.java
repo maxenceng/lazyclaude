@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.otherProjectGroup;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openLive;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openStarting;
@@ -8,19 +9,24 @@ import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.hostedLiveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.elsewhereOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessionsHosting;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.elsewhereGroupViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedLiveSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.liveHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionIdOf;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewBuilder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTicketHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsViewHosting;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
+import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 import java.util.List;
 
@@ -31,31 +37,32 @@ import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
 import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.Marker;
-import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 
 class AvailableSessionsViewTest {
 
     @Test
-    void shouldAnswerTheStrongestMarkerAmongEveryLiveSessionLinkedOrNot() {
+    void shouldCountEachMarkerAmongEveryLiveSessionLinkedOrNot() {
         AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
                 linkedSessionView(sessionIdOf(1), new YourTurn()),
-                linkedSessionView(sessionIdOf(2), new WaitingForPermission(), strong("PROJ-1", "start"))));
+                linkedSessionView(sessionIdOf(2), waitingForPermission(), strong("PROJ-1", "start")),
+                linkedSessionView(sessionIdOf(3), waitingForPermission())));
 
-        assertThat(view.strongestMarker()).contains(Marker.WAITING_FOR_PERMISSION);
+        assertThat(view.markerCounts())
+                .containsOnly(entry(Marker.WAITING_FOR_PERMISSION, 2L), entry(Marker.YOUR_TURN, 1L));
     }
 
     @Test
-    void shouldAnswerNoMarkerWhenEverySessionIsBusy() {
+    void shouldCountNoMarkerWhenEverySessionIsBusy() {
         AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new Busy())));
 
-        assertThat(view.strongestMarker()).isEmpty();
+        assertThat(view.markerCounts()).isEmpty();
     }
 
     @Test
     void shouldAnswerTheStrongestMarkerAmongTheLiveSessionsLinkedToATicketWeakLinksIncluded() {
         AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
-                linkedSessionView(sessionIdOf(1), new WaitingForPermission(), strong("PROJ-2", "start")),
+                linkedSessionView(sessionIdOf(1), waitingForPermission(), strong("PROJ-2", "start")),
                 linkedSessionView(sessionIdOf(2), new YourTurn(), strong("PROJ-1", "start")),
                 linkedSessionView(sessionIdOf(3), waitingForInput(), weak("PROJ-1"))));
 
@@ -75,11 +82,11 @@ class AvailableSessionsViewTest {
 
     @Test
     void shouldAnswerTheTicketsSessionWithTheStrongestMarker() {
-        LiveSessionView strongest = linkedSessionView(sessionIdOf(2), new WaitingForPermission(), weak("PROJ-1"));
+        LiveSessionView strongest = linkedSessionView(sessionIdOf(2), waitingForPermission(), weak("PROJ-1"));
         AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
                 linkedSessionView(sessionIdOf(1), new YourTurn(), strong("PROJ-1", "start")),
                 strongest,
-                linkedSessionView(sessionIdOf(3), new WaitingForPermission(), strong("PROJ-2", "start"))));
+                linkedSessionView(sessionIdOf(3), waitingForPermission(), strong("PROJ-2", "start"))));
 
         assertThat(view.strongestSessionOf(linkedTicketId("PROJ-1"))).contains(strongest);
     }
@@ -148,5 +155,13 @@ class AvailableSessionsViewTest {
         UnavailableSessionsView view = UnavailableSessionsView.from(unavailableSessionsHosting(List.of(openStarting())));
 
         assertThat(view).isEqualTo(unavailableSessionsViewHosting(List.of(startingHostedSessionView())));
+    }
+
+    @Test
+    void shouldCarryEveryGroupElsewhereWithItsPlaceNameAndSessions() {
+        AvailableSessionsView view = (AvailableSessionsView) SessionsView.from(elsewhereOf(List.of(otherProjectGroup(List.of(liveSession())))));
+
+        assertThat(view.elsewhere())
+                .containsExactly(elsewhereGroupViewOf(List.of(sessionViewBuilder().build())));
     }
 }

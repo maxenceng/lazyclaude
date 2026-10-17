@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.shell;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
@@ -14,6 +15,7 @@ import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.NoTitle;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
+import dev.maxenceng.lazyclaude.session.published.PlaceName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
@@ -61,6 +63,8 @@ final class SessionText {
     private static final String STARTED_FORMAT = "%s (%s ago)";
     private static final String FACT_FORMAT = "%-9s%s";
     private static final String CWD = "cwd";
+    private static final String PROJECT = "project";
+    private static final String WAITING_FACT = "waiting";
     private static final String PID = "pid";
     private static final String STARTED_FACT = "started";
     private static final String VERSION = "version";
@@ -201,6 +205,25 @@ final class SessionText {
                                         STARTED_FORMAT.formatted(
                                                 STARTED.format(session.startedAt()), session.age().label()))),
                         version)
+                .toList();
+    }
+
+    /**
+     * The rows of the main view for a session elsewhere: its name and state, then the project or directory it belongs to, why it waits
+     * when it does, and the facts of any live session.
+     */
+    static List<DetailRow> elsewhereFacts(PlaceName place, LiveSessionView session) {
+        List<DetailRow> facts = facts(session);
+        return Stream.of(
+                        facts.stream().limit(1),
+                        Stream.of(fact(PROJECT, place.value())),
+                        session.state()
+                                .waitingFor()
+                                .filter(WaitingReason.class::isInstance)
+                                .map(reason -> fact(WAITING_FACT, ((WaitingReason) reason).value()))
+                                .stream(),
+                        facts.stream().skip(1))
+                .flatMap(Function.identity())
                 .toList();
     }
 

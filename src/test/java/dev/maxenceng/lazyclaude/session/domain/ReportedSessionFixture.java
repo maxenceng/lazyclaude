@@ -40,23 +40,29 @@ public final class ReportedSessionFixture {
         return reportedSessionBuilder().build();
     }
 
-    public static ReportedSession newestReportedSession() {
+    public static ReportedSession.ReportedSessionBuilder newestReportedSessionBuilder() {
         return reportedSessionBuilder()
                 .id(secondSessionId())
                 .pid(secondProcessId())
                 .name(secondSessionName())
-                .startedAt(laterStartedAt())
-                .build();
+                .startedAt(laterStartedAt());
     }
 
-    public static ReportedSession oldestReportedSession() {
+    public static ReportedSession.ReportedSessionBuilder oldestReportedSessionBuilder() {
         return reportedSessionBuilder()
                 .id(thirdSessionId())
                 .pid(thirdProcessId())
                 .name(thirdSessionName())
                 .startedAt(earlierStartedAt())
-                .status(ReportedStatus.IDLE)
-                .build();
+                .status(ReportedStatus.IDLE);
+    }
+
+    public static ReportedSession newestReportedSession() {
+        return newestReportedSessionBuilder().build();
+    }
+
+    public static ReportedSession oldestReportedSession() {
+        return oldestReportedSessionBuilder().build();
     }
 
     public static ReportedSession reportedIn(WorkingDirectory directory) {

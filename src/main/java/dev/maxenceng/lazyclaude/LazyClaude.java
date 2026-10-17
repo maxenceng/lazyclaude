@@ -34,8 +34,10 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionComm
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeAgentsRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LiveSessionRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.NotifySendRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRepository;
@@ -69,6 +71,9 @@ public final class LazyClaude {
     private static final List<String> CLAUDE = List.of("claude");
     private static final List<String> CLAUDE_AGENTS = List.of("claude", "agents", "--json");
     private static final Duration CLAUDE_AGENTS_PATIENCE = Duration.ofSeconds(10);
+    private static final List<String> NOTIFY_SEND = List.of("notify-send");
+    private static final List<String> GDBUS = List.of("gdbus");
+    private static final Duration NOTIFY_PATIENCE = Duration.ofSeconds(5);
     private static final String GH = "gh";
     private static final Duration GH_PATIENCE = Duration.ofSeconds(30);
 
@@ -92,6 +97,7 @@ public final class LazyClaude {
         SessionApplicationService sessionService = sessionService(warningRepository);
         SessionQuery sessions = new SessionQuery(sessionService);
         HostedSessionCommand hosting = new HostedSessionCommand(sessionService);
+        WatchedSessionCommand watching = new WatchedSessionCommand(sessionService);
         ReviewQuery reviews = new ReviewQuery(
                 new ReviewApplicationService(
                         new GhPullRequestsRepository(GH, GH_PATIENCE),
@@ -103,7 +109,7 @@ public final class LazyClaude {
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, hosting, warnings));
+                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, hosting, watching, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -144,6 +150,7 @@ public final class LazyClaude {
                 warnings,
                 new PtyHostRepository(CLAUDE, System.getenv()),
                 new WorktreeRepository(),
+                new NotifySendRepository(NOTIFY_SEND, GDBUS, NOTIFY_PATIENCE),
                 Clock.systemDefaultZone());
     }
 
@@ -197,9 +204,10 @@ public final class LazyClaude {
             SessionQuery sessions,
             ReviewQuery reviews,
             HostedSessionCommand hosting,
+            WatchedSessionCommand watching,
             WarningQuery warnings)
             throws Exception {
-        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, hosting, warnings)::run, hosting);
+        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, hosting, watching, warnings)::run, hosting);
     }
 
     /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
@@ -226,8 +234,9 @@ public final class LazyClaude {
             SessionQuery sessions,
             ReviewQuery reviews,
             HostedSessionCommand hosting,
+            WatchedSessionCommand watching,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, sessions, board, docs, reviews);
+        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, watching, sessions, board, docs, reviews);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         board.subscribe(new BoardWatchPayload(view.root().value()), shell::boardChanged);
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);

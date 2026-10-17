@@ -1,6 +1,8 @@
 package dev.maxenceng.lazyclaude.session.application;
 
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
+import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
+import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.boardTickets;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ran;
@@ -11,6 +13,8 @@ import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSes
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedPastSession;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWaitingFor;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWith;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
@@ -22,6 +26,7 @@ import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.l
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
+import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
@@ -29,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -44,10 +50,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
+import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.Sessions;
 import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
@@ -55,6 +63,7 @@ import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.UnavailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.UnreadPhase;
 import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
+import dev.maxenceng.lazyclaude.session.domain.WatchedSession;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
@@ -88,6 +97,9 @@ class SessionApplicationServiceTest {
 
     @Mock
     private WorktreePort worktrees;
+
+    @Mock
+    private DesktopNotificationPort notifications;
 
     @Test
     void shouldReadTheLiveSessionsOfTheProject() {
@@ -329,5 +341,58 @@ class SessionApplicationServiceTest {
 
         assertThat(received)
                 .containsExactly(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+    }
+
+    @Test
+    void shouldNotifyWhenASweepFindsASessionEnteringWaiting() {
+        when(sessions.liveSessions(any()))
+                .thenReturn(List.of(reportedWith(ReportedStatus.BUSY)))
+                .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
+        when(locator.locate(any())).thenReturn(project());
+        when(notifications.show(inputNotification())).thenReturn(notificationId());
+        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications)
+                .subscribe(project(), noTickets(), received -> {});
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).watch(changed.capture(), any());
+
+        changed.getValue().run();
+        changed.getValue().run();
+
+        verify(notifications).show(inputNotification());
+    }
+
+    @Test
+    void shouldNotNotifyAgainWhenARefreshHandsOverTheSameStates() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedWaitingFor(inputNeeded())));
+        when(locator.locate(any())).thenReturn(project());
+        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications);
+        service.subscribe(project(), noTickets(), received -> {});
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).watch(changed.capture(), any());
+        changed.getValue().run();
+
+        service.refresh(project(), noTickets());
+        service.knowTickets(project(), boardTickets());
+
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void shouldCloseTheNotificationOfTheSessionThatBecomesWatched() {
+        when(sessions.liveSessions(any()))
+                .thenReturn(List.of(reportedWith(ReportedStatus.BUSY)))
+                .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
+        when(locator.locate(any())).thenReturn(project());
+        when(notifications.show(any())).thenReturn(notificationId());
+        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications);
+        service.subscribe(project(), noTickets(), received -> {});
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).watch(changed.capture(), any());
+        changed.getValue().run();
+        changed.getValue().run();
+
+        service.watching(new WatchedSession(sessionId()));
+
+        verify(notifications).close(notificationId());
     }
 }

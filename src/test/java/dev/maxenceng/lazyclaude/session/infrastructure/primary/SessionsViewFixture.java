@@ -14,6 +14,7 @@ import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.seco
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.sessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.thirdSessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
+import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.aiTitle;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 
@@ -29,6 +30,7 @@ import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
+import dev.maxenceng.lazyclaude.session.published.PlaceName;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
@@ -127,6 +129,30 @@ public final class SessionsViewFixture {
         return AvailableSessionsView.builder().live(live).past(List.of()).hosted(hosted).build();
     }
 
+    public static ElsewhereGroupView elsewhereGroupViewOf(List<LiveSessionView> sessions) {
+        return new ElsewhereGroupView(new PlaceName("other"), sessions);
+    }
+
+    public static ElsewhereGroupView elsewhereGroupViewNamed(String name, LiveSessionView... sessions) {
+        return new ElsewhereGroupView(new PlaceName(name), List.of(sessions));
+    }
+
+    public static SessionsView sessionsViewElsewhere(ElsewhereGroupView... groups) {
+        return AvailableSessionsView.builder()
+                .live(List.of())
+                .elsewhere(List.of(groups))
+                .past(List.of())
+                .build();
+    }
+
+    public static SessionsView sessionsViewWithElsewhere(List<LiveSessionView> live, ElsewhereGroupView... groups) {
+        return AvailableSessionsView.builder()
+                .live(live)
+                .elsewhere(List.of(groups))
+                .past(List.of())
+                .build();
+    }
+
     public static LiveSessionView sessionView() {
         return sessionViewBuilder().build();
     }
@@ -157,7 +183,7 @@ public final class SessionsViewFixture {
     }
 
     public static LiveSessionView waitingSessionView() {
-        return sessionViewWith(new WaitingForPermission());
+        return sessionViewWith(waitingForPermission());
     }
 
     public static SessionsView sessionsViewOf(List<LiveSessionView> sessions) {
@@ -234,7 +260,7 @@ public final class SessionsViewFixture {
         return List.of(
                 namedSessionView(sessionIdOf(1), "busy-one", new Busy()),
                 namedSessionView(sessionIdOf(2), "your-turn-one", new YourTurn()),
-                namedSessionView(sessionIdOf(3), "permission-one", new WaitingForPermission()),
+                namedSessionView(sessionIdOf(3), "permission-one", waitingForPermission()),
                 namedSessionView(sessionIdOf(4), "input-one", waitingForInput()),
                 namedSessionView(sessionIdOf(5), "unknown-one", new Unknown()));
     }

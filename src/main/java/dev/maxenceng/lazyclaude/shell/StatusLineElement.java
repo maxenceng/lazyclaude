@@ -1,8 +1,9 @@
 package dev.maxenceng.lazyclaude.shell;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
-import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
@@ -13,21 +14,26 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.element.RenderContext;
 import dev.tamboui.toolkit.element.Size;
 
-/** The top row: the strongest marker of the project's live sessions on the left in its colour, then a question awaiting y/n, or else the warning, if one was raised, flush right in the warning colour and cut with an ellipsis rather than wrapped. */
+/**
+ * The top row: the project's marker counts and the other projects waiting on you on the left, each in its colour and cut with
+ * an ellipsis before the warning; then a question awaiting y/n in their place, else the warning, if one was raised, flush right in the
+ * warning colour and cut with an ellipsis rather than wrapped.
+ */
 final class StatusLineElement implements Element {
 
-    private static final String MARK = "⚠ ";
-    private static final String COUNT_SEPARATOR = " · ";
+    private static final String ELLIPSIS = "…";
+    private static final String SINGLE_FORMAT = "⚠ %s";
+    private static final String COUNTED_FORMAT = "⚠ %d · %s";
     private static final int HEIGHT = 1;
     private static final int SINGLE = 1;
-    private static final int MARKER_WIDTH = 2;
+    private static final int WARNING_GAP = 1;
 
-    private final Optional<Marker> marker;
+    private final List<StatusSpan> spans;
     private final Optional<WarningView> warning;
     private final Optional<String> prompt;
 
-    StatusLineElement(Optional<Marker> marker, Optional<WarningView> warning, Optional<String> prompt) {
-        this.marker = marker;
+    StatusLineElement(List<StatusSpan> spans, Optional<WarningView> warning, Optional<String> prompt) {
+        this.spans = spans;
         this.warning = warning;
         this.prompt = prompt;
     }
@@ -37,21 +43,42 @@ final class StatusLineElement implements Element {
         if (area.height() <= 0 || area.width() <= 0) {
             return;
         }
-        marker.ifPresent(strongest ->
-                frame.buffer().setString(area.x(), area.y(), SessionText.glyph(strongest), Style.EMPTY.fg(SessionText.colour(strongest))));
-        int reserved = marker.isPresent() ? MARKER_WIDTH : 0;
-        prompt.ifPresent(question -> frame.buffer().setString(
-                area.x() + reserved, area.y(), RowsElement.fit(question, Math.max(0, area.width() - reserved)), Style.EMPTY.bold()));
-        if (warning.isEmpty() || prompt.isPresent()) {
+        if (prompt.isPresent()) {
+            frame.buffer().setString(area.x(), area.y(), RowsElement.fit(prompt.get(), area.width()), Style.EMPTY.bold());
             return;
         }
-        String label = RowsElement.fit(label(warning.get()), Math.max(0, area.width() - reserved));
-        int x = area.x() + area.width() - label.codePointCount(0, label.length());
-        frame.buffer().setString(x, area.y(), label, Style.EMPTY.fg(Color.YELLOW));
+        Optional<String> label = warning.map(shown -> RowsElement.fit(label(shown), area.width()));
+        int reserved = label.map(text -> text.codePointCount(0, text.length()) + WARNING_GAP).orElse(0);
+        drawSpans(frame, area, Math.max(0, area.width() - reserved));
+        label.ifPresent(text -> frame.buffer()
+                .setString(
+                        area.x() + area.width() - text.codePointCount(0, text.length()),
+                        area.y(),
+                        text,
+                        Style.EMPTY.fg(Color.YELLOW)));
+    }
+
+    /** The spans in the first {@code budget} cells; when they do not fit, the last of those cells is an ellipsis. */
+    private void drawSpans(Frame frame, Rect area, int budget) {
+        int total = spans.stream().mapToInt(StatusSpan::width).sum();
+        boolean cut = total > budget;
+        int limit = cut ? Math.max(0, budget - ELLIPSIS.length()) : budget;
+        IntStream.range(0, spans.size()).forEach(index -> {
+            int offset = spans.subList(0, index).stream().mapToInt(StatusSpan::width).sum();
+            if (offset < limit) {
+                StatusSpan span = spans.get(index).clipped(limit - offset);
+                frame.buffer().setString(area.x() + offset, area.y(), span.text(), span.style());
+            }
+        });
+        if (cut && budget > 0) {
+            frame.buffer().setString(area.x() + limit, area.y(), ELLIPSIS, Style.EMPTY);
+        }
     }
 
     private static String label(WarningView view) {
-        return view.count() > SINGLE ? MARK + view.count() + COUNT_SEPARATOR + view.text() : MARK + view.text();
+        return view.count() > SINGLE
+                ? COUNTED_FORMAT.formatted(view.count(), view.text())
+                : SINGLE_FORMAT.formatted(view.text());
     }
 
     @Override

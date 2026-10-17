@@ -4,6 +4,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
+import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
@@ -15,7 +16,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.session.published.Busy;
-import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 
 class ShellEnterTicketTest {
@@ -25,7 +25,7 @@ class ShellEnterTicketTest {
         Shell shell = shellOnTicketSessions(sessionsViewOf(List.of(
                 linkedNamedSessionView(1, "busy-one", new Busy(), strongLink("PROJ-1", "start")),
                 linkedNamedSessionView(2, "calm-one", new YourTurn(), strongLink("PROJ-1", "start")),
-                linkedNamedSessionView(3, "stuck-one", new WaitingForPermission(), strongLink("PROJ-1", "start")),
+                linkedNamedSessionView(3, "stuck-one", waitingForPermission(), strongLink("PROJ-1", "start")),
                 linkedNamedSessionView(4, "asking-one", waitingForInput(), strongLink("PROJ-1", "start")))));
 
         assertThat(shell.press(enter())).isTrue();
@@ -74,7 +74,7 @@ class ShellEnterTicketTest {
     void shouldIgnoreASessionAskingThatIsLinkedToAnotherTicket() {
         Shell shell = shellOnTicketSessions(sessionsViewOf(List.of(
                 linkedNamedSessionView(1, "mine-one", new YourTurn(), strongLink("PROJ-1", "start")),
-                linkedNamedSessionView(2, "other-one", new WaitingForPermission(), strongLink("PROJ-2", "start")))));
+                linkedNamedSessionView(2, "other-one", waitingForPermission(), strongLink("PROJ-2", "start")))));
 
         shell.press(enter());
 
