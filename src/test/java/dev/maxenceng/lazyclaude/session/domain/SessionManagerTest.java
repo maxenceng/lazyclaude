@@ -46,6 +46,7 @@ import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.registryU
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.registryUnwatchable;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.transcriptsUnlistable;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.transcriptsUnwatchable;
+import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.permissionPrompt;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
@@ -79,7 +80,6 @@ import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
-import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
@@ -237,7 +237,7 @@ class SessionManagerTest {
         when(locator.locate(any())).thenReturn(project());
 
         assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
-                .isEqualTo(liveSessionsOf(List.of(sessionWith(new WaitingForPermission()))));
+                .isEqualTo(liveSessionsOf(List.of(sessionWith(waitingForPermission()))));
     }
 
     @Test

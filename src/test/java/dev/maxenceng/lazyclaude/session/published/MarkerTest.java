@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.published;
 
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
+import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -12,7 +13,7 @@ class MarkerTest {
 
     @Test
     void shouldMarkAStateWaitingForPermissionAsTheStrongest() {
-        assertThat(new WaitingForPermission().marker()).contains(Marker.WAITING_FOR_PERMISSION);
+        assertThat(waitingForPermission().marker()).contains(Marker.WAITING_FOR_PERMISSION);
     }
 
     @Test

@@ -263,7 +263,7 @@ public final class SessionManager {
 
     private static SessionState waiting(WaitingFor waitingFor) {
         return switch (waitingFor) {
-            case WaitingReason reason when reason.isPermissionPrompt() -> new WaitingForPermission();
+            case WaitingReason reason when reason.isPermissionPrompt() -> new WaitingForPermission(reason);
             default -> new WaitingForInput(waitingFor);
         };
     }

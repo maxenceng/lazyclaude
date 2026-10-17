@@ -4,6 +4,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
+import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
 import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.weakLink;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningViewFixture.warningView;
@@ -16,7 +17,6 @@ import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
-import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.tamboui.style.Color;
 
@@ -26,7 +26,7 @@ class ShellMarkersTest {
     void shouldShowTheStrongestMarkerOfATicketsLiveSessionsInItsGutterAndItsColour() {
         Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(List.of(
                 linkedNamedSessionView(1, "calm-one", new YourTurn(), strongLink("PROJ-1", "start")),
-                linkedNamedSessionView(2, "stuck-one", new WaitingForPermission(), strongLink("PROJ-1", "start"))))));
+                linkedNamedSessionView(2, "stuck-one", waitingForPermission(), strongLink("PROJ-1", "start"))))));
 
         assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("! PROJ-1 .*"));
         assertThat(screen.foregroundTextOnLine(screen.lineOf("PROJ-1 A board"), Color.RED)).isEqualTo("!");
@@ -53,7 +53,7 @@ class ShellMarkersTest {
     @Test
     void shouldCountAWeakLinkForTheMarker() {
         Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(List.of(
-                linkedNamedSessionView(1, "branch-one", new WaitingForPermission(), weakLink("PROJ-1"))))));
+                linkedNamedSessionView(1, "branch-one", waitingForPermission(), weakLink("PROJ-1"))))));
 
         assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("! PROJ-1 .*"));
     }
@@ -72,7 +72,7 @@ class ShellMarkersTest {
     @Test
     void shouldShowNoMarkerForATicketWhenTheSessionWaitingIsLinkedToAnotherOne() {
         Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(List.of(
-                linkedNamedSessionView(1, "stuck-one", new WaitingForPermission(), strongLink("PROJ-2", "start"))))));
+                linkedNamedSessionView(1, "stuck-one", waitingForPermission(), strongLink("PROJ-2", "start"))))));
 
         assertThat(screen.boardPanelLines())
                 .anySatisfy(line -> assertThat(line).startsWith("  PROJ-1 "))
@@ -99,7 +99,7 @@ class ShellMarkersTest {
 
     @Test
     void shouldKeepTheWarningOnTheRightBesideTheMarker() {
-        Shell shell = shellOnTicketSessions(sessionsViewOf(List.of(linkedNamedSessionView(1, "stuck-one", new WaitingForPermission()))));
+        Shell shell = shellOnTicketSessions(sessionsViewOf(List.of(linkedNamedSessionView(1, "stuck-one", waitingForPermission()))));
         shell.warningsChanged(warningView());
 
         Screen screen = Screen.of(shell);
@@ -109,7 +109,7 @@ class ShellMarkersTest {
 
     @Test
     void shouldDropTheMarkerFromTheStatusLineWhenTheSessionStopsAsking() {
-        Shell shell = shellOnTicketSessions(sessionsViewOf(List.of(linkedNamedSessionView(1, "stuck-one", new WaitingForPermission()))));
+        Shell shell = shellOnTicketSessions(sessionsViewOf(List.of(linkedNamedSessionView(1, "stuck-one", waitingForPermission()))));
 
         shell.sessionsChanged(sessionsViewOf(List.of(linkedNamedSessionView(1, "stuck-one", new Busy()))));
 

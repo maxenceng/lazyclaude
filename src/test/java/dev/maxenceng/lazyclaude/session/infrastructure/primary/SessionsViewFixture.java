@@ -14,6 +14,7 @@ import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.seco
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.sessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.thirdSessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
+import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.aiTitle;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 
@@ -157,7 +158,7 @@ public final class SessionsViewFixture {
     }
 
     public static LiveSessionView waitingSessionView() {
-        return sessionViewWith(new WaitingForPermission());
+        return sessionViewWith(waitingForPermission());
     }
 
     public static SessionsView sessionsViewOf(List<LiveSessionView> sessions) {
@@ -234,7 +235,7 @@ public final class SessionsViewFixture {
         return List.of(
                 namedSessionView(sessionIdOf(1), "busy-one", new Busy()),
                 namedSessionView(sessionIdOf(2), "your-turn-one", new YourTurn()),
-                namedSessionView(sessionIdOf(3), "permission-one", new WaitingForPermission()),
+                namedSessionView(sessionIdOf(3), "permission-one", waitingForPermission()),
                 namedSessionView(sessionIdOf(4), "input-one", waitingForInput()),
                 namedSessionView(sessionIdOf(5), "unknown-one", new Unknown()));
     }
