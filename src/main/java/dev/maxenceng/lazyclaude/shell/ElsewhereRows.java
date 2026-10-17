@@ -83,12 +83,7 @@ final class ElsewhereRows {
     }
 
     private void move(int step) {
-        List<RowKey> keys = selectableKeys();
-        if (keys.isEmpty()) {
-            return;
-        }
-        int target = Math.clamp(selectableIndexOfSelected() + (long) step, 0, keys.size() - 1);
-        selected = Optional.of(keys.get(target));
+        selected = RowSelection.moved(selected, step, selectableKeys());
     }
 
     private Optional<RowKey> firstSelectable() {
@@ -100,7 +95,6 @@ final class ElsewhereRows {
     }
 
     private int selectableIndexOfSelected() {
-        List<RowKey> keys = selectableKeys();
-        return selected.map(keys::indexOf).filter(index -> index >= 0).orElse(0);
+        return RowSelection.indexIn(selected, selectableKeys());
     }
 }

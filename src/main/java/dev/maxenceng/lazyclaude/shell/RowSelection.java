@@ -18,4 +18,17 @@ final class RowSelection {
         }
         return Optional.of(after.get(Math.min(index, after.size() - 1)));
     }
+
+    /** The selection {@code step} rows on among the selectable {@code keys}, held at the first or last; unchanged when there are none. */
+    static Optional<RowKey> moved(Optional<RowKey> selected, int step, List<RowKey> keys) {
+        if (keys.isEmpty()) {
+            return selected;
+        }
+        return Optional.of(keys.get((int) Math.clamp(indexIn(selected, keys) + (long) step, 0, keys.size() - 1)));
+    }
+
+    /** Where the selection stands among the selectable {@code keys}, the first when it is on none of them. */
+    static int indexIn(Optional<RowKey> selected, List<RowKey> keys) {
+        return selected.map(keys::indexOf).filter(index -> index >= 0).orElse(0);
+    }
 }

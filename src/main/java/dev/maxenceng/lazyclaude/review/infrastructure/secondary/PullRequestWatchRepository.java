@@ -50,7 +50,7 @@ public final class PullRequestWatchRepository implements PullRequestWatchPort, A
         workers.forEach(Thread::interrupt);
     }
 
-    // deferred: it fetches while the terminal is unfocused too — close it when SESSION-7 decodes ?1004 focus events and the timer can pause.
+    // deferred: it fetches while the terminal is unfocused too — close it when the shell hands this context the terminal's focus and the timer can pause.
     private void loop(Runnable refresh) {
         try {
             while (!Thread.currentThread().isInterrupted()) {
