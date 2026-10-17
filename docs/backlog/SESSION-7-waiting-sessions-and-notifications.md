@@ -60,7 +60,11 @@ No new context and no new edge.
   sessions, as today, and **Elsewhere**: every other place's live sessions, grouped and
   ordered. The shell reads Elsewhere through `SessionQuery`, as part of `SessionsView`.
 - **Permission prompts keep their reason.** `WaitingForPermission` carries its `WaitingFor`,
-  as `WaitingForInput` already does, so the notification body has it.
+  as `WaitingForInput` already does, so the notification body has it. Tightened in review to
+  a `WaitingReason`: a permission prompt is recognised from its text, so it always has one.
+- **A removed worktree of another project is that project's.** Where git locates nothing, a
+  `cwd` under `<parent>/<repo>.worktrees/<branch>` belongs to `<parent>/<repo>`, read back
+  from the path that `Project.ticketWorktree` builds. Decided in review over renaming the place.
 - **Notifications.** A new domain manager, composed by `SessionApplicationService` (ADR 0027),
   decides from the transition between the previous and current machine-wide states plus the
   watched session: fire, replace or close. It holds each open notification's id.

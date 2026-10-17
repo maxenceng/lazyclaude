@@ -1,6 +1,9 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.otherProject;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.otherProjectWorktreeDirectory;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.outsideGitDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectoryAt;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -57,5 +60,18 @@ class ProjectLocationTest {
         assertThat(new NotLocated().holds(new Project(Path.of("/")), workingDirectoryAt("/tmp/scratch")))
                 .as("the root has no folder name to derive a worktrees folder from, and everything is under it")
                 .isTrue();
+    }
+
+    @Test
+    void shouldPlaceAnotherProjectsRemovedWorktreeUnderThatProjectWhenGitLocatedNothing() {
+        assertThat(new NotLocated().placeOf(project(), otherProjectWorktreeDirectory()))
+                .as("a removed worktree of another project is that project's, not a place outside git")
+                .isEqualTo(new ProjectPlace(otherProject()));
+    }
+
+    @Test
+    void shouldPlaceADirectoryInNoProjectAsOutsideGit() {
+        assertThat(new NotLocated().placeOf(project(), outsideGitDirectory()))
+                .isEqualTo(new OutsideGitPlace(outsideGitDirectory()));
     }
 }

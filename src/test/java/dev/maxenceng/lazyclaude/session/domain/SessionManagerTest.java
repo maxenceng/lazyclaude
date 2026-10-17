@@ -70,6 +70,7 @@ import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.raisedTexts;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.anotherProjectDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.otherProjectDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.otherProjectSubdirectory;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.otherProjectWorktreeDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.outsideGitDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.secondOutsideGitDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
@@ -651,6 +652,15 @@ class SessionManagerTest {
         assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
                 .as("a session still running in a removed worktree is the project's, as its past row would be")
                 .isEqualTo(liveSessionsOf(List.of(sessionIn(worktreeDirectory()))));
+    }
+
+    @Test
+    void shouldGroupALiveSessionOfAnotherProjectsRemovedWorktreeUnderThatProject() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(otherProjectWorktreeDirectory())));
+        when(locator.locate(otherProjectWorktreeDirectory())).thenThrow(new ProjectNotFoundException("not a directory"));
+
+        assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
+                .isEqualTo(elsewhereOf(List.of(otherProjectGroup(List.of(sessionIn(otherProjectWorktreeDirectory()))))));
     }
 
     @Test

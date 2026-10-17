@@ -26,7 +26,7 @@ have been waiting for hours.
   nothing, since only the transition into waiting does.
 - **The notification** is titled `<project> · <session name>`, the project being the group's name (the directory when the
   session is outside git), and its body is the registry's `waitingFor` text. `WaitingForPermission` therefore carries its
-  `WaitingFor`, as `WaitingForInput` does.
+  `WaitingReason`; it is recognised from that text, so unlike `WaitingForInput` it always has one.
 - **Closing goes over D-Bus.** `notify-send` can show (`-p` prints the id) and replace (`-r <id>`) but cannot close, so
   `NotifySendRepository` calls `gdbus call --session ... org.freedesktop.Notifications.CloseNotification <id>`. A reply
   that the notification was not found counts as closed, since the user dismissed it first.

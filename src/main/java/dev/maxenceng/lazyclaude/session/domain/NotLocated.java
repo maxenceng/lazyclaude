@@ -1,29 +1,26 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
-import java.nio.file.Path;
-
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * Git located the {@code cwd} in no project, typically because the directory is gone: a ticket worktree that was
- * removed. It then belongs by its path, under the project root or under {@code ../<repo>.worktrees/}.
+ * removed. It then belongs by its path, under a project root or under that project's {@code ../<repo>.worktrees/}.
  */
 public record NotLocated() implements ProjectLocation {
 
-    private static final String WORKTREES_SUFFIX = ".worktrees";
-
     @Override
     public boolean holds(Project project, WorkingDirectory directory) {
-        Path path = directory.path();
-        Path root = project.root();
-        Path name = root.getFileName();
-        return path.startsWith(root)
-                || name != null && path.startsWith(root.resolveSibling(name + WORKTREES_SUFFIX));
+        return directory.path().startsWith(project.root())
+                || Project.owningTicketWorktree(directory).filter(project::equals).isPresent();
     }
 
     @Override
     public SessionPlace placeOf(Project project, WorkingDirectory directory) {
-        return holds(project, directory) ? new ProjectPlace(project) : new OutsideGitPlace(directory);
+        return holds(project, directory)
+                ? new ProjectPlace(project)
+                : Project.owningTicketWorktree(directory)
+                        .<SessionPlace>map(ProjectPlace::new)
+                        .orElseGet(() -> new OutsideGitPlace(directory));
     }
 }
