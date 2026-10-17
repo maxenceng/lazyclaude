@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.otherProjectGroup;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openLive;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openStarting;
@@ -8,12 +9,15 @@ import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.hostedLiveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.elsewhereOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessionsHosting;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.elsewhereGroupViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedLiveSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.liveHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionIdOf;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewBuilder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTicketHostedSessionView;
@@ -148,5 +152,13 @@ class AvailableSessionsViewTest {
         UnavailableSessionsView view = UnavailableSessionsView.from(unavailableSessionsHosting(List.of(openStarting())));
 
         assertThat(view).isEqualTo(unavailableSessionsViewHosting(List.of(startingHostedSessionView())));
+    }
+
+    @Test
+    void shouldCarryEveryGroupElsewhereWithItsPlaceNameAndSessions() {
+        AvailableSessionsView view = (AvailableSessionsView) SessionsView.from(elsewhereOf(List.of(otherProjectGroup(List.of(liveSession())))));
+
+        assertThat(view.elsewhere())
+                .containsExactly(elsewhereGroupViewOf(List.of(sessionViewBuilder().build())));
     }
 }

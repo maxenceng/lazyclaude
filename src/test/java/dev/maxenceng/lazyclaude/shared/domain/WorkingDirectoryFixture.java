@@ -26,6 +26,18 @@ public final class WorkingDirectoryFixture {
         return new WorkingDirectory(Path.of("/work/other"));
     }
 
+    public static WorkingDirectory otherProjectSubdirectory() {
+        return new WorkingDirectory(Path.of("/work/other/src"));
+    }
+
+    public static WorkingDirectory anotherProjectDirectory() {
+        return new WorkingDirectory(Path.of("/work/another"));
+    }
+
+    public static WorkingDirectory secondOutsideGitDirectory() {
+        return new WorkingDirectory(Path.of("/tmp/notes"));
+    }
+
     public static WorkingDirectory outsideGitDirectory() {
         return new WorkingDirectory(Path.of("/tmp/scratch"));
     }

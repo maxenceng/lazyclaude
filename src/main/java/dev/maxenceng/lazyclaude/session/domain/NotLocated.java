@@ -21,4 +21,9 @@ public record NotLocated() implements ProjectLocation {
         return path.startsWith(root)
                 || name != null && path.startsWith(root.resolveSibling(name + WORKTREES_SUFFIX));
     }
+
+    @Override
+    public SessionPlace placeOf(Project project, WorkingDirectory directory) {
+        return holds(project, directory) ? new ProjectPlace(project) : new OutsideGitPlace(directory);
+    }
 }

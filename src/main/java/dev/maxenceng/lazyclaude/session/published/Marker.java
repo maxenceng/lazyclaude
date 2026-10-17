@@ -12,6 +12,11 @@ public enum Marker {
     WAITING_FOR_INPUT,
     WAITING_FOR_PERMISSION;
 
+    /** Whether the session is blocked on you, as opposed to merely at your turn. */
+    public boolean isWaiting() {
+        return this != YOUR_TURN;
+    }
+
     public static Optional<Marker> strongest(Collection<Marker> markers) {
         return markers.stream().max(Marker::compareTo);
     }

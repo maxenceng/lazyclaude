@@ -15,4 +15,8 @@ public final class SessionIdFixture {
     public static SessionId thirdSessionId() {
         return new SessionId("b23a3278-4c1b-4b68-becf-175c9a0dea94");
     }
+
+    public static SessionId fourthSessionId() {
+        return new SessionId("c9e1f2a0-77d3-4d1b-8f55-0a4b9c6d1e32");
+    }
 }

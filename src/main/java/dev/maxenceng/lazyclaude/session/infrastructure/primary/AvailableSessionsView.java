@@ -7,14 +7,21 @@ import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 
-/** The project's sessions: the live ones newest start first, then the past ones newest activity first, and the hosted ones in tab order. */
+/** The project's sessions: the live ones newest start first, those elsewhere by place, then the past ones newest activity first, and the hosted ones in tab order. */
 public record AvailableSessionsView(
-        List<LiveSessionView> live, List<PastSessionView> past, List<HostedSessionView> hosted) implements SessionsView {
+        List<LiveSessionView> live,
+        List<ElsewhereGroupView> elsewhere,
+        List<PastSessionView> past,
+        List<HostedSessionView> hosted)
+        implements SessionsView {
 
     static AvailableSessionsView from(AvailableSessions available) {
         return builder()
                 .live(available.live().stream()
                         .map(session -> LiveSessionView.from(available, session))
+                        .toList())
+                .elsewhere(available.elsewhere().stream()
+                        .map(group -> ElsewhereGroupView.from(available, group))
                         .toList())
                 .past(available.past().stream()
                         .map(session -> PastSessionView.from(available, session))
@@ -58,6 +65,7 @@ public record AvailableSessionsView(
 
     public static final class AvailableSessionsViewBuilder {
         private List<LiveSessionView> live;
+        private List<ElsewhereGroupView> elsewhere = List.of();
         private List<PastSessionView> past;
         private List<HostedSessionView> hosted = List.of();
 
@@ -65,6 +73,11 @@ public record AvailableSessionsView(
 
         public AvailableSessionsViewBuilder live(List<LiveSessionView> live) {
             this.live = live;
+            return this;
+        }
+
+        public AvailableSessionsViewBuilder elsewhere(List<ElsewhereGroupView> elsewhere) {
+            this.elsewhere = elsewhere;
             return this;
         }
 
@@ -79,7 +92,7 @@ public record AvailableSessionsView(
         }
 
         public AvailableSessionsView build() {
-            return new AvailableSessionsView(live, past, hosted);
+            return new AvailableSessionsView(live, elsewhere, past, hosted);
         }
     }
 }

@@ -42,6 +42,24 @@ public final class SessionsFixture {
         return availableSessionsOf(sessions, List.of());
     }
 
+    public static AvailableSessions liveSessionsWithElsewhere(List<LiveSession> sessions, List<ElsewhereGroup> elsewhere) {
+        return AvailableSessions.builder()
+                .live(sessions)
+                .past(List.of())
+                .elsewhere(elsewhere)
+                .clock(sessionClock())
+                .build();
+    }
+
+    public static AvailableSessions elsewhereOf(List<ElsewhereGroup> elsewhere) {
+        return AvailableSessions.builder()
+                .live(List.of())
+                .past(List.of())
+                .elsewhere(elsewhere)
+                .clock(sessionClock())
+                .build();
+    }
+
     public static AvailableSessions pastSessionsOf(List<PastSession> past) {
         return availableSessionsOf(List.of(), past);
     }

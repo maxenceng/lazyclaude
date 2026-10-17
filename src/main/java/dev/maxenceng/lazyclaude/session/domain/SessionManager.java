@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.session.published.Busy;
+import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
@@ -55,9 +56,22 @@ public final class SessionManager {
             .reversed()
             .thenComparing(session -> session.id().value());
 
+    private static final int NO_MARKER = -1;
+
     private static final Comparator<ReportedSession> NEWEST_FIRST = Comparator.comparing(ReportedSession::startedAt)
             .reversed()
             .thenComparing(session -> session.id().value());
+
+    private static final Comparator<LiveSession> STRONGEST_FIRST = Comparator.comparing(
+                    (LiveSession session) -> session.state().marker().map(Marker::ordinal).orElse(NO_MARKER))
+            .reversed()
+            .thenComparing(session -> session.name().value())
+            .thenComparing(session -> session.id().value());
+
+    private static final Comparator<ElsewhereGroup> STRONGEST_PLACE_FIRST = Comparator.comparing(
+                    (ElsewhereGroup group) -> group.strongestMarker().map(Marker::ordinal).orElse(NO_MARKER))
+            .reversed()
+            .thenComparing(group -> group.place().name().value());
 
     private final LiveSessionPort sessions;
     private final PastSessionPort pastSessions;
@@ -166,6 +180,7 @@ public final class SessionManager {
                 .live(running.live().stream()
                         .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))
                         .toList())
+                .elsewhere(running.elsewhere())
                 .past(pastSessionsOf(project, running.ids()).stream()
                         .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))
                         .toList())
@@ -179,10 +194,16 @@ public final class SessionManager {
 
     private RunningSessions runningIn(Project project) {
         List<ReportedSession> reported = sessions.liveSessions(this::warnOfAgents);
+        List<PlacedSession> placed = placedIn(project, reported);
+        ProjectPlace here = new ProjectPlace(project);
         return RunningSessions.builder()
                 .project(project)
                 .ids(reported.stream().map(ReportedSession::id).toList())
-                .live(liveSessionsOf(project, reported))
+                .live(placed.stream()
+                        .filter(session -> session.place().equals(here))
+                        .map(PlacedSession::session)
+                        .toList())
+                .elsewhere(elsewhereOf(placed, here))
                 .build();
     }
 
@@ -223,7 +244,7 @@ public final class SessionManager {
                 .toList();
     }
 
-    private List<LiveSession> liveSessionsOf(Project project, List<ReportedSession> reported) {
+    private List<PlacedSession> placedIn(Project project, List<ReportedSession> reported) {
         List<ReportedSession> candidates = reported.stream()
                 .filter(session -> !session.isSdkCli())
                 .toList();
@@ -233,9 +254,26 @@ public final class SessionManager {
                 .distinct()
                 .collect(Collectors.toMap(Function.identity(), this::locationOf));
         return candidates.stream()
-                .filter(session -> located.get(session.directory()).holds(project, session.directory()))
                 .sorted(NEWEST_FIRST)
-                .map(SessionManager::live)
+                .map(session -> PlacedSession.builder()
+                        .place(located.get(session.directory()).placeOf(project, session.directory()))
+                        .session(live(session))
+                        .build())
+                .toList();
+    }
+
+    private static List<ElsewhereGroup> elsewhereOf(List<PlacedSession> placed, ProjectPlace here) {
+        return placed.stream()
+                .filter(session -> !session.place().equals(here))
+                .collect(Collectors.groupingBy(
+                        PlacedSession::place, Collectors.mapping(PlacedSession::session, Collectors.toList())))
+                .entrySet()
+                .stream()
+                .map(group -> ElsewhereGroup.builder()
+                        .place(group.getKey())
+                        .sessions(group.getValue().stream().sorted(STRONGEST_FIRST).toList())
+                        .build())
+                .sorted(STRONGEST_PLACE_FIRST)
                 .toList();
     }
 

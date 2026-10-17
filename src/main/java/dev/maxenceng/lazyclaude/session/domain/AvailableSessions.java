@@ -13,15 +13,20 @@ import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 
 /**
- * The sessions of one project that could be read: the live ones, then the past ones, the hosted ones in tab order, with the clock their ages are read
+ * The sessions of one project that could be read: the live ones, the live ones elsewhere grouped by place, then the past ones, the hosted ones in tab order, with the clock their ages are read
  * from. That a session is one or the other, never both, and the order, are the manager's.
  */
 public record AvailableSessions(
-        List<LiveSession> live, List<PastSession> past, List<OpenHostedSession> hosted, SessionClock clock)
+        List<LiveSession> live,
+        List<ElsewhereGroup> elsewhere,
+        List<PastSession> past,
+        List<OpenHostedSession> hosted,
+        SessionClock clock)
         implements Sessions {
 
     public AvailableSessions {
         Assert.notNull("live sessions", live);
+        Assert.notNull("elsewhere", elsewhere);
         Assert.notNull("past sessions", past);
         Assert.notNull("hosted tabs", hosted);
         Assert.notNull("clock", clock);
@@ -32,6 +37,7 @@ public record AvailableSessions(
         List<LiveSession> owned = live.stream().map(session -> ownedAmong(open, session)).toList();
         return builder()
                 .live(owned)
+                .elsewhere(elsewhere)
                 .past(past)
                 .hosted(open.sessions().stream()
                         .map(session -> OpenHostedSession.builder()
@@ -88,6 +94,7 @@ public record AvailableSessions(
 
     public static final class AvailableSessionsBuilder {
         private List<LiveSession> live;
+        private List<ElsewhereGroup> elsewhere = List.of();
         private List<PastSession> past;
         private List<OpenHostedSession> hosted = List.of();
         private SessionClock clock;
@@ -96,6 +103,11 @@ public record AvailableSessions(
 
         public AvailableSessionsBuilder live(List<LiveSession> live) {
             this.live = live;
+            return this;
+        }
+
+        public AvailableSessionsBuilder elsewhere(List<ElsewhereGroup> elsewhere) {
+            this.elsewhere = elsewhere;
             return this;
         }
 
@@ -115,7 +127,7 @@ public record AvailableSessions(
         }
 
         public AvailableSessions build() {
-            return new AvailableSessions(live, past, hosted, clock);
+            return new AvailableSessions(live, elsewhere, past, hosted, clock);
         }
     }
 }

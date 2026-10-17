@@ -30,6 +30,7 @@ import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
+import dev.maxenceng.lazyclaude.session.published.PlaceName;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
@@ -126,6 +127,10 @@ public final class SessionsViewFixture {
 
     public static SessionsView sessionsViewHosting(List<LiveSessionView> live, List<HostedSessionView> hosted) {
         return AvailableSessionsView.builder().live(live).past(List.of()).hosted(hosted).build();
+    }
+
+    public static ElsewhereGroupView elsewhereGroupViewOf(List<LiveSessionView> sessions) {
+        return new ElsewhereGroupView(new PlaceName("other"), sessions);
     }
 
     public static LiveSessionView sessionView() {
