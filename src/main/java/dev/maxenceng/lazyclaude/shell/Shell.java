@@ -46,6 +46,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.JumpPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RefusedRemovalView;
@@ -788,12 +789,16 @@ public final class Shell extends ToolkitApp {
 
     /**
      * Judges the ticket's worktree afresh, off the render thread, and on the render thread asks whether to remove it when nothing
-     * stands in the way, else says what does. With {@code stillSelected}, an answer about a ticket no longer selected is dropped.
+     * stands in the way, else says what does. With {@code stillSelected}, an answer about a ticket no longer selected is dropped; without
+     * it, the check was raised by a session's end rather than asked for, and a ticket with no worktree has nothing to refuse.
      */
     private void askRemoval(TicketView ticket, boolean stillSelected) {
         WorktreeView judged = screens.worktreeOf(worktreePayload(ticket));
         onRenderThread(() -> {
             if (stillSelected && !selectedTicket().map(TicketView::id).equals(Optional.of(ticket.id()))) {
+                return;
+            }
+            if (!stillSelected && judged instanceof NoWorktreeView) {
                 return;
             }
             if (judged instanceof HeldWorktreeView held && held.clear()) {

@@ -19,6 +19,7 @@ import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.wor
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -55,6 +57,9 @@ class HostedSessionManagerTicketTest {
 
     @Mock
     private TicketDoneEndedListener doneEnded;
+
+    @Mock
+    private OpenSessionsListener openChanged;
 
     @Captor
     private ArgumentCaptor<HostLaunch> launched;
@@ -253,6 +258,22 @@ class HostedSessionManagerTicketTest {
         exited.getValue().accept(new ExitCode(0));
 
         verify(doneEnded).ended(linkedTicketId());
+    }
+
+    @Test
+    void shouldTellOfTheChangedSessionsBeforeTellingWhichTicketsDoneSessionEnded() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        manager.onTicketDoneEnded(doneEnded);
+        manager.startTicket(ticketStart(Verb.DONE), paneSize());
+        manager.onChange(openChanged);
+        verify(hosts).spawn(any(), exited.capture());
+
+        exited.getValue().accept(new ExitCode(0));
+
+        InOrder told = inOrder(openChanged, doneEnded);
+        told.verify(openChanged).changed();
+        told.verify(doneEnded).ended(linkedTicketId());
     }
 
     @Test

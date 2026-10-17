@@ -28,7 +28,7 @@ import dev.maxenceng.lazyclaude.review.published.NoMergedHead;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeNotRemovedException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
-import dev.maxenceng.lazyclaude.session.domain.WorktreeUnreadableException;
+import dev.maxenceng.lazyclaude.session.domain.WorktreeUnavailableException;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 
@@ -103,7 +103,7 @@ class TicketWorktreeCommandTest {
 
     @Test
     void shouldFailWithWhyWhenGitCannotSayWhatStandsInTheWorktree() {
-        when(worktrees.dirtyPaths(worktreeDirectory())).thenThrow(new WorktreeUnreadableException("git status: fatal"));
+        when(worktrees.dirtyPaths(worktreeDirectory())).thenThrow(new WorktreeUnavailableException("git status: fatal"));
         when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(command.remove(worktreePayload(headCommit())))

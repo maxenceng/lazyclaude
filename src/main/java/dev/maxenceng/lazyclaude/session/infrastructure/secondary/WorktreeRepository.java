@@ -12,7 +12,6 @@ import dev.maxenceng.lazyclaude.session.domain.CommitId;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeNotRemovedException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeUnavailableException;
-import dev.maxenceng.lazyclaude.session.domain.WorktreeUnreadableException;
 import dev.maxenceng.lazyclaude.session.published.DirtyPath;
 import dev.maxenceng.lazyclaude.shared.domain.BranchName;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
@@ -139,10 +138,10 @@ public final class WorktreeRepository implements WorktreePort {
         try {
             result = git.run(worktree.path(), arguments);
         } catch (GitNotRunException e) {
-            throw new WorktreeUnreadableException(e.getMessage(), e);
+            throw new WorktreeUnavailableException(e.getMessage(), e);
         }
         if (!result.succeeded()) {
-            throw new WorktreeUnreadableException(failure(command, result));
+            throw new WorktreeUnavailableException(failure(command, result));
         }
         return result;
     }

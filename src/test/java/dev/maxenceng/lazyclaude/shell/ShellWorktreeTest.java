@@ -331,6 +331,9 @@ class ShellWorktreeTest {
         shell.ticketDoneEnded(linkedTicketId());
 
         assertThat(Screen.of(shell).statusLine()).doesNotContain("remove worktree");
+        assertThat(Screen.of(shell).lines().getLast())
+                .as("an exit offers on a worktree that exists; with none there is nothing to refuse")
+                .doesNotContain("cannot remove");
     }
 
     @Test

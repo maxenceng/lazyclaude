@@ -4,7 +4,6 @@ import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeUnavailableException;
-import dev.maxenceng.lazyclaude.session.domain.WorktreeUnreadableException;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Reason;
@@ -62,7 +61,7 @@ public final class SessionQuery {
                             payload.mergedHead())
                     .<WorktreeView>map(HeldWorktreeView::from)
                     .orElseGet(NoWorktreeView::new);
-        } catch (WorktreeUnavailableException | WorktreeUnreadableException unreadable) {
+        } catch (WorktreeUnavailableException unreadable) {
             return new UnreadableWorktreeView(new Reason(unreadable.getMessage()));
         }
     }

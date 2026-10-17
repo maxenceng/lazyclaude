@@ -41,6 +41,7 @@ public record UnavailableSessions(Reason reason, List<OpenHostedSession> hosted)
         return Optional.empty();
     }
 
+    // deferred: an outside session in the worktree is not seen while the registry is unreadable, so removal is not refused for it — close it when the worktree state can say it cannot tell.
     @Override
     public List<SessionName> namesIn(WorkingDirectory worktree) {
         return hosted.stream()

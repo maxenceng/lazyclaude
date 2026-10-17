@@ -4,7 +4,6 @@ import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeNotClearException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeNotRemovedException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeUnavailableException;
-import dev.maxenceng.lazyclaude.session.domain.WorktreeUnreadableException;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 
 /** What the shell asks of {@code session} to remove a ticket's worktree, which runs {@code git}, so not on the render thread. */
@@ -30,7 +29,7 @@ public final class TicketWorktreeCommand {
             return new RemovedWorktreeView();
         } catch (WorktreeNotClearException refused) {
             return new RefusedRemovalView(WorktreeStateView.from(refused.state()));
-        } catch (WorktreeNotRemovedException | WorktreeUnreadableException | WorktreeUnavailableException failed) {
+        } catch (WorktreeNotRemovedException | WorktreeUnavailableException failed) {
             return new FailedRemovalView(new Reason(failed.getMessage()));
         }
     }

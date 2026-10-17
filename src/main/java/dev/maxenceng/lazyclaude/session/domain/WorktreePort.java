@@ -50,14 +50,14 @@ public interface WorktreePort {
     /**
      * The paths {@code git status --porcelain} reports in {@code worktree}: modified, staged and untracked ones alike.
      *
-     * @throws WorktreeUnreadableException when git cannot say
+     * @throws WorktreeUnavailableException when git cannot say
      */
     List<DirtyPath> dirtyPaths(WorkingDirectory worktree);
 
     /**
      * The commits {@code worktree}'s checkout holds that are neither {@code mergedHead} nor behind it and that no remote ref has.
      *
-     * @throws WorktreeUnreadableException when git cannot say
+     * @throws WorktreeUnavailableException when git cannot say
      */
     List<CommitId> commitsBeyond(WorkingDirectory worktree, HeadCommit mergedHead);
 

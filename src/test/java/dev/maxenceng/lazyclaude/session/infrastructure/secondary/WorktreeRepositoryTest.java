@@ -27,7 +27,6 @@ import dev.maxenceng.lazyclaude.review.published.HeadCommit;
 import dev.maxenceng.lazyclaude.session.domain.CommitId;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeNotRemovedException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeUnavailableException;
-import dev.maxenceng.lazyclaude.session.domain.WorktreeUnreadableException;
 import dev.maxenceng.lazyclaude.session.published.DirtyPath;
 import dev.maxenceng.lazyclaude.shared.domain.BranchName;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
@@ -230,7 +229,7 @@ class WorktreeRepositoryTest {
         Path linked = linkedWorktreeOn(root, ticketWorktreePath(temp), branchName().value());
 
         assertThatThrownBy(() -> new WorktreeRepository(missingGit()).dirtyPaths(new WorkingDirectory(linked)))
-                .isInstanceOf(WorktreeUnreadableException.class);
+                .isInstanceOf(WorktreeUnavailableException.class);
     }
 
     @Test
@@ -238,7 +237,7 @@ class WorktreeRepositoryTest {
         Path plain = Files.createDirectories(temp.resolve("plain"));
 
         assertThatThrownBy(() -> repository.dirtyPaths(new WorkingDirectory(plain)))
-                .isInstanceOf(WorktreeUnreadableException.class);
+                .isInstanceOf(WorktreeUnavailableException.class);
     }
 
     @Test
@@ -295,7 +294,7 @@ class WorktreeRepositoryTest {
         Path linked = linkedWorktreeOn(root, ticketWorktreePath(temp), branchName().value());
 
         assertThatThrownBy(() -> repository.commitsBeyond(new WorkingDirectory(linked), new HeadCommit("1".repeat(40))))
-                .isInstanceOf(WorktreeUnreadableException.class);
+                .isInstanceOf(WorktreeUnavailableException.class);
     }
 
     @Test
@@ -304,7 +303,7 @@ class WorktreeRepositoryTest {
 
         assertThatThrownBy(() -> repository.commitsBeyond(new WorkingDirectory(linked), new HeadCommit("--all")))
                 .as("a head that begins with a dash is a revision git cannot find, never an option it obeys")
-                .isInstanceOf(WorktreeUnreadableException.class);
+                .isInstanceOf(WorktreeUnavailableException.class);
     }
 
     @Test

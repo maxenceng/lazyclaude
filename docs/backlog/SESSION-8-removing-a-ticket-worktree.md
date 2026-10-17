@@ -1,6 +1,6 @@
 ---
 id: SESSION-8
-status: in-progress
+status: in-review
 context: session
 type: feature
 tracker_id: 85
@@ -11,16 +11,16 @@ created: 2026-10-10
 
 ## Acceptance criteria
 
-- [ ] `d remove worktree` shows in the key bar only on a Board ticket that reads `done` and still has its ticket worktree; on any other ticket `d` is neither shown nor bound.
-- [ ] `d` runs the checks off the render thread; when all pass, the status line asks `remove worktree <path>? y/n`. `y` runs `git worktree remove` and keeps the local ticket branch; `n` or Esc leaves everything as it was.
-- [ ] When a hosted session running `/ticket done` exits and the ticket worktree's file reads `done`, the same checks run and the same question is asked. A hosted session running any other verb, or one whose ticket does not read `done`, offers nothing on exit.
-- [ ] Removal is refused, with the reason in the key bar and no question asked, when `git status --porcelain` in the worktree is not empty, untracked files included — the paths are listed.
-- [ ] Removal is refused when the worktree holds commits beyond the merged pull request's head that no remote ref has.
-- [ ] A worktree whose ticket was squash-merged and whose head branch GitHub deleted, with nothing committed since, is not refused — the case plain `--not --remotes` gets wrong.
-- [ ] Removal is refused when no merged pull request is found for the ticket branch (none, closed unmerged, or beyond the merged read's reach), with "cannot tell what the merge covered".
-- [ ] Removal is refused when any live session, hosted or outside, has its `cwd` in the worktree — the sessions are named. lazyclaude never ends a session to make room.
-- [ ] When `git worktree remove` itself fails after a yes, git's message shows in the key bar and the worktree, branch and screen are left as they were.
-- [ ] The ticket detail shows the ticket worktree's path and its worktree state: clean, N dirty paths, N commits beyond the merge, or no merged pull request. The Board shows nothing of it.
+- [x] `d remove worktree` shows in the key bar only on a Board ticket that reads `done` and still has its ticket worktree; on any other ticket `d` is neither shown nor bound.
+- [x] `d` runs the checks off the render thread; when all pass, the status line asks `remove worktree <path>? y/n`. `y` runs `git worktree remove` and keeps the local ticket branch; `n` or Esc leaves everything as it was.
+- [x] When a hosted session running `/ticket done` exits and the ticket worktree's file reads `done`, the same checks run and the same question is asked. A hosted session running any other verb, or one whose ticket does not read `done`, offers nothing on exit.
+- [x] Removal is refused, with the reason in the key bar and no question asked, when `git status --porcelain` in the worktree is not empty, untracked files included — the paths are listed.
+- [x] Removal is refused when the worktree holds commits beyond the merged pull request's head that no remote ref has.
+- [x] A worktree whose ticket was squash-merged and whose head branch GitHub deleted, with nothing committed since, is not refused — the case plain `--not --remotes` gets wrong.
+- [x] Removal is refused when no merged pull request is found for the ticket branch (none, closed unmerged, or beyond the merged read's reach), with "cannot tell what the merge covered".
+- [x] Removal is refused when any live session, hosted or outside, has its `cwd` in the worktree — the sessions are named. lazyclaude never ends a session to make room.
+- [x] When `git worktree remove` itself fails after a yes, git's message shows in the key bar and the worktree, branch and screen are left as they were.
+- [x] The ticket detail shows the ticket worktree's path and its worktree state: clean, N dirty paths, N commits beyond the merge, or no merged pull request. The Board shows nothing of it.
 
 ## Model decision
 
