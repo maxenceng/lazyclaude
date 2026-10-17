@@ -265,7 +265,7 @@ class ShellJumpTest {
         assertThat(Screen.of(shell).text())
                 .contains("╭ kitty remote control conflicts ")
                 .contains("│ ~/.config/kitty/user.conf line 12 sets")
-                .contains("│   allow_remote_control yes")
+                .contains("│   allow_remote_control no")
                 .contains("│ remote control needs")
                 .contains("│   allow_remote_control socket-only")
                 .contains("│ nothing was edited")

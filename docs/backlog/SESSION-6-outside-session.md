@@ -31,10 +31,11 @@ created: 2026-10-10
       else. `o` on a hosted or past row does nothing.
 - [ ] When kitty refuses because remote control is off and lazyclaude itself runs in kitty, a
       popup shows the file (`$KITTY_CONFIG_DIRECTORY/kitty.conf`, else
-      `~/.config/kitty/kitty.conf`) and the lines `allow_remote_control socket-only` and
+      `$XDG_CONFIG_HOME/kitty/kitty.conf`, else `~/.config/kitty/kitty.conf`) and the lines `allow_remote_control socket-only` and
       `listen_on unix:@kitty-{kitty_pid}`. `y` appends them under `# added by lazyclaude` and
       says kitty needs a restart; `n` or `esc` closes it.
-- [ ] When either key is already set to another value, in `kitty.conf` or any file it
+- [ ] When either key is already set to a value that does not allow socket control (`socket` and
+      `yes` do), in `kitty.conf` or any file it
       `include`s or `globinclude`s, the popup shows the conflict and nothing is edited.
 - [ ] When both keys are already set to those values, `o` warns that kitty needs a restart and
       opens no popup.

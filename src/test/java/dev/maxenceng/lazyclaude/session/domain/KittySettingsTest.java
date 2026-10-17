@@ -18,6 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class KittySettingsTest {
 
@@ -57,6 +59,25 @@ class KittySettingsTest {
                 .isEqualTo(conflictingWith(conflictingAllowSetting(), allowRemoteControlLine()));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"socket", "yes", "y", "True"})
+    void shouldFindRemoteControlConfiguredWhenItIsAllowedOverTheSocketAnotherWay(String allowing) {
+        KittySettings settings = new KittySettings(List.of(settingOf(line("allow_remote_control", allowing), kittyConfigFile(), 1), listenOnSetting()));
+
+        assertThat(settings.remoteControl(kittyConfigFile()))
+                .as("kitten @ --to works over the socket with these as with socket-only, so they are no conflict")
+                .isEqualTo(new ConfiguredRemoteControl());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"no", "password"})
+    void shouldFindAConflictWhenRemoteControlIsNotAllowedOverTheSocketWithoutAPassword(String refusing) {
+        KittyConfigSetting setting = settingOf(line("allow_remote_control", refusing), kittyConfigFile(), 1);
+
+        assertThat(new KittySettings(List.of(setting, listenOnSetting())).remoteControl(kittyConfigFile()))
+                .isEqualTo(conflictingWith(setting, allowRemoteControlLine()));
+    }
+
     @Test
     void shouldFindAConflictWhenTheSocketIsListenedAnotherWay() {
         assertThat(new KittySettings(List.of(allowRemoteControlSetting(), conflictingListenSetting())).remoteControl(kittyConfigFile()))
@@ -72,14 +93,14 @@ class KittySettingsTest {
     @Test
     void shouldLetALaterLineWinOverAnEarlierOneAsKittyDoes() {
         KittySettings overridden = new KittySettings(List.of(
-                settingOf(line("allow_remote_control", "yes"), kittyConfigFile(), 1), allowRemoteControlSetting(), listenOnSetting()));
+                settingOf(line("allow_remote_control", "no"), kittyConfigFile(), 1), allowRemoteControlSetting(), listenOnSetting()));
 
         assertThat(overridden.remoteControl(kittyConfigFile())).isEqualTo(new ConfiguredRemoteControl());
     }
 
     @Test
     void shouldFindAConflictWhenALaterLineOverridesTheWantedValue() {
-        ConfigSetting later = settingOf(line("allow_remote_control", "no"), kittyConfigFile(), 40);
+        KittyConfigSetting later = settingOf(line("allow_remote_control", "no"), kittyConfigFile(), 40);
 
         assertThat(new KittySettings(List.of(allowRemoteControlSetting(), listenOnSetting(), later)).remoteControl(kittyConfigFile()))
                 .isEqualTo(conflictingWith(later, allowRemoteControlLine()));

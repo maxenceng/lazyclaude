@@ -17,47 +17,47 @@ public final class KittyConfigFixture {
         return new KittyConfigFile(Path.of("/home/max/.config/kitty/user.conf"));
     }
 
-    public static ConfigLine allowRemoteControlLine() {
+    public static KittyConfigLine allowRemoteControlLine() {
         return line("allow_remote_control", "socket-only");
     }
 
-    public static ConfigLine listenOnLine() {
+    public static KittyConfigLine listenOnLine() {
         return line("listen_on", "unix:@kitty-{kitty_pid}");
     }
 
-    public static List<ConfigLine> bothLines() {
+    public static List<KittyConfigLine> bothLines() {
         return List.of(allowRemoteControlLine(), listenOnLine());
     }
 
-    public static ConfigLine line(String key, String value) {
-        return ConfigLine.builder().key(new ConfigKey(key)).value(new ConfigValue(value)).build();
+    public static KittyConfigLine line(String key, String value) {
+        return KittyConfigLine.builder().key(new KittyConfigKey(key)).value(new KittyConfigValue(value)).build();
     }
 
-    public static ConfigSetting settingOf(ConfigLine line, KittyConfigFile file, int number) {
-        return ConfigSetting.builder()
+    public static KittyConfigSetting settingOf(KittyConfigLine line, KittyConfigFile file, int number) {
+        return KittyConfigSetting.builder()
                 .line(line)
-                .place(ConfigPlace.builder().file(file).line(new ConfigLineNumber(number)).build())
+                .place(KittyConfigPlace.builder().file(file).line(new KittyConfigLineNumber(number)).build())
                 .build();
     }
 
-    public static ConfigSetting allowRemoteControlSetting() {
+    public static KittyConfigSetting allowRemoteControlSetting() {
         return settingOf(allowRemoteControlLine(), kittyConfigFile(), 4);
     }
 
-    public static ConfigSetting listenOnSetting() {
+    public static KittyConfigSetting listenOnSetting() {
         return settingOf(listenOnLine(), kittyConfigFile(), 5);
     }
 
-    public static void settingsRead(KittyConfigPort config, ConfigSetting... settings) {
+    public static void settingsRead(KittyConfigPort config, KittyConfigSetting... settings) {
         when(config.locate()).thenReturn(kittyConfigFile());
         when(config.settings(kittyConfigFile(), KittySettings.remoteControlKeys())).thenReturn(new KittySettings(List.of(settings)));
     }
 
-    public static ConfigSetting conflictingAllowSetting() {
-        return settingOf(line("allow_remote_control", "yes"), includedConfigFile(), 12);
+    public static KittyConfigSetting conflictingAllowSetting() {
+        return settingOf(line("allow_remote_control", "no"), includedConfigFile(), 12);
     }
 
-    public static ConfigSetting conflictingListenSetting() {
+    public static KittyConfigSetting conflictingListenSetting() {
         return settingOf(line("listen_on", "unix:/tmp/kitty"), kittyConfigFile(), 9);
     }
 
@@ -65,15 +65,15 @@ public final class KittyConfigFixture {
         return adding(bothLines());
     }
 
-    public static AddRemoteControl adding(List<ConfigLine> lines) {
+    public static AddRemoteControl adding(List<KittyConfigLine> lines) {
         return addingIn(kittyConfigFile(), lines);
     }
 
-    public static AddRemoteControl addingIn(KittyConfigFile file, List<ConfigLine> lines) {
+    public static AddRemoteControl addingIn(KittyConfigFile file, List<KittyConfigLine> lines) {
         return AddRemoteControl.builder().file(file).lines(lines).build();
     }
 
-    public static RemoteControlConfig conflictingWith(ConfigSetting found, ConfigLine wanted) {
+    public static RemoteControlConfig conflictingWith(KittyConfigSetting found, KittyConfigLine wanted) {
         return ConflictingRemoteControl.builder().found(found).wanted(wanted).build();
     }
 }

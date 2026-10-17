@@ -6,7 +6,7 @@ import java.util.stream.Stream;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
 /** Neither option conflicts, and these lines, the ones not yet set, can be appended to the file. */
-public record AddRemoteControl(KittyConfigFile file, List<ConfigLine> lines) implements RemoteControlConfig {
+public record AddRemoteControl(KittyConfigFile file, List<KittyConfigLine> lines) implements RemoteControlConfig {
 
     private static final String ADDED_BY = "# added by lazyclaude";
     private static final String LINE = "%s %s";
@@ -30,7 +30,7 @@ public record AddRemoteControl(KittyConfigFile file, List<ConfigLine> lines) imp
 
     public static final class AddRemoteControlBuilder {
         private KittyConfigFile file;
-        private List<ConfigLine> lines;
+        private List<KittyConfigLine> lines;
 
         private AddRemoteControlBuilder() {}
 
@@ -39,7 +39,7 @@ public record AddRemoteControl(KittyConfigFile file, List<ConfigLine> lines) imp
             return this;
         }
 
-        public AddRemoteControlBuilder lines(List<ConfigLine> lines) {
+        public AddRemoteControlBuilder lines(List<KittyConfigLine> lines) {
             this.lines = lines;
             return this;
         }

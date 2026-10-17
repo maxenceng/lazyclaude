@@ -10,10 +10,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.EnvironmentUnreadableException;
+import dev.maxenceng.lazyclaude.session.domain.EnvironmentVariableName;
+import dev.maxenceng.lazyclaude.session.domain.EnvironmentVariableValue;
 import dev.maxenceng.lazyclaude.session.domain.ProcessEnvironment;
 import dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentPort;
-import dev.maxenceng.lazyclaude.session.domain.VariableName;
-import dev.maxenceng.lazyclaude.session.domain.VariableValue;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 
 /**
@@ -62,8 +62,8 @@ public final class ProcessEnvironmentRepository implements ProcessEnvironmentPor
         return new ProcessEnvironment(variables
                 .filter(variable -> !variable.getKey().isBlank() && !variable.getValue().isBlank())
                 .collect(Collectors.toMap(
-                        variable -> new VariableName(variable.getKey()),
-                        variable -> new VariableValue(variable.getValue()),
+                        variable -> new EnvironmentVariableName(variable.getKey()),
+                        variable -> new EnvironmentVariableValue(variable.getValue()),
                         (first, second) -> second)));
     }
 }

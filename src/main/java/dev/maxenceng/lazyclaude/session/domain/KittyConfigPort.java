@@ -5,7 +5,10 @@ import java.util.List;
 /** Where kitty's configuration is found, read and added to. */
 public interface KittyConfigPort {
 
-    /** The {@code kitty.conf} kitty reads: {@code $KITTY_CONFIG_DIRECTORY/kitty.conf}, else {@code ~/.config/kitty/kitty.conf}. */
+    /**
+     * The {@code kitty.conf} kitty reads: {@code $KITTY_CONFIG_DIRECTORY/kitty.conf}, else {@code $XDG_CONFIG_HOME/kitty/kitty.conf}, else
+     * {@code ~/.config/kitty/kitty.conf}.
+     */
     KittyConfigFile locate();
 
     /**
@@ -14,7 +17,7 @@ public interface KittyConfigPort {
      *
      * @throws KittyConfigUnreadableException when a file that exists cannot be read, with the reason
      */
-    KittySettings settings(KittyConfigFile file, List<ConfigKey> keys);
+    KittySettings settings(KittyConfigFile file, List<KittyConfigKey> keys);
 
     /**
      * Appends the text of {@code adding} to its file, creating the file when it is missing.

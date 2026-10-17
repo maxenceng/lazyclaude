@@ -8,12 +8,12 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 
 /** The variables a process runs with, those set to something. */
-public record ProcessEnvironment(Map<VariableName, VariableValue> variables) {
+public record ProcessEnvironment(Map<EnvironmentVariableName, EnvironmentVariableValue> variables) {
 
-    private static final VariableName TMUX_PANE = new VariableName("TMUX_PANE");
-    private static final VariableName TMUX = new VariableName("TMUX");
-    private static final VariableName KITTY_PID = new VariableName("KITTY_PID");
-    private static final VariableName KITTY_WINDOW_ID = new VariableName("KITTY_WINDOW_ID");
+    private static final EnvironmentVariableName TMUX_PANE = new EnvironmentVariableName("TMUX_PANE");
+    private static final EnvironmentVariableName TMUX = new EnvironmentVariableName("TMUX");
+    private static final EnvironmentVariableName KITTY_PID = new EnvironmentVariableName("KITTY_PID");
+    private static final EnvironmentVariableName KITTY_WINDOW_ID = new EnvironmentVariableName("KITTY_WINDOW_ID");
     private static final Pattern NUMBER = Pattern.compile("\\d{1,18}");
     private static final String TMUX_FIELD_SEPARATOR = ",";
     private static final int TMUX_FIELDS_KEPT = 2;
@@ -57,14 +57,14 @@ public record ProcessEnvironment(Map<VariableName, VariableValue> variables) {
                                 .build()));
     }
 
-    private Optional<Long> numberOf(VariableName name) {
+    private Optional<Long> numberOf(EnvironmentVariableName name) {
         return valueOf(name)
-                .map(VariableValue::value)
+                .map(EnvironmentVariableValue::value)
                 .filter(text -> NUMBER.matcher(text).matches())
                 .map(Long::parseLong);
     }
 
-    private Optional<VariableValue> valueOf(VariableName name) {
+    private Optional<EnvironmentVariableValue> valueOf(EnvironmentVariableName name) {
         return Optional.ofNullable(variables.get(name));
     }
 }

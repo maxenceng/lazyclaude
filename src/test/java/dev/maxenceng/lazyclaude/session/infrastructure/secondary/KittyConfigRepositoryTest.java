@@ -22,15 +22,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import dev.maxenceng.lazyclaude.session.domain.ConfigKey;
 import dev.maxenceng.lazyclaude.session.domain.KittyConfigFile;
+import dev.maxenceng.lazyclaude.session.domain.KittyConfigKey;
 import dev.maxenceng.lazyclaude.session.domain.KittyConfigUnreadableException;
 import dev.maxenceng.lazyclaude.session.domain.KittyConfigUnwritableException;
 import dev.maxenceng.lazyclaude.session.domain.KittySettings;
 
 class KittyConfigRepositoryTest {
 
-    private static final List<ConfigKey> KEYS = KittySettings.remoteControlKeys();
+    private static final List<KittyConfigKey> KEYS = KittySettings.remoteControlKeys();
 
     @TempDir
     Path home;
@@ -49,6 +49,24 @@ class KittyConfigRepositoryTest {
     void shouldLocateKittyConfUnderTheConfigDirectoryTheEnvironmentNames() {
         assertThat(new KittyConfigRepository(home, Map.of("KITTY_CONFIG_DIRECTORY", "/etc/kitty-here")).locate())
                 .isEqualTo(new KittyConfigFile(Path.of("/etc/kitty-here/kitty.conf")));
+    }
+
+    @Test
+    void shouldLocateKittyConfUnderTheXdgConfigHomeWhenNoKittyConfigDirectoryIsSet() {
+        assertThat(new KittyConfigRepository(home, Map.of("XDG_CONFIG_HOME", "/srv/config")).locate())
+                .as("kitty looks under $XDG_CONFIG_HOME before ~/.config, so editing ~/.config would change a file kitty never reads")
+                .isEqualTo(new KittyConfigFile(Path.of("/srv/config/kitty/kitty.conf")));
+    }
+
+    @Test
+    void shouldPreferTheKittyConfigDirectoryOverTheXdgConfigHome() {
+        assertThat(new KittyConfigRepository(home, Map.of("KITTY_CONFIG_DIRECTORY", "/etc/kitty-here", "XDG_CONFIG_HOME", "/srv/config")).locate())
+                .isEqualTo(new KittyConfigFile(Path.of("/etc/kitty-here/kitty.conf")));
+    }
+
+    @Test
+    void shouldIgnoreABlankXdgConfigHome() {
+        assertThat(new KittyConfigRepository(home, Map.of("XDG_CONFIG_HOME", " ")).locate()).isEqualTo(configFile(kittyDirectory, "kitty.conf"));
     }
 
     @Test

@@ -20,16 +20,16 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.AddRemoteControl;
-import dev.maxenceng.lazyclaude.session.domain.ConfigKey;
-import dev.maxenceng.lazyclaude.session.domain.ConfigLine;
-import dev.maxenceng.lazyclaude.session.domain.ConfigLineNumber;
-import dev.maxenceng.lazyclaude.session.domain.ConfigPlace;
-import dev.maxenceng.lazyclaude.session.domain.ConfigSetting;
-import dev.maxenceng.lazyclaude.session.domain.ConfigValue;
 import dev.maxenceng.lazyclaude.session.domain.KittyConfigFile;
+import dev.maxenceng.lazyclaude.session.domain.KittyConfigKey;
+import dev.maxenceng.lazyclaude.session.domain.KittyConfigLine;
+import dev.maxenceng.lazyclaude.session.domain.KittyConfigLineNumber;
+import dev.maxenceng.lazyclaude.session.domain.KittyConfigPlace;
 import dev.maxenceng.lazyclaude.session.domain.KittyConfigPort;
+import dev.maxenceng.lazyclaude.session.domain.KittyConfigSetting;
 import dev.maxenceng.lazyclaude.session.domain.KittyConfigUnreadableException;
 import dev.maxenceng.lazyclaude.session.domain.KittyConfigUnwritableException;
+import dev.maxenceng.lazyclaude.session.domain.KittyConfigValue;
 import dev.maxenceng.lazyclaude.session.domain.KittySettings;
 
 /**
@@ -43,7 +43,9 @@ public final class KittyConfigRepository implements KittyConfigPort {
 
     private static final String CONFIG_DIRECTORY = "KITTY_CONFIG_DIRECTORY";
     private static final String CONFIG_FILE = "kitty.conf";
-    private static final String DEFAULT_DIRECTORY = ".config/kitty";
+    private static final String XDG_CONFIG_HOME = "XDG_CONFIG_HOME";
+    private static final String DEFAULT_CONFIG_HOME = ".config";
+    private static final String KITTY_DIRECTORY = "kitty";
     private static final String COMMENT = "#";
     private static final String INCLUDE = "include";
     private static final String GLOBINCLUDE = "globinclude";
@@ -70,17 +72,20 @@ public final class KittyConfigRepository implements KittyConfigPort {
         this.environment = environment;
     }
 
+    // deferred: a kitty.conf only under $XDG_CONFIG_DIRS is not found, so one is started in the user's directory — a user who keeps it there
     @Override
     public KittyConfigFile locate() {
-        Path directory = Optional.ofNullable(environment.get(CONFIG_DIRECTORY))
-                .filter(set -> !set.isBlank())
-                .map(set -> Path.of(set).toAbsolutePath())
-                .orElseGet(() -> home.resolve(DEFAULT_DIRECTORY));
+        Path directory = directoryIn(CONFIG_DIRECTORY)
+                .orElseGet(() -> directoryIn(XDG_CONFIG_HOME).orElseGet(() -> home.resolve(DEFAULT_CONFIG_HOME)).resolve(KITTY_DIRECTORY));
         return new KittyConfigFile(directory.resolve(CONFIG_FILE));
     }
 
+    private Optional<Path> directoryIn(String variable) {
+        return Optional.ofNullable(environment.get(variable)).filter(set -> !set.isBlank()).map(set -> Path.of(set).toAbsolutePath());
+    }
+
     @Override
-    public KittySettings settings(KittyConfigFile file, List<ConfigKey> keys) {
+    public KittySettings settings(KittyConfigFile file, List<KittyConfigKey> keys) {
         return new KittySettings(settingsOf(file.path(), keys, Set.of()).toList());
     }
 
@@ -107,7 +112,7 @@ public final class KittyConfigRepository implements KittyConfigPort {
         }
     }
 
-    private Stream<ConfigSetting> settingsOf(Path file, List<ConfigKey> keys, Set<Path> reading) {
+    private Stream<KittyConfigSetting> settingsOf(Path file, List<KittyConfigKey> keys, Set<Path> reading) {
         Path identity = identityOf(file);
         if (reading.contains(identity)) {
             return Stream.empty();
@@ -119,7 +124,7 @@ public final class KittyConfigRepository implements KittyConfigPort {
                 .flatMap(index -> settingsOfLine(file, index + 1, lines.get(index).strip(), keys, chain));
     }
 
-    private Stream<ConfigSetting> settingsOfLine(Path file, int number, String line, List<ConfigKey> keys, Set<Path> reading) {
+    private Stream<KittyConfigSetting> settingsOfLine(Path file, int number, String line, List<KittyConfigKey> keys, Set<Path> reading) {
         if (line.isEmpty() || line.startsWith(COMMENT)) {
             return Stream.empty();
         }
@@ -133,11 +138,11 @@ public final class KittyConfigRepository implements KittyConfigPort {
             case GLOBINCLUDE -> globbedBy(file, value).flatMap(included -> settingsOf(included, keys, reading));
             default -> keys.stream()
                     .filter(key -> key.value().equals(parts[0]))
-                    .map(key -> ConfigSetting.builder()
-                            .line(ConfigLine.builder().key(key).value(new ConfigValue(value)).build())
-                            .place(ConfigPlace.builder()
+                    .map(key -> KittyConfigSetting.builder()
+                            .line(KittyConfigLine.builder().key(key).value(new KittyConfigValue(value)).build())
+                            .place(KittyConfigPlace.builder()
                                     .file(new KittyConfigFile(file))
-                                    .line(new ConfigLineNumber(number))
+                                    .line(new KittyConfigLineNumber(number))
                                     .build())
                             .build());
         };

@@ -61,7 +61,7 @@ public final class TranscriptViewFixture {
         return ConflictingRemoteControlView.builder()
                 .file(Path.of(System.getProperty("user.home"), ".config/kitty/user.conf"))
                 .line(12)
-                .setting("allow_remote_control yes")
+                .setting("allow_remote_control no")
                 .wanted("allow_remote_control socket-only")
                 .build();
     }

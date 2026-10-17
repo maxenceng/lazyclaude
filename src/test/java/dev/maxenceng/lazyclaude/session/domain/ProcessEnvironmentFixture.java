@@ -13,8 +13,8 @@ public final class ProcessEnvironmentFixture {
     public static ProcessEnvironment environmentOf(Map<String, String> variables) {
         return new ProcessEnvironment(variables.entrySet().stream()
                 .collect(Collectors.toMap(
-                        variable -> new VariableName(variable.getKey()),
-                        variable -> new VariableValue(variable.getValue()))));
+                        variable -> new EnvironmentVariableName(variable.getKey()),
+                        variable -> new EnvironmentVariableValue(variable.getValue()))));
     }
 
     public static ProcessEnvironment emptyEnvironment() {

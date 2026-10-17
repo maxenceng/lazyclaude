@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import dev.maxenceng.lazyclaude.session.published.EntryText;
 import dev.maxenceng.lazyclaude.session.published.NoToolInput;
 import dev.maxenceng.lazyclaude.session.published.PromptEntry;
 import dev.maxenceng.lazyclaude.session.published.ReplyEntry;
@@ -15,6 +14,7 @@ import dev.maxenceng.lazyclaude.session.published.ToolCallEntry;
 import dev.maxenceng.lazyclaude.session.published.ToolInput;
 import dev.maxenceng.lazyclaude.session.published.ToolName;
 import dev.maxenceng.lazyclaude.session.published.TranscriptEntry;
+import dev.maxenceng.lazyclaude.session.published.TranscriptEntryText;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -112,12 +112,12 @@ final class TranscriptEntryLine {
                 .filter(line -> !line.isEmpty());
     }
 
-    private static Optional<EntryText> text(JsonNode node) {
+    private static Optional<TranscriptEntryText> text(JsonNode node) {
         return Optional.ofNullable(node).filter(JsonNode::isString).flatMap(found -> text(found.asString()));
     }
 
-    private static Optional<EntryText> text(String text) {
-        return text == null || text.isBlank() ? Optional.empty() : Optional.of(new EntryText(text.strip()));
+    private static Optional<TranscriptEntryText> text(String text) {
+        return text == null || text.isBlank() ? Optional.empty() : Optional.of(new TranscriptEntryText(text.strip()));
     }
 
     private static boolean isText(JsonNode node, String expected) {
