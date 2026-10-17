@@ -118,13 +118,12 @@ public final class TreeWatcher implements AutoCloseable {
     }
 
     private void register(TreeScope scope, Path from) {
-        Optional<WatchService> open = service;
-        if (open.isEmpty()) {
+        if (service.isEmpty()) {
             giveUp(scope, serviceFailure.map(IOException::getMessage).orElse(NO_SERVICE));
             return;
         }
         try {
-            Files.walkFileTree(from, new TreeRegistration(open.get(), registrar, scope, watched));
+            Files.walkFileTree(from, new TreeRegistration(service.get(), registrar, scope, watched));
         } catch (IOException e) {
             giveUp(scope, e.getMessage());
         }
@@ -141,7 +140,7 @@ public final class TreeWatcher implements AutoCloseable {
     private void run(Runnable changed) {
         long nextPoll = System.nanoTime() + pollInterval.toNanos();
         try {
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 boolean relevant = batch();
                 if (!polled.isEmpty() && System.nanoTime() - nextPoll >= 0) {
                     nextPoll = System.nanoTime() + pollInterval.toNanos();
@@ -157,21 +156,20 @@ public final class TreeWatcher implements AutoCloseable {
     }
 
     private boolean batch() throws InterruptedException {
-        Optional<WatchService> open = service;
-        if (open.isEmpty()) {
+        if (service.isEmpty()) {
             Thread.sleep(pollInterval.toMillis());
             return false;
         }
-        WatchKey first = open.get().poll(pollInterval.toMillis(), TimeUnit.MILLISECONDS);
+        WatchKey first = service.get().poll(pollInterval.toMillis(), TimeUnit.MILLISECONDS);
         if (first == null) {
             return false;
         }
         boolean relevant = process(first);
         long deadline = System.nanoTime() + maxWait.toNanos();
-        WatchKey more = open.get().poll(batchWindow.toMillis(), TimeUnit.MILLISECONDS);
+        WatchKey more = service.get().poll(batchWindow.toMillis(), TimeUnit.MILLISECONDS);
         while (more != null) {
             relevant |= process(more);
-            more = System.nanoTime() - deadline < 0 ? open.get().poll(batchWindow.toMillis(), TimeUnit.MILLISECONDS) : null;
+            more = System.nanoTime() - deadline < 0 ? service.get().poll(batchWindow.toMillis(), TimeUnit.MILLISECONDS) : null;
         }
         return relevant;
     }

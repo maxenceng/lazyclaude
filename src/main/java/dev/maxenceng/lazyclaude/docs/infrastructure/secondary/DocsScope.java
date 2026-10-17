@@ -1,8 +1,8 @@
 package dev.maxenceng.lazyclaude.docs.infrastructure.secondary;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import dev.maxenceng.lazyclaude.docs.published.DocumentPath;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.TreeScope;
@@ -37,8 +37,9 @@ final class DocsScope implements TreeScope {
     }
 
     private boolean listed(Path entry) {
-        List<String> segments = new ArrayList<>();
-        docs.relativize(entry).forEach(segment -> segments.add(segment.toString()));
-        return new DocumentPath(String.join(SEPARATOR, segments)).listed();
+        String relative = StreamSupport.stream(docs.relativize(entry).spliterator(), false)
+                .map(Path::toString)
+                .collect(Collectors.joining(SEPARATOR));
+        return new DocumentPath(relative).listed();
     }
 }
