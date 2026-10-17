@@ -9,6 +9,7 @@ public final class TranscriptWatchFixture {
 
     private static final Duration SHORT_SETTLE = Duration.ofMillis(400);
     private static final Duration SHORT_POLL = Duration.ofMillis(300);
+    private static final Duration LONG_POLL = Duration.ofMinutes(1);
 
     private TranscriptWatchFixture() {}
 
@@ -47,6 +48,18 @@ public final class TranscriptWatchFixture {
                 WatchKeyPoll.platform(),
                 SHORT_SETTLE,
                 SHORT_POLL);
+    }
+
+    static TranscriptWatchRepository longPollingWatcherWithoutInotify(Path projects, TranscriptRepository transcripts) {
+        return new TranscriptWatchRepository(
+                projects,
+                transcripts,
+                () -> {
+                    throw new IOException("User limit of inotify watches reached");
+                },
+                WatchKeyPoll.platform(),
+                SHORT_SETTLE,
+                LONG_POLL);
     }
 
     public static Duration settleTime() {

@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
@@ -54,6 +56,7 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
     private final Duration pollInterval;
     private final List<WatchService> open = new CopyOnWriteArrayList<>();
     private final List<Thread> workers = new CopyOnWriteArrayList<>();
+    private final Semaphore rescans = new Semaphore(0);
 
     public TranscriptWatchRepository(Path transcriptsRoot, TranscriptRepository transcripts) {
         this(
@@ -87,6 +90,11 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
                 .daemon()
                 .name(WORKER_NAME)
                 .start(() -> run(locator, changed, fallback, cache, root)));
+    }
+
+    @Override
+    public void rescanNow() {
+        rescans.release();
     }
 
     @Override
@@ -125,14 +133,14 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
             boolean everything = false;
             if (service.isPresent()) {
                 try {
-                    everything = drain(service.get(), pending);
+                    everything = drain(service.get(), pending) | rescanRequested(Duration.ZERO);
                 } catch (IOException cannotWatchFolder) {
                     closeQuietly(service.get());
                     giveUpWatching(cannotWatchFolder, fallback);
                     service = Optional.empty();
                 }
             } else {
-                Thread.sleep(pollInterval.toMillis());
+                rescanRequested(pollInterval);
                 everything = true;
             }
             if (everything) {
@@ -143,6 +151,12 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
                 changed.run();
             }
         }
+    }
+
+    /** Whether a rescan was asked for, waiting up to {@code wait} for one; every request made so far is answered by the one rescan that follows. */
+    private boolean rescanRequested(Duration wait) throws InterruptedException {
+        boolean asked = rescans.tryAcquire(wait.toMillis(), TimeUnit.MILLISECONDS);
+        return rescans.drainPermits() > 0 || asked;
     }
 
     private boolean settleInto(Map<Path, Instant> pending, TranscriptLocator locator, CacheFallback cache) {

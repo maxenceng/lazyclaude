@@ -148,4 +148,11 @@ class ReviewManagerTest {
 
         verify(watch, times(1)).watch(any());
     }
+
+    @Test
+    void shouldRunTheWatchNowWhenRefreshed() {
+        manager.runNow();
+
+        verify(watch).runNow();
+    }
 }

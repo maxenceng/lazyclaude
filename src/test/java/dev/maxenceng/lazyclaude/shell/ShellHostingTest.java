@@ -462,6 +462,6 @@ class ShellHostingTest {
     void shouldListNAndMOverThePanels() {
         Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
 
-        assertThat(Screen.of(shell).lines().getLast()).contains("N new", "m main view");
+        assertThat(Screen.of(shell).lines().getLast()).contains("N new", "R refresh");
     }
 }

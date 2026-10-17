@@ -28,6 +28,11 @@ public record ReviewManager(
         });
     }
 
+    /** Runs the watch's fetch now, for a reader who asked rather than waited; a fetch already under way answers it. */
+    public void runNow() {
+        watch.runNow();
+    }
+
     private PullRequests read(Project project) {
         try {
             return new OpenPullRequests(pullRequests.openPullRequests(project));

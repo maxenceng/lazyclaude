@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.session.application;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
@@ -40,6 +41,7 @@ public final class SessionApplicationService {
     private final SessionManager manager;
     private final HostedSessionManager hosted;
     private final LastPushedSessions lastPushed = new LastPushedSessions();
+    private final AtomicReference<Consumer<Sessions>> delivering = new AtomicReference<>(sessions -> {});
 
     public SessionApplicationService(
             LiveSessionPort sessions,
@@ -65,7 +67,19 @@ public final class SessionApplicationService {
             listener.accept(sessions.hosting(hosted.open()));
         };
         manager.watch(project, tickets, hosting);
-        hosted.onChange(() -> manager.refresh(project, tickets, hosting));
+        hosted.onChange(() -> manager.refresh(project, hosting));
+        delivering.set(hosting);
+    }
+
+    /** From now on sessions are linked against {@code tickets}, the ids of the board as it was last read; the subscriber is handed them linked that way at once. */
+    public void knowTickets(Project project, KnownTickets tickets) {
+        manager.know(project, tickets, delivering.get());
+    }
+
+    /** Reads the live sessions and the transcripts again now, linked against {@code tickets}, rather than at the next change or sweep. */
+    public void refresh(Project project, KnownTickets tickets) {
+        manager.know(project, tickets, delivering.get());
+        manager.rescanTranscripts();
     }
 
     public HostStart startUnlinked(Project project, PaneSize size) {

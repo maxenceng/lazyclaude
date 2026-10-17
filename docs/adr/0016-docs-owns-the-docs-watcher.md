@@ -4,7 +4,7 @@ Date: 2026-10-10
 
 ## Status
 
-Accepted. Amends the ownership list of LAZY-21, which gave `board` the root-checkout watchers.
+Accepted. Amends the ownership list of LAZY-21, which gave `board` the root-checkout watchers. The watch loop it describes moved to the shared kernel's tree watcher (ADR 0031).
 
 ## Context
 

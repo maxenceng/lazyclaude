@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -17,6 +18,9 @@ import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.shared.domain.BranchName;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
+import dev.maxenceng.lazyclaude.shared.domain.WarnOnce;
+import dev.maxenceng.lazyclaude.shared.domain.Warning;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
@@ -27,8 +31,53 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * merged branch read only through a worktree that holds it, and a branch copy that cannot be read
  * never replaced by the root copy.
  */
-public record BoardManager(
-        ProjectLocatorPort locator, BacklogPort backlog, BranchCopyPort copies, BranchChangesPort changes) {
+public final class BoardManager {
+
+    private static final String POLLING_WARNING = "board: %s; checking every %d s";
+    private static final String UNREADABLE_WARNING = "board: %s; showing the board as last read";
+
+    private final ProjectLocatorPort locator;
+    private final BacklogPort backlog;
+    private final BranchCopyPort copies;
+    private final BranchChangesPort changes;
+    private final BoardWatchPort watch;
+    private final WarningPort warnings;
+    private final WarnOnce unreadable = new WarnOnce();
+
+    public BoardManager(
+            ProjectLocatorPort locator,
+            BacklogPort backlog,
+            BranchCopyPort copies,
+            BranchChangesPort changes,
+            BoardWatchPort watch,
+            WarningPort warnings) {
+        this.locator = locator;
+        this.backlog = backlog;
+        this.copies = copies;
+        this.changes = changes;
+        this.watch = watch;
+        this.warnings = warnings;
+    }
+
+    /**
+     * Runs {@code changed} after each batch of changes to what the board is read from, on the watcher's thread. A tree that is
+     * polled instead of watched is warned of, once for each tree.
+     */
+    public void watch(WorkingDirectory from, Runnable changed) {
+        watch.watch(locator.locate(from), changed, this::warnOfPolling);
+    }
+
+    /**
+     * A re-read of the board failed and the one on screen stays. Saying why is raised once for the run: a warning is never withdrawn,
+     * so a board that keeps failing and recovering would otherwise pile up copies of it.
+     */
+    public void boardUnreadable(Reason cause) {
+        unreadable.raise(warnings, new Warning(UNREADABLE_WARNING.formatted(cause.value())));
+    }
+
+    private void warnOfPolling(Reason cause, Duration every) {
+        warnings.raise(new Warning(POLLING_WARNING.formatted(cause.value(), every.toSeconds())));
+    }
 
     public Board boardFor(WorkingDirectory from, Set<TicketBranch> merged) {
         Project project = locator.locate(from);

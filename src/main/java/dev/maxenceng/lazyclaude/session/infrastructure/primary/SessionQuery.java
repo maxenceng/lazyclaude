@@ -35,6 +35,16 @@ public final class SessionQuery {
         sessions.subscribe(payload.toDomain(), payload.tickets(), read -> listener.accept(SessionsView.from(read)));
     }
 
+    /** Reads the live sessions and the transcripts again now, linked against the tickets of {@code payload}, and hands the subscriber a view when they land. */
+    public void refresh(SessionPayload payload) {
+        sessions.refresh(payload.toDomain(), payload.tickets());
+    }
+
+    /** From now on sessions are linked against the tickets of {@code payload}, and the subscriber is handed a view linked that way at once. */
+    public void knowTickets(SessionPayload payload) {
+        sessions.knowTickets(payload.toDomain(), payload.tickets());
+    }
+
     /** What a hosted session shows right now, blank for one that is gone. */
     public TerminalScreen screenOf(HostedSessionId id) {
         return sessions.screenOf(id);

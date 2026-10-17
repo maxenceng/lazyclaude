@@ -287,4 +287,47 @@ class SessionApplicationServiceTest {
 
         verify(hosts).end(id);
     }
+
+    @Test
+    void shouldHandTheListenerTheSessionsReadAgainAndAskForTheTranscriptsAgainOnRefresh() {
+        when(sessions.liveSessions(any())).thenReturn(List.of());
+        List<Sessions> received = new ArrayList<>();
+        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        service.subscribe(project(), noTickets(), received::add);
+
+        service.refresh(project(), noTickets());
+
+        assertThat(received).containsExactly(liveSessionsOf(List.of()));
+        verify(transcriptWatch).rescanNow();
+    }
+
+    @Test
+    void shouldHandTheListenerTheSessionsLinkedAgainstTheTicketsItWasToldOf() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+        when(past.linkFacts()).thenReturn(Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
+        List<Sessions> received = new ArrayList<>();
+        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        service.subscribe(project(), noTickets(), received::add);
+
+        service.knowTickets(project(), boardTickets());
+
+        assertThat(received)
+                .containsExactly(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+    }
+
+    @Test
+    void shouldHandTheListenerTheSessionsLinkedAgainstTheTicketsItIsRefreshedWith() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+        when(past.linkFacts()).thenReturn(Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
+        List<Sessions> received = new ArrayList<>();
+        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        service.subscribe(project(), noTickets(), received::add);
+
+        service.refresh(project(), boardTickets());
+
+        assertThat(received)
+                .containsExactly(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+    }
 }

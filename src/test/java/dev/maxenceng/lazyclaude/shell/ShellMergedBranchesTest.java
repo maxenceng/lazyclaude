@@ -37,7 +37,7 @@ class ShellMergedBranchesTest {
 
     @Test
     void shouldReadTheBoardAgainWhenATicketBranchBecomesMerged() {
-        when(boards.refreshedBoardFor(readingBoardWithMerged("PROJ-1")))
+        when(boards.boardReadAgainFor(readingBoardWithMerged("PROJ-1")))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().title(secondTitle()).build())));
         Shell shell = shellReading(boards, ticketView());
 
@@ -48,17 +48,17 @@ class ShellMergedBranchesTest {
 
     @Test
     void shouldReadTheBoardOnTheFetchingThreadBeforeAnyFrameIsDrawn() {
-        when(boards.refreshedBoardFor(readingBoardWithMerged("PROJ-1"))).thenReturn(Optional.of(boardViewOf(ticketView())));
+        when(boards.boardReadAgainFor(readingBoardWithMerged("PROJ-1"))).thenReturn(Optional.of(boardViewOf(ticketView())));
         Shell shell = shellReading(boards, ticketView());
 
         shell.mergedPullRequestsChanged(mergedPullRequestsViewOn("PROJ-1"));
 
-        verify(boards).refreshedBoardFor(readingBoardWithMerged("PROJ-1"));
+        verify(boards).boardReadAgainFor(readingBoardWithMerged("PROJ-1"));
     }
 
     @Test
     void shouldKeepTheSelectionOnTheSameTicketWhenItsRowMoves() {
-        when(boards.refreshedBoardFor(readingBoardWithMerged("PROJ-1")))
+        when(boards.boardReadAgainFor(readingBoardWithMerged("PROJ-1")))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().status(Status.IN_PROGRESS).build(), secondTicketView())));
         Shell shell = shellReading(boards, ticketView(), secondTicketView());
         shell.press(key('j'));
@@ -91,7 +91,7 @@ class ShellMergedBranchesTest {
 
     @Test
     void shouldNotReadTheBoardAgainWhenTheMergedTicketBranchesAreTheSame() {
-        when(boards.refreshedBoardFor(readingBoardWithMerged("PROJ-1"))).thenReturn(Optional.of(boardViewOf(ticketView())));
+        when(boards.boardReadAgainFor(readingBoardWithMerged("PROJ-1"))).thenReturn(Optional.of(boardViewOf(ticketView())));
         Shell shell = shellReading(boards, ticketView());
 
         shell.mergedPullRequestsChanged(mergedPullRequestsViewOn("PROJ-1"));
@@ -99,13 +99,13 @@ class ShellMergedBranchesTest {
         shell.mergedPullRequestsChanged(mergedPullRequestsViewOn("other", "PROJ-1"));
         Screen.of(shell);
 
-        verify(boards, times(1)).refreshedBoardFor(readingBoardWithMerged("PROJ-1"));
+        verify(boards, times(1)).boardReadAgainFor(readingBoardWithMerged("PROJ-1"));
     }
 
     @Test
     void shouldReadTheBoardAgainWhenGitHubStopsAnsweringAndTheBranchesCountAsSourcesAgain() {
-        when(boards.refreshedBoardFor(readingBoardWithMerged("PROJ-1"))).thenReturn(Optional.of(boardViewOf(ticketView())));
-        when(boards.refreshedBoardFor(readingBoardWithMerged())).thenReturn(Optional.of(boardViewOf(ticketView())));
+        when(boards.boardReadAgainFor(readingBoardWithMerged("PROJ-1"))).thenReturn(Optional.of(boardViewOf(ticketView())));
+        when(boards.boardReadAgainFor(readingBoardWithMerged())).thenReturn(Optional.of(boardViewOf(ticketView())));
         Shell shell = shellReading(boards, ticketView());
         shell.mergedPullRequestsChanged(mergedPullRequestsViewOn("PROJ-1"));
         Screen.of(shell);
@@ -113,13 +113,13 @@ class ShellMergedBranchesTest {
         shell.mergedPullRequestsChanged(noMergedPullRequestsView());
         Screen.of(shell);
 
-        verify(boards).refreshedBoardFor(readingBoardWithMerged());
+        verify(boards).boardReadAgainFor(readingBoardWithMerged());
     }
 
     @Test
     void shouldKeepTheBoardOnScreenAndTryAgainAtTheNextFetchWhenItCannotBeRead() {
         BoardPayload merged = readingBoardWithMerged("PROJ-1");
-        when(boards.refreshedBoardFor(merged))
+        when(boards.boardReadAgainFor(merged))
                 .thenReturn(Optional.empty())
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().title(secondTitle()).build())));
         Shell shell = shellReading(boards, ticketView());

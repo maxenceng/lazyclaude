@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.docs.published.DocumentPath;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.ChurnTolerantVisitor;
 
 /** Collects the path of every regular file under {@code docs/}, relative to it and `/`-separated, whatever the file is. */
 final class DocumentPathCollector extends ChurnTolerantVisitor {

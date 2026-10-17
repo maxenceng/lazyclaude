@@ -72,6 +72,7 @@ public final class SessionManager {
     private final WarnOnce cacheUnwritable = new WarnOnce();
     private final WarnOnce rootUnlistable = new WarnOnce();
     private final LastLiveRead lastLive = new LastLiveRead();
+    private final LastKnownTickets known = new LastKnownTickets();
 
     public SessionManager(
             LiveSessionPort sessions,
@@ -103,18 +104,30 @@ public final class SessionManager {
      * overwrites a newer one.
      */
     public void watch(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
-        watch.watch(() -> deliver(listener, () -> readingLive(project, tickets)), this::warnOfSweep);
+        known.know(tickets);
+        watch.watch(() -> deliver(listener, () -> readingLive(project, known.current())), this::warnOfSweep);
         transcriptWatch.watch(
                 this::locationOf,
-                () -> deliver(listener, () -> reusingLive(project, tickets)),
+                () -> deliver(listener, () -> reusingLive(project, known.current())),
                 this::warnOfTranscriptPolling,
                 this::warnOfCache,
                 this::warnOfUnlistableRoot);
     }
 
     /** Hands {@code listener} the sessions again now, for a change none of the watchers sees: a hosted session opening or closing. */
-    public void refresh(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
-        deliver(listener, () -> readingLive(project, tickets));
+    public void refresh(Project project, Consumer<Sessions> listener) {
+        deliver(listener, () -> readingLive(project, known.current()));
+    }
+
+    /** From now on sessions are linked against {@code tickets}, and {@code listener} is handed them linked that way at once. */
+    public void know(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
+        known.know(tickets);
+        refresh(project, listener);
+    }
+
+    /** Has the transcripts read again, whether or not they look changed; the sessions arrive through the watch's listener. */
+    public void rescanTranscripts() {
+        transcriptWatch.rescanNow();
     }
 
     private void deliver(Consumer<Sessions> listener, Supplier<Sessions> read) {

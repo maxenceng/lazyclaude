@@ -25,10 +25,13 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
@@ -79,7 +82,6 @@ public final class Shell extends ToolkitApp {
     private static final int LEFT_COLUMN_PERCENT = 35;
     private static final int SMALL_PANEL_HEIGHT = 3;
     private static final int SHRUNK_PANEL_HEIGHT = 5;
-    private static final int KEY_BAR_HEIGHT = 1;
 
     private static final String BOARD_TITLE = "Board";
     private static final String SESSIONS_TITLE = "Sessions";
@@ -99,6 +101,7 @@ public final class Shell extends ToolkitApp {
 
     private static final char QUIT = 'q';
     private static final char NEW_SESSION = 'N';
+    private static final char REFRESH = 'R';
     private static final char NEW_TICKET_SESSION = 'n';
     private static final char TOGGLE_MAIN_VIEW = 'm';
     private static final char SUSPEND = 'z';
@@ -121,12 +124,11 @@ public final class Shell extends ToolkitApp {
     private static final String EXPAND_KEY = "enter expand";
     private static final String FOCUS_KEYS = "alt+h/j/k/l focus";
     private static final String QUIT_KEY = "q quit";
+    private static final String REFRESH_KEY = "R refresh";
     private static final String NEW_KEY = "N new";
     private static final String NEW_TICKET_KEY = "n new";
     private static final String MAIN_VIEW_KEY = "m main view";
     private static final String SESSION_KEYS = "alt+h/l tab  alt+h/j/k/l focus  alt+m main view";
-    private static final String KEY_BAR_INDENT = " ";
-    private static final String KEY_SEPARATOR = "  ";
 
     private final BoardRows board;
     private final DocsRows docs;
@@ -140,6 +142,8 @@ public final class Shell extends ToolkitApp {
     private final HostedSessionCommand hosting;
     private final SessionQuery screens;
     private final BoardQuery boards;
+    private final DocsQuery docsQuery;
+    private final ReviewQuery reviews;
     private final Path root;
     private final DockTabs dock = new DockTabs();
     private final Map<HostedSessionId, PaneSize> paneSizes = new HashMap<>();
@@ -147,6 +151,8 @@ public final class Shell extends ToolkitApp {
     private PullRequestsView pullRequests;
     private volatile BoardView lastRead;
     private volatile Set<String> mergedTicketBranches = Set.of();
+    private volatile Set<String> latestMergedHeads = Set.of();
+    private volatile List<LinkedTicketId> linkedTicketIds;
     private volatile Set<String> mergedHeads = Set.of();
     private final AtomicReference<Set<String>> pendingMergedHeads = new AtomicReference<>();
     private final Executor background;
@@ -170,11 +176,23 @@ public final class Shell extends ToolkitApp {
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
             SessionQuery screens,
-            BoardQuery boards) {
-        this(board, docs, sessions, pullRequests, hosting, screens, boards, Executors.newVirtualThreadPerTaskExecutor());
+            BoardQuery boards,
+            DocsQuery docsQuery,
+            ReviewQuery reviews) {
+        this(
+                board,
+                docs,
+                sessions,
+                pullRequests,
+                hosting,
+                screens,
+                boards,
+                docsQuery,
+                reviews,
+                Executors.newVirtualThreadPerTaskExecutor());
     }
 
-    /** {@code background} runs what must not hold up the frame: adding a worktree, and the start of a session in it. */
+    /** {@code background} runs what must not hold up the frame: adding a worktree, the start of a session in it, and a refresh. */
     Shell(
             BoardView board,
             DocsView docs,
@@ -183,16 +201,21 @@ public final class Shell extends ToolkitApp {
             HostedSessionCommand hosting,
             SessionQuery screens,
             BoardQuery boards,
+            DocsQuery docsQuery,
+            ReviewQuery reviews,
             Executor background) {
         this.background = background;
         this.board = new BoardRows(board);
         this.lastRead = board;
+        this.linkedTicketIds = BoardRows.ticketIdsOf(board);
         this.docs = new DocsRows(docs);
         this.sessions = new SessionRows(sessions);
         this.pullRequests = pullRequests;
         this.hosting = hosting;
         this.screens = screens;
         this.boards = boards;
+        this.docsQuery = docsQuery;
+        this.reviews = reviews;
         this.root = board.root().value();
         this.dock.replace(sessions.hosted());
     }
@@ -281,14 +304,33 @@ public final class Shell extends ToolkitApp {
         if (reading != null) {
             reading.runOnRenderThread(this::applyPendingMergedHeads);
         }
-        Set<String> branches = BoardRows.ticketBranchesOf(lastRead);
-        Set<String> merged = view.headBranches().stream()
-                .filter(branches::contains)
-                .collect(Collectors.toUnmodifiableSet());
-        if (merged.equals(mergedTicketBranches)) {
+        latestMergedHeads = view.headBranches();
+        if (mergedTicketBranches().equals(mergedTicketBranches)) {
             return;
         }
-        boards.refreshedBoardFor(new BoardPayload(root, merged)).ifPresent(read -> {
+        reread();
+    }
+
+    /**
+     * Something the board is read from changed: the backlog, a ticket worktree's copy of a ticket, or the refs. Callable from any
+     * thread; the board is read again on the caller's, with the branches known merged, and applied on the UI thread.
+     */
+    public void boardChanged() {
+        reread();
+    }
+
+    private Set<String> mergedTicketBranches() {
+        Set<String> branches = BoardRows.ticketBranchesOf(lastRead);
+        return latestMergedHeads.stream().filter(branches::contains).collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * One read at a time, so a slow read that started first never lands after a newer one; the merged branches are taken under
+     * the same lock, so a read never goes ahead with heads older than the last one applied.
+     */
+    private synchronized void reread() {
+        Set<String> merged = mergedTicketBranches();
+        boards.boardReadAgainFor(new BoardPayload(root, merged)).ifPresent(read -> {
             lastRead = read;
             mergedTicketBranches = merged;
             pendingBoard.set(read);
@@ -296,7 +338,17 @@ public final class Shell extends ToolkitApp {
             if (running != null) {
                 running.runOnRenderThread(this::applyPendingBoard);
             }
+            followTickets(read);
         });
+    }
+
+    /** Sessions are linked against the tickets of the board as last read, so a ticket created while running links them. */
+    private void followTickets(BoardView read) {
+        List<LinkedTicketId> ids = BoardRows.ticketIdsOf(read);
+        if (!ids.equals(linkedTicketIds)) {
+            linkedTicketIds = ids;
+            screens.knowTickets(new SessionPayload(root, ids));
+        }
     }
 
     private void applyPendingMergedHeads() {
@@ -316,7 +368,11 @@ public final class Shell extends ToolkitApp {
     private void applyPendingBoard() {
         BoardView next = pendingBoard.getAndSet(null);
         if (next != null) {
+            RowKey before = board.selected().key();
             board.replace(next);
+            if (!board.selected().key().equals(before) && mainViewOwner == Focus.BOARD) {
+                mainViewScroll.reset();
+            }
             showSelectedTicketsSessions();
         }
     }
@@ -412,6 +468,9 @@ public final class Shell extends ToolkitApp {
         }
         if (key.isChar(QUIT)) {
             return requestQuit();
+        }
+        if (key.isChar(REFRESH)) {
+            return refresh();
         }
         if (key.isChar(NEW_TICKET_SESSION)) {
             return newFromTicket();
@@ -524,6 +583,17 @@ public final class Shell extends ToolkitApp {
             quitRequested = true;
             quit();
         }
+        return true;
+    }
+
+    /** Reads everything again, off the render thread, and shows only what changed; the pull requests are fetched on their own thread. */
+    private boolean refresh() {
+        background.execute(() -> {
+            reviews.refresh();
+            screens.refresh(new SessionPayload(root, linkedTicketIds));
+            docsChanged(docsQuery.docsFor(new DocsPayload(root)));
+            boardChanged();
+        });
         return true;
     }
 
@@ -831,7 +901,7 @@ public final class Shell extends ToolkitApp {
                                         small(ELSEWHERE_TITLE, Focus.ELSEWHERE))
                                 .percent(LEFT_COLUMN_PERCENT),
                         (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
-                text(keyBar()).dim().length(KEY_BAR_HEIGHT));
+                new KeyBarElement(keyBar()));
         return picker.<Element>map(open -> stack(screen, new VerbPickerElement(open, () -> sessionsArea)))
                 .orElse(screen);
     }
@@ -950,12 +1020,12 @@ public final class Shell extends ToolkitApp {
         return new DetailElement(width -> TicketText.head(ticket, pullRequests, width), TicketText.markdown(ticket), mainViewScroll);
     }
 
-    private String keyBar() {
+    private List<String> keyBar() {
         if (picker.isPresent()) {
-            return KEY_BAR_INDENT + VerbPickerText.keys();
+            return List.of(VerbPickerText.keys());
         }
         if (inSession()) {
-            return KEY_BAR_INDENT + SESSION_KEYS;
+            return List.of(SESSION_KEYS);
         }
         List<String> keys = new ArrayList<>();
         if (focus == Focus.BOARD || focus == Focus.SESSIONS || focus == Focus.DOCS) {
@@ -980,8 +1050,9 @@ public final class Shell extends ToolkitApp {
             keys.add(NEW_TICKET_KEY);
         }
         keys.add(NEW_KEY);
+        keys.add(REFRESH_KEY);
         keys.add(MAIN_VIEW_KEY);
-        return KEY_BAR_INDENT + String.join(KEY_SEPARATOR, keys);
+        return keys;
     }
 
     private boolean foldable() {

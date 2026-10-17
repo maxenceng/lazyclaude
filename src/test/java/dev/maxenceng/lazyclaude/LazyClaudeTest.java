@@ -1,8 +1,10 @@
 package dev.maxenceng.lazyclaude;
 
 import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFileOf;
+import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticket;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.boardQuery;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.unreadChanges;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.inReviewSlugTicketView;
@@ -64,6 +66,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
+import dev.maxenceng.lazyclaude.board.domain.BoardWatchPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchCopyPort;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
@@ -130,6 +133,9 @@ class LazyClaudeTest {
 
     @Mock
     private SessionWatchPort sessionWatch;
+
+    @Mock
+    private BoardWatchPort boardWatch;
 
     @TempDir
     Path sandbox;
@@ -216,6 +222,22 @@ class LazyClaudeTest {
         assertThat(exit).as("the docs stand alone; the board still opens").isZero();
         assertThat(openedDocs).containsExactly(unavailableDocsView());
         assertThat(said.size()).as("the Docs panel says why, not the terminal").isZero();
+    }
+
+    @Test
+    void shouldHandTheShellTheBoardAgainWhenTheBoardWatcherReportsAChange() {
+        when(locator.locate(any())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of());
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies, unreadChanges(), boardWatch, raised), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), warningQuery(raised));
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(boardWatch).watch(eq(project()), changed.capture(), any());
+        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket())));
+
+        changed.getValue().run();
+
+        assertThat(Screen.of(shell).boardPanelText())
+                .as("watcher, application and shell are joined for the project the board was read from")
+                .contains("PROJ-1");
     }
 
     @Test

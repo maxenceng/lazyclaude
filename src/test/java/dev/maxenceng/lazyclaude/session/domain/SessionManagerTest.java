@@ -696,8 +696,46 @@ class SessionManagerTest {
     void shouldDeliverTheSessionsOnRefresh() {
         when(sessions.liveSessions(any())).thenReturn(List.of());
 
-        sessionManager(sessions, locator, watch, warnings).refresh(project(), noTickets(), listener);
+        sessionManager(sessions, locator, watch, warnings).refresh(project(), listener);
 
         verify(listener).accept(liveSessionsOf(List.of()));
+    }
+
+    @Test
+    void shouldLinkASessionToATicketLearnedAfterTheWatchStarted() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+        when(past.linkFacts()).thenReturn(Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
+        SessionManager manager = sessionManager(sessions, past, locator, watch, transcriptWatch, warnings);
+        manager.watch(project(), noTickets(), listener);
+
+        manager.know(project(), boardTickets(), listener);
+
+        verify(listener)
+                .accept(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+    }
+
+    @Test
+    void shouldKeepLinkingAgainstTheTicketsLearnedOnLaterChangesOfTheRegistry() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+        when(past.linkFacts()).thenReturn(Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
+        SessionManager manager = sessionManager(sessions, past, locator, watch, transcriptWatch, warnings);
+        manager.watch(project(), noTickets(), listener);
+        ArgumentCaptor<Runnable> registryChanged = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).watch(registryChanged.capture(), any());
+        manager.know(project(), boardTickets(), listener);
+
+        registryChanged.getValue().run();
+
+        verify(listener, times(2))
+                .accept(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+    }
+
+    @Test
+    void shouldAskTheTranscriptWatchToRescanWhenTranscriptsAreRescanned() {
+        sessionManager(sessions, past, locator, watch, transcriptWatch, warnings).rescanTranscripts();
+
+        verify(transcriptWatch).rescanNow();
     }
 }
