@@ -11,4 +11,9 @@ public record WorkingDirectory(Path path) {
         Assert.notNull("working directory", path);
         path = path.toAbsolutePath().normalize();
     }
+
+    /** Whether {@code other} is this directory or lies below it; compared by path segments, so a sibling sharing a name prefix is not. */
+    public boolean contains(WorkingDirectory other) {
+        return other.path().startsWith(path);
+    }
 }

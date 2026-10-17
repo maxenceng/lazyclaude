@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static org.mockito.Mockito.mock;
 
+import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
@@ -55,5 +56,27 @@ public final class SessionQueryFixture {
                 warnings,
                 hosts,
                 worktrees));
+    }
+
+    public static SessionQuery sessionQueryOver(LiveSessionPort sessions, ProjectLocatorPort locator, WorktreePort worktrees) {
+        return new SessionQuery(worktreeService(sessions, locator, worktrees));
+    }
+
+    public static TicketWorktreeCommand ticketWorktreeCommand(
+            LiveSessionPort sessions, ProjectLocatorPort locator, WorktreePort worktrees) {
+        return new TicketWorktreeCommand(worktreeService(sessions, locator, worktrees));
+    }
+
+    private static SessionApplicationService worktreeService(
+            LiveSessionPort sessions, ProjectLocatorPort locator, WorktreePort worktrees) {
+        return sessionApplicationService(
+                sessions,
+                mock(PastSessionPort.class),
+                locator,
+                mock(SessionWatchPort.class),
+                mock(TranscriptWatchPort.class),
+                mock(WarningPort.class),
+                mock(HostPort.class),
+                worktrees);
     }
 }

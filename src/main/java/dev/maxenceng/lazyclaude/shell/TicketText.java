@@ -29,6 +29,8 @@ final class TicketText {
     private static final String KEY_GAP = "  ";
     private static final String RULE = "─";
     private static final String NO_BODY = "no body";
+    private static final String WORKTREE_KEY = "worktree";
+    private static final String NO_KEY = "";
 
     private TicketText() {}
 
@@ -43,11 +45,11 @@ final class TicketText {
      * The rows above a ticket's body: the facts line, the other frontmatter keys, the rows about its pull request in the same key
      * column, a rule across {@code width}, and "no body" when it has none.
      */
-    static List<DetailRow> head(TicketView ticket, PullRequestsView pullRequests, int width) {
+    static List<DetailRow> head(TicketView ticket, PullRequestsView pullRequests, Optional<WorktreeFacts> worktree, int width) {
         return Stream.of(
                         Stream.of(new DetailRow(facts(ticket), Style.EMPTY.bold())),
-                        keyRows(ticket).stream().map(key -> new DetailRow(key, Style.EMPTY)),
-                        PullRequestText.rows(ticket, pullRequests, keyWidth(ticket), width).stream(),
+                        keyRows(ticket, worktree, width).stream().map(key -> new DetailRow(key, Style.EMPTY)),
+                        PullRequestText.rows(ticket, pullRequests, keyWidth(ticket, worktree), width).stream(),
                         Stream.of(new DetailRow(RULE.repeat(width), Style.EMPTY.dim())),
                         Included.when(ticket.body() instanceof NoBody, new DetailRow(NO_BODY, Style.EMPTY.dim())))
                 .flatMap(Function.identity())
@@ -75,21 +77,41 @@ final class TicketText {
                 .collect(Collectors.joining(FACT_SEPARATOR));
     }
 
-    static List<String> keyRows(TicketView ticket) {
-        return ticket.frontmatter().stream().map(entry -> keyRow(entry, keyWidth(ticket))).toList();
+    /** The frontmatter rows, then the worktree's under them when the ticket has one to show. */
+    private static List<String> keyRows(TicketView ticket, Optional<WorktreeFacts> worktree, int width) {
+        int keyWidth = keyWidth(ticket, worktree);
+        return Stream.concat(
+                        ticket.frontmatter().stream().map(entry -> keyRow(entry, keyWidth)),
+                        worktree.stream().flatMap(facts -> worktreeRows(facts, keyWidth, width).stream()))
+                .toList();
     }
 
     /** The width of the key column: the longest frontmatter key, or the longest key of the pull request rows when that is wider. */
-    private static int keyWidth(TicketView ticket) {
+    private static int keyWidth(TicketView ticket, Optional<WorktreeFacts> worktree) {
         int longest = ticket.frontmatter().stream()
                 .mapToInt(entry -> entry.key().name().length())
                 .max()
                 .orElse(0);
-        return Math.max(longest, PullRequestText.keyWidth());
+        int worktreeKey = worktree.isPresent() ? WORKTREE_KEY.length() : 0;
+        return Math.max(Math.max(longest, worktreeKey), PullRequestText.keyWidth());
+    }
+
+    /** The worktree's place and state on one row when they fit, else the state on a row under the place, so a narrow view never cuts it off. */
+    private static List<String> worktreeRows(WorktreeFacts facts, int keyWidth, int width) {
+        String whole = keyed(WORKTREE_KEY, facts.place() + KEY_GAP + facts.state(), keyWidth);
+        if (facts.state().isEmpty()) {
+            return List.of(keyed(WORKTREE_KEY, facts.place(), keyWidth));
+        }
+        return whole.length() <= width
+                ? List.of(whole)
+                : List.of(keyed(WORKTREE_KEY, facts.place(), keyWidth), keyed(NO_KEY, facts.state(), keyWidth));
     }
 
     private static String keyRow(FrontmatterEntryView entry, int keyWidth) {
-        String key = entry.key().name();
-        return key + " ".repeat(keyWidth - key.length()) + KEY_GAP + entry.value().text();
+        return keyed(entry.key().name(), entry.value().text(), keyWidth);
+    }
+
+    private static String keyed(String key, String value, int keyWidth) {
+        return key + " ".repeat(keyWidth - key.length()) + KEY_GAP + value;
     }
 }

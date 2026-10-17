@@ -7,8 +7,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
+import dev.maxenceng.lazyclaude.review.published.MergedHead;
 import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationManager;
 import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
+import dev.maxenceng.lazyclaude.session.domain.HeldWorktree;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.HostedSessionManager;
 import dev.maxenceng.lazyclaude.session.domain.JumpManager;
@@ -24,6 +26,7 @@ import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.Sessions;
 import dev.maxenceng.lazyclaude.session.domain.TerminalJumpPort;
+import dev.maxenceng.lazyclaude.session.domain.TicketDoneEndedListener;
 import dev.maxenceng.lazyclaude.session.domain.TicketStart;
 import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptManager;
@@ -32,6 +35,8 @@ import dev.maxenceng.lazyclaude.session.domain.TranscriptReadPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
 import dev.maxenceng.lazyclaude.session.domain.Watched;
+import dev.maxenceng.lazyclaude.session.domain.WorktreeManager;
+import dev.maxenceng.lazyclaude.session.domain.WorktreeNotClearException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
@@ -54,6 +59,7 @@ public final class SessionApplicationService {
 
     private final SessionManager manager;
     private final HostedSessionManager hosted;
+    private final WorktreeManager worktreeing;
     private final DesktopNotificationManager notifying;
     private final JumpManager jumping;
     private final KittyConfigManager kittyConfiguring;
@@ -77,6 +83,7 @@ public final class SessionApplicationService {
             TranscriptReadPort transcripts,
             Clock clock) {
         this.hosted = new HostedSessionManager(hosts, warnings, worktrees);
+        this.worktreeing = new WorktreeManager(worktrees);
         this.jumping = new JumpManager(jumps, environments, kittyConfig, warnings);
         this.kittyConfiguring = new KittyConfigManager(kittyConfig, warnings);
         this.transcribing = new TranscriptManager(transcripts);
@@ -122,10 +129,7 @@ public final class SessionApplicationService {
      * longer live is no jump. It runs a process, so not on the render thread.
      */
     public Optional<RemoteControlConfig> jump(Project project, KnownTickets tickets, SessionId session) {
-        return lastPushed
-                .last()
-                .map(pushed -> pushed.hosting(hosted.open()))
-                .orElseGet(() -> sessionsFor(project, tickets))
+        return sessionsAsPushed(project, tickets)
                 .liveSession(session)
                 .flatMap(jumping::jump);
     }
@@ -163,10 +167,35 @@ public final class SessionApplicationService {
     // deferred: a session that ran design counts one watcher tick late unless lazyclaude hosts it — close it when a preselection is seen stale.
     public VerbChoice verbChoiceFor(
             Project project, KnownTickets tickets, LinkedTicketId ticket, List<Verb> allowed, boolean merged) {
-        Sessions read = lastPushed.last()
-                .map(pushed -> pushed.hosting(hosted.open()))
-                .orElseGet(() -> sessionsFor(project, tickets));
-        return VerbChoice.of(allowed, read.ranVerb(ticket, Verb.DESIGN), merged);
+        return VerbChoice.of(allowed, sessionsAsPushed(project, tickets).ranVerb(ticket, Verb.DESIGN), merged);
+    }
+
+    private Sessions sessionsAsPushed(Project project, KnownTickets tickets) {
+        return lastPushed.last().map(pushed -> pushed.hosting(hosted.open())).orElseGet(() -> sessionsFor(project, tickets));
+    }
+
+    /**
+     * The ticket worktree and what stands in it, none when the ticket has no worktree. The sessions are the watcher's last push with
+     * the hosted ones as they are now, as {@link #verbChoiceFor} reads them, so an outside session that started in the worktree
+     * within the last tick is not yet counted. It runs {@code git}, so not on the render thread.
+     */
+    // deferred: an outside session that started in the worktree one watcher tick ago is not counted — close it when a removal is seen to take a session's directory.
+    public Optional<HeldWorktree> worktreeOf(Project project, KnownTickets tickets, TicketWorktree worktree, MergedHead merged) {
+        return worktreeing.held(worktree, merged, sessionsAsPushed(project, tickets));
+    }
+
+    /**
+     * Removes the ticket worktree, keeping its branch, after judging it again; nothing when it has none.
+     *
+     * @throws WorktreeNotClearException when something stands in it
+     */
+    public void removeWorktree(Project project, KnownTickets tickets, TicketWorktree worktree, MergedHead merged) {
+        worktreeing.remove(worktree, merged, sessionsAsPushed(project, tickets));
+    }
+
+    /** Tells {@code listener} which ticket's {@code /ticket done} session ended, however it ended. */
+    public void onTicketDoneEnded(TicketDoneEndedListener listener) {
+        hosted.onTicketDoneEnded(listener);
     }
 
     public HostStart resume(SessionId session, WorkingDirectory recorded, PaneSize size) {

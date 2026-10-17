@@ -137,6 +137,7 @@ class ShellTicketStartTest {
                 hosting,
                 mock(dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand.class),
                 mock(dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand.class),
+                mock(dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand.class),
                 blankScreens(),
                 mock(dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery.class),
                 mock(dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery.class),

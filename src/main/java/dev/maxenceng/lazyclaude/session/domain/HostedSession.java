@@ -10,6 +10,7 @@ import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -18,6 +19,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * that record describes, until its process exits and it is dropped.
  */
 public record HostedSession(HostedSessionId id, ProcessId pid, WorkingDirectory directory, LaunchCommand command) {
+
+    private static final String PLAIN_NAME = "claude";
 
     public HostedSession {
         Assert.notNull("hosted session id", id);
@@ -34,6 +37,21 @@ public record HostedSession(HostedSessionId id, ProcessId pid, WorkingDirectory 
     /** The ticket this session was started for, none for a plain or resumed one. */
     public Optional<LinkedTicketId> ticket() {
         return command instanceof TicketClaude run ? Optional.of(run.ticket()) : Optional.empty();
+    }
+
+    /** Whether its {@code claude} runs in {@code worktree} or below it. */
+    public boolean runsIn(WorkingDirectory worktree) {
+        return worktree.contains(directory);
+    }
+
+    /** What it is called: the name {@code claude} was given for its ticket and verb, else plain {@code claude}. */
+    public SessionName name() {
+        return command instanceof TicketClaude run ? run.sessionName() : new SessionName(PLAIN_NAME);
+    }
+
+    /** The ticket this session was started to close out with {@code /ticket done}, none for a session that ran any other verb. */
+    public Optional<LinkedTicketId> doneTicket() {
+        return command instanceof TicketClaude run && run.verb() == Verb.DONE ? Optional.of(run.ticket()) : Optional.empty();
     }
 
     /** The link to its ticket that starting it gives it before any transcript does. */

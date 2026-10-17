@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.review.domain;
+package dev.maxenceng.lazyclaude.review.published;
 
 public final class HeadCommitFixture {
 

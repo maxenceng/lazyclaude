@@ -11,9 +11,11 @@ import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * The sessions of one project that could be read: the live ones, the live ones elsewhere grouped by place, then the past ones, the hosted ones in tab order, with the clock their ages are read
@@ -65,6 +67,20 @@ public record AvailableSessions(
         return Stream.concat(live.stream(), elsewhere.stream().flatMap(group -> group.sessions().stream()))
                 .filter(session -> session.id().equals(id))
                 .findFirst();
+    }
+
+    /** The names of the live sessions whose directory is {@code worktree} or below it, hosted ones that are still starting included. */
+    public List<SessionName> namesIn(WorkingDirectory worktree) {
+        Stream<SessionName> registered = Stream.concat(
+                        live.stream(), elsewhere.stream().flatMap(group -> group.sessions().stream()))
+                .filter(session -> session.runsIn(worktree))
+                .map(LiveSession::name);
+        Stream<SessionName> starting = hosted.stream()
+                .filter(open -> open.phase() instanceof StartingPhase)
+                .map(OpenHostedSession::session)
+                .filter(session -> session.runsIn(worktree))
+                .map(HostedSession::name);
+        return Stream.concat(registered, starting).toList();
     }
 
     @Override

@@ -125,6 +125,32 @@ public final class GitFixture {
         Files.delete(backlog);
     }
 
+    public static String headOf(Path in) throws Exception {
+        return gitOutput(in, "rev-parse", "HEAD").strip();
+    }
+
+    public static void remoteBeside(Path repository, Path remote) throws Exception {
+        git(remote.getParent(), "init", "-q", "--bare", remote.toString());
+        git(repository, "remote", "add", "origin", remote.toString());
+    }
+
+    public static void pushHeadAs(Path in, String branch) throws Exception {
+        git(in, "push", "-q", "origin", "HEAD:refs/heads/" + branch);
+    }
+
+    public static boolean branchExistsIn(Path repository, String branch) throws Exception {
+        return !gitOutput(repository, "branch", "--list", branch).isBlank();
+    }
+
+    private static String gitOutput(Path in, String... args) throws Exception {
+        List<String> command = new ArrayList<>(List.of("git", "-C", in.toString()));
+        command.addAll(List.of(args));
+        Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertThat(process.waitFor()).as(output).isZero();
+        return output;
+    }
+
     private static void git(Path in, String... args) throws Exception {
         List<String> command = new ArrayList<>(List.of("git", "-C", in.toString()));
         command.addAll(List.of(args));

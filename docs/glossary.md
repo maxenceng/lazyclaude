@@ -71,7 +71,8 @@ words mean.
 | Unread | A hosted session while the registry cannot be read: whether it is starting, busy or waiting is unknown. Its tab reads `starting`, and it counts as busy, so `q` asks first. | `session` |
 | Busy | The session is working; nothing is asked of you. The registry's `busy` and `shell` both show as busy. | `session` |
 | Your turn | The session finished and waits for your next prompt, without blocking on anything. Shown, never notified. | `session` |
-| Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session. | `shared` (its path), `session` (creates it) |
+| Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session (its *Worktree state*). Removal is `git worktree remove` only; the local ticket branch stays. | `shared` (its path), `session` (creates and removes it) |
+| Worktree state | A ticket worktree's dirty paths (`git status --porcelain`, untracked files included), its commits beyond the merged pull request's head that no remote ref has, and the live sessions whose `cwd` is in it; clear when all three are empty, or *no merged pull request* when the merge cannot be read, or *no sessions read* when the sessions cannot be. The detail shows it and removal is refused by it, from the one value. | `session` |
 | Verb picker | The popup `n` opens on a ticket, listing its allowed verbs with the preselected one under the cursor. | `shell` |
 | Preselected verb | The allowed verb the verb picker opens on, from status, past sessions and the pull request's state. | `session` |
 | Waiting | The session is blocked on you: *waiting for permission* (a permission prompt) or *waiting for input* (any other question). The only state that notifies. | `session` |
@@ -84,6 +85,7 @@ words mean.
 |---|---|---|
 | Pull request | An open GitHub pull request on this repository, not from a fork; a ticket's pull request is the one whose head is its ticket branch. "PR" in UI text, `PullRequest` in code. | `review` |
 | Merged pull request | A pull request on this repository, not from a fork, that GitHub reports merged. | `review` |
+| Merged head | The head commit (`headRefOid`) of a branch's merged pull request, or none when no merged pull request is known for the branch. Published so `session` can tell what the merge covered. | `review` |
 | Draft pull request | A pull request GitHub marks as draft. Always written in full ("draft PR" in UI text), never a bare "draft", which stays the ticket status. | `review` |
 | Checks | The check runs and commit statuses on a pull request's head. | `review` |
 | CI result | The checks collapsed into *passed*, *failed* or *pending*: failed wins over pending, pending over passed. A pull request with no checks has none. | `review` |

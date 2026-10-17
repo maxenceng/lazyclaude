@@ -3,7 +3,10 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
+import dev.maxenceng.lazyclaude.session.domain.WorktreeUnavailableException;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
+import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 
 /** What the shell asks of {@code session}: a project's live and past sessions as a view, and a view again whenever they may have changed. It only reads: the hosted sessions' screens included. */
@@ -43,6 +46,29 @@ public final class SessionQuery {
     /** From now on sessions are linked against the tickets of {@code payload}, and the subscriber is handed a view linked that way at once. */
     public void knowTickets(SessionPayload payload) {
         sessions.knowTickets(payload.toDomain(), payload.tickets());
+    }
+
+    /**
+     * The ticket's worktree and what stands in it, none when it has none, or why that could not be told; never a failure. The sessions
+     * are the last pushed, as for {@link #verbChoiceFor}. It runs {@code git}, so not on the render thread.
+     */
+    public WorktreeView worktreeOf(WorktreePayload payload) {
+        try {
+            return sessions.worktreeOf(
+                            payload.sessions().toDomain(),
+                            payload.sessions().tickets(),
+                            payload.toDomain(),
+                            payload.mergedHead())
+                    .<WorktreeView>map(HeldWorktreeView::from)
+                    .orElseGet(NoWorktreeView::new);
+        } catch (WorktreeUnavailableException unreadable) {
+            return new UnreadableWorktreeView(new Reason(unreadable.getMessage()));
+        }
+    }
+
+    /** Hands {@code listener} the ticket whose {@code /ticket done} session ended, however it ended, on whichever thread ended it. */
+    public void onTicketDoneEnded(Consumer<LinkedTicketId> listener) {
+        sessions.onTicketDoneEnded(listener::accept);
     }
 
     /** What the session's transcript gained since {@code payload}'s offset; never a failure. Reads a file, so not on the render thread. */

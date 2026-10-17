@@ -7,8 +7,10 @@ import static dev.maxenceng.lazyclaude.review.domain.PullRequestFixture.pendingP
 import static dev.maxenceng.lazyclaude.review.domain.PullRequestFixture.pullRequest;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.pullRequestsUnavailable;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.watchedRefresh;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsViewFixture.mergedHeadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsViewFixture.mergedPullRequestsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsViewFixture.noMergedPullRequestsView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsViewFixture.siblingMergedHeadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.draftPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.failedPullRequestView;
@@ -17,8 +19,9 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.pullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.unavailablePullRequestsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQueryFixture.reviewQuery;
-import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBranch;
+import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.sharingTheIdPrefix;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.siblingHeadBranch;
+import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.secondHeadCommit;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -36,6 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.maxenceng.lazyclaude.review.domain.MergedPullRequestPort;
 import dev.maxenceng.lazyclaude.review.domain.OpenPullRequestPort;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestWatchPort;
+import dev.maxenceng.lazyclaude.review.published.NoMergedHead;
 
 @ExtendWith(MockitoExtension.class)
 class ReviewQueryTest {
@@ -122,13 +126,25 @@ class ReviewQueryTest {
 
         watchedRefresh(watch).run();
 
-        assertThat(mergedDelivered).containsExactly(mergedPullRequestsViewOf(headBranch()));
+        assertThat(mergedDelivered).containsExactly(mergedPullRequestsViewOf(mergedHeadView()));
     }
 
     @Test
     void shouldViewTheHeadBranchesOfTheMergedPullRequestsAsPlainNames() {
-        assertThat(mergedPullRequestsViewOf(headBranch(), siblingHeadBranch()).headBranches())
+        assertThat(mergedPullRequestsViewOf(mergedHeadView(), siblingMergedHeadView()).headBranches())
                 .containsExactlyInAnyOrder("PROJ-1-first-slice", "PROJ-2");
+    }
+
+    @Test
+    void shouldViewTheMergedHeadOfABranchByItsName() {
+        assertThat(mergedPullRequestsViewOf(mergedHeadView(), siblingMergedHeadView()).mergedHeadOf(siblingHeadBranch()))
+                .isEqualTo(secondHeadCommit());
+    }
+
+    @Test
+    void shouldViewNoMergedHeadForABranchNoMergedPullRequestHas() {
+        assertThat(mergedPullRequestsViewOf(mergedHeadView()).mergedHeadOf(sharingTheIdPrefix()))
+                .isEqualTo(new NoMergedHead());
     }
 
     @Test
