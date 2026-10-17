@@ -1,6 +1,6 @@
 ---
 id: SESSION-7
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 84
@@ -133,3 +133,9 @@ The status line, then the Elsewhere panel, the fourth in the left column:
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-8](LAZY-8-detecting-a-waiting-session.md), [LAZY-10](LAZY-10-screen-layout-and-keys.md). Notifications are suppressed while that session's pane and the terminal have focus.
+
+Closed after [#30](https://github.com/maxenceng/lazyclaude/pull/30). ADR 0033 records firing on the transition and closing over D-Bus. ADR 0034 records the focus workaround, and ADR 0023 the cost of claiming a removed worktree. What the code will not show:
+
+- TamboUI 0.5.0 does swallow focus reports, and eats the keystroke after one. *Model decision* said to raise that rather than work around it. ADR 0034's `Backend` wrapper is the workaround that was chosen, and it has a `// deferred:` comment for when TamboUI decodes focus itself.
+- A notification the user dismisses is re-created by `notify-send -r` under a new id. `replace` therefore keeps the id it is given back. Before review it kept the old one, and that notification was never closed.
+- `notify-send` and `gdbus` are new runtime dependencies. Neither is checked by `make doctor`. A missing one only shows as the warning.
