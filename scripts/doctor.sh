@@ -44,9 +44,14 @@ fi
 
 report "JAVA_HOME" "${JAVA_HOME:-<unset, falling back to PATH>}"
 
+# tmux has no --version and takes -V instead.
 for tool in claude gh tmux; do
 	if command -v "${tool}" >/dev/null 2>&1; then
-		report "${tool}" "$("${tool}" --version 2>&1 | head -1)"
+		case "${tool}" in
+		tmux) version_flag=-V ;;
+		*) version_flag=--version ;;
+		esac
+		report "${tool}" "$("${tool}" "${version_flag}" 2>&1 | head -1)"
 	else
 		report "${tool}" "not installed"
 	fi
