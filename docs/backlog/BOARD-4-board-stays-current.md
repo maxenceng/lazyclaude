@@ -1,6 +1,6 @@
 ---
 id: BOARD-4
-status: in-review
+status: done
 context: board
 type: feature
 tracker_id: 75
@@ -76,3 +76,11 @@ Nothing new on screen but `R refresh` in the key bar. A refresh shows only as th
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-21](LAZY-21-keeping-the-screen-current.md). Selection follows ids; a watch that can't be set up falls back to 5 s polling with a warning.
+
+Closed after [#27](https://github.com/maxenceng/lazyclaude/pull/27). ADR 0031 records the kernel tree watcher, and ADR 0032 the collection rule review added. What the code will not show:
+
+- The keep-the-last-good-board decision stays in `BoardApplicationService`, not `BoardManager`. `ArchitectureTest.managers_assert_nothing` forbids a manager from catching `DomainException`.
+- The board-unreadable warning is raised once per run. A re-arm after a good read was dropped because a warning is never withdrawn (ADR 0022), so it would have piled up copies.
+- The merged set is worked out under the re-read lock, so a re-read cannot apply older merged heads after newer ones. No test covers this race, because no test can control which waiting thread takes the lock first.
+- Review asked for a stream where a list was filled by `forEach`, with the reason "avoid mutations". That became PMD's `BuildCollectionsWithoutMutation`, and all 39 sites were rewritten on this branch, including session and transcript code outside the ticket. Collections held in fields are not covered yet.
+- Every watch loop now ends on interruption instead of `while (true)`. Nothing in the build checks this.
