@@ -1,6 +1,6 @@
 ---
 id: SESSION-8
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 85
@@ -53,3 +53,9 @@ The ticket detail adds one row under the branch: `worktree  ../lazyclaude.worktr
 ## Notes
 
 Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-17](LAZY-17-removing-a-ticket-worktree.md). The commits-beyond-the-merged-head refusal needs the merged PR's `headRefOid` from REVIEW-1.
+
+Closed after [#35](https://github.com/maxenceng/lazyclaude/pull/35). ADR 0038 records the merged head read once in `review`, the `rev-list` that survives a squash-merge, and the exit callback. What the code will not show:
+
+- *Model decision* names two refusing states. Review added a third, *no sessions read*: when neither the registry nor `claude agents --json` answers, removal is refused, since the hosted sessions alone would miss a `claude` started outside lazyclaude. ADR 0038 and the glossary carry it. *Model decision* does not.
+- The architecture reviewer worried that the `/ticket done` session that just ended would block removal of its own worktree. It doesn't, because `exited()` refreshes the sessions before the done listener fires. That order is the whole guarantee, and one test pins it.
+- Kept under review on purpose: `CommitId` (the state holds the commits and the detail counts them), the `WorktreeContents`/`HeldWorktree` names beside the glossary's *Worktree state*, and `done` checked only in the shell.
