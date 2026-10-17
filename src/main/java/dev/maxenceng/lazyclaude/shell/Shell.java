@@ -93,8 +93,8 @@ public final class Shell extends ToolkitApp {
     private static final String NO_DOCS = "no docs";
     private static final String DOCS_UNAVAILABLE = "docs unavailable";
     private static final String NO_LIVE_SESSION = "no live session";
+    private static final String NO_SESSION_ELSEWHERE = "nothing elsewhere";
     private static final String SESSIONS_UNAVAILABLE = "sessions unavailable: ";
-    private static final String EMPTY = "";
 
     private static final int DEFAULT_PANE_WIDTH = 80;
     private static final int DEFAULT_PANE_HEIGHT = 24;
@@ -133,6 +133,7 @@ public final class Shell extends ToolkitApp {
     private final BoardRows board;
     private final DocsRows docs;
     private final SessionRows sessions;
+    private final ElsewhereRows elsewhere;
     private final AtomicReference<DocsView> pendingDocs = new AtomicReference<>();
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
     private final AtomicReference<PullRequestsView> pendingPullRequests = new AtomicReference<>();
@@ -210,6 +211,7 @@ public final class Shell extends ToolkitApp {
         this.linkedTicketIds = BoardRows.ticketIdsOf(board);
         this.docs = new DocsRows(docs);
         this.sessions = new SessionRows(sessions);
+        this.elsewhere = new ElsewhereRows(sessions);
         this.pullRequests = pullRequests;
         this.hosting = hosting;
         this.screens = screens;
@@ -265,6 +267,9 @@ public final class Shell extends ToolkitApp {
             return;
         }
         if (sessions.replace(next) && mainViewOwner == Focus.SESSIONS) {
+            mainViewScroll.reset();
+        }
+        if (elsewhere.replace(next) && mainViewOwner == Focus.ELSEWHERE) {
             mainViewScroll.reset();
         }
         refreshOffer();
@@ -504,6 +509,12 @@ public final class Shell extends ToolkitApp {
         }
         if (focus == Focus.SESSIONS && key.isChar(UP)) {
             return selectSession(sessions::up);
+        }
+        if (focus == Focus.ELSEWHERE && key.isChar(DOWN)) {
+            return selectElsewhere(elsewhere::down);
+        }
+        if (focus == Focus.ELSEWHERE && key.isChar(UP)) {
+            return selectElsewhere(elsewhere::up);
         }
         return focus == Focus.MAIN && scrollMainView(key);
     }
@@ -773,6 +784,15 @@ public final class Shell extends ToolkitApp {
         return true;
     }
 
+    private boolean selectElsewhere(Runnable move) {
+        Optional<RowKey> before = elsewhere.selectedKey();
+        move.run();
+        if (!elsewhere.selectedKey().equals(before)) {
+            mainViewScroll.reset();
+        }
+        return true;
+    }
+
     private boolean selectSession(Runnable move) {
         Optional<RowKey> before = sessions.selectedKey();
         move.run();
@@ -883,7 +903,7 @@ public final class Shell extends ToolkitApp {
         } else {
             lastRight = target;
         }
-        if ((target == Focus.BOARD || target == Focus.SESSIONS || target == Focus.DOCS) && target != mainViewOwner) {
+        if (target.column() == Column.LEFT && target != mainViewOwner) {
             mainViewOwner = target;
             mainViewScroll.reset();
         }
@@ -899,13 +919,16 @@ public final class Shell extends ToolkitApp {
         applyPendingMergedHeads();
         applyPendingWarning();
         Element screen = column(
-                new StatusLineElement(sessions.strongestMarker(), warning, quitPrompt.map(SessionText::quitPrompt)),
+                new StatusLineElement(
+                        StatusText.spans(sessions.markerCounts(), elsewhere.groups()),
+                        warning,
+                        quitPrompt.map(SessionText::quitPrompt)),
                 row(
                         column(
                                         boardPanel(),
                                         sessionsPanel(),
                                         docsPanel(),
-                                        small(ELSEWHERE_TITLE, Focus.ELSEWHERE))
+                                        elsewherePanel())
                                 .percent(LEFT_COLUMN_PERCENT),
                         (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
                 new KeyBarElement(keyBar()));
@@ -953,8 +976,15 @@ public final class Shell extends ToolkitApp {
         return mainViewOwner == owner ? panel.fill() : panel.length(SHRUNK_PANEL_HEIGHT);
     }
 
-    private Element small(String title, Focus owner) {
-        return framed(title, owner, text(EMPTY)).length(SMALL_PANEL_HEIGHT);
+    private Element elsewherePanel() {
+        Element body = elsewhere.isEmpty()
+                ? text(NO_SESSION_ELSEWHERE).dim()
+                : new RowsElement(
+                        elsewhere.visible().stream().map(ElsewhereRow::line).toList(),
+                        elsewhere.selectedIndex(),
+                        focus == Focus.ELSEWHERE);
+        Panel panel = framed(ELSEWHERE_TITLE, Focus.ELSEWHERE, body);
+        return mainViewOwner == Focus.ELSEWHERE ? panel.fill() : panel.length(SMALL_PANEL_HEIGHT);
     }
 
     private Element mainView() {
@@ -981,6 +1011,7 @@ public final class Shell extends ToolkitApp {
         return switch (mainViewOwner) {
             case BOARD -> boardDetail();
             case SESSIONS -> sessionsDetail();
+            case ELSEWHERE -> elsewhereDetail();
             default -> docsDetail();
         };
     }
@@ -998,6 +1029,14 @@ public final class Shell extends ToolkitApp {
                     case NewSessionRow newSession -> column();
                     case StartingSessionRow starting -> column();
                 })
+                .orElseGet(() -> column());
+    }
+
+    private Element elsewhereDetail() {
+        return elsewhere
+                .selected()
+                .<Element>map(row -> new DetailElement(
+                        width -> SessionText.elsewhereFacts(row.place(), row.session()), Optional.empty(), mainViewScroll))
                 .orElseGet(() -> column());
     }
 
@@ -1035,7 +1074,7 @@ public final class Shell extends ToolkitApp {
             return List.of(SESSION_KEYS);
         }
         return Stream.of(
-                        Included.when(focus == Focus.BOARD || focus == Focus.SESSIONS || focus == Focus.DOCS, MOVE_KEYS),
+                        Included.when(focus.column() == Column.LEFT, MOVE_KEYS),
                         Included.when(focus == Focus.MAIN, SCROLL_KEYS),
                         Stream.of(PANEL_KEYS),
                         Included.when(foldable(), FOLD_KEY),

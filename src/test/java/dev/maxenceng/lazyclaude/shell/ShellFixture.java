@@ -258,6 +258,10 @@ final class ShellFixture {
         return pressed(newShell(boardViewOf(ticketView()), emptyDocsView(), sessions), alt('j'), 1);
     }
 
+    static Shell shellOnElsewhere(SessionsView sessions) {
+        return pressed(newShell(boardViewOf(ticketView()), emptyDocsView(), sessions), alt('j'), 3);
+    }
+
     static Shell shellOnTicketSessions(SessionsView sessions) {
         Shell shell = newShell(boardViewOf(ticketView(), secondTicketView()), emptyDocsView(), sessions);
         shell.press(key('j'));

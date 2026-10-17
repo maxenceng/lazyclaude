@@ -194,12 +194,12 @@ class ShellDocsTest {
     }
 
     @Test
-    void shouldKeepShowingTheDocumentWhileAStubPanelHasFocus() {
+    void shouldShowNothingInTheMainViewOnceElsewhereHasFocusAndHoldsNoSession() {
         Shell shell = shellOnDocs(docsView());
 
         shell.press(alt('j'));
 
-        assertThat(Screen.of(shell).mainViewRows()).anySatisfy(row -> assertThat(row).contains("Context map"));
+        assertThat(Screen.of(shell).mainViewRows()).allSatisfy(row -> assertThat(row).isBlank());
     }
 
     @Test
@@ -219,15 +219,6 @@ class ShellDocsTest {
                 .as("the selected row stays in view in the shrunk panel")
                 .contains("tamboui.md")
                 .doesNotContain("context-map.md");
-    }
-
-    @Test
-    void shouldKeepDocsTallWhileAStubPanelHasFocus() {
-        Shell shell = shellOnDocs(docsView());
-
-        shell.press(alt('j'));
-
-        assertThat(Screen.of(shell).boardPanelText()).contains("context-map.md", "tamboui.md");
     }
 
     @Test

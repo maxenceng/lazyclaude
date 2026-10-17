@@ -26,6 +26,7 @@ import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.l
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 import java.util.List;
 
@@ -41,19 +42,21 @@ import dev.maxenceng.lazyclaude.session.published.YourTurn;
 class AvailableSessionsViewTest {
 
     @Test
-    void shouldAnswerTheStrongestMarkerAmongEveryLiveSessionLinkedOrNot() {
+    void shouldCountEachMarkerAmongEveryLiveSessionLinkedOrNot() {
         AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
                 linkedSessionView(sessionIdOf(1), new YourTurn()),
-                linkedSessionView(sessionIdOf(2), waitingForPermission(), strong("PROJ-1", "start"))));
+                linkedSessionView(sessionIdOf(2), waitingForPermission(), strong("PROJ-1", "start")),
+                linkedSessionView(sessionIdOf(3), waitingForPermission())));
 
-        assertThat(view.strongestMarker()).contains(Marker.WAITING_FOR_PERMISSION);
+        assertThat(view.markerCounts())
+                .containsOnly(entry(Marker.WAITING_FOR_PERMISSION, 2L), entry(Marker.YOUR_TURN, 1L));
     }
 
     @Test
-    void shouldAnswerNoMarkerWhenEverySessionIsBusy() {
+    void shouldCountNoMarkerWhenEverySessionIsBusy() {
         AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new Busy())));
 
-        assertThat(view.strongestMarker()).isEmpty();
+        assertThat(view.markerCounts()).isEmpty();
     }
 
     @Test

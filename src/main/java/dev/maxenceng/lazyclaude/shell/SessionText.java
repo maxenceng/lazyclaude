@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.shell;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
@@ -14,11 +15,13 @@ import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.NoTitle;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
+import dev.maxenceng.lazyclaude.session.published.PlaceName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.Version;
+import dev.maxenceng.lazyclaude.session.published.WaitingFor;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.WaitingReason;
@@ -61,6 +64,8 @@ final class SessionText {
     private static final String STARTED_FORMAT = "%s (%s ago)";
     private static final String FACT_FORMAT = "%-9s%s";
     private static final String CWD = "cwd";
+    private static final String PROJECT = "project";
+    private static final String WAITING_FACT = "waiting";
     private static final String PID = "pid";
     private static final String STARTED_FACT = "started";
     private static final String VERSION = "version";
@@ -202,6 +207,34 @@ final class SessionText {
                                                 STARTED.format(session.startedAt()), session.age().label()))),
                         version)
                 .toList();
+    }
+
+    /**
+     * The rows of the main view for a session elsewhere: its name and state, then the project or directory it belongs to, why it waits
+     * when it does, and the facts of any live session.
+     */
+    static List<DetailRow> elsewhereFacts(PlaceName place, LiveSessionView session) {
+        List<DetailRow> facts = facts(session);
+        return Stream.of(
+                        facts.stream().limit(1),
+                        Stream.of(fact(PROJECT, place.value())),
+                        reasonOf(session.state())
+                                .filter(WaitingReason.class::isInstance)
+                                .map(reason -> fact(WAITING_FACT, ((WaitingReason) reason).value()))
+                                .stream(),
+                        facts.stream().skip(1))
+                .flatMap(Function.identity())
+                .toList();
+    }
+
+    private static Optional<WaitingFor> reasonOf(SessionState state) {
+        return switch (state) {
+            case WaitingForPermission permission -> Optional.of(permission.reason());
+            case WaitingForInput input -> Optional.of(input.reason());
+            case Busy busy -> Optional.empty();
+            case YourTurn yourTurn -> Optional.empty();
+            case Unknown unknown -> Optional.empty();
+        };
     }
 
     /** The rows of the main view for a past session: its title and that it is past, then cwd, last activity, start time and id. */

@@ -1,9 +1,9 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
@@ -37,9 +37,9 @@ public final class DesktopNotificationManager {
     private final DesktopNotificationPort notifications;
     private final WarningPort warnings;
     private final WarnOnce failing = new WarnOnce();
-    private Optional<Map<SessionId, SessionState>> before = Optional.empty();
-    private Map<SessionId, NotificationId> open = Map.of();
-    private Watched watched = new NoWatchedSession();
+    private final SeenStates seen = new SeenStates();
+    private final OpenNotifications open = new OpenNotifications();
+    private final CurrentlyWatched watched = new CurrentlyWatched();
 
     public DesktopNotificationManager(DesktopNotificationPort notifications, WarningPort warnings) {
         this.notifications = notifications;
@@ -51,25 +51,19 @@ public final class DesktopNotificationManager {
         if (!(sessions instanceof AvailableSessions available)) {
             return;
         }
-        var now = available.everyone(project);
-        Map<SessionId, SessionState> previous = before.orElse(null);
-        before = Optional.of(now.stream()
-                .collect(Collectors.toUnmodifiableMap(
-                        placed -> placed.session().id(), placed -> placed.session().state())));
-        if (previous == null) {
-            return;
-        }
-        open.keySet().stream()
-                .filter(id -> !before.orElseThrow().containsKey(id))
-                .toList()
-                .forEach(this::closeFor);
-        now.forEach(placed -> react(placed, Optional.ofNullable(previous.get(placed.session().id()))));
+        List<PlacedSession> now = available.everyone(project);
+        Map<SessionId, SessionState> states = now.stream()
+                .collect(Collectors.toUnmodifiableMap(placed -> placed.session().id(), placed -> placed.session().state()));
+        seen.exchange(states).ifPresent(previous -> {
+            open.sessions().stream().filter(id -> !states.containsKey(id)).forEach(this::closeFor);
+            now.forEach(placed -> react(placed, Optional.ofNullable(previous.get(placed.session().id()))));
+        });
     }
 
     /** From now on {@code next} is the session the user looks at: it is not notified, and any notification it has is closed. */
     public synchronized void watching(Watched next) {
-        watched = next;
-        open.keySet().stream().filter(next::watches).toList().forEach(this::closeFor);
+        watched.watch(next);
+        open.sessions().stream().filter(next::watches).forEach(this::closeFor);
     }
 
     private void react(PlacedSession placed, Optional<SessionState> was) {
@@ -82,14 +76,14 @@ public final class DesktopNotificationManager {
             closeFor(session.id());
         } else if (was.flatMap(DesktopNotificationManager::reasonOf).isPresent()) {
             replaceFor(session.id(), notificationOf(placed, reason.get()));
-        } else if (!watched.watches(session.id())) {
+        } else if (!watched.get().watches(session.id())) {
             fireFor(session.id(), notificationOf(placed, reason.get()));
         }
     }
 
     private void fireFor(SessionId session, DesktopNotification notification) {
         try {
-            opened(session, notifications.show(notification));
+            open.opened(session, notifications.show(notification));
         } catch (DesktopNotificationUnavailableException failure) {
             warn(failure);
         }
@@ -97,29 +91,18 @@ public final class DesktopNotificationManager {
 
     private void replaceFor(SessionId session, DesktopNotification notification) {
         try {
-            Optional.ofNullable(open.get(session)).ifPresent(id -> notifications.replace(id, notification));
+            open.of(session).ifPresent(id -> notifications.replace(id, notification));
         } catch (DesktopNotificationUnavailableException failure) {
             warn(failure);
         }
     }
 
     private void closeFor(SessionId session) {
-        Optional<NotificationId> id = Optional.ofNullable(open.get(session));
-        open = open.entrySet().stream()
-                .filter(shown -> !shown.getKey().equals(session))
-                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
         try {
-            id.ifPresent(notifications::close);
+            open.closed(session).ifPresent(notifications::close);
         } catch (DesktopNotificationUnavailableException failure) {
             warn(failure);
         }
-    }
-
-    private void opened(SessionId session, NotificationId id) {
-        open = Stream.concat(
-                        open.entrySet().stream().filter(shown -> !shown.getKey().equals(session)),
-                        Stream.of(Map.entry(session, id)))
-                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private void warn(DesktopNotificationUnavailableException failure) {

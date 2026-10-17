@@ -80,13 +80,24 @@ class ShellMarkersTest {
     }
 
     @Test
-    void shouldShowTheStrongestMarkerOfEveryLiveSessionOnTheLeftOfTheStatusLine() {
+    void shouldCountEachMarkerOfTheProjectsLiveSessionsOnTheLeftOfTheStatusLine() {
         Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(List.of(
                 linkedNamedSessionView(1, "calm-one", new YourTurn(), strongLink("PROJ-1", "start")),
-                linkedNamedSessionView(2, "loose-one", waitingForInput())))));
+                linkedNamedSessionView(2, "loose-one", waitingForInput()),
+                linkedNamedSessionView(3, "asking-one", waitingForInput()),
+                linkedNamedSessionView(4, "stuck-one", waitingForPermission()),
+                linkedNamedSessionView(5, "busy-one", new Busy())))));
 
-        assertThat(screen.statusLine()).startsWith("?");
-        assertThat(screen.foregroundTextOnLine(0, Color.YELLOW)).isEqualTo("?");
+        assertThat(screen.statusLine()).startsWith("! 1  ? 2  • 1");
+        assertThat(screen.foregroundTextOnLine(0, Color.YELLOW)).isEqualTo("? 2");
+        assertThat(screen.foregroundTextOnLine(0, Color.RED)).isEqualTo("! 1");
+    }
+
+    @Test
+    void shouldListOnlyTheMarkersThatArePresent() {
+        Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(List.of(linkedNamedSessionView(1, "loose-one", waitingForInput())))));
+
+        assertThat(screen.statusLine()).startsWith("? 1").doesNotContain("!").doesNotContain("•");
     }
 
     @Test
@@ -104,7 +115,7 @@ class ShellMarkersTest {
 
         Screen screen = Screen.of(shell);
 
-        assertThat(screen.statusLine()).startsWith("!").endsWith(warningView().text());
+        assertThat(screen.statusLine()).startsWith("! 1").endsWith(warningView().text());
     }
 
     @Test

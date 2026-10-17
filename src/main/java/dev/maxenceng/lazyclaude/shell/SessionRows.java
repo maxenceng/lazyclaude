@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -134,9 +135,9 @@ final class SessionRows {
         return sessions instanceof AvailableSessionsView available ? available.strongestMarkerOf(ticketId) : Optional.empty();
     }
 
-    /** The strongest marker among the project's live sessions, linked or not, for the status line. */
-    Optional<Marker> strongestMarker() {
-        return sessions instanceof AvailableSessionsView available ? available.strongestMarker() : Optional.empty();
+    /** How many of the project's live sessions, linked or not, carry each marker, for the status line. */
+    Map<Marker, Long> markerCounts() {
+        return sessions instanceof AvailableSessionsView available ? available.markerCounts() : Map.of();
     }
 
     /** The verb the shown ticket's {@code n new} row offers to start, none while it offers no session, as a {@code done} ticket does not. */

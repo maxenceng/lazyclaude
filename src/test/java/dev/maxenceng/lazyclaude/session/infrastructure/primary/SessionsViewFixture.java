@@ -133,6 +133,26 @@ public final class SessionsViewFixture {
         return new ElsewhereGroupView(new PlaceName("other"), sessions);
     }
 
+    public static ElsewhereGroupView elsewhereGroupViewNamed(String name, LiveSessionView... sessions) {
+        return new ElsewhereGroupView(new PlaceName(name), List.of(sessions));
+    }
+
+    public static SessionsView sessionsViewElsewhere(ElsewhereGroupView... groups) {
+        return AvailableSessionsView.builder()
+                .live(List.of())
+                .elsewhere(List.of(groups))
+                .past(List.of())
+                .build();
+    }
+
+    public static SessionsView sessionsViewWithElsewhere(List<LiveSessionView> live, ElsewhereGroupView... groups) {
+        return AvailableSessionsView.builder()
+                .live(live)
+                .elsewhere(List.of(groups))
+                .past(List.of())
+                .build();
+    }
+
     public static LiveSessionView sessionView() {
         return sessionViewBuilder().build();
     }

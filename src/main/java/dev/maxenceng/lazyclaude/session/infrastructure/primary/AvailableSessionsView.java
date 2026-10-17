@@ -1,7 +1,10 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
@@ -32,9 +35,11 @@ public record AvailableSessionsView(
                 .build();
     }
 
-    /** The strongest marker among this project's live sessions, linked or not. */
-    public Optional<Marker> strongestMarker() {
-        return Marker.strongest(live.stream().flatMap(session -> session.marker().stream()).toList());
+    /** How many of this project's live sessions, linked or not, carry each marker; a marker none carries is absent. */
+    public Map<Marker, Long> markerCounts() {
+        return live.stream()
+                .flatMap(session -> session.marker().stream())
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
     }
 
     /** The strongest marker among the live sessions linked to {@code ticket}, weak links included. */
