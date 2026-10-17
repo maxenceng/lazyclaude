@@ -158,25 +158,10 @@ class ShellPastSessionsTest {
     }
 
     @Test
-    void shouldShowTheFactsOfTheSelectedPastSessionInTheMainView() {
-        Shell shell = shellOnSessions(pastSessionsViewOf(List.of(pastSessionView())));
-
-        assertThat(Screen.of(shell).mainViewRows())
-                .as("the id is cut with an ellipsis where the main view ends, as every long fact is")
-                .containsSubsequence(
-                        "Refine PROJ-1  ○ past",
-                        "cwd            /work/app",
-                        "last activity  2026-10-10 13:50 (10m ago)",
-                        "started        2026-10-10 12:40",
-                        "session        11111111-0000-0000-0000-0000000000…");
-    }
-
-    @Test
     void shouldTitleARowByTheFirstPromptWhenTheSessionHasNoTitle() {
         Shell shell = shellOnSessions(pastSessionsViewOf(List.of(pastSessionViewTitled(firstPrompt()))));
 
         assertThat(Screen.of(shell).boardPanelText()).contains("○ /ticket start PROJ-1");
-        assertThat(Screen.of(shell).mainViewRows()).contains("/ticket start PROJ-1  ○ past");
     }
 
     @Test
@@ -187,7 +172,6 @@ class ShellPastSessionsTest {
 
         assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("○ 11111111\\s+10m"));
         assertThat(screen.dimText()).anySatisfy(line -> assertThat(line).contains("11111111"));
-        assertThat(screen.mainViewRows()).contains("11111111  ○ past");
     }
 
     @Test
@@ -207,13 +191,11 @@ class ShellPastSessionsTest {
         shell.sessionsChanged(pastSessionsViewOf(List.of(
                 pastSessionViewBuilder().id(sessionId()).title(firstPrompt()).build(), pastSessionViewNumbered(2))));
 
-        Screen screen = Screen.of(shell);
-        assertThat(screen.reversedText())
+        assertThat(Screen.of(shell).reversedText())
                 .as("the selection follows the session id from the live block into the past one")
                 .singleElement()
                 .asString()
                 .contains("/ticket start PROJ-1");
-        assertThat(screen.mainViewRows()).contains("/ticket start PROJ-1  ○ past");
     }
 
     @Test

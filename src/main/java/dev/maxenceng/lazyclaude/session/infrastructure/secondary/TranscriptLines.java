@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
@@ -18,6 +19,24 @@ final class TranscriptLines {
     private static final int END_OF_STREAM = -1;
 
     private TranscriptLines() {}
+
+    /**
+     * Whether {@code offset} is where a line the file still holds ends, as every offset {@link #read} hands back is: the start,
+     * or just after a newline. One that is not points into a file that was replaced.
+     */
+    static boolean endsALine(Path file, long offset) throws IOException {
+        if (offset == 0) {
+            return true;
+        }
+        try (SeekableByteChannel channel = Files.newByteChannel(file)) {
+            if (offset > channel.size()) {
+                return false;
+            }
+            ByteBuffer before = ByteBuffer.allocate(1);
+            channel.position(offset - 1).read(before);
+            return before.get(0) == NEWLINE;
+        }
+    }
 
     /** Hands each complete line to {@code line}, and returns the offset just after the last one, where the next read starts. */
     static long read(Path file, long from, Consumer<byte[]> line) throws IOException {

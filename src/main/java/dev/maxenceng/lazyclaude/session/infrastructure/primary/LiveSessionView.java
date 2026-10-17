@@ -7,11 +7,16 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.Hosting;
+import dev.maxenceng.lazyclaude.session.domain.InKitty;
+import dev.maxenceng.lazyclaude.session.domain.InTmux;
 import dev.maxenceng.lazyclaude.session.domain.LiveSession;
+import dev.maxenceng.lazyclaude.session.domain.Nowhere;
+import dev.maxenceng.lazyclaude.session.domain.Residence;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
+import dev.maxenceng.lazyclaude.session.published.ResidenceName;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
@@ -29,7 +34,12 @@ public record LiveSessionView(
         ClaudeVersion version,
         SessionState state,
         List<TicketLink> links,
-        Hosting hosting) {
+        Hosting hosting,
+        Optional<ResidenceName> residenceName) {
+
+    private static final ResidenceName KITTY = new ResidenceName("kitty");
+    private static final ResidenceName TMUX = new ResidenceName("tmux");
+
 
     static LiveSessionView from(AvailableSessions available, LiveSession session) {
         return builder()
@@ -43,6 +53,7 @@ public record LiveSessionView(
                 .state(session.state())
                 .links(session.links())
                 .hosting(session.hosting())
+                .residenceName(nameOf(session.residence()))
                 .build();
     }
 
@@ -60,6 +71,21 @@ public record LiveSessionView(
     public boolean isHosted() {
         return hosting == Hosting.HOSTED;
     }
+
+    /** Whether {@code o} brings the session's window forward. */
+    public boolean isJumpable() {
+        return hosting.isJumpable();
+    }
+
+    /** What the session's row says of where it lives, none when it lives in neither kitty nor tmux. */
+    private static Optional<ResidenceName> nameOf(Residence residence) {
+        return switch (residence) {
+            case InKitty window -> Optional.of(KITTY);
+            case InTmux pane -> Optional.of(TMUX);
+            case Nowhere nowhere -> Optional.empty();
+        };
+    }
+
 
     /** Whether the session is linked to no ticket. */
     public boolean isUnlinked() {
@@ -81,6 +107,7 @@ public record LiveSessionView(
         private SessionState state;
         private List<TicketLink> links;
         private Hosting hosting = Hosting.OUTSIDE;
+        private Optional<ResidenceName> residenceName = Optional.empty();
 
         private LiveSessionViewBuilder() {}
 
@@ -134,8 +161,13 @@ public record LiveSessionView(
             return this;
         }
 
+        public LiveSessionViewBuilder residenceName(Optional<ResidenceName> residenceName) {
+            this.residenceName = residenceName;
+            return this;
+        }
+
         public LiveSessionView build() {
-            return new LiveSessionView(id, pid, name, directory, startedAt, age, version, state, links, hosting);
+            return new LiveSessionView(id, pid, name, directory, startedAt, age, version, state, links, hosting, residenceName);
         }
     }
 }

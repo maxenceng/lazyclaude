@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.otherProjectGroup;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSession;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionsOf;
@@ -12,6 +13,7 @@ import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.newestS
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsWithElsewhere;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
@@ -38,6 +40,42 @@ class AvailableSessionsTest {
         AvailableSessions hosting = liveSessionsOf(List.of(newestSession())).hosting(hostedSessionsOf(hostedSession()));
 
         assertThat(hosting.live()).extracting(LiveSession::hosting).containsExactly(Hosting.OUTSIDE);
+    }
+
+    @Test
+    void shouldMarkASessionElsewhereHostedWhenItsPidIsOneLazyclaudeSpawned() {
+        AvailableSessions hosting = liveSessionsWithElsewhere(List.of(), List.of(otherProjectGroup(List.of(liveSession()))))
+                .hosting(hostedSessionsOf(hostedSession()));
+
+        assertThat(hosting.elsewhere())
+                .as("a session lazyclaude hosts is never an outside session, wherever its cwd belongs")
+                .isEqualTo(List.of(otherProjectGroup(List.of(hostedLiveSession()))));
+    }
+
+    @Test
+    void shouldLeaveASessionElsewhereOutsideWhenItsPidIsNotOneLazyclaudeSpawned() {
+        AvailableSessions hosting = liveSessionsWithElsewhere(List.of(), List.of(otherProjectGroup(List.of(newestSession()))))
+                .hosting(hostedSessionsOf(hostedSession()));
+
+        assertThat(hosting.elsewhere()).isEqualTo(List.of(otherProjectGroup(List.of(newestSession()))));
+    }
+
+    @Test
+    void shouldFindALiveSessionOfTheProjectById() {
+        assertThat(liveSessionsOf(List.of(liveSession(), newestSession())).liveSession(newestSession().id())).contains(newestSession());
+    }
+
+    @Test
+    void shouldFindALiveSessionElsewhereById() {
+        AvailableSessions sessions =
+                liveSessionsWithElsewhere(List.of(liveSession()), List.of(otherProjectGroup(List.of(newestSession()))));
+
+        assertThat(sessions.liveSession(newestSession().id())).contains(newestSession());
+    }
+
+    @Test
+    void shouldFindNoLiveSessionForAnIdNoneRuns() {
+        assertThat(liveSessionsOf(List.of(liveSession())).liveSession(newestSession().id())).isEmpty();
     }
 
     @Test

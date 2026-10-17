@@ -14,7 +14,7 @@ import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * A live session of the project, with the state lazyclaude draws from what Claude Code reported and the tickets its
+ * A live session of the project, with where it lives, the state lazyclaude draws from what Claude Code reported and the tickets its
  * transcript links it to, none while it has no transcript yet.
  */
 public record LiveSession(
@@ -26,7 +26,8 @@ public record LiveSession(
         ClaudeVersion version,
         SessionState state,
         List<TicketLink> links,
-        Hosting hosting) {
+        Hosting hosting,
+        Residence residence) {
 
     public LiveSession {
         Assert.notNull("id", id);
@@ -38,10 +39,11 @@ public record LiveSession(
         Assert.notNull("state", state);
         Assert.notNull("links", links);
         Assert.notNull("hosting", hosting);
+        Assert.notNull("residence", residence);
     }
 
     public LiveSession linkedTo(List<TicketLink> links) {
-        return new LiveSession(id, pid, name, directory, startedAt, version, state, links, hosting);
+        return new LiveSession(id, pid, name, directory, startedAt, version, state, links, hosting, residence);
     }
 
     /** This session linked to {@code starting}'s ticket, unless its transcript already links it to that ticket. */
@@ -55,7 +57,7 @@ public record LiveSession(
     /** This session as lazyclaude knows it to be owned: hosted when its pid is one of {@code hostedPids}, else outside. */
     public LiveSession ownedAmong(List<ProcessId> hostedPids) {
         Hosting owner = hostedPids.contains(pid) ? Hosting.HOSTED : Hosting.OUTSIDE;
-        return new LiveSession(id, pid, name, directory, startedAt, version, state, links, owner);
+        return new LiveSession(id, pid, name, directory, startedAt, version, state, links, owner, residence);
     }
 
     public static LiveSessionBuilder builder() {
@@ -72,6 +74,7 @@ public record LiveSession(
         private SessionState state;
         private List<TicketLink> links = List.of();
         private Hosting hosting = Hosting.OUTSIDE;
+        private Residence residence = new Nowhere();
 
         private LiveSessionBuilder() {}
 
@@ -120,8 +123,13 @@ public record LiveSession(
             return this;
         }
 
+        public LiveSessionBuilder residence(Residence residence) {
+            this.residence = residence;
+            return this;
+        }
+
         public LiveSession build() {
-            return new LiveSession(id, pid, name, directory, startedAt, version, state, links, hosting);
+            return new LiveSession(id, pid, name, directory, startedAt, version, state, links, hosting, residence);
         }
     }
 }

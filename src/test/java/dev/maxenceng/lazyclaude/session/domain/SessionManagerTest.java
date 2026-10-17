@@ -29,6 +29,10 @@ import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSes
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionActiveMinutesAgo;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionIn;
+import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inKitty;
+import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inTmux;
+import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.kittyEnvironment;
+import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.tmuxEnvironment;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.newestReportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.newestReportedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.oldestReportedSession;
@@ -43,6 +47,7 @@ import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.ses
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.advancingClock;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.elsewhereOf;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.emptyEnvironmentPort;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsWithElsewhere;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
@@ -130,6 +135,9 @@ class SessionManagerTest {
     private WarningPort warnings;
 
     @Mock
+    private ProcessEnvironmentPort environment;
+
+    @Mock
     private Consumer<Sessions> listener;
 
     @Test
@@ -145,7 +153,7 @@ class SessionManagerTest {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
         when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
 
-        AvailableSessions read = (AvailableSessions) new SessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, advancingClock()).sessionsFor(project(), noTickets());
+        AvailableSessions read = (AvailableSessions) new SessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, emptyEnvironmentPort(), advancingClock()).sessionsFor(project(), noTickets());
 
         assertThat(read.ageOf(liveSession()))
                 .as("rows of one read drawn at different instants would disagree on how long ago they started")
@@ -857,5 +865,41 @@ class SessionManagerTest {
         sessionManager(sessions, past, locator, watch, transcriptWatch, warnings).rescanTranscripts();
 
         verify(transcriptWatch).rescanNow();
+    }
+
+    @Test
+    void shouldReadWhereAProjectsLiveSessionLivesFromItsProcessEnvironment() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+        when(environment.of(reportedSession().pid())).thenReturn(kittyEnvironment());
+
+        assertThat(sessionManager(sessions, locator, watch, warnings, environment).sessionsFor(project(), noTickets()))
+                .isEqualTo(liveSessionsOf(List.of(liveSessionBuilder().residence(inKitty()).build())));
+    }
+
+    @Test
+    void shouldReadWhereASessionElsewhereLivesFromItsProcessEnvironment() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(otherProjectDirectory())));
+        when(locator.locate(otherProjectDirectory())).thenReturn(otherProject());
+        when(environment.of(reportedIn(otherProjectDirectory()).pid())).thenReturn(tmuxEnvironment());
+
+        assertThat(sessionManager(sessions, locator, watch, warnings, environment).sessionsFor(project(), noTickets()))
+                .isEqualTo(liveSessionsWithElsewhere(
+                        List.of(), List.of(otherProjectGroup(List.of(liveSessionBuilder().directory(otherProjectDirectory()).residence(inTmux()).build())))));
+    }
+
+    @Test
+    void shouldPlaceASessionNowhereAndWarnOnceWhenItsEnvironmentCannotBeRead() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
+        when(environment.of(reportedSession().pid())).thenThrow(new EnvironmentUnreadableException("cannot read /proc/17234/environ: access denied"));
+        SessionManager manager = sessionManager(sessions, locator, watch, warnings, environment);
+
+        manager.sessionsFor(project(), noTickets());
+        Sessions second = manager.sessionsFor(project(), noTickets());
+
+        assertThat(second).isEqualTo(liveSessionsOf(List.of(liveSession())));
+        assertThat(raisedTexts(warnings))
+                .containsExactly("sessions: cannot read /proc/17234/environ: access denied; where sessions live is unknown.");
     }
 }

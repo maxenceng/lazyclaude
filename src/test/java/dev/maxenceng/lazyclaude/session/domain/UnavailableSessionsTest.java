@@ -7,6 +7,7 @@ import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openU
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -24,6 +25,11 @@ class UnavailableSessionsTest {
         assertThat(hosting)
                 .as("a registry that cannot be read must not close the tabs of claudes that are running")
                 .isEqualTo(unavailableSessionsHosting(List.of(openUnread())));
+    }
+
+    @Test
+    void shouldFindNoLiveSessionWhenTheRegistryCannotBeRead() {
+        assertThat(unavailableSessions().liveSession(sessionId())).isEmpty();
     }
 
     @Test

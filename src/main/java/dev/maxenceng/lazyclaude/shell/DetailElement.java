@@ -23,12 +23,23 @@ final class DetailElement implements Element {
     private final IntFunction<List<DetailRow>> head;
     private final Optional<String> markdown;
     private final MainViewScroll scroll;
+    private final boolean tailing;
 
     /** {@code head} says which rows precede the markdown, given the width they are drawn at. */
     DetailElement(IntFunction<List<DetailRow>> head, Optional<String> markdown, MainViewScroll scroll) {
+        this(head, markdown, scroll, false);
+    }
+
+    private DetailElement(IntFunction<List<DetailRow>> head, Optional<String> markdown, MainViewScroll scroll, boolean tailing) {
         this.head = head;
         this.markdown = markdown;
         this.scroll = scroll;
+        this.tailing = tailing;
+    }
+
+    /** Only {@code rows}, which grow at the bottom: the scroll follows them while it rests on the last. */
+    static DetailElement tailing(IntFunction<List<DetailRow>> rows, MainViewScroll scroll) {
+        return new DetailElement(rows, Optional.empty(), scroll, true);
     }
 
     @Override
@@ -38,7 +49,11 @@ final class DetailElement implements Element {
         }
         List<DetailRow> head = this.head.apply(area.width());
         int bodyHeight = markdown.map(source -> view(source, 0).computeHeight(area.width())).orElse(0);
-        scroll.observe(head.size() + bodyHeight, area.height());
+        if (tailing) {
+            scroll.follow(head.size() + bodyHeight, area.height());
+        } else {
+            scroll.observe(head.size() + bodyHeight, area.height());
+        }
         int offset = scroll.offset();
         IntStream.range(Math.max(0, offset), Math.min(head.size(), offset + area.height()))
                 .forEach(row -> frame.buffer().setString(

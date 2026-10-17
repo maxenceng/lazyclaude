@@ -149,4 +149,102 @@ class MainViewScrollTest {
 
         assertThat(scroll.offset()).isZero();
     }
+
+    @Test
+    void shouldFollowGrowingContentWhileAtTheBottom() {
+        MainViewScroll scroll = scrollOverTwentyRowsInTen();
+        scroll.bottom();
+
+        scroll.follow(25, 10);
+
+        assertThat(scroll.offset()).isEqualTo(15);
+    }
+
+    @Test
+    void shouldHoldItsPlaceWhenScrolledUpWhileTheContentGrows() {
+        MainViewScroll scroll = scrollOverTwentyRowsInTen();
+        scroll.bottom();
+        scroll.rowUp();
+
+        scroll.follow(25, 10);
+
+        assertThat(scroll.offset()).isEqualTo(9);
+    }
+
+    @Test
+    void shouldFollowAgainOnceScrolledBackDownToTheBottom() {
+        MainViewScroll scroll = scrollOverTwentyRowsInTen();
+        scroll.bottom();
+        scroll.rowUp();
+        scroll.rowDown();
+
+        scroll.follow(25, 10);
+
+        assertThat(scroll.offset()).isEqualTo(15);
+    }
+
+    @Test
+    void shouldFollowAgainOnTheBottomKey() {
+        MainViewScroll scroll = scrollOverTwentyRowsInTen();
+        scroll.bottom();
+        scroll.halfPageUp();
+        scroll.bottom();
+
+        scroll.follow(25, 10);
+
+        assertThat(scroll.offset()).isEqualTo(15);
+    }
+
+    @Test
+    void shouldStopFollowingAtTheTop() {
+        MainViewScroll scroll = scrollOverTwentyRowsInTen();
+        scroll.bottom();
+        scroll.top();
+
+        scroll.follow(25, 10);
+
+        assertThat(scroll.offset()).isZero();
+    }
+
+    @Test
+    void shouldFollowAgainWhenAHalfPageDownReachesTheBottom() {
+        MainViewScroll scroll = scrollOverTwentyRowsInTen();
+        scroll.bottom();
+        scroll.halfPageUp();
+        scroll.halfPageDown();
+
+        scroll.follow(25, 10);
+
+        assertThat(scroll.offset()).isEqualTo(15);
+    }
+
+    @Test
+    void shouldStartAFreshViewAtItsLatestRow() {
+        MainViewScroll scroll = new MainViewScroll();
+
+        scroll.follow(20, 10);
+
+        assertThat(scroll.offset()).isEqualTo(10);
+    }
+
+    @Test
+    void shouldFollowFromTheBottomAfterAReset() {
+        MainViewScroll scroll = scrollOverTwentyRowsInTen();
+        scroll.top();
+
+        scroll.reset();
+        scroll.follow(20, 10);
+
+        assertThat(scroll.offset()).as("another session is shown from its latest entry").isEqualTo(10);
+    }
+
+    @Test
+    void shouldNotFollowContentThatIsOnlyObserved() {
+        MainViewScroll scroll = scrollOverTwentyRowsInTen();
+        scroll.top();
+
+        scroll.observe(30, 10);
+
+        assertThat(scroll.offset()).as("a ticket that grows keeps its first rows in view").isZero();
+    }
 }

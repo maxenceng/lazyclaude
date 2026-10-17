@@ -4,6 +4,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
@@ -13,12 +14,20 @@ import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.FirstPrompt;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.NoTitle;
+import dev.maxenceng.lazyclaude.session.published.NoToolInput;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.PlaceName;
+import dev.maxenceng.lazyclaude.session.published.PromptEntry;
+import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.ReplyEntry;
+import dev.maxenceng.lazyclaude.session.published.ResidenceName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
+import dev.maxenceng.lazyclaude.session.published.ToolCallEntry;
+import dev.maxenceng.lazyclaude.session.published.ToolInput;
+import dev.maxenceng.lazyclaude.session.published.TranscriptEntry;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.Version;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
@@ -49,10 +58,6 @@ final class SessionText {
     private static final String UNLINKED_LABEL = "unlinked";
     private static final String OLDER_GLYPH = "…";
     private static final String OLDER_FORMAT = "%d older";
-    private static final String PAST_HEADING_FORMAT = "%s  %s past";
-    private static final String PAST_FACT_FORMAT = "%-15s%s";
-    private static final String LAST_ACTIVITY_FACT = "last activity";
-    private static final String SESSION_FACT = "session";
     private static final String BUSY_LABEL = "busy";
     private static final String YOUR_TURN_LABEL = "your turn";
     private static final String PERMISSION_LABEL = "waiting for permission";
@@ -68,6 +73,13 @@ final class SessionText {
     private static final String PID = "pid";
     private static final String STARTED_FACT = "started";
     private static final String VERSION = "version";
+    private static final String PROMPT_MARK = "› ";
+    private static final String PROMPT_INDENT = "  ";
+    private static final String TOOL_CALL = "⏺ %s";
+    private static final String TOOL_CALL_WITH_ARGUMENT = "⏺ %s  %s";
+    private static final String NO_TRANSCRIPT = "no transcript yet";
+    private static final String UNREADABLE_TRANSCRIPT = "transcript unreadable: %s";
+    private static final DetailRow BLANK_ROW = new DetailRow("", Style.EMPTY);
     private static final DateTimeFormatter STARTED = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private SessionText() {}
@@ -124,6 +136,14 @@ final class SessionText {
     /** What a hosted session's row says where a session started elsewhere says its age. */
     static String paneLabel() {
         return PANE_LABEL;
+    }
+
+    /** What a live session's row says at its right edge: {@code pane} when hosted, where an outside session lives, else its age. */
+    static String rowLabel(LiveSessionView session) {
+        if (session.isHosted()) {
+            return PANE_LABEL;
+        }
+        return session.residenceName().map(ResidenceName::value).orElseGet(() -> session.age().label());
     }
 
     static String quitPrompt(long busyOrWaiting) {
@@ -227,20 +247,50 @@ final class SessionText {
                 .toList();
     }
 
-    /** The rows of the main view for a past session: its title and that it is past, then cwd, last activity, start time and id. */
-    static List<DetailRow> pastFacts(PastSessionView session) {
-        return List.of(
-                new DetailRow(PAST_HEADING_FORMAT.formatted(title(session), PAST_GLYPH), Style.EMPTY.bold()),
-                pastFact(CWD, session.directory().toString()),
-                pastFact(
-                        LAST_ACTIVITY_FACT,
-                        STARTED_FORMAT.formatted(STARTED.format(session.lastActivity()), session.age().label())),
-                pastFact(STARTED_FACT, STARTED.format(session.startedAt())),
-                pastFact(SESSION_FACT, session.id().value()));
+    static String noTranscriptNotice() {
+        return NO_TRANSCRIPT;
     }
 
-    private static DetailRow pastFact(String name, String value) {
-        return new DetailRow(PAST_FACT_FORMAT.formatted(name, value), Style.EMPTY);
+    static String unreadableTranscriptNotice(Reason reason) {
+        return UNREADABLE_TRANSCRIPT.formatted(reason.value());
+    }
+
+    static List<DetailRow> transcriptNotice(String notice) {
+        return List.of(new DetailRow(notice, Style.EMPTY.dim()));
+    }
+
+    /**
+     * The rows of the main view for a transcript: a prompt behind {@code ›}, a reply plain, both wrapped to {@code width}, and a tool call as
+     * one dim line. A blank row sets each prompt and reply off from what precedes it; a tool call sticks to what it follows.
+     */
+    static List<DetailRow> transcript(List<TranscriptEntry> entries, int width) {
+        return IntStream.range(0, entries.size())
+                .boxed()
+                .flatMap(index -> Stream.concat(separator(index, entries.get(index)), rows(entries.get(index), width)))
+                .toList();
+    }
+
+    private static Stream<DetailRow> separator(int index, TranscriptEntry entry) {
+        return index > 0 && !(entry instanceof ToolCallEntry) ? Stream.of(BLANK_ROW) : Stream.empty();
+    }
+
+    private static Stream<DetailRow> rows(TranscriptEntry entry, int width) {
+        return switch (entry) {
+            case PromptEntry prompt -> {
+                List<String> lines = Wrapping.lines(prompt.text().value(), width - PROMPT_MARK.length());
+                yield IntStream.range(0, lines.size())
+                        .mapToObj(index -> new DetailRow((index == 0 ? PROMPT_MARK : PROMPT_INDENT) + lines.get(index), Style.EMPTY));
+            }
+            case ReplyEntry reply -> Wrapping.lines(reply.text().value(), width).stream().map(line -> new DetailRow(line, Style.EMPTY));
+            case ToolCallEntry call -> Stream.of(new DetailRow(toolCall(call), Style.EMPTY.dim()));
+        };
+    }
+
+    private static String toolCall(ToolCallEntry call) {
+        return switch (call.argument()) {
+            case ToolInput input -> TOOL_CALL_WITH_ARGUMENT.formatted(call.tool().value(), input.value());
+            case NoToolInput none -> TOOL_CALL.formatted(call.tool().value());
+        };
     }
 
     private static DetailRow fact(String name, String value) {

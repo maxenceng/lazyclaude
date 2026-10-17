@@ -84,6 +84,7 @@ import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
@@ -229,7 +230,7 @@ class LazyClaudeTest {
     void shouldHandTheShellTheBoardAgainWhenTheBoardWatcherReportsAChange() {
         when(locator.locate(any())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
-        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies, unreadChanges(), boardWatch, raised), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), warningQuery(raised));
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies, unreadChanges(), boardWatch, raised), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(OutsideSessionCommand.class), warningQuery(raised));
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(boardWatch).watch(eq(project()), changed.capture(), any());
         when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket())));
@@ -244,7 +245,7 @@ class LazyClaudeTest {
     @Test
     void shouldHandTheShellTheDocsAgainWhenTheWatcherReportsAChange() {
         when(docs.paths(project())).thenReturn(List.of());
-        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), warningQuery(raised));
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(OutsideSessionCommand.class), warningQuery(raised));
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(eq(project()), changed.capture(), any());
         when(docs.paths(project())).thenReturn(List.of(readDocument().path()));
@@ -265,7 +266,7 @@ class LazyClaudeTest {
 
         try (DocsWatchRepository watcher = watcherWithoutInotify()) {
             DocsQuery realDocs = docsQuery(new DocsRepository(), watcher, raised);
-            int exit = LazyClaude.start(repository, realBoard, realDocs, sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> shells.add(LazyClaude.shellOn(view, docsView, sessionsView, realBoard, realDocs, sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), warningQuery(raised))));
+            int exit = LazyClaude.start(repository, realBoard, realDocs, sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> shells.add(LazyClaude.shellOn(view, docsView, sessionsView, realBoard, realDocs, sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(OutsideSessionCommand.class), warningQuery(raised))));
 
             assertThat(exit).isZero();
         }
@@ -279,7 +280,7 @@ class LazyClaudeTest {
 
     @Test
     void shouldShowAWarningRaisedAfterTheShellWasComposed() {
-        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), warningQuery(raised));
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(OutsideSessionCommand.class), warningQuery(raised));
         assertThat(Screen.of(shell).statusLine()).isBlank();
 
         raised.raise(warning());
@@ -290,7 +291,7 @@ class LazyClaudeTest {
 
     @Test
     void shouldShowAWarningWhenAThreadOtherThanMainStopsOnAFailureNobodyCaught() throws Exception {
-        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), warningQuery(raised));
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(OutsideSessionCommand.class), warningQuery(raised));
         Thread.UncaughtExceptionHandler handler = LazyClaude.warnOfStoppedThreads(Thread.currentThread(), warningCommand(raised), err);
 
         Thread.ofPlatform()
@@ -356,7 +357,7 @@ class LazyClaudeTest {
 
     @Test
     void shouldHandTheShellTheSessionsAgainWhenTheWatcherReportsAChange() {
-        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), warningQuery(raised));
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(OutsideSessionCommand.class), warningQuery(raised));
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(sessionWatch).watch(changed.capture(), any());
         when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
@@ -370,7 +371,7 @@ class LazyClaudeTest {
 
     @Test
     void shouldHandTheShellTheOpenPullRequestsWhenTheWatchRuns() {
-        Shell shell = LazyClaude.shellOn(boardViewOf(slugTicketView()), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), warningQuery(raised));
+        Shell shell = LazyClaude.shellOn(boardViewOf(slugTicketView()), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(OutsideSessionCommand.class), warningQuery(raised));
         ArgumentCaptor<Runnable> refresh = ArgumentCaptor.forClass(Runnable.class);
         verify(pullRequestWatch).watch(refresh.capture());
         when(pullRequests.openPullRequests(project())).thenReturn(List.of(failingPullRequest()));
@@ -384,7 +385,7 @@ class LazyClaudeTest {
 
     @Test
     void shouldReadTheBoardAgainWhenTheWatchReportsAMergedTicketBranch() {
-        Shell shell = LazyClaude.shellOn(boardViewOf(inReviewSlugTicketView()), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), warningQuery(raised));
+        Shell shell = LazyClaude.shellOn(boardViewOf(inReviewSlugTicketView()), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(OutsideSessionCommand.class), warningQuery(raised));
         ArgumentCaptor<Runnable> refresh = ArgumentCaptor.forClass(Runnable.class);
         verify(pullRequestWatch).watch(refresh.capture());
         when(locator.locate(any())).thenReturn(project());
@@ -402,7 +403,7 @@ class LazyClaudeTest {
 
     @Test
     void shouldRaiseNoWarningWhenGitHubCannotBeRead() {
-        Shell shell = LazyClaude.shellOn(boardViewOf(slugTicketView()), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), warningQuery(raised));
+        Shell shell = LazyClaude.shellOn(boardViewOf(slugTicketView()), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(OutsideSessionCommand.class), warningQuery(raised));
         ArgumentCaptor<Runnable> refresh = ArgumentCaptor.forClass(Runnable.class);
         verify(pullRequestWatch).watch(refresh.capture());
         when(pullRequests.openPullRequests(project())).thenThrow(pullRequestsUnavailable());
@@ -456,7 +457,7 @@ class LazyClaudeTest {
     void shouldHaveTheShellRepaintWhenAHostedSessionDraws() {
         HostPort hosts = mock(HostPort.class);
 
-        LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQueryHosting(hosts), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), warningQuery(raised));
+        LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQueryHosting(hosts), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(OutsideSessionCommand.class), warningQuery(raised));
 
         verify(hosts).onScreenChange(any());
     }

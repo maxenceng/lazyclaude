@@ -8,6 +8,9 @@ import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.strong;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.hostedLiveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
+import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
+import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inKitty;
+import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inTmux;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.elsewhereOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessionsHosting;
@@ -23,6 +26,8 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTicketHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsViewHosting;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
+import static dev.maxenceng.lazyclaude.session.published.ResidenceNameFixture.kittyName;
+import static dev.maxenceng.lazyclaude.session.published.ResidenceNameFixture.tmuxName;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -148,6 +153,31 @@ class AvailableSessionsViewTest {
         AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(List.of(liveSession()), List.of()));
 
         assertThat(view.live()).singleElement().satisfies(live -> assertThat(live.isHosted()).isFalse());
+    }
+
+    @Test
+    void shouldNameKittyAsWhereASessionLivesWhenItRunsInAKittyWindow() {
+        AvailableSessionsView view = AvailableSessionsView.from(
+                availableSessionsHosting(List.of(liveSessionBuilder().residence(inKitty()).build()), List.of()));
+
+        assertThat(view.live()).singleElement().satisfies(live -> assertThat(live.residenceName()).contains(kittyName()));
+    }
+
+    @Test
+    void shouldNameTmuxAsWhereASessionLivesWhenItRunsInATmuxPane() {
+        AvailableSessionsView view = AvailableSessionsView.from(
+                elsewhereOf(List.of(otherProjectGroup(List.of(liveSessionBuilder().residence(inTmux()).build())))));
+
+        assertThat(view.elsewhere().getFirst().sessions())
+                .singleElement()
+                .satisfies(live -> assertThat(live.residenceName()).contains(tmuxName()));
+    }
+
+    @Test
+    void shouldNameNoResidenceForASessionThatLivesNowhere() {
+        AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(List.of(liveSession()), List.of()));
+
+        assertThat(view.live()).singleElement().satisfies(live -> assertThat(live.residenceName()).isEmpty());
     }
 
     @Test

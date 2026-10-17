@@ -7,6 +7,8 @@ import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.proces
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.thirdProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
+import static dev.maxenceng.lazyclaude.session.published.ResidenceNameFixture.kittyName;
+import static dev.maxenceng.lazyclaude.session.published.ResidenceNameFixture.tmuxName;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.thirdSessionId;
@@ -60,7 +62,15 @@ public final class SessionsViewFixture {
     }
 
     public static LiveSessionView hostedLiveSessionView() {
-        return sessionViewBuilder().hosting(Hosting.HOSTED).build();
+        return hostedSessionViewBuilder().build();
+    }
+
+    public static LiveSessionView.LiveSessionViewBuilder hostedSessionViewBuilder() {
+        return sessionViewBuilder().hosting(Hosting.HOSTED);
+    }
+
+    public static LiveSessionView hostedSessionViewWith(SessionState state) {
+        return hostedSessionViewBuilder().state(state).build();
     }
 
     public static HostedSessionView startingHostedSessionView() {
@@ -283,6 +293,19 @@ public final class SessionsViewFixture {
                 .name(new SessionName(name))
                 .state(state)
                 .links(List.of(links))
+                .build();
+    }
+
+    public static LiveSessionView kittySessionView() {
+        return sessionViewBuilder().name(new SessionName("fix-status")).residenceName(Optional.of(kittyName())).build();
+    }
+
+    public static LiveSessionView tmuxSessionView() {
+        return sessionViewBuilder()
+                .id(secondSessionId())
+                .name(new SessionName("lint-pass"))
+                .state(waitingForInput())
+                .residenceName(Optional.of(tmuxName()))
                 .build();
     }
 

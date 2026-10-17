@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
@@ -9,6 +10,7 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
@@ -38,7 +40,7 @@ public record AvailableSessions(
         List<LiveSession> owned = live.stream().map(session -> ownedAmong(open, session)).toList();
         return builder()
                 .live(owned)
-                .elsewhere(elsewhere)
+                .elsewhere(elsewhere.stream().map(group -> group.ownedAmong(open.pids())).toList())
                 .past(past)
                 .hosted(open.sessions().stream()
                         .map(session -> OpenHostedSession.builder()
@@ -56,6 +58,13 @@ public record AvailableSessions(
                 .flatMap(HostedSession::startingLink)
                 .map(owned::linkedBy)
                 .orElse(owned);
+    }
+
+    @Override
+    public Optional<LiveSession> liveSession(SessionId id) {
+        return Stream.concat(live.stream(), elsewhere.stream().flatMap(group -> group.sessions().stream()))
+                .filter(session -> session.id().equals(id))
+                .findFirst();
     }
 
     @Override
