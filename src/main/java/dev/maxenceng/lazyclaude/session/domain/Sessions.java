@@ -1,10 +1,13 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import java.util.List;
 import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.SessionName;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /** What a project's sessions are as the Sessions panel shows them: the live and past ones, or the reason none could be read. */
 public sealed interface Sessions permits AvailableSessions, UnavailableSessions {
@@ -14,6 +17,9 @@ public sealed interface Sessions permits AvailableSessions, UnavailableSessions 
 
     /** The live session running as {@code id}, this project's or one elsewhere, if there is one. */
     Optional<LiveSession> liveSession(SessionId id);
+
+    /** The names of the live sessions whose directory is {@code worktree} or below it, hosted ones that are still starting included. */
+    List<SessionName> namesIn(WorkingDirectory worktree);
 
     /** Whether a session last ran {@code verb} on {@code ticket}, or lazyclaude started one to. */
     // deferred: a session counts by its last verb on the ticket, so one that ran design and then review reads as no design run — close it when a design run is missed for that.

@@ -33,7 +33,6 @@ public final class PtyHostRepository implements HostPort {
 
     private static final String RESUME_FLAG = "--resume";
     private static final String NAME_FLAG = "-n";
-    private static final String SESSION_NAME = "%s %s";
     private static final String SLASH_COMMAND = "/ticket %s %s";
 
     private final List<String> claude;
@@ -105,7 +104,7 @@ public final class PtyHostRepository implements HostPort {
                             claude.stream(),
                             Stream.of(
                                     NAME_FLAG,
-                                    SESSION_NAME.formatted(run.ticket().value(), run.verb().label()),
+                                    run.sessionName().value(),
                                     SLASH_COMMAND.formatted(run.verb().label(), run.ticket().value())))
                     .toList();
         };

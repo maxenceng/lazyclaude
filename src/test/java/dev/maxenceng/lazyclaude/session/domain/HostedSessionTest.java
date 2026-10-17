@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.published.Busy;
+import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
@@ -129,5 +130,30 @@ class HostedSessionTest {
     @Test
     void shouldRunNoVerbWhenItIsAPlainClaude() {
         assertThat(hostedSession().runs(linkedTicketId(), Verb.DESIGN)).isFalse();
+    }
+
+    @Test
+    void shouldBeNamedForTheTicketAndVerbItWasStartedFor() {
+        assertThat(hostedSessionRunning(Verb.START).name()).isEqualTo(new SessionName("PROJ-1 start"));
+    }
+
+    @Test
+    void shouldBeNamedClaudeWhenItWasNotStartedForATicket() {
+        assertThat(hostedSession().name()).isEqualTo(new SessionName("claude"));
+    }
+
+    @Test
+    void shouldCloseOutTheTicketItWasStartedToDo() {
+        assertThat(hostedSessionRunning(Verb.DONE).doneTicket()).contains(linkedTicketId());
+    }
+
+    @Test
+    void shouldCloseOutNoTicketWhenItRanAnotherVerb() {
+        assertThat(hostedSessionRunning(Verb.RESPOND).doneTicket()).isEmpty();
+    }
+
+    @Test
+    void shouldCloseOutNoTicketWhenItWasNotStartedForOne() {
+        assertThat(hostedSession().doneTicket()).isEmpty();
     }
 }

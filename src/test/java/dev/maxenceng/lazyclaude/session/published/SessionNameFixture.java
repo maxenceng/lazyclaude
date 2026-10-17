@@ -8,6 +8,10 @@ public final class SessionNameFixture {
         return new SessionName("lazyclaude-b6");
     }
 
+    public static SessionName claudeSessionName() {
+        return new SessionName("claude");
+    }
+
     public static SessionName secondSessionName() {
         return new SessionName("lazyclaude-3f");
     }

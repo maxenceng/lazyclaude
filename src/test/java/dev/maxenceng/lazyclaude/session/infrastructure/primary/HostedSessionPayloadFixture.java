@@ -12,6 +12,7 @@ import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.wor
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
+import dev.maxenceng.lazyclaude.review.published.MergedHead;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 
 public final class HostedSessionPayloadFixture {
@@ -46,5 +47,10 @@ public final class HostedSessionPayloadFixture {
     public static VerbChoicePayload verbChoicePayload(List<Verb> verbs, boolean merged) {
         return new VerbChoicePayload(
                 new SessionPayload(project().root(), List.of(linkedTicketId())), linkedTicketId(), verbs, merged);
+    }
+
+    public static WorktreePayload worktreePayload(MergedHead mergedHead) {
+        return new WorktreePayload(
+                new SessionPayload(project().root(), List.of(linkedTicketId())), branchName().value(), mergedHead);
     }
 }

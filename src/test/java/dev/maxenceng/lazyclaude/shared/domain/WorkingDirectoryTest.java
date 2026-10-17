@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.shared.domain;
 
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectoryAt;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -27,5 +29,28 @@ class WorkingDirectoryTest {
     @Test
     void shouldRefuseAMissingPath() {
         assertThatThrownBy(() -> new WorkingDirectory(null)).isInstanceOf(MissingMandatoryValueException.class);
+    }
+
+    @Test
+    void shouldContainADirectoryBelowIt() {
+        assertThat(worktreeDirectory().contains(workingDirectoryAt("/work/app.worktrees/PROJ-1-ticket/src/main")))
+                .isTrue();
+    }
+
+    @Test
+    void shouldContainItself() {
+        assertThat(worktreeDirectory().contains(worktreeDirectory())).isTrue();
+    }
+
+    @Test
+    void shouldNotContainASiblingWhoseNameStartsWithItsName() {
+        assertThat(worktreeDirectory().contains(workingDirectoryAt("/work/app.worktrees/PROJ-1-ticket-again/src")))
+                .as("a path is below another by its segments, not by the characters they begin with")
+                .isFalse();
+    }
+
+    @Test
+    void shouldNotContainItsParent() {
+        assertThat(worktreeDirectory().contains(workingDirectoryAt("/work/app.worktrees"))).isFalse();
     }
 }

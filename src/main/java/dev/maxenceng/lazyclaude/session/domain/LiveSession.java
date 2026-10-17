@@ -60,6 +60,11 @@ public record LiveSession(
         return new LiveSession(id, pid, name, directory, startedAt, version, state, links, owner, residence);
     }
 
+    /** Whether the session's {@code cwd} is {@code worktree} or below it. */
+    public boolean runsIn(WorkingDirectory worktree) {
+        return worktree.contains(directory);
+    }
+
     public static LiveSessionBuilder builder() {
         return new LiveSessionBuilder();
     }

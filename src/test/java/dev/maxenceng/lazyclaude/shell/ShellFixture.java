@@ -2,8 +2,10 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.projectRoot;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewIn;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
@@ -32,6 +34,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
@@ -41,16 +44,19 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionComm
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.JumpPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoTranscriptView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemoteControlConfigView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeView;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
@@ -74,6 +80,7 @@ final class ShellFixture {
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
                 mock(OutsideSessionCommand.class),
+                mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
     }
@@ -87,6 +94,7 @@ final class ShellFixture {
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
                 mock(OutsideSessionCommand.class),
+                mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 boards, mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
     }
@@ -101,6 +109,7 @@ final class ShellFixture {
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
                 mock(OutsideSessionCommand.class),
+                mock(TicketWorktreeCommand.class),
                 screens,
                 boards,
                 docs,
@@ -126,6 +135,7 @@ final class ShellFixture {
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
                 mock(OutsideSessionCommand.class),
+                mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 boards,
                 mock(DocsQuery.class),
@@ -146,6 +156,7 @@ final class ShellFixture {
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
                 mock(OutsideSessionCommand.class),
+                mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
         shell.press(key('j'));
@@ -161,6 +172,7 @@ final class ShellFixture {
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
                 mock(OutsideSessionCommand.class),
+                mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
         shell.press(key('j'));
@@ -224,6 +236,7 @@ final class ShellFixture {
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
                 outside,
+                mock(TicketWorktreeCommand.class),
                 screens,
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
@@ -247,6 +260,56 @@ final class ShellFixture {
         return payload.getValue();
     }
 
+    static SessionQuery screensShowing(WorktreeView worktree) {
+        return mock(SessionQuery.class, invocation -> invocation.getMethod().getReturnType() == WorktreeView.class
+                ? worktree
+                : blankScreenOrFirstVerb(invocation));
+    }
+
+    static Shell shellOnDoneTicket(SessionQuery screens, TicketWorktreeCommand removing, Executor background) {
+        return shellOnDoneTicket(screens, removing, mock(BoardQuery.class), background);
+    }
+
+    static Shell shellOnDoneTicket(SessionQuery screens, TicketWorktreeCommand removing, BoardQuery boards, Executor background) {
+        Shell shell = new Shell(
+                boardViewOf(doneTicketView()),
+                emptyDocsView(),
+                emptySessionsView(),
+                checkingPullRequestsView(),
+                mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
+                mock(WatchedSessionCommand.class),
+                mock(OutsideSessionCommand.class),
+                removing,
+                screens,
+                boards,
+                mock(DocsQuery.class),
+                mock(ReviewQuery.class),
+                background);
+        pressed(shell, key('j'), Status.DONE.ordinal());
+        shell.press(enter());
+        shell.press(key('j'));
+        Screen.of(shell);
+        return shell;
+    }
+
+    static Shell shellOnDoneTicket(TicketWorktreeCommand removing, BoardQuery boards, WorktreeView worktree) {
+        return shellOnDoneTicket(screensShowing(worktree), removing, boards, Runnable::run);
+    }
+
+    static Shell shellOnInReviewTicket(WorktreeView worktree, HostedSessionCommand hosting) {
+        return shellOnTicket(ticketViewIn(Status.IN_REVIEW), emptySessionsView(), hosting, screensShowing(worktree));
+    }
+
+    static void drained(List<Runnable> queued) {
+        List<Runnable> now = List.copyOf(queued);
+        queued.clear();
+        now.forEach(Runnable::run);
+    }
+
+    static Shell shellOnDoneTicketWithWorktree(WorktreeView worktree, TicketWorktreeCommand removing) {
+        return shellOnDoneTicket(screensShowing(worktree), removing, Runnable::run);
+    }
+
     static SessionQuery screensChoosing(VerbChoiceView choice) {
         return mock(SessionQuery.class, invocation -> invocation.getMethod().getReturnType() == VerbChoiceView.class
                 ? choice
@@ -254,6 +317,9 @@ final class ShellFixture {
     }
 
     private static Object blankScreenOrNothing(InvocationOnMock invocation) {
+        if (invocation.getMethod().getReturnType() == WorktreeView.class) {
+            return new NoWorktreeView();
+        }
         return invocation.getMethod().getReturnType() == TerminalScreen.class ? TerminalScreen.blank() : null;
     }
 
@@ -278,6 +344,7 @@ final class ShellFixture {
                 hosting,
                 mock(WatchedSessionCommand.class),
                 mock(OutsideSessionCommand.class),
+                mock(TicketWorktreeCommand.class),
                 screens,
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
         pressed(shell, key('j'), ticket.status().ordinal());
@@ -334,6 +401,7 @@ final class ShellFixture {
                 hosting,
                 watching,
                 mock(OutsideSessionCommand.class),
+                mock(TicketWorktreeCommand.class),
                 screens,
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
@@ -363,6 +431,7 @@ final class ShellFixture {
                 hosting,
                 mock(WatchedSessionCommand.class),
                 mock(OutsideSessionCommand.class),
+                mock(TicketWorktreeCommand.class),
                 screens,
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),

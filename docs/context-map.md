@@ -12,8 +12,8 @@ change that implements the first ticket refined into them. Their words are alrea
 | Context | Responsibility | Status |
 |---|---|---|
 | `board` | A project's backlog: its tickets, their status read from each ticket branch's copy, and the verbs `/ticket` allows for that status. Read-only. A ticket is its branch copy, found through `git worktree list` and `git show`, unless its root copy reads `done` (ADR 0028) or its branch is among the merged ones the shell hands over. Kept current by its own watch on the root `docs/backlog/`, each worktree's copy of its ticket's file, and the refs (ADR 0031). The verbs `/ticket` allows for each ticket, `design` included when its branch touches `frontend/**`. | in code |
-| `session` | Claude Code sessions: which are live (from the registry after a liveness check, else `claude agents --json`) and their state (busy, your turn, waiting), kept current by its own watcher on `~/.claude/sessions/` (ADR 0021); and which are past, from the transcripts under `~/.claude/projects/` through a cache of their own, kept current by a second watcher (ADR 0023). Each is linked to the tickets its `/ticket` args name, else weakly to those its branch names, against the ticket ids the shell hands over (ADR 0024). It also hosts the sessions lazyclaude starts: the real `claude` on a pty, as `HostedSession`s behind a `HostPort` whose one adapter holds pty4j and jediterm (ADR 0026). It picks the verb a ticket's new session starts on and runs it in the ticket worktree, which it adds when missing (ADR 0030). It groups every live session outside the project as Elsewhere, and notifies the desktop when any session on the machine enters waiting, unless the shell says it is the watched one (ADR 0033). | in code |
-| `review` | A ticket's pull request: its open pull requests and the CI result of their checks, and the 100 most recent merged pull requests, from two `gh pr list` runs in turn on a 60 s timer of its own, matched by the shell to a ticket's branch. Still to come: its diff and threads, your pending review on GitHub, and submitting it. | in code |
+| `session` | Claude Code sessions: which are live (from the registry after a liveness check, else `claude agents --json`) and their state (busy, your turn, waiting), kept current by its own watcher on `~/.claude/sessions/` (ADR 0021); and which are past, from the transcripts under `~/.claude/projects/` through a cache of their own, kept current by a second watcher (ADR 0023). Each is linked to the tickets its `/ticket` args name, else weakly to those its branch names, against the ticket ids the shell hands over (ADR 0024). It also hosts the sessions lazyclaude starts: the real `claude` on a pty, as `HostedSession`s behind a `HostPort` whose one adapter holds pty4j and jediterm (ADR 0026). It picks the verb a ticket's new session starts on and runs it in the ticket worktree, which it adds when missing (ADR 0030) and removes on the user's yes when nothing stands in it (ADR 0038). It groups every live session outside the project as Elsewhere, and notifies the desktop when any session on the machine enters waiting, unless the shell says it is the watched one (ADR 0033). | in code |
+| `review` | A ticket's pull request: its open pull requests and the CI result of their checks, and the 100 most recent merged pull requests with the commit each was merged at, from two `gh pr list` runs in turn on a 60 s timer of its own, matched by the shell to a ticket's branch. Still to come: its diff and threads, your pending review on GitHub, and submitting it. | in code |
 | `docs` | The project's `docs/**/*.md` outside `docs/backlog/`, as a tree of documents, read-only, kept current by its own watcher on `docs/**` (ADR 0016). | in code |
 
 Not contexts:
@@ -37,14 +37,14 @@ graph TD
     shell -- "board's ticket ids" --> session
     shell --> review
     shell --> docs
-    session -- "PR head branch, merged state" --> review
+    session -- "PR head branch, merged head" --> review
     session -- "Verb" --> board
 ```
 
 - `board` knows nothing of sessions or pull requests. Who works a ticket is `session`'s
   question; how a ticket looks with its sessions is `shell`'s join.
 - `session` is handed the board's ticket ids and a ticket's allowed verbs by the shell, and reads only `Verb` from `board.published` (ADR 0030); the ticket's status and branch stay `board`'s. It reads a pull request's head branch to apply the `pr-link` rule, and the shell hands it whether a ticket's branch is among the merged heads, to
-  preselect `done`.
+  preselect `done`, and the ticket branch's merged head (`MergedHead`), to tell what a merge covered before a worktree is removed (ADR 0038).
 - `review` knows nothing of tickets: it reads every open pull request, and the shell finds a ticket's by its ticket branch.
 - A ticket's PR glyph on the board is `shell`'s join of its ticket branch with `review`'s open
   pull requests and their CI result; `board` still knows nothing of pull requests.

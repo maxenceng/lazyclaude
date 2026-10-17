@@ -9,6 +9,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
@@ -43,6 +44,7 @@ public final class HostedSessionManager {
     private final List<HostedSessionId> spawning = new ArrayList<>();
     private final Map<HostedSessionId, ExitCode> earlyExits = new HashMap<>();
     private final List<OpenSessionsListener> changeListeners = new CopyOnWriteArrayList<>();
+    private final List<TicketDoneEndedListener> doneEndedListeners = new CopyOnWriteArrayList<>();
 
     public HostedSessionManager(HostPort hosts, WarningPort warnings, WorktreePort worktrees) {
         this.hosts = hosts;
@@ -133,6 +135,11 @@ public final class HostedSessionManager {
         changeListeners.add(listener);
     }
 
+    /** Tells {@code listener} which ticket's {@code /ticket done} session ended, however it ended; a session running any other verb tells nothing. */
+    public void onTicketDoneEnded(TicketDoneEndedListener listener) {
+        doneEndedListeners.add(listener);
+    }
+
     /** Tells {@code listener} whenever a session drew something. */
     public void onScreenChange(Runnable listener) {
         hosts.onScreenChange(id -> listener.run());
@@ -212,18 +219,24 @@ public final class HostedSessionManager {
     }
 
     private void exited(HostedSessionId id, ExitCode code) {
-        boolean dropped;
+        Optional<HostedSession> dropped;
         synchronized (open) {
-            dropped = open.removeIf(session -> session.id().equals(id));
-            if (!dropped && spawning.contains(id)) {
+            dropped = open.stream().filter(session -> session.id().equals(id)).findFirst();
+            dropped.ifPresent(open::remove);
+            if (dropped.isEmpty() && spawning.contains(id)) {
                 earlyExits.put(id, code);
             }
         }
-        if (!dropped) {
+        if (dropped.isEmpty()) {
             return;
         }
         warnOfFailure(code);
         changed();
+        dropped.flatMap(HostedSession::doneTicket).ifPresent(this::doneEnded);
+    }
+
+    private void doneEnded(LinkedTicketId ticket) {
+        doneEndedListeners.forEach(listener -> listener.ended(ticket));
     }
 
     private void changed() {

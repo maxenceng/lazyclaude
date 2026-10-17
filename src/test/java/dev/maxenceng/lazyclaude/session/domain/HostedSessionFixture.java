@@ -13,6 +13,7 @@ import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class HostedSessionFixture {
 
@@ -65,6 +66,13 @@ public final class HostedSessionFixture {
         return OpenHostedSession.builder()
                 .session(hostedSession())
                 .phase(new LivePhase(live))
+                .build();
+    }
+
+    public static OpenHostedSession startingIn(WorkingDirectory directory) {
+        return OpenHostedSession.builder()
+                .session(hostedSessionBuilder().directory(directory).build())
+                .phase(new StartingPhase())
                 .build();
     }
 }

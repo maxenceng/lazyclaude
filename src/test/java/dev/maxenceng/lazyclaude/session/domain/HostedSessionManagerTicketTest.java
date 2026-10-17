@@ -20,11 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,8 +53,14 @@ class HostedSessionManagerTicketTest {
     @Mock
     private WorktreePort worktrees;
 
+    @Mock
+    private TicketDoneEndedListener doneEnded;
+
     @Captor
     private ArgumentCaptor<HostLaunch> launched;
+
+    @Captor
+    private ArgumentCaptor<Consumer<ExitCode>> exited;
 
     private HostedSessionManager manager;
 
@@ -232,5 +240,70 @@ class HostedSessionManagerTicketTest {
         assertThat(start).isEqualTo(new NotStartedHost());
         verify(hosts, never()).spawn(any(), any());
         assertThat(raisedTexts(warnings)).containsExactly("ticket worktree: fatal: already checked out; nothing started.");
+    }
+
+    @Test
+    void shouldTellListenersWhichTicketsDoneSessionEnded() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        manager.onTicketDoneEnded(doneEnded);
+        manager.startTicket(ticketStart(Verb.DONE), paneSize());
+        verify(hosts).spawn(any(), exited.capture());
+
+        exited.getValue().accept(new ExitCode(0));
+
+        verify(doneEnded).ended(linkedTicketId());
+    }
+
+    @Test
+    void shouldTellListenersEvenWhenTheDoneSessionExitedWithAFailure() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        manager.onTicketDoneEnded(doneEnded);
+        manager.startTicket(ticketStart(Verb.DONE), paneSize());
+        verify(hosts).spawn(any(), exited.capture());
+
+        exited.getValue().accept(new ExitCode(1));
+
+        verify(doneEnded).ended(linkedTicketId());
+    }
+
+    @Test
+    void shouldNotTellListenersWhenASessionRunningAnotherVerbEnds() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        manager.onTicketDoneEnded(doneEnded);
+        manager.startTicket(ticketStart(Verb.RESPOND), paneSize());
+        verify(hosts).spawn(any(), exited.capture());
+
+        exited.getValue().accept(new ExitCode(0));
+
+        verifyNoInteractions(doneEnded);
+    }
+
+    @Test
+    void shouldNotTellListenersWhenASessionNotStartedForATicketEnds() {
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        manager.onTicketDoneEnded(doneEnded);
+        manager.startUnlinked(project(), paneSize());
+        verify(hosts).spawn(any(), exited.capture());
+
+        exited.getValue().accept(new ExitCode(0));
+
+        verifyNoInteractions(doneEnded);
+    }
+
+    @Test
+    void shouldTellListenersOnceWhenTheDoneSessionReportsItsExitTwice() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        manager.onTicketDoneEnded(doneEnded);
+        manager.startTicket(ticketStart(Verb.DONE), paneSize());
+        verify(hosts).spawn(any(), exited.capture());
+        exited.getValue().accept(new ExitCode(0));
+
+        exited.getValue().accept(new ExitCode(0));
+
+        verify(doneEnded, times(1)).ended(linkedTicketId());
     }
 }

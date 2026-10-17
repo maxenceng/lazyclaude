@@ -8,6 +8,8 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.SessionName;
+import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * Neither the registry nor {@code claude agents --json} answered; lazyclaude starts anyway and says why. The past sessions
@@ -37,6 +39,15 @@ public record UnavailableSessions(Reason reason, List<OpenHostedSession> hosted)
     @Override
     public Optional<LiveSession> liveSession(SessionId id) {
         return Optional.empty();
+    }
+
+    @Override
+    public List<SessionName> namesIn(WorkingDirectory worktree) {
+        return hosted.stream()
+                .map(OpenHostedSession::session)
+                .filter(session -> session.runsIn(worktree))
+                .map(HostedSession::name)
+                .toList();
     }
 
     @Override

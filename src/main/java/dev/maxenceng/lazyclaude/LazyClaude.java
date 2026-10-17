@@ -35,6 +35,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCom
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeAgentsRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.KittyConfigRepository;
@@ -107,6 +108,7 @@ public final class LazyClaude {
         HostedSessionCommand hosting = new HostedSessionCommand(sessionService);
         WatchedSessionCommand watching = new WatchedSessionCommand(sessionService);
         OutsideSessionCommand outside = new OutsideSessionCommand(sessionService);
+        TicketWorktreeCommand removing = new TicketWorktreeCommand(sessionService);
         ReviewQuery reviews = new ReviewQuery(
                 new ReviewApplicationService(
                         new GhPullRequestsRepository(GH, GH_PATIENCE),
@@ -118,7 +120,7 @@ public final class LazyClaude {
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, hosting, watching, outside, warnings));
+                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, hosting, watching, outside, removing, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -219,9 +221,10 @@ public final class LazyClaude {
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
             OutsideSessionCommand outside,
+            TicketWorktreeCommand removing,
             WarningQuery warnings)
             throws Exception {
-        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, hosting, watching, outside, warnings)::run, hosting);
+        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, hosting, watching, outside, removing, warnings)::run, hosting);
     }
 
     /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
@@ -250,12 +253,14 @@ public final class LazyClaude {
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
             OutsideSessionCommand outside,
+            TicketWorktreeCommand removing,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, watching, outside, sessions, board, docs, reviews);
+        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, watching, outside, removing, sessions, board, docs, reviews);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         board.subscribe(new BoardWatchPayload(view.root().value()), shell::boardChanged);
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);
         sessions.onScreenChange(shell::screensChanged);
+        sessions.onTicketDoneEnded(shell::ticketDoneEnded);
         reviews.subscribe(
                 new ReviewPayload(view.root().value()), shell::pullRequestsChanged, shell::mergedPullRequestsChanged);
         warnings.subscribe(shell::warningsChanged);

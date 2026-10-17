@@ -35,7 +35,10 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.review.published.HeadBranch;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.AddRemoteControlView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.FailedRemovalView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HeldWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
@@ -45,7 +48,9 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.RefusedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemoteControlConfigView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemovedWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeTicketHostedPayload;
@@ -53,14 +58,19 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadableTranscriptView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadableWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeRemovalView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeView;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
@@ -126,6 +136,7 @@ public final class Shell extends ToolkitApp {
     private static final char YES = 'y';
     private static final char NO = 'n';
     private static final char JUMP = 'o';
+    private static final char REMOVE_WORKTREE = 'd';
     private static final char LEFT = 'h';
     private static final char DOWN = 'j';
     private static final char UP = 'k';
@@ -145,6 +156,7 @@ public final class Shell extends ToolkitApp {
     private static final String QUIT_KEY = "q quit";
     private static final String REFRESH_KEY = "R refresh";
     private static final String JUMP_KEY = "o jump";
+    private static final String REMOVE_WORKTREE_KEY = "d remove worktree";
     private static final String NEW_KEY = "N new";
     private static final String NEW_TICKET_KEY = "n new";
     private static final String MAIN_VIEW_KEY = "m main view";
@@ -166,6 +178,7 @@ public final class Shell extends ToolkitApp {
     private final HostedSessionCommand hosting;
     private final WatchedSessionCommand watching;
     private final OutsideSessionCommand outside;
+    private final TicketWorktreeCommand removing;
     private final TerminalFocus terminalFocus = new TerminalFocus(this::terminalFocusChanged);
     private WatchedPayload lastWatched = new NoWatchedSessionPayload();
     private CompletableFuture<Void> watchUpdates = CompletableFuture.completedFuture(null);
@@ -191,6 +204,12 @@ public final class Shell extends ToolkitApp {
     private Optional<Rect> paneArea = Optional.empty();
     private Optional<Long> quitPrompt = Optional.empty();
     private Optional<RemoteControlConfigView> remoteControlPrompt = Optional.empty();
+    private Optional<RemovalPrompt> removalPrompt = Optional.empty();
+    private Optional<String> refusal = Optional.empty();
+    private Optional<ShownWorktree> shownWorktree = Optional.empty();
+    private boolean worktreeStale;
+    private final AtomicBoolean worktreeReading = new AtomicBoolean();
+    private volatile MergedPullRequestsView latestMerged = new MergedPullRequestsView(List.of());
     private Optional<Rect> mainViewArea = Optional.empty();
     private CompletableFuture<Void> outsideCommands = CompletableFuture.completedFuture(null);
     private boolean mainViewHidden;
@@ -209,6 +228,7 @@ public final class Shell extends ToolkitApp {
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
             OutsideSessionCommand outside,
+            TicketWorktreeCommand removing,
             SessionQuery screens,
             BoardQuery boards,
             DocsQuery docsQuery,
@@ -221,6 +241,7 @@ public final class Shell extends ToolkitApp {
                 hosting,
                 watching,
                 outside,
+                removing,
                 screens,
                 boards,
                 docsQuery,
@@ -237,6 +258,7 @@ public final class Shell extends ToolkitApp {
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
             OutsideSessionCommand outside,
+            TicketWorktreeCommand removing,
             SessionQuery screens,
             BoardQuery boards,
             DocsQuery docsQuery,
@@ -253,6 +275,7 @@ public final class Shell extends ToolkitApp {
         this.hosting = hosting;
         this.watching = watching;
         this.outside = outside;
+        this.removing = removing;
         this.screens = screens;
         this.boards = boards;
         this.docsQuery = docsQuery;
@@ -312,6 +335,7 @@ public final class Shell extends ToolkitApp {
             mainViewScroll.reset();
         }
         transcriptStale = true;
+        worktreeStale = true;
         refreshOffer();
         TabClosing closing = dock.replace(sessions.hosted());
         if (focus == Focus.DOCK && closing == TabClosing.LAST_ONE_GONE) {
@@ -350,6 +374,7 @@ public final class Shell extends ToolkitApp {
             reading.runOnRenderThread(this::applyPendingMergedHeads);
         }
         latestMergedHeads = view.headBranches();
+        latestMerged = view;
         if (mergedTicketBranches().equals(mergedTicketBranches)) {
             return;
         }
@@ -403,6 +428,7 @@ public final class Shell extends ToolkitApp {
         }
         mergedHeads = heads;
         mergedRead = true;
+        worktreeStale = true;
         picker.ifPresent(open -> {
             open.checked();
             open.preselecting(choiceFor(open.ticket()));
@@ -413,6 +439,7 @@ public final class Shell extends ToolkitApp {
     private void applyPendingBoard() {
         BoardView next = pendingBoard.getAndSet(null);
         if (next != null) {
+            worktreeStale = true;
             RowKey before = board.selected().key();
             board.replace(next);
             if (!board.selected().key().equals(before) && mainViewOwner == Focus.BOARD) {
@@ -531,8 +558,12 @@ public final class Shell extends ToolkitApp {
         applyPendingBoard();
         applyPendingMergedHeads();
         applyPendingWarning();
+        refusal = Optional.empty();
         if (quitPrompt.isPresent()) {
             return answerQuitPrompt(key);
+        }
+        if (removalPrompt.isPresent()) {
+            return answerRemovalPrompt(key);
         }
         if (remoteControlPrompt.isPresent()) {
             return answerRemoteControlPrompt(remoteControlPrompt.get(), key);
@@ -560,6 +591,9 @@ public final class Shell extends ToolkitApp {
         }
         if (key.isChar(JUMP)) {
             return jump();
+        }
+        if (key.isChar(REMOVE_WORKTREE) && removableTicket().isPresent()) {
+            return checkRemoval(removableTicket().get());
         }
         if (key.isChar(NEW_TICKET_SESSION)) {
             return newFromTicket();
@@ -723,6 +757,118 @@ public final class Shell extends ToolkitApp {
             inOrder(outside::addRemoteControl);
         }
         return true;
+    }
+
+    /**
+     * A hosted session running {@code /ticket done} on {@code ticket} has ended. Callable from any thread: the board is read again, off
+     * the render thread, and when the ticket now reads done the same checks as {@code d} run and the question is asked.
+     */
+    public void ticketDoneEnded(LinkedTicketId ticket) {
+        inOrder(() -> {
+            reread();
+            BoardRows.ticketOf(lastRead, ticket)
+                    .filter(found -> found.status().finished())
+                    .ifPresent(found -> askRemoval(found, false));
+        });
+    }
+
+    /** The selected ticket when {@code d} applies: on the Board, reading done, and with a worktree last read. */
+    private Optional<TicketView> removableTicket() {
+        return selectedTicket()
+                .filter(ticket -> focus == Focus.BOARD && ticket.status().finished())
+                .filter(ticket -> shownWorktree
+                        .filter(shown -> shown.ticket().equals(idOf(ticket)) && shown.view() instanceof HeldWorktreeView)
+                        .isPresent());
+    }
+
+    private boolean checkRemoval(TicketView ticket) {
+        inOrder(() -> askRemoval(ticket, true));
+        return true;
+    }
+
+    /**
+     * Judges the ticket's worktree afresh, off the render thread, and on the render thread asks whether to remove it when nothing
+     * stands in the way, else says what does. With {@code stillSelected}, an answer about a ticket no longer selected is dropped.
+     */
+    private void askRemoval(TicketView ticket, boolean stillSelected) {
+        WorktreeView judged = screens.worktreeOf(worktreePayload(ticket));
+        onRenderThread(() -> {
+            if (stillSelected && !selectedTicket().map(TicketView::id).equals(Optional.of(ticket.id()))) {
+                return;
+            }
+            if (judged instanceof HeldWorktreeView held && held.clear()) {
+                removalPrompt = Optional.of(new RemovalPrompt(ticket, held.path()));
+            } else {
+                refusal = Optional.of(WorktreeText.refusal(judged));
+            }
+        });
+    }
+
+    private WorktreePayload worktreePayload(TicketView ticket) {
+        return new WorktreePayload(
+                new SessionPayload(root, BoardRows.ticketIdsOf(lastRead)),
+                ticket.branch().value(),
+                latestMerged.mergedHeadOf(new HeadBranch(ticket.branch().value())));
+    }
+
+    private static LinkedTicketId idOf(TicketView ticket) {
+        return new LinkedTicketId(ticket.id().value());
+    }
+
+    private boolean answerRemovalPrompt(KeyEvent key) {
+        RemovalPrompt asked = removalPrompt.get();
+        removalPrompt = Optional.empty();
+        if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
+            inOrder(() -> {
+                WorktreeRemovalView result = removing.remove(worktreePayload(asked.ticket()));
+                onRenderThread(() -> removed(result));
+            });
+        }
+        return true;
+    }
+
+    private void removed(WorktreeRemovalView result) {
+        switch (result) {
+            case RemovedWorktreeView _ -> {
+                shownWorktree = Optional.empty();
+                worktreeStale = true;
+            }
+            case RefusedRemovalView refused -> refusal = Optional.of(WorktreeText.refusal(refused.state()));
+            case FailedRemovalView failed -> refusal = Optional.of(WorktreeText.failure(failed.reason()));
+        }
+    }
+
+    /**
+     * Reads the selected ticket's worktree off the render thread, when another ticket was selected or something it is judged by
+     * changed; one read at a time, and what lands is kept with the ticket it is about.
+     */
+    private void syncWorktree() {
+        Optional<TicketView> wanted = mainViewOwner == Focus.BOARD ? selectedTicket() : Optional.empty();
+        wanted.ifPresent(ticket -> {
+            boolean shown = shownWorktree.filter(read -> read.ticket().equals(idOf(ticket))).isPresent();
+            if ((!shown || worktreeStale) && worktreeReading.compareAndSet(false, true)) {
+                worktreeStale = false;
+                readWorktree(ticket);
+            }
+        });
+    }
+
+    /** A read that fails unexpectedly is shown as unreadable, so the next read is not held back by one that never landed. */
+    private void readWorktree(TicketView ticket) {
+        WorktreePayload payload = worktreePayload(ticket);
+        CompletableFuture.supplyAsync(() -> screens.worktreeOf(payload), background)
+                .exceptionally(Shell::unreadableWorktree)
+                .thenAccept(read -> onRenderThread(() -> {
+                    shownWorktree = Optional.of(new ShownWorktree(idOf(ticket), read));
+                    worktreeReading.set(false);
+                }));
+    }
+
+    private static WorktreeView unreadableWorktree(Throwable failed) {
+        Throwable cause = failed instanceof CompletionException wrapped && wrapped.getCause() != null ? wrapped.getCause() : failed;
+        return new UnreadableWorktreeView(new Reason(Optional.ofNullable(cause.getMessage())
+                .filter(message -> !message.isBlank())
+                .orElseGet(() -> cause.getClass().getSimpleName())));
     }
 
     /** Reads everything again, off the render thread, and shows only what changed; the pull requests are fetched on their own thread. */
@@ -1048,11 +1194,14 @@ public final class Shell extends ToolkitApp {
         applyPendingWarning();
         syncWatched();
         syncTranscript();
+        syncWorktree();
         Element screen = column(
                 new StatusLineElement(
                         StatusText.spans(sessions.markerCounts(), elsewhere.groups()),
                         warning,
-                        quitPrompt.map(SessionText::quitPrompt)),
+                        quitPrompt
+                                .map(SessionText::quitPrompt)
+                                .or(() -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree())))),
                 row(
                         column(
                                         boardPanel(),
@@ -1258,11 +1407,20 @@ public final class Shell extends ToolkitApp {
         };
     }
 
+    private Optional<WorktreeFacts> worktreeDetail(TicketView ticket) {
+        return shownWorktree
+                .filter(shown -> shown.ticket().equals(idOf(ticket)))
+                .flatMap(shown -> WorktreeText.detail(root, shown.view()));
+    }
+
     private Element ticketDetail(TicketView ticket) {
-        return new DetailElement(width -> TicketText.head(ticket, pullRequests, width), TicketText.markdown(ticket), mainViewScroll);
+        return new DetailElement(width -> TicketText.head(ticket, pullRequests, worktreeDetail(ticket), width), TicketText.markdown(ticket), mainViewScroll);
     }
 
     private List<String> keyBar() {
+        if (refusal.isPresent()) {
+            return List.of(refusal.get());
+        }
         if (remoteControlPrompt.isPresent()) {
             return List.of(RemoteControlPromptText.keys(remoteControlPrompt.get()));
         }
@@ -1279,6 +1437,7 @@ public final class Shell extends ToolkitApp {
                         Included.when(foldable(), FOLD_KEY),
                         Included.when(focus == Focus.BOARD && board.selected() instanceof TicketRow, SESSIONS_KEY),
                         Included.when(focus == Focus.SESSIONS && sessions.olderSelected(), EXPAND_KEY),
+                        Included.when(removableTicket().isPresent(), REMOVE_WORKTREE_KEY),
                         Included.when(jumpTarget().isPresent(), JUMP_KEY),
                         Stream.of(FOCUS_KEYS, QUIT_KEY),
                         Included.when(
