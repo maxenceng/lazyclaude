@@ -14,8 +14,9 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
  */
 public final class GhPullRequestsRepository implements OpenPullRequestPort {
 
-    private static final List<String> ARGUMENTS =
-            List.of("pr", "list", "--state", "open", "--json", "number,title,headRefName,isDraft,isCrossRepository,statusCheckRollup");
+    // deferred: only the 100 most recent open pull requests are asked for, so a ticket's pull request beyond them shows no glyph — close it when a project has that many open.
+    private static final List<String> ARGUMENTS = List.of(
+            "pr", "list", "--state", "open", "--limit", "100", "--json", "number,title,headRefName,isDraft,isCrossRepository,statusCheckRollup");
 
     private final GhCommand gh;
 
@@ -25,6 +26,6 @@ public final class GhPullRequestsRepository implements OpenPullRequestPort {
 
     @Override
     public List<PullRequest> openPullRequests(Project project) {
-        return PullRequestRecords.pullRequests(gh.output(project, ARGUMENTS), GhCommand.SOURCE);
+        return PullRequestRecords.pullRequests(gh.output(project, ARGUMENTS), GhCommand.sourceOf(ARGUMENTS));
     }
 }

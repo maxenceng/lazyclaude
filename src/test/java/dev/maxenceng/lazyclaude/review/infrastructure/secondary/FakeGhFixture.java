@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -8,10 +10,16 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.review.domain.MergedPullRequest;
 import dev.maxenceng.lazyclaude.review.domain.PullRequest;
+import dev.maxenceng.lazyclaude.review.domain.ReviewThread;
 import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
@@ -19,6 +27,7 @@ public final class FakeGhFixture {
 
     private static final Duration PATIENCE = Duration.ofSeconds(10);
     private static final Duration IMPATIENCE = Duration.ofMillis(300);
+    private static final int LINES_OF_A_LARGE_DIFF = 5000;
 
     private FakeGhFixture() {}
 
@@ -99,6 +108,93 @@ public final class FakeGhFixture {
         return mergedPullRequestJsonFrom(true, number, head, oid);
     }
 
+    public static GhPullRequestDiffRepository diffRepositoryOver(Path gh) {
+        return new GhPullRequestDiffRepository(gh.toString(), PATIENCE);
+    }
+
+    public static GhPullRequestDiffRepository impatientDiffRepositoryOver(Path gh) {
+        return new GhPullRequestDiffRepository(gh.toString(), IMPATIENCE);
+    }
+
+    public static GhPullRequestDiffRepository diffRepositoryOverMissingGh() {
+        return new GhPullRequestDiffRepository(missingCommand(), PATIENCE);
+    }
+
+    public static Path ghDiffingWithItsArguments(Path directory) throws IOException {
+        return script(directory, "printf 'diff --git a/x b/x\\n--- a/x\\n+++ b/x\\n@@ -1 +1 @@\\n+%s\\n' \"$*\"\n");
+    }
+
+    public static Path ghDiffingWithItsDirectory(Path directory) throws IOException {
+        return script(directory, "printf 'diff --git a/x b/x\\n--- a/x\\n+++ b/x\\n@@ -1 +1 @@\\n+%s\\n' \"$(pwd)\"\n");
+    }
+
+    public static Path ghRefusingALargeDiff(Path directory) throws IOException {
+        return ghFailing(directory, 1, "could not find pull request diff: HTTP 406: Sorry, the diff exceeded the maximum number of lines (20000)");
+    }
+
+    public static Path ghPrintingALargeDiff(Path directory) throws IOException {
+        return script(
+                directory,
+                "printf 'diff --git a/x b/x\\n--- a/x\\n+++ b/x\\n@@ -0,0 +1,%d @@\\n'\nseq 1 %d | sed 's/^/+a line longer than a pipe buffer would hold in total /'\n"
+                        .formatted(LINES_OF_A_LARGE_DIFF, LINES_OF_A_LARGE_DIFF));
+    }
+
+    public static int linesOfALargeDiff() {
+        return LINES_OF_A_LARGE_DIFF;
+    }
+
+    public static <T> T whileEveryCommonPoolThreadIsBusy(Callable<T> read) throws Exception {
+        CountDownLatch release = new CountDownLatch(1);
+        List<CompletableFuture<Void>> holders = IntStream.range(0, ForkJoinPool.getCommonPoolParallelism())
+                .mapToObj(any -> CompletableFuture.runAsync(() -> awaitQuietly(release), ForkJoinPool.commonPool()))
+                .toList();
+        try {
+            return read.call();
+        } finally {
+            release.countDown();
+            CompletableFuture.allOf(holders.toArray(CompletableFuture[]::new)).join();
+        }
+    }
+
+    public static GhThreadRepository threadRepositoryOver(Path gh) {
+        return new GhThreadRepository(gh.toString(), PATIENCE);
+    }
+
+    public static GhThreadRepository impatientThreadRepositoryOver(Path gh) {
+        return new GhThreadRepository(gh.toString(), IMPATIENCE);
+    }
+
+    public static GhThreadRepository threadRepositoryOverMissingGh() {
+        return new GhThreadRepository(missingCommand(), PATIENCE);
+    }
+
+    public static List<ReviewThread> readThreadsPrinted(Path directory, String output) throws IOException {
+        return threadRepositoryOver(ghPrinting(directory, output)).threads(projectAt(directory), pullRequestNumber());
+    }
+
+    public static Path ghAnsweringThreadsWithItsArguments(Path directory) throws IOException {
+        return script(
+                directory,
+                "printf '{\"data\":{\"repository\":{\"pullRequest\":{\"reviewThreads\":{\"nodes\":[{\"path\":\"p\",\"line\":1,\"startLine\":null,\"diffSide\":\"RIGHT\",\"isResolved\":false,\"isOutdated\":false,\"comments\":{\"nodes\":[{\"author\":{\"login\":\"a\"},\"body\":\"%s\"}]}}]}}}}}' \"$(echo $*)\"\n");
+    }
+
+    public static String threadsPageJson(String... threads) {
+        return """
+                {"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[%s]}}}}}"""
+                .formatted(String.join(",", threads));
+    }
+
+    public static String threadJson(String path, String line, String startLine, String side, boolean resolved, boolean outdated, String... comments) {
+        return """
+                {"path":%s,"line":%s,"startLine":%s,"diffSide":"%s","isResolved":%b,"isOutdated":%b,"comments":{"nodes":[%s]},"unknown":"ignored"}"""
+                .formatted(path == null ? "null" : "\"" + path + "\"", line, startLine, side, resolved, outdated, String.join(",", comments));
+    }
+
+    public static String commentJson(String login, String body) {
+        return """
+                {"author":%s,"body":"%s"}""".formatted(login == null ? "null" : "{\"login\":\"" + login + "\"}", body);
+    }
+
     public static String missingCommand() {
         return "lazyclaude-no-such-gh";
     }
@@ -136,6 +232,14 @@ public final class FakeGhFixture {
         return """
                 {"number":%d,"title":"%s","headRefName":"%s","isDraft":%b,"isCrossRepository":%b,"statusCheckRollup":[%s],"unknown":"ignored"}"""
                 .formatted(number, title, head, draft, fork, String.join(",", checks));
+    }
+
+    private static void awaitQuietly(CountDownLatch release) {
+        try {
+            release.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static Path script(Path directory, String body) throws IOException {

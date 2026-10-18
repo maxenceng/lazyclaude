@@ -53,6 +53,18 @@ class AssertTest {
     }
 
     @Test
+    void shouldRefuseANumberAfterItsBoundSayingBoth() {
+        assertThatThrownBy(() -> Assert.notAfter("first", 20, 18))
+                .isInstanceOf(AfterBoundException.class)
+                .hasMessage("first is at most 18, got 20");
+    }
+
+    @Test
+    void shouldAcceptANumberEqualToItsBound() {
+        assertThatCode(() -> Assert.notAfter("first", 18, 18)).doesNotThrowAnyException();
+    }
+
+    @Test
     void shouldRefuseABlankValueNamingItsField() {
         assertThatThrownBy(() -> Assert.notBlank("title", "  "))
                 .isInstanceOf(BlankValueException.class)

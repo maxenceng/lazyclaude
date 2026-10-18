@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -19,6 +20,8 @@ import dev.maxenceng.lazyclaude.session.domain.SourceFallback;
  */
 public final class ClaudeAgentsRepository implements LiveSessionPort {
 
+    // A reader blocks until the process exits, so each gets its own virtual thread rather than a slot of the shared pool.
+    private static final Executor READERS = task -> Thread.ofVirtual().start(task);
     private static final String SOURCE = "claude agents --json";
     private static final int SUCCESS = 0;
 
@@ -46,7 +49,7 @@ public final class ClaudeAgentsRepository implements LiveSessionPort {
     private byte[] run() {
         Process process = start();
         try {
-            CompletableFuture<byte[]> output = CompletableFuture.supplyAsync(() -> readAll(process));
+            CompletableFuture<byte[]> output = CompletableFuture.supplyAsync(() -> readAll(process), READERS);
             if (!process.waitFor(patience.toMillis(), TimeUnit.MILLISECONDS)) {
                 process.destroyForcibly();
                 throw new SessionsUnavailableException("%s did not answer within %d s".formatted(SOURCE, patience.toSeconds()));

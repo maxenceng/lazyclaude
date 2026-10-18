@@ -121,7 +121,7 @@ final class PullRequestText {
         };
     }
 
-    private static Optional<PullRequestView> pullRequestOf(TicketView ticket, PullRequestsView pullRequests) {
+    static Optional<PullRequestView> pullRequestOf(TicketView ticket, PullRequestsView pullRequests) {
         return pullRequests instanceof OpenPullRequestsView open
                 ? open.on(new HeadBranch(ticket.branch().value()))
                 : Optional.empty();
