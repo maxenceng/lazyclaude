@@ -1,6 +1,6 @@
 ---
 id: REVIEW-2
-status: in-review
+status: done
 context: review
 type: feature
 tracker_id: 88
@@ -127,3 +127,9 @@ Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-6](LAZY
 Refined 2026-10-18. The open-PR fetch's missing `--limit` (it fell back to `gh`'s 30) was
 found while refining and folded in here rather than given its own ticket. No `gh` call had a
 contract test before this one.
+
+Closed after [#37](https://github.com/maxenceng/lazyclaude/pull/37). ADR 0039 records the left column swap and where a thread meets a diff line. What the code will not show:
+
+- *Model decision* has the shell's viewport build the diff rows, inline threads included. Review moved that join into `review`'s domain (`PullRequestDiff.place`, asked for through `ReviewQuery.threadsInDiff`). This let Comments list in true diff order: a `LEFT` thread on old line 100 sits above a `RIGHT` one on new line 50. ADR 0039 carries the decision. *Model decision* does not.
+- The manager *Model decision* implies was renamed `PullRequestDiffManager` under review. From REVIEW-3 on, "review" in code means GitHub's pending review, not the screen (glossary *Review screen*).
+- The process stream readers moved off the common pool onto virtual threads, in every adapter, not only `gh`'s. With the pool busy, a diff larger than a pipe stalled until the 30 s patience. `ArchitectureTest.async_work_names_its_executor` now refuses an executor-less `supplyAsync`/`runAsync`.
