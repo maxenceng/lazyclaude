@@ -29,12 +29,15 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OnDiffAnchorView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingDeletePayload;
@@ -135,6 +138,11 @@ public final class Shell extends ToolkitApp {
     private static final String REVIEW_PANEL_TITLE = "Review";
     private static final String REVIEW_TITLE = "PR #%d %s";
     private static final String NOT_DELETED = "not deleted (%s)";
+    private static final String NOT_SUBMITTED = "not submitted (%s)";
+    private static final String SUBMIT_PROMPT = "submit review as Comment? y/n";
+    private static final String RESPOND_TITLE = "Respond";
+    private static final String RESPOND_PROMPT = "start /ticket respond %s?";
+    private static final String RESPOND_HINT = "y start  esc back";
     private static final String BOARD_TITLE = "Board";
     private static final String SESSIONS_TITLE = "Sessions";
     private static final String DOCS_TITLE = "Docs";
@@ -166,6 +174,7 @@ public final class Shell extends ToolkitApp {
     private static final char COMMENT = 'c';
     private static final char RANGE = 'v';
     private static final char DELETE = 'x';
+    private static final char SUMMARY = 'S';
     private static final char SAVE = 's';
     private static final char NEXT_FILE = 'J';
     private static final char PREVIOUS_FILE = 'K';
@@ -245,6 +254,8 @@ public final class Shell extends ToolkitApp {
     private Optional<Long> quitPrompt = Optional.empty();
     private Optional<RemoteControlConfigView> remoteControlPrompt = Optional.empty();
     private Optional<RemovalPrompt> removalPrompt = Optional.empty();
+    private Optional<ReviewPane> submitPrompt = Optional.empty();
+    private Optional<TicketView> respondPrompt = Optional.empty();
     private Optional<String> refusal = Optional.empty();
     private Optional<ShownWorktree> shownWorktree = Optional.empty();
     private boolean worktreeStale;
@@ -609,6 +620,12 @@ public final class Shell extends ToolkitApp {
         }
         if (removalPrompt.isPresent()) {
             return answerRemovalPrompt(key);
+        }
+        if (submitPrompt.isPresent()) {
+            return answerSubmitPrompt(submitPrompt.get(), key);
+        }
+        if (respondPrompt.isPresent()) {
+            return answerRespondPrompt(respondPrompt.get(), key);
         }
         if (remoteControlPrompt.isPresent()) {
             return answerRemoteControlPrompt(remoteControlPrompt.get(), key);
@@ -1011,6 +1028,10 @@ public final class Shell extends ToolkitApp {
         if (key.isChar(OPEN_REVIEW)) {
             return true;
         }
+        if (key.isChar(SUMMARY)) {
+            pane.openBox(new CommentBox(new SummaryTarget(), Optional.empty(), summaryOf(pane.pending())));
+            return true;
+        }
         if (key.isChar(RESOLVED)) {
             pane.toggleResolved();
             return true;
@@ -1021,6 +1042,48 @@ public final class Shell extends ToolkitApp {
             case COMMENTS -> moveInComments(pane, key);
             default -> false;
         };
+    }
+
+    private static String summaryOf(PendingReviewView pending) {
+        return pending instanceof OpenPendingReviewView open ? open.summary().value() : "";
+    }
+
+    /** The confirm after the summary is saved: {@code y} submits the pending review as a Comment, any other key leaves it pending. */
+    private boolean answerSubmitPrompt(ReviewPane pane, KeyEvent key) {
+        submitPrompt = Optional.empty();
+        if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
+            inReviewOrder(pane, () -> writing.submit(new PullRequestPayload(root, pane.number())), answer -> {
+                switch (answer) {
+                    case WrittenReviewView _ -> submitted();
+                    case RefusedWriteView refused -> refusal = Optional.of(NOT_SUBMITTED.formatted(refused.reason().value()));
+                }
+            });
+        }
+        return true;
+    }
+
+    /** GitHub took the submit: the review closes and the ticket is selected, after offering to respond when the ticket's status allows it. */
+    private void submitted() {
+        Optional<TicketView> ticket = selectedTicket().filter(found -> found.verbs().contains(Verb.RESPOND));
+        if (ticket.isPresent()) {
+            respondPrompt = ticket;
+        } else {
+            leaveReview();
+        }
+    }
+
+    private boolean answerRespondPrompt(TicketView ticket, KeyEvent key) {
+        if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
+            respondPrompt = Optional.empty();
+            leaveReview();
+            TicketHostedPayload payload = new TicketHostedPayload(
+                    root, new LinkedTicketId(ticket.id().value()), ticket.branch().value(), Verb.RESPOND, paneSize());
+            inBackground(() -> hosting.startTicket(payload));
+        } else if (key.isKey(KeyCode.ESCAPE)) {
+            respondPrompt = Optional.empty();
+            leaveReview();
+        }
+        return true;
     }
 
     /** {@code c} on the cursor's line, or on the range marked, opens the comment box under it. */
@@ -1103,6 +1166,9 @@ public final class Shell extends ToolkitApp {
                 case WrittenReviewView written -> {
                     pane.applyWritten(written.pending());
                     pane.closeBox();
+                    if (box.target() instanceof SummaryTarget) {
+                        submitPrompt = Optional.of(pane);
+                    }
                 }
                 case RefusedWriteView refused -> box.saveRefused(refused.reason());
             }
@@ -1507,7 +1573,8 @@ public final class Shell extends ToolkitApp {
                         warning,
                         quitPrompt
                                 .map(SessionText::quitPrompt)
-                                .or(() -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree())))),
+                                .or(() -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree())))
+                                .or(() -> submitPrompt.map(_ -> SUBMIT_PROMPT))),
                 row(
                         leftColumn(),
                         (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
@@ -1521,10 +1588,20 @@ public final class Shell extends ToolkitApp {
                                 VerbPickerText.hint(),
                                 () -> sessionsArea)))
                 .orElse(screen);
+        Element withRespond = respondPrompt
+                .<Element>map(ticket -> stack(
+                        withPicker,
+                        new PopupElement(
+                                RESPOND_TITLE,
+                                List.of(RESPOND_PROMPT.formatted(ticket.id().value())),
+                                Optional.empty(),
+                                RESPOND_HINT,
+                                () -> mainViewArea)))
+                .orElse(withPicker);
         Element withBox = review.flatMap(ReviewPane::box)
                 .filter(open -> open.inlineAt().isEmpty())
-                .<Element>map(open -> stack(withPicker, boxPopup(open)))
-                .orElse(withPicker);
+                .<Element>map(open -> stack(withRespond, boxPopup(open)))
+                .orElse(withRespond);
         return remoteControlPrompt
                 .<Element>map(prompt -> stack(
                         withBox,

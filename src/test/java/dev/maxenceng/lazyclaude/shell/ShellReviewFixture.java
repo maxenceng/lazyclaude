@@ -37,6 +37,7 @@ import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
@@ -87,12 +88,22 @@ final class ShellReviewFixture {
 
     static Shell shellOnATicketWith(
             PullRequestsView pullRequests, ReviewQuery reviews, PendingReviewCommand writing, Executor background) {
+        return shellOnTheTicket(slugTicketView(), pullRequests, reviews, writing, mock(HostedSessionCommand.class, ShellFixture::noHostStarted), background);
+    }
+
+    static Shell shellOnTheTicket(
+            TicketView ticket,
+            PullRequestsView pullRequests,
+            ReviewQuery reviews,
+            PendingReviewCommand writing,
+            HostedSessionCommand hosting,
+            Executor background) {
         Shell shell = new Shell(
-                boardViewOf(slugTicketView()),
+                boardViewOf(ticket),
                 emptyDocsView(),
                 emptySessionsView(),
                 pullRequests,
-                mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
+                hosting,
                 mock(WatchedSessionCommand.class),
                 mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
@@ -102,7 +113,18 @@ final class ShellReviewFixture {
                 reviews,
                 writing,
                 background);
-        shell.press(key('j'));
+        return ShellFixture.pressed(shell, key('j'), ticket.status().ordinal() + 1);
+    }
+
+    static Shell shellSubmitting(TicketView ticket, PendingReviewCommand writing, HostedSessionCommand hosting) {
+        Shell shell = shellOnTheTicket(
+                ticket,
+                openPullRequestsViewOf(pullRequestView()),
+                reviewsAnswering(twoFileDiffView(), readThreadsViewOf(), openPendingViewOf(commentOnView(diffPath(), rightOn(3)))),
+                writing,
+                hosting,
+                Runnable::run);
+        shell.press(key('p'));
         return shell;
     }
 
