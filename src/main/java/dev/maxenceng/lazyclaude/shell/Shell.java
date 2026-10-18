@@ -113,9 +113,11 @@ public final class Shell extends ToolkitApp {
     private static final int LEFT_COLUMN_PERCENT = 35;
     private static final int SMALL_PANEL_HEIGHT = 3;
     private static final int SHRUNK_PANEL_HEIGHT = 5;
+    private static final int REVIEW_PANEL_HEIGHT = 6;
 
     private static final String FILES_TITLE = "Files";
     private static final String COMMENTS_TITLE = "Comments";
+    private static final String REVIEW_PANEL_TITLE = "Review";
     private static final String REVIEW_TITLE = "PR #%d %s";
     private static final String BOARD_TITLE = "Board";
     private static final String SESSIONS_TITLE = "Sessions";
@@ -926,7 +928,12 @@ public final class Shell extends ToolkitApp {
         return reviewablePullRequest()
                 .map(pullRequest -> {
                     ReviewPane pane = new ReviewPane(
-                            pullRequest.number(), pullRequest.title(), reviews.loadingDiff(), reviews.loadingThreads(), reviews);
+                            pullRequest.number(),
+                            pullRequest.title(),
+                            reviews.loadingDiff(),
+                            reviews.loadingThreads(),
+                            reviews.loadingPending(),
+                            reviews);
                     review = Optional.of(pane);
                     lastLeft = Focus.FILES;
                     goUp(Focus.MAIN);
@@ -950,6 +957,10 @@ public final class Shell extends ToolkitApp {
         PullRequestPayload payload = new PullRequestPayload(root, pane.number());
         long diffRead = pane.beginDiffRead();
         long threadsRead = pane.beginThreadsRead();
+        long pendingRead = pane.beginPendingRead();
+        CompletableFuture.supplyAsync(() -> reviews.pendingOf(payload), background)
+                .exceptionally(ReviewReads::unreadablePending)
+                .thenAccept(read -> onRenderThread(() -> landed(pane, () -> pane.applyPending(pendingRead, read))));
         CompletableFuture.supplyAsync(() -> reviews.diffOf(payload), background)
                 .exceptionally(ReviewReads::unreadableDiff)
                 .thenAccept(read -> onRenderThread(() -> landed(pane, () -> pane.applyDiff(diffRead, read))));
@@ -1387,7 +1398,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element leftColumn() {
-        return review.<Element>map(pane -> column(filesPanel(pane), commentsPanel(pane)).percent(LEFT_COLUMN_PERCENT))
+        return review.<Element>map(pane -> column(filesPanel(pane), commentsPanel(pane), reviewPanel(pane)).percent(LEFT_COLUMN_PERCENT))
                 .orElseGet(() -> column(boardPanel(), sessionsPanel(), docsPanel(), elsewherePanel()).percent(LEFT_COLUMN_PERCENT));
     }
 
@@ -1401,6 +1412,12 @@ public final class Shell extends ToolkitApp {
                 .<Element>map(notice -> richText(notice).wrapWord().dim())
                 .orElseGet(() -> new RowsElement(ReviewText.commentLines(pane), pane.selectedComment(), focus == Focus.COMMENTS));
         return framed(COMMENTS_TITLE, Focus.COMMENTS, body).fill();
+    }
+
+    private Element reviewPanel(ReviewPane pane) {
+        return panel(REVIEW_PANEL_TITLE, new RowsElement(ReviewText.reviewLines(pane.pending()), -1, false))
+                .rounded()
+                .length(REVIEW_PANEL_HEIGHT);
     }
 
     private Element boardPanel() {

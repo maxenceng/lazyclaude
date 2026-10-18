@@ -1,7 +1,11 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
+import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadInDiffView;
@@ -10,6 +14,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
+import dev.maxenceng.lazyclaude.review.published.ThreadLine;
 import dev.maxenceng.lazyclaude.review.published.PullRequestTitle;
 
 /**
@@ -27,6 +32,8 @@ final class ReviewPane {
     private PullRequestDiffView diff;
     private ThreadsView threads;
     private ThreadsInDiffView placed;
+    private PendingReviewView pending;
+    private PendingCommentsInDiffView placedPending;
     private boolean showResolved;
     private DiffRows rows;
     private int cursor;
@@ -36,14 +43,23 @@ final class ReviewPane {
     private int viewHeight;
     private long diffReads;
     private long threadsReads;
+    private long pendingReads;
 
-    ReviewPane(PullRequestNumber number, PullRequestTitle title, PullRequestDiffView diff, ThreadsView threads, ReviewQuery reviews) {
+    ReviewPane(
+            PullRequestNumber number,
+            PullRequestTitle title,
+            PullRequestDiffView diff,
+            ThreadsView threads,
+            PendingReviewView pending,
+            ReviewQuery reviews) {
         this.number = number;
         this.title = title;
         this.diff = diff;
         this.threads = threads;
+        this.pending = pending;
         this.reviews = reviews;
         this.placed = reviews.threadsInDiff(diff, threads);
+        this.placedPending = reviews.pendingInDiff(diff, pending);
         this.rows = DiffRows.of(diff, placed, showResolved);
     }
 
@@ -61,6 +77,20 @@ final class ReviewPane {
 
     ThreadsView threads() {
         return threads;
+    }
+
+    PendingReviewView pending() {
+        return pending;
+    }
+
+    /** The pending comments in diff order, the ones on no line last; none until the pending review is read. */
+    List<PendingInDiffView> pendingComments() {
+        return placedPending.comments();
+    }
+
+    /** How many pending comments hang on the file at {@code path}. */
+    int pendingIn(DiffPath path) {
+        return (int) pendingComments().stream().filter(placed -> placed.comment().anchor().path().equals(path)).count();
     }
 
     DiffRows rows() {
@@ -120,7 +150,19 @@ final class ReviewPane {
         if (read == threadsReads) {
             threads = view;
             rebuild();
-            selectedComment = clamp(selectedComment, comments().size());
+            selectedComment = clamp(selectedComment, entries().size());
+        }
+    }
+
+    long beginPendingRead() {
+        pendingReads++;
+        return pendingReads;
+    }
+
+    void applyPending(long read, PendingReviewView view) {
+        if (read == pendingReads) {
+            pending = view;
+            rebuild();
         }
     }
 
@@ -132,6 +174,14 @@ final class ReviewPane {
     /** The threads in diff order, the ones on no line last; none until they are read. */
     List<ThreadInDiffView> comments() {
         return placed.threads();
+    }
+
+    /** What Comments lists: the pending comments first, in diff order, then the threads in diff order. */
+    List<CommentEntry> entries() {
+        return Stream.concat(
+                        pendingComments().stream().<CommentEntry>map(PendingEntry::new),
+                        comments().stream().<CommentEntry>map(ThreadEntry::new))
+                .toList();
     }
 
     /** How many threads of the file at {@code path} still wait for an answer: not resolved, and not outdated. */
@@ -184,24 +234,32 @@ final class ReviewPane {
     }
 
     void selectCommentDown() {
-        selectedComment = clamp(selectedComment + 1, comments().size());
+        selectedComment = clamp(selectedComment + 1, entries().size());
     }
 
     void selectCommentUp() {
-        selectedComment = clamp(selectedComment - 1, comments().size());
+        selectedComment = clamp(selectedComment - 1, entries().size());
     }
 
     /** To the line the selected thread shows under; nowhere for an outdated one. */
     void goToSelectedComment() {
-        if (selectedComment < comments().size()) {
-            if (comments().get(selectedComment).line() instanceof OnDiffLine on) {
+        if (selectedComment < entries().size()) {
+            if (lineOf(entries().get(selectedComment)) instanceof OnDiffLine on) {
                 moveTo(on.index().value());
             }
         }
     }
 
+    private static ThreadLine lineOf(CommentEntry entry) {
+        return switch (entry) {
+            case PendingEntry pending -> pending.placed().line();
+            case ThreadEntry thread -> thread.placed().line();
+        };
+    }
+
     private void rebuild() {
         placed = reviews.threadsInDiff(diff, threads);
+        placedPending = reviews.pendingInDiff(diff, pending);
         rows = DiffRows.of(diff, placed, showResolved);
         moveTo(cursor);
     }

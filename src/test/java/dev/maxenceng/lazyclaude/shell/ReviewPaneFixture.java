@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.shell;
 
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.noPendingReviewView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.addedFileView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.changedFileView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingDiffView;
@@ -46,7 +47,7 @@ final class ReviewPaneFixture {
     }
 
     static ReviewPane paneOver(PullRequestDiffView diff, ThreadsView threads) {
-        return new ReviewPane(pullRequestNumber(), pullRequestTitle(), diff, threads, joiningReviews());
+        return new ReviewPane(pullRequestNumber(), pullRequestTitle(), diff, threads, noPendingReviewView(), joiningReviews());
     }
 
     static ReviewPane loadingPane() {

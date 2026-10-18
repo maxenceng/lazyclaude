@@ -3,9 +3,11 @@ package dev.maxenceng.lazyclaude.shell;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailablePendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableThreadsView;
 import dev.maxenceng.lazyclaude.review.published.Reason;
 
@@ -20,6 +22,10 @@ final class ReviewReads {
 
     static ThreadsView unreadableThreads(Throwable failed) {
         return new UnavailableThreadsView(reasonOf(failed));
+    }
+
+    static PendingReviewView unreadablePending(Throwable failed) {
+        return new UnavailablePendingReviewView(reasonOf(failed));
     }
 
     private static Reason reasonOf(Throwable failed) {
