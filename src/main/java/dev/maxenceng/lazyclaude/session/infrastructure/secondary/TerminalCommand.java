@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -14,6 +15,8 @@ import dev.maxenceng.lazyclaude.session.domain.TerminalJumpFailedException;
 /** Runs a command that brings a window forward and says how it ended and what it printed, standard error included. */
 final class TerminalCommand {
 
+    // A reader blocks until the process exits, so each gets its own virtual thread rather than a slot of the shared pool.
+    private static final Executor READERS = task -> Thread.ofVirtual().start(task);
     private static final String CANNOT_RUN = "cannot run %s: %s";
     private static final String TIMEOUT = "%s did not answer within %d s";
     private static final String INTERRUPTED = "interrupted while waiting for %s";
@@ -35,7 +38,7 @@ final class TerminalCommand {
     CommandOutput run() {
         Process process = start();
         try {
-            CompletableFuture<String> printed = CompletableFuture.supplyAsync(() -> readAll(process));
+            CompletableFuture<String> printed = CompletableFuture.supplyAsync(() -> readAll(process), READERS);
             if (!process.waitFor(patience.toMillis(), TimeUnit.MILLISECONDS)) {
                 process.destroyForcibly();
                 throw new TerminalJumpFailedException(TIMEOUT.formatted(program(), patience.toSeconds()));

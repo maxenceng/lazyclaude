@@ -50,7 +50,9 @@ final class DiffText {
             case HunkHeaderRow header ->
                 List.of(clipped(List.of(new StatusSpan(header.header().value(), Style.EMPTY.dim())), width));
             case LineRow line -> List.of(lineRow(line.line(), width, numberWidth, cursor));
-            case ThreadRow thread -> ThreadText.rows(thread.thread(), width, gutterWidth(numberWidth));
+            case ThreadRow thread -> ThreadText.rows(thread.thread(), width, gutterWidth(numberWidth)).stream()
+                    .map(spans -> clipped(spans, width))
+                    .toList();
         };
     }
 

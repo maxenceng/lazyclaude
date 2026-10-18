@@ -15,4 +15,8 @@ public final class ThreadCommentFixture {
     public static ThreadComment answer() {
         return comment("bob", "It assumes markdown.");
     }
+
+    public static ThreadComment replyFromALongAuthor() {
+        return comment("dependabot[bot]", "Bumps the version of the parser.");
+    }
 }

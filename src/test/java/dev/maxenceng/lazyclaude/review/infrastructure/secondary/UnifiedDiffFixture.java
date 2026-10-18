@@ -134,4 +134,30 @@ public final class UnifiedDiffFixture {
                 +x
                 """;
     }
+
+    public static String fileLineTooShortToNameAPath() {
+        return """
+                diff --git x
+                @@ -1 +1 @@
+                +x
+                """;
+    }
+
+    public static String fileLineNamingABlankPath() {
+        return """
+                diff --git a/  b/\s
+                @@ -1 +1 @@
+                +x
+                """;
+    }
+
+    public static String hunkHeaderPastAnyLineNumber() {
+        return """
+                diff --git a/src/Board.java b/src/Board.java
+                --- a/src/Board.java
+                +++ b/src/Board.java
+                @@ -99999999999 +1 @@
+                +x
+                """;
+    }
 }

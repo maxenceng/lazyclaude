@@ -40,6 +40,12 @@ public final class Assert {
         }
     }
 
+    public static void notAfter(String field, int input, int bound) {
+        if (input > bound) {
+            throw new AfterBoundException(field, input, bound);
+        }
+    }
+
     public static void absolute(String field, Path input) {
         notNull(field, input);
         if (!input.isAbsolute()) {

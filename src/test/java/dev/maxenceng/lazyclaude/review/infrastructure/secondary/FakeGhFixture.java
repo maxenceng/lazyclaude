@@ -10,7 +10,12 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.review.domain.MergedPullRequest;
 import dev.maxenceng.lazyclaude.review.domain.PullRequest;
@@ -22,6 +27,7 @@ public final class FakeGhFixture {
 
     private static final Duration PATIENCE = Duration.ofSeconds(10);
     private static final Duration IMPATIENCE = Duration.ofMillis(300);
+    private static final int LINES_OF_A_LARGE_DIFF = 5000;
 
     private FakeGhFixture() {}
 
@@ -126,6 +132,30 @@ public final class FakeGhFixture {
         return ghFailing(directory, 1, "could not find pull request diff: HTTP 406: Sorry, the diff exceeded the maximum number of lines (20000)");
     }
 
+    public static Path ghPrintingALargeDiff(Path directory) throws IOException {
+        return script(
+                directory,
+                "printf 'diff --git a/x b/x\\n--- a/x\\n+++ b/x\\n@@ -0,0 +1,%d @@\\n'\nseq 1 %d | sed 's/^/+a line longer than a pipe buffer would hold in total /'\n"
+                        .formatted(LINES_OF_A_LARGE_DIFF, LINES_OF_A_LARGE_DIFF));
+    }
+
+    public static int linesOfALargeDiff() {
+        return LINES_OF_A_LARGE_DIFF;
+    }
+
+    public static <T> T whileEveryCommonPoolThreadIsBusy(Callable<T> read) throws Exception {
+        CountDownLatch release = new CountDownLatch(1);
+        List<CompletableFuture<Void>> holders = IntStream.range(0, ForkJoinPool.getCommonPoolParallelism())
+                .mapToObj(any -> CompletableFuture.runAsync(() -> awaitQuietly(release), ForkJoinPool.commonPool()))
+                .toList();
+        try {
+            return read.call();
+        } finally {
+            release.countDown();
+            CompletableFuture.allOf(holders.toArray(CompletableFuture[]::new)).join();
+        }
+    }
+
     public static GhThreadRepository threadRepositoryOver(Path gh) {
         return new GhThreadRepository(gh.toString(), PATIENCE);
     }
@@ -202,6 +232,14 @@ public final class FakeGhFixture {
         return """
                 {"number":%d,"title":"%s","headRefName":"%s","isDraft":%b,"isCrossRepository":%b,"statusCheckRollup":[%s],"unknown":"ignored"}"""
                 .formatted(number, title, head, draft, fork, String.join(",", checks));
+    }
+
+    private static void awaitQuietly(CountDownLatch release) {
+        try {
+            release.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static Path script(Path directory, String body) throws IOException {

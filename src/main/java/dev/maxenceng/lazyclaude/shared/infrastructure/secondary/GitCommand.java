@@ -5,11 +5,14 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.stream.Stream;
 
 /** Runs {@code git} in a directory and waits for it. A run that ends non-zero is a result; only a run that cannot happen is a failure. */
 public final class GitCommand {
 
+    // A reader blocks until the process exits, so each gets its own virtual thread rather than a slot of the shared pool.
+    private static final Executor READERS = task -> Thread.ofVirtual().start(task);
     private static final String IN_DIRECTORY = "-C";
 
     private final String executable;
@@ -23,7 +26,7 @@ public final class GitCommand {
         try {
             Process process = new ProcessBuilder(Stream.concat(Stream.of(executable, IN_DIRECTORY, in.toString()), arguments.stream()).toList())
                     .start();
-            CompletableFuture<byte[]> said = CompletableFuture.supplyAsync(() -> readAll(process));
+            CompletableFuture<byte[]> said = CompletableFuture.supplyAsync(() -> readAll(process), READERS);
             byte[] output = process.getInputStream().readAllBytes();
             int exitValue = process.waitFor();
             return new GitResult(exitValue, output, said.get());

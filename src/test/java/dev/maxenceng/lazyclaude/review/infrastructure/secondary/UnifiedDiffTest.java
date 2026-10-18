@@ -14,7 +14,10 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDi
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.binaryFileDiff;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.blankContextDiff;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.deletedFileDiff;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.fileLineNamingABlankPath;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.fileLineTooShortToNameAPath;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.firstLineDiff;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.hunkHeaderPastAnyLineNumber;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.hunkHeaderWithoutNumbers;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.modifiedFileDiff;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.renamedFileDiff;
@@ -92,6 +95,27 @@ class UnifiedDiffTest {
     @Test
     void shouldRefuseAHunkWhoseHeaderCarriesNoLineNumbers() {
         assertThatThrownBy(() -> UnifiedDiff.parse(hunkHeaderWithoutNumbers()))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("gh pr diff does not parse");
+    }
+
+    @Test
+    void shouldRefuseAFileLineTooShortToNameAPath() {
+        assertThatThrownBy(() -> UnifiedDiff.parse(fileLineTooShortToNameAPath()))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("gh pr diff does not parse");
+    }
+
+    @Test
+    void shouldRefuseAFileLineNamingABlankPath() {
+        assertThatThrownBy(() -> UnifiedDiff.parse(fileLineNamingABlankPath()))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("gh pr diff does not parse");
+    }
+
+    @Test
+    void shouldRefuseAHunkHeaderPastAnyLineNumber() {
+        assertThatThrownBy(() -> UnifiedDiff.parse(hunkHeaderPastAnyLineNumber()))
                 .isInstanceOf(PullRequestsUnavailableException.class)
                 .hasMessageContaining("gh pr diff does not parse");
     }

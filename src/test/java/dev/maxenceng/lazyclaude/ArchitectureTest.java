@@ -13,6 +13,8 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import com.tngtech.archunit.core.domain.Dependency;
@@ -136,6 +138,15 @@ class ArchitectureTest {
             .haveFullyQualifiedName(java.io.PrintStream.class.getName())
             .orShould()
             .callMethod(Throwable.class, "printStackTrace")
+            .allowEmptyShould(true);
+
+    // A task without an executor runs on the common pool, where a blocking read starves every other user of it.
+    @ArchTest
+    static final ArchRule async_work_names_its_executor = noClasses()
+            .should()
+            .callMethod(CompletableFuture.class, "supplyAsync", Supplier.class)
+            .orShould()
+            .callMethod(CompletableFuture.class, "runAsync", Runnable.class)
             .allowEmptyShould(true);
 
     // Jackson parses what other tools write; it stays in the adapter that reads it, never in a domain or a screen.

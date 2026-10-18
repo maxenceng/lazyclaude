@@ -1,6 +1,6 @@
 ---
 id: REVIEW-2
-status: in-progress
+status: in-review
 context: review
 type: feature
 tracker_id: 88
@@ -11,47 +11,47 @@ created: 2026-10-10
 
 ## Acceptance criteria
 
-- [ ] `p` on a ticket whose ticket branch is the head of an open pull request (REVIEW-1's
+- [x] `p` on a ticket whose ticket branch is the head of an open pull request (REVIEW-1's
       exact join) opens the review: the left column's four panels are replaced by **Files**
       and **Comments**, the main view shows the PR's diff, and the status line and the dock
       stay. `esc` leaves it and restores the four panels with the same ticket selected.
-- [ ] `p review` is in the key bar only on such a ticket. On a ticket with no open PR, one
+- [x] `p review` is in the key bar only on such a ticket. On a ticket with no open PR, one
       whose PR head only shares the id prefix, or while the open-PR fetch is `checking…` or
       `unknown`, `p` is not listed and does nothing.
-- [ ] Diff and threads are read once when `p` opens the review, off the render thread, with
+- [x] Diff and threads are read once when `p` opens the review, off the render thread, with
       a dim `loading…` in the main view meanwhile, and read again on `R`. No timer reads them.
-- [ ] The main view shows the diff of every file in one scroll, each file under a file
+- [x] The main view shows the diff of every file in one scroll, each file under a file
       header and each hunk under its `@@` header, `+` lines green, `-` lines red. It draws
       only the visible slice, so a diff of 20k lines scrolls without a per-frame cost in its
       length.
-- [ ] A line cursor moves over `+`, `-` and context lines and skips file and hunk headers:
+- [x] A line cursor moves over `+`, `-` and context lines and skips file and hunk headers:
       `j`/`k` one line, `J`/`K` to the first line of the next/previous file, `ctrl+d`/`ctrl+u`
       half a page. The Files selection follows the cursor's file; `enter` on a file in Files
       moves the cursor to its first line.
-- [ ] Files lists each file with its status letter (`A` added, `M` modified, `D` deleted,
+- [x] Files lists each file with its status letter (`A` added, `M` modified, `D` deleted,
       `R` renamed, shown `old → new`), its name, and `◆n` for its open threads (unresolved,
       not outdated); no `◆` when it has none.
-- [ ] A thread shows inline under the line it sits on: its `line` on the new side for
+- [x] A thread shows inline under the line it sits on: its `line` on the new side for
       `RIGHT`, on the old side (the `-` line) for `LEFT`. A range shows `L12–18` from
       `startLine` to `line`. Its comments follow as author and body in plain wrapped text,
       replies indented under the first.
-- [ ] A resolved thread is hidden inline until `r`, which shows resolved threads dimmed;
+- [x] A resolved thread is hidden inline until `r`, which shows resolved threads dimmed;
       `r` again hides them.
 - [ ] An outdated thread (no `line`) is never placed inline. Comments lists every thread in
       diff order (file, then line), outdated ones last and marked `outdated`, resolved ones
       dimmed; `enter` on a placed thread moves the cursor to its line, and does nothing on
       an outdated one.
-- [ ] When the diff cannot be read — `gh` missing, not authenticated, offline, a non-zero
+- [x] When the diff cannot be read — `gh` missing, not authenticated, offline, a non-zero
       exit, or a run killed after 30 s — the main view shows `PR unknown (<reason>)` and
       Files is empty. A diff GitHub refuses as too large shows
       `diff too large for GitHub (<reason>)`. Threads still list in Comments when they were
       read; when they cannot be, Comments shows `threads unknown (<reason>)`. Nothing reaches
       the status line, nothing blocks, and `esc` still leaves.
-- [ ] A read that fails on `R` after one succeeded replaces what was shown with the reason;
+- [x] A read that fails on `R` after one succeeded replaces what was shown with the reason;
       the last good diff or threads are never shown as current.
-- [ ] The open-PR fetch passes `--limit 100`: with more than 30 open PRs (`gh`'s default),
+- [x] The open-PR fetch passes `--limit 100`: with more than 30 open PRs (`gh`'s default),
       every ticket's PR up to 100 still gets its glyph.
-- [ ] `make contract` runs `gh pr diff --color never` and the threads GraphQL query against
+- [x] `make contract` runs `gh pr diff --color never` and the threads GraphQL query against
       a real pull request of this repository and asserts both parse.
 
 ## Model decision

@@ -9,6 +9,7 @@ public record PlacedThread(ThreadSide side, DiffLineNumber first, DiffLineNumber
         Assert.notNull("side", side);
         Assert.notNull("first", first);
         Assert.notNull("last", last);
+        Assert.notAfter("first", first.value(), last.value());
     }
 
     public static PlacedThreadBuilder builder() {

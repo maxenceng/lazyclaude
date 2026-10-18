@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -21,6 +22,8 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
  */
 final class GhCommand {
 
+    // A reader blocks until the process exits, so each gets its own virtual thread rather than a slot of the shared pool.
+    private static final Executor READERS = task -> Thread.ofVirtual().start(task);
     private static final int SUCCESS = 0;
     private static final int WORDS_OF_A_COMMAND = 2;
 
@@ -76,7 +79,7 @@ final class GhCommand {
     }
 
     private static CompletableFuture<byte[]> readInBackground(InputStream stream, String source) {
-        return CompletableFuture.supplyAsync(() -> readAll(stream, source));
+        return CompletableFuture.supplyAsync(() -> readAll(stream, source), READERS);
     }
 
     private static byte[] readAll(InputStream stream, String source) {

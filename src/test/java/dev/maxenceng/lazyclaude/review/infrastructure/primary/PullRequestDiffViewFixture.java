@@ -10,6 +10,7 @@ import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDi
 import static dev.maxenceng.lazyclaude.review.published.ReasonFixture.reason;
 import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.answer;
 import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.question;
+import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.replyFromALongAuthor;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.outdated;
 
 import java.nio.file.Path;
@@ -72,6 +73,10 @@ public final class PullRequestDiffViewFixture {
 
     public static ReviewThreadView openThreadView(DiffPath path, ThreadPosition position) {
         return threadView(path, position, false, true, question(), answer());
+    }
+
+    public static ReviewThreadView threadWithALongAuthorView(DiffPath path, ThreadPosition position) {
+        return threadView(path, position, false, true, question(), replyFromALongAuthor());
     }
 
     public static ReviewThreadView resolvedThreadView(DiffPath path, ThreadPosition position) {

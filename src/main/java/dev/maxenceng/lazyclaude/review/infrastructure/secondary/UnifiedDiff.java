@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Gatherers;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.review.domain.DiffFile;
 import dev.maxenceng.lazyclaude.review.domain.Hunk;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestDiff;
@@ -29,10 +30,11 @@ import dev.maxenceng.lazyclaude.review.published.RenamedFile;
 final class UnifiedDiff {
 
     private static final String SOURCE = "gh pr diff";
+    private static final String UNPARSED = "%s does not parse: %s";
     private static final Pattern FILE_START = Pattern.compile("(?m)^(?=diff --git )");
     private static final Pattern HUNK_START = Pattern.compile("(?m)^(?=@@ )");
     private static final Pattern LINE_BREAK = Pattern.compile("\n");
-    private static final Pattern HUNK_HEADER = Pattern.compile("^@@ -(\\d+)(?:,\\d+)? \\+(\\d+)(?:,\\d+)? @@.*");
+    private static final Pattern HUNK_HEADER = Pattern.compile("^@@ -(\\d{1,9})(?:,\\d+)? \\+(\\d{1,9})(?:,\\d+)? @@.*");
     private static final String FIRST_HUNK = "\n@@ ";
     private static final String FILE_LINE = "diff --git ";
     private static final String NO_NEWLINE_MARKER = "\\";
@@ -50,7 +52,11 @@ final class UnifiedDiff {
 
     /** @throws PullRequestsUnavailableException saying what {@code gh pr diff} printed that is not a unified diff */
     static PullRequestDiff parse(String text) {
-        return new PullRequestDiff(FILE_START.splitAsStream(text).filter(section -> !section.isBlank()).map(UnifiedDiff::file).toList());
+        try {
+            return new PullRequestDiff(FILE_START.splitAsStream(text).filter(section -> !section.isBlank()).map(UnifiedDiff::file).toList());
+        } catch (DomainException refused) {
+            throw new PullRequestsUnavailableException(UNPARSED.formatted(SOURCE, refused.getMessage()), refused);
+        }
     }
 
     private static DiffFile file(String section) {
@@ -82,6 +88,9 @@ final class UnifiedDiff {
     // deferred: a path git quotes (one with non-ASCII characters) reads with its quotes and escapes — close it when a ticket's diff names such a file.
     private static String pathOf(String fileLine) {
         String paths = fileLine.substring(FILE_LINE.length());
+        if (paths.length() < OLD_SIDE.length() + NEW_SIDE_GAP.length()) {
+            throw new PullRequestsUnavailableException(UNPARSED.formatted(SOURCE, fileLine));
+        }
         int length = (paths.length() - NEW_SIDE_GAP.length() - OLD_SIDE.length()) / PATHS_ON_THE_LINE;
         return paths.substring(OLD_SIDE.length(), OLD_SIDE.length() + length);
     }
@@ -90,7 +99,7 @@ final class UnifiedDiff {
         List<String> lines = LINE_BREAK.splitAsStream(section).toList();
         Matcher header = HUNK_HEADER.matcher(lines.getFirst());
         if (!header.matches()) {
-            throw new PullRequestsUnavailableException("%s does not parse: %s".formatted(SOURCE, lines.getFirst()));
+            throw new PullRequestsUnavailableException(UNPARSED.formatted(SOURCE, lines.getFirst()));
         }
         ScannedDiffLine before = new ScannedDiffLine("", Integer.parseInt(header.group(OLD_START)), Integer.parseInt(header.group(NEW_START)));
         return Hunk.builder()

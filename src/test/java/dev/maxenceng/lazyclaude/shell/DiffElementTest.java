@@ -4,6 +4,7 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.openThreadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.resolvedThreadView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.threadWithALongAuthorView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
@@ -16,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
 
 class DiffElementTest {
@@ -86,6 +88,17 @@ class DiffElementTest {
         Screen screen = Screen.of(new DiffElement(pane), 30, 12);
 
         assertThat(screen.lines()).anySatisfy(line -> assertThat(line.stripTrailing()).isEqualTo("             Why not reuse it?").hasSizeLessThanOrEqualTo(30));
+    }
+
+    @Test
+    void shouldKeepEveryThreadRowInsideTheAreaWhenAnAuthorLeavesNoRoomForTheReply() {
+        ReviewPane pane = paneOver(twoFileDiffView(), readThreadsViewOf(threadWithALongAuthorView(diffPath(), rightOn(3))));
+
+        Screen screen = Screen.of(new DiffElement(pane), 40, 12, Rect.of(24, 12));
+
+        assertThat(screen.lines())
+                .as("a row drawn past the area's right edge overwrites the main panel's border")
+                .allSatisfy(line -> assertThat(line.substring(24)).isBlank());
     }
 
     @Test

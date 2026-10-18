@@ -8,10 +8,13 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFix
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghFailing;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghHanging;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghPrinting;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghPrintingALargeDiff;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghRefusingALargeDiff;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.impatientDiffRepositoryOver;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.linesOfALargeDiff;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.missingCommand;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.projectAt;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.whileEveryCommonPoolThreadIsBusy;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.UnifiedDiffFixture.modifiedFileDiff;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +43,17 @@ class GhPullRequestDiffRepositoryTest {
         PullRequestDiff read = diffRepositoryOver(ghPrinting(root, modifiedFileDiff())).diff(projectAt(root), pullRequestNumber());
 
         assertThat(read.files()).isEqualTo(List.of(modifiedFile()));
+    }
+
+    @Test
+    void shouldReadADiffLargerThanAPipeHoldsWhileEveryCommonPoolThreadIsBusy() throws Exception {
+        Path gh = ghPrintingALargeDiff(root);
+
+        PullRequestDiff read = whileEveryCommonPoolThreadIsBusy(() -> diffRepositoryOver(gh).diff(projectAt(root), pullRequestNumber()));
+
+        assertThat(read.files().getFirst().hunks().getFirst().lines())
+                .as("gh blocks on a full pipe until its output is read, so a reader queued behind busy shared threads stalls it")
+                .hasSize(linesOfALargeDiff());
     }
 
     @Test

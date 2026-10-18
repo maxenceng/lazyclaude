@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
@@ -22,6 +23,8 @@ import dev.maxenceng.lazyclaude.session.domain.NotificationId;
  */
 public final class NotifySendRepository implements DesktopNotificationPort {
 
+    // A reader blocks until the process exits, so each gets its own virtual thread rather than a slot of the shared pool.
+    private static final Executor READERS = task -> Thread.ofVirtual().start(task);
     private static final String PRINT_ID = "-p";
     private static final String REPLACE = "-r";
     private static final String END_OF_OPTIONS = "--";
@@ -100,7 +103,7 @@ public final class NotifySendRepository implements DesktopNotificationPort {
     private CommandOutput execute(List<String> command, List<String> program) {
         Process process = start(command, program);
         try {
-            CompletableFuture<String> output = CompletableFuture.supplyAsync(() -> readAll(process, program));
+            CompletableFuture<String> output = CompletableFuture.supplyAsync(() -> readAll(process, program), READERS);
             if (!process.waitFor(patience.toMillis(), TimeUnit.MILLISECONDS)) {
                 process.destroyForcibly();
                 throw new DesktopNotificationUnavailableException(TIMEOUT.formatted(program.getFirst(), patience.toSeconds()));
