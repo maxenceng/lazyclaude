@@ -68,13 +68,4 @@ class CommentBoxTest {
         assertThat(box.content()).isEqualTo("text");
         assertThat(box.edit(key('!'))).isTrue();
     }
-
-    @Test
-    void shouldTakePastedText() {
-        CommentBox box = new CommentBox(new SummaryTarget(), Optional.empty(), "a");
-
-        box.paste("b\nc");
-
-        assertThat(box.content()).isEqualTo("ab\nc");
-    }
 }

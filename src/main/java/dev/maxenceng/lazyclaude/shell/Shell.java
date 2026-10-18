@@ -199,10 +199,14 @@ public final class Shell extends ToolkitApp {
     private static final String REFRESH_KEY = "R refresh";
     private static final String JUMP_KEY = "o jump";
     private static final String REVIEW_KEY = "p review";
-    private static final List<String> DIFF_KEYS =
-            List.of("j/k line", "J/K file", "^d/^u page", "r resolved", "R refresh", "esc back");
-    private static final List<String> PANEL_REVIEW_KEYS =
-            List.of("j/k move", "enter go to line", "r resolved", "R refresh", "esc back");
+    private static final List<String> DIFF_KEYS = List.of(
+            "c comment", "v range", "enter edit", "x delete", "S submit", "j/k line", "J/K file", "^d/^u page", "r resolved", "R refresh", "esc back");
+    private static final List<String> COMMENTS_REVIEW_KEYS = List.of(
+            "c reply", "enter open", "x delete", "S submit", "j/k move", "r resolved", "R refresh", "esc back");
+    private static final List<String> FILES_REVIEW_KEYS = List.of("j/k move", "enter go to line", "S submit", "r resolved", "R refresh", "esc back");
+    private static final List<String> BOX_KEYS = List.of("^s save  esc cancel");
+    private static final List<String> RESPOND_KEYS = List.of("y start  esc back");
+    private static final List<String> SUBMIT_KEYS = List.of("y submit  any other key keeps it pending");
     private static final String REMOVE_WORKTREE_KEY = "d remove worktree";
     private static final String NEW_KEY = "N new";
     private static final String NEW_TICKET_KEY = "n new";
@@ -1861,9 +1865,22 @@ public final class Shell extends ToolkitApp {
         if (inSession()) {
             return List.of(SESSION_KEYS);
         }
+        if (respondPrompt.isPresent()) {
+            return RESPOND_KEYS;
+        }
+        if (submitPrompt.isPresent()) {
+            return SUBMIT_KEYS;
+        }
+        if (review.flatMap(ReviewPane::box).isPresent()) {
+            return BOX_KEYS;
+        }
         if (review.isPresent()) {
             return Stream.concat(
-                            (focus == Focus.MAIN ? DIFF_KEYS : PANEL_REVIEW_KEYS).stream(),
+                            (switch (focus) {
+                                case MAIN -> DIFF_KEYS;
+                                case COMMENTS -> COMMENTS_REVIEW_KEYS;
+                                default -> FILES_REVIEW_KEYS;
+                            }).stream(),
                             Stream.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY))
                     .toList();
         }

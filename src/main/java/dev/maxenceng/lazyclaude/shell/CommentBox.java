@@ -84,11 +84,4 @@ final class CommentBox {
         }
         return true;
     }
-
-    /** Puts pasted text in at the cursor. */
-    void paste(String pasted) {
-        if (!saving) {
-            text.insert(pasted);
-        }
-    }
 }

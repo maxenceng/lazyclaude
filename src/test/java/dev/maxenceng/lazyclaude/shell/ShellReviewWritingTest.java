@@ -52,6 +52,8 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReplyPayloa
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.tamboui.tui.event.KeyCode;
+import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.KeyModifiers;
 
 class ShellReviewWritingTest {
 
@@ -379,5 +381,26 @@ class ShellReviewWritingTest {
         shell.press(key('c'));
 
         assertThat(Screen.of(shell).text()).doesNotContain("esc cancel");
+    }
+
+    @Test
+    void shouldListReplyInsteadOfCommentInTheKeyBarOfCommentsAndOnlyTheBoxKeysWhileTheBoxIsOpen() {
+        Shell shell = shellInCommentsOn(openThreadView(diffPath(), rightOn(3)), mock(PendingReviewCommand.class));
+        assertThat(Screen.of(shell).lines().getLast()).contains("c reply", "x delete", "S submit").doesNotContain("c comment");
+
+        shell.press(key('c'));
+
+        assertThat(Screen.of(shell).lines().getLast()).contains("^s save  esc cancel").doesNotContain("S submit");
+    }
+
+    @Test
+    void shouldQuitOnCtrlCWithTheBoxOpenAskingNothingAboutTheReview() {
+        Shell shell = shellOnTheAddedLineWriting(mock(PendingReviewCommand.class));
+        shell.press(key('c'));
+        typed(shell, "unsaved");
+
+        shell.press(KeyEvent.ofChar('c', KeyModifiers.CTRL));
+
+        assertThat(shell.quitRequested()).isTrue();
     }
 }
