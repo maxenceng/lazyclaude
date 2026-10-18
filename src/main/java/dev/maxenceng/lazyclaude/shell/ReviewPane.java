@@ -286,6 +286,14 @@ final class ReviewPane {
         rebuild();
     }
 
+    /** Drops the range marked; answers whether there was one. */
+    boolean clearRange() {
+        boolean marked = rangeStart.isPresent();
+        rangeStart = Optional.empty();
+        rangeEnd = Optional.empty();
+        return marked;
+    }
+
     /** Whether the diff line at {@code line} is inside the range being marked. */
     boolean inRange(int line) {
         return rangeStart.isPresent() && line >= rangeLow() && line <= rangeHigh();

@@ -26,15 +26,29 @@ final class PopupElement implements Element {
     private static final String SIDE = "│";
     private static final String GAP = " ";
     private static final int PADDING = 2;
+    private static final int CARET_LEFT = 2;
 
     private final String title;
     private final List<String> rows;
     private final Optional<Integer> bold;
     private final String hint;
     private final Supplier<Optional<Rect>> anchor;
+    private final Optional<BoxText.Caret> caret;
 
     /** {@code bold} is the row the cursor is on, if there is a cursor. */
     PopupElement(String title, List<String> rows, Optional<Integer> bold, String hint, Supplier<Optional<Rect>> anchor) {
+        this(title, rows, bold, hint, anchor, Optional.empty());
+    }
+
+    /** {@code caret} is where the text cursor stands within the rows, when the popup holds a box to write in. */
+    PopupElement(
+            String title,
+            List<String> rows,
+            Optional<Integer> bold,
+            String hint,
+            Supplier<Optional<Rect>> anchor,
+            Optional<BoxText.Caret> caret) {
+        this.caret = caret;
         this.title = title;
         this.rows = rows;
         this.bold = bold;
@@ -52,6 +66,7 @@ final class PopupElement implements Element {
                 .forEach(row -> draw(frame, area, corner, row + 1, side(rows.get(row), inner),
                         bold.filter(cursor -> cursor == row).isPresent() ? Style.EMPTY.bold() : Style.EMPTY));
         draw(frame, area, corner, rows.size() + 1, ruled(BOTTOM_LEFT, hint, BOTTOM_RIGHT, inner), border);
+        caret.ifPresent(at -> frame.setCursorPosition(corner.x() + CARET_LEFT + at.column(), corner.y() + 1 + at.row()));
     }
 
     private int width() {

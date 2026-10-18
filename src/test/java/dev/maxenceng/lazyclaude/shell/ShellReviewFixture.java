@@ -6,7 +6,9 @@ import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixtu
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.commentOnView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.loadingPendingView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.noPendingReviewView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.onDiffAnchorView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.openPendingViewOf;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.pendingCommentView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.replyViewOn;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
@@ -18,9 +20,12 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.openPullRequestsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.pullRequestView;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
+import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.pendingCommentId;
+import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.secondPendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDiffPath;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,7 +38,10 @@ import java.util.stream.IntStream;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
+import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
@@ -139,6 +147,32 @@ final class ShellReviewFixture {
         when(writing.summarise(any())).thenReturn(answer);
         when(writing.submit(any())).thenReturn(answer);
         return writing;
+    }
+
+    static PendingCommentView firstOfTwoPendingComments() {
+        return pendingCommentView(pendingCommentId(), new CommentBody("first"), onDiffAnchorView(diffPath(), rightOn(3)));
+    }
+
+    static PendingCommentView secondOfTwoPendingComments() {
+        return pendingCommentView(secondPendingCommentId(), new CommentBody("second"), onDiffAnchorView(diffPath(), rightOn(3)));
+    }
+
+    static Shell shellOnALineWithTwoPendingComments(PendingReviewCommand writing) {
+        return ShellFixture.pressed(
+                shellReviewing(
+                        twoFileDiffView(),
+                        readThreadsViewOf(),
+                        openPendingViewOf(firstOfTwoPendingComments(), secondOfTwoPendingComments()),
+                        writing),
+                key('j'),
+                2);
+    }
+
+    static Shell shellInCommentsOn(ReviewThreadView thread, PendingReviewCommand writing) {
+        Shell shell = shellReviewing(twoFileDiffView(), readThreadsViewOf(thread), noPendingReviewView(), writing);
+        shell.press(key('h'));
+        shell.press(alt('j'));
+        return shell;
     }
 
     static Shell typed(Shell shell, String text) {

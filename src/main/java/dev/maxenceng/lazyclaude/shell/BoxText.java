@@ -95,4 +95,17 @@ final class BoxText {
     static int rowCount(CommentBox box, int width, int indent) {
         return inline(box, width, indent).size();
     }
+
+    /** The rows a popup holds for a box: {@code above} first, then a rule, then the box's text and what stands under it. */
+    static List<String> popupRows(CommentBox box, int inner, List<String> above) {
+        return Stream.of(above.stream(), Stream.of(RULE.repeat(inner)), textRows(box, inner).stream(), status(box).stream())
+                .flatMap(rows -> rows)
+                .toList();
+    }
+
+    /** The cursor within a popup's rows, which {@code above} lines and the rule come before the text of. */
+    static Caret popupCaret(CommentBox box, int inner, int above) {
+        Caret within = caret(box, inner);
+        return new Caret(above + 1 + within.row(), within.column());
+    }
 }

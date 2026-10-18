@@ -36,6 +36,8 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OnDiffAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingDeletePayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingEditPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReplyPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
@@ -132,6 +134,7 @@ public final class Shell extends ToolkitApp {
     private static final String COMMENTS_TITLE = "Comments";
     private static final String REVIEW_PANEL_TITLE = "Review";
     private static final String REVIEW_TITLE = "PR #%d %s";
+    private static final String NOT_DELETED = "not deleted (%s)";
     private static final String BOARD_TITLE = "Board";
     private static final String SESSIONS_TITLE = "Sessions";
     private static final String DOCS_TITLE = "Docs";
@@ -161,6 +164,8 @@ public final class Shell extends ToolkitApp {
     private static final char OPEN_REVIEW = 'p';
     private static final char RESOLVED = 'r';
     private static final char COMMENT = 'c';
+    private static final char RANGE = 'v';
+    private static final char DELETE = 'x';
     private static final char SAVE = 's';
     private static final char NEXT_FILE = 'J';
     private static final char PREVIOUS_FILE = 'K';
@@ -995,7 +1000,7 @@ public final class Shell extends ToolkitApp {
             return pressInBox(pane, pane.box().get(), key);
         }
         if (key.isKey(KeyCode.ESCAPE)) {
-            return leaveReview();
+            return pane.clearRange() || leaveReview();
         }
         if (key.hasAlt()) {
             return false;
@@ -1020,6 +1025,14 @@ public final class Shell extends ToolkitApp {
 
     /** {@code c} on the cursor's line, or on the range marked, opens the comment box under it. */
     private boolean writeInDiff(ReviewPane pane, KeyEvent key) {
+        if (key.isChar(RANGE)) {
+            pane.markRange().ifPresent(reason -> refusal = Optional.of(reason.value()));
+            return true;
+        }
+        if (key.isKey(KeyCode.ENTER) || key.isChar(DELETE)) {
+            pane.pendingOnCursorLine().ifPresent(comment -> editOrDelete(pane, key, comment, Optional.of(pane.cursor())));
+            return true;
+        }
         if (!key.isChar(COMMENT)) {
             return false;
         }
@@ -1031,6 +1044,23 @@ public final class Shell extends ToolkitApp {
             }
         }
         return true;
+    }
+
+    /** {@code enter} opens a pending comment in the box, under {@code inlineAt} if it has a line; {@code x} deletes it. */
+    private void editOrDelete(ReviewPane pane, KeyEvent key, PendingCommentView comment, Optional<Integer> inlineAt) {
+        if (key.isKey(KeyCode.ENTER)) {
+            pane.openBox(new CommentBox(new EditCommentTarget(comment), inlineAt, comment.body().value()));
+        } else {
+            inReviewOrder(
+                    pane,
+                    () -> writing.delete(new PendingDeletePayload(root, pane.number(), comment.id())),
+                    answer -> {
+                        switch (answer) {
+                            case WrittenReviewView written -> pane.applyWritten(written.pending());
+                            case RefusedWriteView refused -> refusal = Optional.of(NOT_DELETED.formatted(refused.reason().value()));
+                        }
+                    });
+        }
     }
 
     /** The box takes every key: {@code ctrl+s} saves, {@code esc} throws it away, the rest edit its text; only {@code ctrl+c} still quits. */
@@ -1128,17 +1158,34 @@ public final class Shell extends ToolkitApp {
         return true;
     }
 
-    private static boolean moveInComments(ReviewPane pane, KeyEvent key) {
+    private boolean moveInComments(ReviewPane pane, KeyEvent key) {
         if (key.isChar(DOWN)) {
             pane.selectCommentDown();
         } else if (key.isChar(UP)) {
             pane.selectCommentUp();
-        } else if (key.isKey(KeyCode.ENTER)) {
-            pane.goToSelectedComment();
+        } else if (key.isKey(KeyCode.ENTER) || key.isChar(DELETE) || key.isChar(COMMENT)) {
+            actOnSelectedComment(pane, key);
         } else {
             return false;
         }
         return true;
+    }
+
+    /** {@code enter} goes to a thread's line or opens a pending comment, {@code x} deletes a pending comment and {@code c} replies to a thread. */
+    private void actOnSelectedComment(ReviewPane pane, KeyEvent key) {
+        pane.selectedEntry().ifPresent(entry -> {
+            switch (entry) {
+                case PendingEntry pending when !key.isChar(COMMENT) -> {
+                    pane.goToSelectedComment();
+                    editOrDelete(pane, key, pending.placed().comment(), pane.lineOf(pending.placed().line()));
+                }
+                case ThreadEntry thread when key.isChar(COMMENT) ->
+                    pane.openBox(new CommentBox(
+                            new ReplyTarget(thread.placed().thread()), pane.lineOfThread(thread.placed().thread()), ""));
+                case ThreadEntry _ when key.isKey(KeyCode.ENTER) -> pane.goToSelectedComment();
+                default -> {}
+            }
+        });
     }
 
     private boolean toggleMainView() {
@@ -1474,16 +1521,33 @@ public final class Shell extends ToolkitApp {
                                 VerbPickerText.hint(),
                                 () -> sessionsArea)))
                 .orElse(screen);
+        Element withBox = review.flatMap(ReviewPane::box)
+                .filter(open -> open.inlineAt().isEmpty())
+                .<Element>map(open -> stack(withPicker, boxPopup(open)))
+                .orElse(withPicker);
         return remoteControlPrompt
                 .<Element>map(prompt -> stack(
-                        withPicker,
+                        withBox,
                         new PopupElement(
                                 RemoteControlPromptText.title(prompt),
                                 RemoteControlPromptText.rows(prompt),
                                 Optional.empty(),
                                 RemoteControlPromptText.hint(prompt),
                                 () -> mainViewArea)))
-                .orElse(withPicker);
+                .orElse(withBox);
+    }
+
+    /** The box of the summary, or of a comment or reply whose line is not in the diff, over the main view. */
+    private Element boxPopup(CommentBox open) {
+        int inner = BoxPopupText.inner(mainViewArea.map(Rect::width).orElse(DEFAULT_PANE_WIDTH));
+        List<String> above = BoxPopupText.above(open, inner);
+        return new PopupElement(
+                BoxPopupText.title(open),
+                BoxText.popupRows(open, inner, above),
+                Optional.empty(),
+                BoxText.HINT,
+                () -> mainViewArea,
+                open.saving() ? Optional.empty() : Optional.of(BoxText.popupCaret(open, inner, above.size())));
     }
 
     private Element leftColumn() {
