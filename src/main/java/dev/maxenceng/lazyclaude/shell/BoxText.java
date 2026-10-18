@@ -1,0 +1,98 @@
+package dev.maxenceng.lazyclaude.shell;
+
+import java.util.List;
+import java.util.stream.Stream;
+
+import dev.tamboui.style.Style;
+import dev.tamboui.style.Overflow;
+import dev.tamboui.widgets.input.TextAreaState;
+import dev.tamboui.widgets.input.TextAreaState.DisplayRow;
+
+/** How the review words a comment box: the text wrapped to the room it has, its frame, and the saving or not-saved line under it. */
+final class BoxText {
+
+    static final String HINT = "^s save  esc cancel";
+
+    private static final String TOP_LEFT = "╭";
+    private static final String TOP_RIGHT = "╮";
+    private static final String BOTTOM_LEFT = "╰";
+    private static final String BOTTOM_RIGHT = "╯";
+    private static final String RULE = "─";
+    private static final String SIDE = "│";
+    private static final String SPACE = " ";
+    private static final String SAVING = "saving…";
+    private static final String NOT_SAVED = "not saved (%s)";
+    private static final int FRAME = 4;
+    private static final int MIN_INNER = 8;
+
+    private BoxText() {}
+
+    /** Where the cursor is within the box's text: the row and the column of the wrapped text. */
+    record Caret(int row, int column) {}
+
+    /** The room the text has inside a box drawn across {@code width} cells. */
+    static int innerWidth(int width) {
+        return Math.max(MIN_INNER, width - FRAME);
+    }
+
+    /** The wrapped rows of the box's text, padded to {@code inner} cells. */
+    static List<String> textRows(CommentBox box, int inner) {
+        TextAreaState area = box.area();
+        return area.computeDisplayRows(inner, Overflow.WRAP_CHARACTER).stream()
+                .map(row -> padded(area.getLine(row.logicalRow()).substring(row.startCol(), row.endCol()), inner))
+                .toList();
+    }
+
+    /** The row and column the cursor is drawn at within the wrapped text. */
+    static Caret caret(CommentBox box, int inner) {
+        TextAreaState area = box.area();
+        List<DisplayRow> rows = area.computeDisplayRows(inner, Overflow.WRAP_CHARACTER);
+        int index = TextAreaState.findDisplayRowIndex(rows, area.cursorRow(), area.cursorCol());
+        return new Caret(index, Math.min(inner - 1, area.cursorCol() - rows.get(index).startCol()));
+    }
+
+    /** What stands under the box: {@code saving…} while a save is out, why the last one failed, else nothing. */
+    static List<String> status(CommentBox box) {
+        return box.saving()
+                ? List.of(SAVING)
+                : box.notSaved().map(reason -> List.of(NOT_SAVED.formatted(reason.value()))).orElse(List.of());
+    }
+
+    /** The screen rows of a box drawn inline, set in past {@code indent} cells across {@code width}. */
+    static List<List<StatusSpan>> inline(CommentBox box, int width, int indent) {
+        int boxWidth = Math.max(MIN_INNER + FRAME, width - indent);
+        int inner = innerWidth(boxWidth);
+        Style border = Style.EMPTY.fg(PendingText.COLOUR);
+        String lead = SPACE.repeat(indent);
+        Stream<List<StatusSpan>> top = Stream.of(List.of(
+                new StatusSpan(lead, Style.EMPTY), new StatusSpan(TOP_LEFT + RULE.repeat(boxWidth - 2) + TOP_RIGHT, border)));
+        Stream<List<StatusSpan>> text = textRows(box, inner).stream()
+                .map(row -> List.of(
+                        new StatusSpan(lead, Style.EMPTY),
+                        new StatusSpan(SIDE + SPACE, border),
+                        new StatusSpan(row, Style.EMPTY),
+                        new StatusSpan(SPACE + SIDE, border)));
+        String hint = SPACE + HINT + SPACE;
+        Stream<List<StatusSpan>> bottom = Stream.of(List.of(
+                new StatusSpan(lead, Style.EMPTY),
+                new StatusSpan(
+                        BOTTOM_LEFT + hint + RULE.repeat(Math.max(0, boxWidth - 2 - hint.length())) + BOTTOM_RIGHT, border)));
+        Stream<List<StatusSpan>> status = status(box).stream()
+                .map(line -> List.of(new StatusSpan(lead + SPACE.repeat(2) + line, Style.EMPTY.dim())));
+        return Stream.of(top, text, bottom, status).flatMap(rows -> rows).toList();
+    }
+
+    /** The screen column and row, within the inline box, of its cursor. */
+    static Caret inlineCaret(CommentBox box, int width, int indent) {
+        Caret within = caret(box, innerWidth(Math.max(MIN_INNER + FRAME, width - indent)));
+        return new Caret(within.row() + 1, indent + 2 + within.column());
+    }
+
+    private static String padded(String text, int inner) {
+        return text + SPACE.repeat(Math.max(0, inner - text.codePointCount(0, text.length())));
+    }
+
+    static int rowCount(CommentBox box, int width, int indent) {
+        return inline(box, width, indent).size();
+    }
+}

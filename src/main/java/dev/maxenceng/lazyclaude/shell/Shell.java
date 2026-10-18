@@ -19,6 +19,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -33,12 +34,24 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.OnDiffAnchorView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingEditPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReplyPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingSummaryPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedAnchorView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedWriteView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.WrittenReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
+import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
+import dev.maxenceng.lazyclaude.review.published.Summary;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.AddRemoteControlView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.FailedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HeldWorktreeView;
@@ -147,6 +160,8 @@ public final class Shell extends ToolkitApp {
     private static final char JUMP = 'o';
     private static final char OPEN_REVIEW = 'p';
     private static final char RESOLVED = 'r';
+    private static final char COMMENT = 'c';
+    private static final char SAVE = 's';
     private static final char NEXT_FILE = 'J';
     private static final char PREVIOUS_FILE = 'K';
     private static final char REMOVE_WORKTREE = 'd';
@@ -232,6 +247,7 @@ public final class Shell extends ToolkitApp {
     private volatile MergedPullRequestsView latestMerged = new MergedPullRequestsView(List.of());
     private Optional<Rect> mainViewArea = Optional.empty();
     private CompletableFuture<Void> outsideCommands = CompletableFuture.completedFuture(null);
+    private CompletableFuture<Void> reviewWrites = CompletableFuture.completedFuture(null);
     private boolean mainViewHidden;
     private Focus focus = Focus.BOARD;
     private Focus lastLeft = Focus.BOARD;
@@ -975,6 +991,9 @@ public final class Shell extends ToolkitApp {
 
     /** The keys of the open review; {@code false} for one it leaves to the rest of the keys. */
     private boolean pressInReview(ReviewPane pane, KeyEvent key) {
+        if (pane.box().isPresent()) {
+            return pressInBox(pane, pane.box().get(), key);
+        }
         if (key.isKey(KeyCode.ESCAPE)) {
             return leaveReview();
         }
@@ -992,11 +1011,81 @@ public final class Shell extends ToolkitApp {
             return true;
         }
         return switch (focus) {
-            case MAIN -> moveInDiff(pane, key);
+            case MAIN -> moveInDiff(pane, key) || writeInDiff(pane, key);
             case FILES -> moveInFiles(pane, key);
             case COMMENTS -> moveInComments(pane, key);
             default -> false;
         };
+    }
+
+    /** {@code c} on the cursor's line, or on the range marked, opens the comment box under it. */
+    private boolean writeInDiff(ReviewPane pane, KeyEvent key) {
+        if (!key.isChar(COMMENT)) {
+            return false;
+        }
+        if (pane.rows().lineCount() > 0) {
+            switch (pane.anchor()) {
+                case OnDiffAnchorView anchor ->
+                    pane.openBox(new CommentBox(new NewCommentTarget(anchor), Optional.of(pane.anchorLine()), ""));
+                case RefusedAnchorView refused -> refusal = Optional.of(refused.reason().value());
+            }
+        }
+        return true;
+    }
+
+    /** The box takes every key: {@code ctrl+s} saves, {@code esc} throws it away, the rest edit its text; only {@code ctrl+c} still quits. */
+    private boolean pressInBox(ReviewPane pane, CommentBox box, KeyEvent key) {
+        if (key.isCtrlC()) {
+            return false;
+        }
+        if (box.saving()) {
+            return true;
+        }
+        if (key.isKey(KeyCode.ESCAPE)) {
+            pane.closeBox();
+        } else if (key.hasCtrl() && key.isChar(SAVE)) {
+            save(pane, box);
+        } else {
+            box.edit(key);
+        }
+        return true;
+    }
+
+    /** Writes what the box holds off the render thread; GitHub's answer closes the box, or keeps it with the reason it was refused. */
+    private void save(ReviewPane pane, CommentBox box) {
+        box.saveBegun();
+        PendingReviewCommand command = writing;
+        Path project = root;
+        PullRequestNumber number = pane.number();
+        String content = box.content();
+        Supplier<PendingReviewWriteView> write = switch (box.target()) {
+            case NewCommentTarget target ->
+                () -> command.comment(new PendingCommentPayload(
+                        project, number, target.anchor().path(), target.anchor().position(), new CommentBody(content)));
+            case EditCommentTarget target ->
+                () -> command.edit(new PendingEditPayload(project, number, target.comment().id(), new CommentBody(content)));
+            case ReplyTarget target ->
+                () -> command.reply(new PendingReplyPayload(project, number, target.thread().id(), new CommentBody(content)));
+            case SummaryTarget _ -> () -> command.summarise(new PendingSummaryPayload(project, number, new Summary(content)));
+        };
+        inReviewOrder(pane, write, answer -> {
+            switch (answer) {
+                case WrittenReviewView written -> {
+                    pane.applyWritten(written.pending());
+                    pane.closeBox();
+                }
+                case RefusedWriteView refused -> box.saveRefused(refused.reason());
+            }
+        });
+    }
+
+    /** Writes to the pending review one after the other, off the render thread; an answer for a review since left is dropped. */
+    private void inReviewOrder(ReviewPane pane, Supplier<PendingReviewWriteView> write, Consumer<PendingReviewWriteView> answered) {
+        reviewWrites = reviewWrites
+                .exceptionally(_ -> null)
+                .thenApplyAsync(_ -> write.get(), background)
+                .exceptionally(ReviewReads::refusedWrite)
+                .thenAccept(answer -> onRenderThread(() -> landed(pane, () -> answered.accept(answer))));
     }
 
     private static boolean pageReview(ReviewPane pane, KeyEvent key) {

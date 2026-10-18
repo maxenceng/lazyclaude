@@ -11,6 +11,7 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingRevi
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.openThreadView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.outdatedThreadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.resolvedThreadView;
@@ -34,6 +35,7 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadThreadsView;
@@ -109,9 +111,38 @@ final class ShellReviewFixture {
     }
 
     static Shell shellReviewing(PullRequestDiffView diff, ThreadsView threads, PendingReviewView pending, PendingReviewCommand writing) {
+        return shellReviewing(diff, threads, pending, writing, Runnable::run);
+    }
+
+    static Shell shellReviewing(
+            PullRequestDiffView diff, ThreadsView threads, PendingReviewView pending, PendingReviewCommand writing, Executor background) {
         Shell shell = shellOnATicketWith(
-                openPullRequestsViewOf(pullRequestView()), reviewsAnswering(diff, threads, pending), writing, Runnable::run);
+                openPullRequestsViewOf(pullRequestView()), reviewsAnswering(diff, threads, pending), writing, background);
         shell.press(key('p'));
+        return shell;
+    }
+
+    static Shell shellWriting(PendingReviewCommand writing) {
+        return shellReviewing(twoFileDiffView(), readThreadsViewOf(), noPendingReviewView(), writing);
+    }
+
+    static Shell shellOnTheAddedLineWriting(PendingReviewCommand writing) {
+        return ShellFixture.pressed(shellWriting(writing), key('j'), 2);
+    }
+
+    static PendingReviewCommand writingThatWrites(PendingReviewWriteView answer) {
+        PendingReviewCommand writing = mock(PendingReviewCommand.class);
+        when(writing.comment(any())).thenReturn(answer);
+        when(writing.reply(any())).thenReturn(answer);
+        when(writing.edit(any())).thenReturn(answer);
+        when(writing.delete(any())).thenReturn(answer);
+        when(writing.summarise(any())).thenReturn(answer);
+        when(writing.submit(any())).thenReturn(answer);
+        return writing;
+    }
+
+    static Shell typed(Shell shell, String text) {
+        text.chars().forEach(character -> shell.press(character == '\n' ? ShellFixture.enter() : key((char) character)));
         return shell;
     }
 

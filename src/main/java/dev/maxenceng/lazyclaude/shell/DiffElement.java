@@ -43,10 +43,21 @@ final class DiffElement implements Element {
     /** Draws a row from screen row {@code y} down, as much of it as fits; answers how many screen rows it takes. */
     private int draw(Frame frame, Rect area, DiffRows rows, int row, int y) {
         boolean cursor = rows.lineCount() > 0 && row == rows.rowOfLine(pane.cursor());
-        List<List<StatusSpan>> lines = DiffText.rows(rows.row(row), area.width(), rows.numberWidth(), cursor);
+        boolean inRange = rows.lineOfRow(row).filter(pane::inRange).isPresent();
+        List<List<StatusSpan>> lines = DiffText.rows(rows.row(row), area.width(), rows.numberWidth(), cursor, inRange);
         IntStream.range(0, Math.min(lines.size(), area.height() - y))
                 .forEach(line -> drawSpans(frame, area, y + line, lines.get(line)));
+        if (rows.row(row) instanceof BoxRow open && !open.box().saving()) {
+            placeCursor(frame, area, open.box(), rows.numberWidth(), y);
+        }
         return lines.size();
+    }
+
+    private static void placeCursor(Frame frame, Rect area, CommentBox box, int numberWidth, int y) {
+        BoxText.Caret caret = BoxText.inlineCaret(box, area.width(), DiffText.gutterWidth(numberWidth));
+        if (y + caret.row() < area.height()) {
+            frame.setCursorPosition(area.x() + caret.column(), area.y() + y + caret.row());
+        }
     }
 
     private static void drawSpans(Frame frame, Rect area, int y, List<StatusSpan> spans) {
@@ -62,11 +73,12 @@ final class DiffElement implements Element {
             return 0;
         }
         int cursorRow = rows.rowOfLine(pane.cursor());
+        int target = rows.boxRow().orElse(cursorRow);
         int top = Math.min(pane.top(), rows.size() - 1);
         if (cursorRow < top) {
             return withItsHeaders(rows, cursorRow);
         }
-        return reaches(rows, area, top, cursorRow, 0) ? top : earliestStart(rows, area, cursorRow, heightOf(rows, area, cursorRow));
+        return reaches(rows, area, top, target, 0) ? top : earliestStart(rows, area, target, heightOf(rows, area, target));
     }
 
     /** The row a line is scrolled up to: the file and hunk headers above it come along. */
@@ -77,7 +89,7 @@ final class DiffElement implements Element {
     }
 
     private static boolean isAttachedOrLine(DiffRow row) {
-        return row instanceof LineRow || row instanceof ThreadRow || row instanceof PendingRow;
+        return row instanceof LineRow || row instanceof ThreadRow || row instanceof PendingRow || row instanceof BoxRow;
     }
 
     /** Whether rows {@code from} through {@code target} fit the area, looking at no more rows than the area is high. */

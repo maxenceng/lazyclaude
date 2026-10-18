@@ -13,6 +13,7 @@ import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.review.domain.PullRequestDiffPort;
@@ -44,7 +45,7 @@ final class ReviewPaneFixture {
     }
 
     static DiffRows rowsOf(PullRequestDiffView diff, ThreadsView threads, boolean showResolved) {
-        return DiffRows.of(diff, joiningReviews().threadsInDiff(diff, threads), new PendingCommentsInDiffView(List.of()), showResolved);
+        return DiffRows.of(diff, joiningReviews().threadsInDiff(diff, threads), new PendingCommentsInDiffView(List.of()), Optional.empty(), showResolved);
     }
 
     static ReviewPane paneOver(PullRequestDiffView diff, ThreadsView threads) {

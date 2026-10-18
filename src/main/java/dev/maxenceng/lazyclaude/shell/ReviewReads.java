@@ -4,6 +4,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableDiffView;
@@ -26,6 +28,10 @@ final class ReviewReads {
 
     static PendingReviewView unreadablePending(Throwable failed) {
         return new UnavailablePendingReviewView(reasonOf(failed));
+    }
+
+    static PendingReviewWriteView refusedWrite(Throwable failed) {
+        return new RefusedWriteView(reasonOf(failed));
     }
 
     private static Reason reasonOf(Throwable failed) {
