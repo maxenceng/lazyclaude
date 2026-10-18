@@ -9,7 +9,7 @@ import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 /** The threads GitHub answered with. */
 public record ReadThreads(List<ReviewThread> threads) implements ThreadsReading {
 
-    private static final Comparator<ReviewThread> IN_DIFF_ORDER = Comparator.comparing(ReadThreads::isOutdated)
+    private static final Comparator<ReviewThread> BY_FILE_AND_LINE = Comparator.comparing(ReadThreads::isOutdated)
             .thenComparing(thread -> thread.path().value())
             .thenComparingInt(ReadThreads::lineShownUnder);
 
@@ -17,9 +17,12 @@ public record ReadThreads(List<ReviewThread> threads) implements ThreadsReading 
         Assert.notNull("threads", threads);
     }
 
-    /** The threads by file, then by the line they show under, the outdated ones, which sit on no line, last. */
-    public List<ReviewThread> inDiffOrder() {
-        return threads.stream().sorted(IN_DIFF_ORDER).toList();
+    /**
+     * The threads by file, then by the number of the line they show under whichever side it is on, the outdated ones, which sit on no line,
+     * last. Only the diff knows which line a number is; {@link PullRequestDiff#place} turns this into diff order.
+     */
+    public List<ReviewThread> byFileAndLine() {
+        return threads.stream().sorted(BY_FILE_AND_LINE).toList();
     }
 
     private static boolean isOutdated(ReviewThread thread) {

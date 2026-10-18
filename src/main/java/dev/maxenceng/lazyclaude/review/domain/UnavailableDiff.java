@@ -16,7 +16,7 @@ public record UnavailableDiff(Reason reason, boolean tooLarge) implements DiffRe
 
     public static final class UnavailableDiffBuilder {
         private Reason reason;
-        private boolean tooLarge;
+        private Boolean tooLarge;
 
         private UnavailableDiffBuilder() {}
 
@@ -31,6 +31,7 @@ public record UnavailableDiff(Reason reason, boolean tooLarge) implements DiffRe
         }
 
         public UnavailableDiff build() {
+            Assert.notNull("tooLarge", tooLarge);
             return new UnavailableDiff(reason, tooLarge);
         }
     }

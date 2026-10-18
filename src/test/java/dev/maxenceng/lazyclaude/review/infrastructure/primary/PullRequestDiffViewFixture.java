@@ -19,10 +19,13 @@ import java.util.List;
 import dev.maxenceng.lazyclaude.review.domain.ReviewThread;
 import dev.maxenceng.lazyclaude.review.published.AddedFile;
 import dev.maxenceng.lazyclaude.review.published.DiffLine;
+import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.FileStatus;
 import dev.maxenceng.lazyclaude.review.published.HunkHeader;
 import dev.maxenceng.lazyclaude.review.published.ModifiedFile;
+import dev.maxenceng.lazyclaude.review.published.NoDiffLine;
+import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 import dev.maxenceng.lazyclaude.review.published.RenamedFile;
 import dev.maxenceng.lazyclaude.review.published.ThreadComment;
@@ -67,6 +70,10 @@ public final class PullRequestDiffViewFixture {
         return fileView(newDiffPath(), new RenamedFile(oldDiffPath()));
     }
 
+    public static DiffFileView fileWithOldNumbersFarAboveNewOnesView() {
+        return modifiedFileView(diffPath(), hunkView("@@ -100,1 +50,1 @@", removed("gone", 100), added("came", 50)));
+    }
+
     public static ReadDiffView twoFileDiffView() {
         return readDiffViewOf(changedFileView(), addedFileView());
     }
@@ -103,6 +110,10 @@ public final class PullRequestDiffViewFixture {
         return UnavailableDiffView.builder().reason(reason()).tooLarge(true).build();
     }
 
+    public static UnavailableDiffView unavailableDiffViewSayingNothingOfItsSize() {
+        return UnavailableDiffView.builder().reason(reason()).build();
+    }
+
     public static LoadingThreadsView loadingThreadsView() {
         return new LoadingThreadsView();
     }
@@ -128,5 +139,13 @@ public final class PullRequestDiffViewFixture {
 
     public static ReviewThreadView viewOf(ReviewThread thread) {
         return ReviewThreadView.from(thread);
+    }
+
+    public static ThreadInDiffView onLineView(ReviewThreadView thread, int index) {
+        return ThreadInDiffView.builder().thread(thread).line(new OnDiffLine(new DiffLineIndex(index))).build();
+    }
+
+    public static ThreadInDiffView onNoLineView(ReviewThreadView thread) {
+        return ThreadInDiffView.builder().thread(thread).line(new NoDiffLine()).build();
     }
 }

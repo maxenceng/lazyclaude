@@ -9,14 +9,19 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestTitle;
+import static org.mockito.Mockito.mock;
 
 import java.util.List;
 import java.util.stream.IntStream;
 
+import dev.maxenceng.lazyclaude.review.domain.PullRequestDiffPort;
+import dev.maxenceng.lazyclaude.review.domain.ThreadPort;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.DiffFileView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.HunkView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQueryFixture;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.published.DiffLine;
 import dev.maxenceng.lazyclaude.review.published.DiffLineFixture;
@@ -32,8 +37,16 @@ final class ReviewPaneFixture {
         return Screen.of(new DiffElement(pane), DRAWN_WIDTH, height);
     }
 
+    static ReviewQuery joiningReviews() {
+        return ReviewQueryFixture.reviewQuery(mock(PullRequestDiffPort.class), mock(ThreadPort.class));
+    }
+
+    static DiffRows rowsOf(PullRequestDiffView diff, ThreadsView threads, boolean showResolved) {
+        return DiffRows.of(diff, joiningReviews().threadsInDiff(diff, threads), showResolved);
+    }
+
     static ReviewPane paneOver(PullRequestDiffView diff, ThreadsView threads) {
-        return new ReviewPane(pullRequestNumber(), pullRequestTitle(), diff, threads);
+        return new ReviewPane(pullRequestNumber(), pullRequestTitle(), diff, threads, joiningReviews());
     }
 
     static ReviewPane loadingPane() {

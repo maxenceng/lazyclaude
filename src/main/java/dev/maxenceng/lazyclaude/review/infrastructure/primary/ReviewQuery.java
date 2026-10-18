@@ -2,7 +2,7 @@ package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
 import java.util.function.Consumer;
 
-import dev.maxenceng.lazyclaude.review.application.PullRequestReviewApplicationService;
+import dev.maxenceng.lazyclaude.review.application.PullRequestDiffApplicationService;
 import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
 
 /**
@@ -12,31 +12,40 @@ import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
 public final class ReviewQuery {
 
     private final ReviewApplicationService review;
-    private final PullRequestReviewApplicationService pullRequestReview;
+    private final PullRequestDiffApplicationService pullRequestDiff;
 
-    public ReviewQuery(ReviewApplicationService review, PullRequestReviewApplicationService pullRequestReview) {
+    public ReviewQuery(ReviewApplicationService review, PullRequestDiffApplicationService pullRequestDiff) {
         this.review = review;
-        this.pullRequestReview = pullRequestReview;
+        this.pullRequestDiff = pullRequestDiff;
     }
 
     /** What stands until the diff's read answers. */
     public PullRequestDiffView loadingDiff() {
-        return PullRequestDiffView.from(pullRequestReview.loadingDiff());
+        return PullRequestDiffView.from(pullRequestDiff.loadingDiff());
     }
 
     /** What stands until the threads' read answers. */
     public ThreadsView loadingThreads() {
-        return ThreadsView.from(pullRequestReview.loadingThreads());
+        return ThreadsView.from(pullRequestDiff.loadingThreads());
     }
 
     /** Reads the pull request's diff now, on the caller's thread, which waits for {@code gh}; never a failure, the reason is the view. */
     public PullRequestDiffView diffOf(PullRequestPayload payload) {
-        return PullRequestDiffView.from(pullRequestReview.diff(payload.project(), payload.number()));
+        return PullRequestDiffView.from(pullRequestDiff.diff(payload.project(), payload.number()));
     }
 
     /** Reads the pull request's threads now, on the caller's thread, which waits for {@code gh}; never a failure, the reason is the view. */
     public ThreadsView threadsOf(PullRequestPayload payload) {
-        return ThreadsView.from(pullRequestReview.threads(payload.project(), payload.number()));
+        return ThreadsView.from(pullRequestDiff.threads(payload.project(), payload.number()));
+    }
+
+    /**
+     * The threads with the diff lines they show under, in diff order, from whatever each read last answered: none until the threads are
+     * read, and every one on no line until the diff is. It reads nothing.
+     */
+    public ThreadsInDiffView threadsInDiff(PullRequestDiffView diff, ThreadsView threads) {
+        return ThreadsInDiffView.from(
+                pullRequestDiff.threadsInDiff(ReviewReadings.diffOf(diff), ReviewReadings.threadsOf(threads)));
     }
 
     /** What stands until the first fetch answers. */

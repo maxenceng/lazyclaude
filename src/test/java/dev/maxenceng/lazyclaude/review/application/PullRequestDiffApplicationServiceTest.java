@@ -24,7 +24,7 @@ import dev.maxenceng.lazyclaude.review.domain.ReadThreads;
 import dev.maxenceng.lazyclaude.review.domain.ThreadPort;
 
 @ExtendWith(MockitoExtension.class)
-class PullRequestReviewApplicationServiceTest {
+class PullRequestDiffApplicationServiceTest {
 
     @Mock
     private PullRequestDiffPort diffs;
@@ -32,11 +32,11 @@ class PullRequestReviewApplicationServiceTest {
     @Mock
     private ThreadPort threads;
 
-    private PullRequestReviewApplicationService service;
+    private PullRequestDiffApplicationService service;
 
     @BeforeEach
     void createService() {
-        service = new PullRequestReviewApplicationService(diffs, threads);
+        service = new PullRequestDiffApplicationService(diffs, threads);
     }
 
     @Test

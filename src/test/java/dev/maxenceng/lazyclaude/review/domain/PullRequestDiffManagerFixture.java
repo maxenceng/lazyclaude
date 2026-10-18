@@ -2,9 +2,9 @@ package dev.maxenceng.lazyclaude.review.domain;
 
 import static dev.maxenceng.lazyclaude.review.published.ReasonFixture.reason;
 
-public final class PullRequestReviewManagerFixture {
+public final class PullRequestDiffManagerFixture {
 
-    private PullRequestReviewManagerFixture() {}
+    private PullRequestDiffManagerFixture() {}
 
     public static PullRequestDiffTooLargeException diffTooLarge() {
         return new PullRequestDiffTooLargeException(reason().value(), new IllegalStateException());
@@ -16,6 +16,10 @@ public final class PullRequestReviewManagerFixture {
 
     public static UnavailableDiff tooLargeDiff() {
         return UnavailableDiff.builder().reason(reason()).tooLarge(true).build();
+    }
+
+    public static UnavailableDiff unavailableDiffSayingNothingOfItsSize() {
+        return UnavailableDiff.builder().reason(reason()).build();
     }
 
     public static UnavailableThreads unavailableThreads() {

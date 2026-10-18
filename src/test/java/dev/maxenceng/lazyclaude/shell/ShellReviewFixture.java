@@ -46,6 +46,9 @@ final class ShellReviewFixture {
         when(reviews.loadingThreads()).thenReturn(loadingThreadsView());
         when(reviews.diffOf(any())).thenReturn(diff);
         when(reviews.threadsOf(any())).thenReturn(threads);
+        ReviewQuery joining = ReviewPaneFixture.joiningReviews();
+        when(reviews.threadsInDiff(any(), any()))
+                .thenAnswer(call -> joining.threadsInDiff(call.getArgument(0), call.getArgument(1)));
         return reviews;
     }
 

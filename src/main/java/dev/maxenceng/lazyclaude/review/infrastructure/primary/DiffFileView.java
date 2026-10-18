@@ -19,6 +19,14 @@ public record DiffFileView(DiffPath path, FileStatus status, List<HunkView> hunk
                 .build();
     }
 
+    DiffFile toDomain() {
+        return DiffFile.builder()
+                .path(path)
+                .status(status)
+                .hunks(hunks.stream().map(HunkView::toDomain).toList())
+                .build();
+    }
+
     public static DiffFileViewBuilder builder() {
         return new DiffFileViewBuilder();
     }

@@ -22,6 +22,10 @@ have nothing to say about a diff, and squeezing six into the column leaves each 
   Comments and no further; `h` and `l` move between them and the main view as they do today.
 - **The diff and the threads are read once on `p`, off the render thread, and again on `R`.** No timer reads them. A read lands only in
   the review it was begun for and only if no later read of its kind was begun.
+- **Where a thread meets a diff line is `review`'s rule, not the shell's.** The domain joins the diff with the threads, giving each
+  thread its diff line and listing them in diff order. Whichever read has not answered yet places nothing: until the diff is read,
+  every thread has no line. The shell asks for the join through `ReviewQuery` whenever either read lands, and draws what it gets.
+  A `LEFT` thread's row in Comments writes its lines as `-100`: in diff order an old line 100 can sit above a new line 50.
 - **The diff source is `gh pr diff`, not `/pulls/{n}/files`**; that is LAZY-6's decision and needs no record here.
 
 ## Consequences

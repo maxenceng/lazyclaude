@@ -5,7 +5,7 @@ import dev.maxenceng.lazyclaude.review.domain.ReadThreads;
 import dev.maxenceng.lazyclaude.review.domain.ThreadsReading;
 import dev.maxenceng.lazyclaude.review.domain.UnavailableThreads;
 
-/** A pull request's threads as the shell reads them: not read yet, the threads in diff order, or why GitHub could not be asked for them. */
+/** A pull request's threads as the shell reads them: not read yet, the threads, or why GitHub could not be asked for them. */
 public sealed interface ThreadsView permits LoadingThreadsView, ReadThreadsView, UnavailableThreadsView {
 
     static ThreadsView from(ThreadsReading reading) {

@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
+import dev.maxenceng.lazyclaude.error.domain.Assert;
+
 import dev.maxenceng.lazyclaude.review.domain.UnavailableDiff;
 import dev.maxenceng.lazyclaude.review.published.Reason;
 
@@ -18,7 +20,7 @@ public record UnavailableDiffView(Reason reason, boolean tooLarge) implements Pu
 
     public static final class UnavailableDiffViewBuilder {
         private Reason reason;
-        private boolean tooLarge;
+        private Boolean tooLarge;
 
         private UnavailableDiffViewBuilder() {}
 
@@ -33,6 +35,7 @@ public record UnavailableDiffView(Reason reason, boolean tooLarge) implements Pu
         }
 
         public UnavailableDiffView build() {
+            Assert.notNull("tooLarge", tooLarge);
             return new UnavailableDiffView(reason, tooLarge);
         }
     }

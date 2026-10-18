@@ -920,7 +920,7 @@ public final class Shell extends ToolkitApp {
         return reviewablePullRequest()
                 .map(pullRequest -> {
                     ReviewPane pane = new ReviewPane(
-                            pullRequest.number(), pullRequest.title(), reviews.loadingDiff(), reviews.loadingThreads());
+                            pullRequest.number(), pullRequest.title(), reviews.loadingDiff(), reviews.loadingThreads(), reviews);
                     review = Optional.of(pane);
                     lastLeft = Focus.FILES;
                     goUp(Focus.MAIN);

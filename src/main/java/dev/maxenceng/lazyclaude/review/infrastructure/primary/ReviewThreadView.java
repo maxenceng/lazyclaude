@@ -22,6 +22,15 @@ public record ReviewThreadView(DiffPath path, ThreadPosition position, boolean r
                 .build();
     }
 
+    ReviewThread toDomain() {
+        return ReviewThread.builder()
+                .path(path)
+                .position(position)
+                .resolved(resolved)
+                .comments(comments)
+                .build();
+    }
+
     public static ReviewThreadViewBuilder builder() {
         return new ReviewThreadViewBuilder();
     }

@@ -11,11 +11,13 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffVie
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadThreadsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableThreadsView;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 import dev.maxenceng.lazyclaude.review.published.RenamedFile;
+import dev.maxenceng.lazyclaude.review.published.ThreadSide;
 import dev.tamboui.style.Style;
 
 /** How the review words its Files and Comments panels and what stands in the main view while there is no diff to show. */
@@ -34,6 +36,7 @@ final class ReviewText {
     private static final String LETTER_GAP = " ";
     private static final String PLACED = "%s:%s %s";
     private static final String PLACED_WITHOUT_AUTHOR = "%s:%s";
+    private static final String OLD_SIDE = "-";
     private static final String OUTDATED_ROW = "%s  %s";
     private static final String PATH_SEPARATOR = "/";
     private static final String RENAMED = "%s → %s";
@@ -91,7 +94,7 @@ final class ReviewText {
 
     /** Each thread in diff order: a mark when still open, its file and line and first author, or the file and {@code outdated}; resolved ones dim. */
     static List<RowLine> commentLines(ReviewPane pane) {
-        return pane.comments().stream().map(ReviewText::commentLine).toList();
+        return pane.comments().stream().map(ThreadInDiffView::thread).map(ReviewText::commentLine).toList();
     }
 
     private static RowLine commentLine(ReviewThreadView thread) {
@@ -108,7 +111,7 @@ final class ReviewText {
         if (!(thread.position() instanceof PlacedThread placed)) {
             return OUTDATED_ROW.formatted(file, OUTDATED);
         }
-        String lines = ThreadText.lines(placed);
+        String lines = placed.side() == ThreadSide.LEFT ? OLD_SIDE + ThreadText.lines(placed) : ThreadText.lines(placed);
         return thread.comments().stream()
                 .findFirst()
                 .map(first -> PLACED.formatted(file, lines, first.author().value()))

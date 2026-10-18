@@ -15,6 +15,10 @@ public record HunkView(HunkHeader header, List<DiffLine> lines) {
         return builder().header(hunk.header()).lines(hunk.lines()).build();
     }
 
+    Hunk toDomain() {
+        return Hunk.builder().header(header).lines(lines).build();
+    }
+
     public static HunkViewBuilder builder() {
         return new HunkViewBuilder();
     }

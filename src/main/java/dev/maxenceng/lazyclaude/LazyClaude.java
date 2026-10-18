@@ -23,7 +23,7 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsRepository;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchRepository;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
-import dev.maxenceng.lazyclaude.review.application.PullRequestReviewApplicationService;
+import dev.maxenceng.lazyclaude.review.application.PullRequestDiffApplicationService;
 import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
@@ -117,7 +117,7 @@ public final class LazyClaude {
                         new GhPullRequestsRepository(GH, GH_PATIENCE),
                         new GhMergedPullRequestsRepository(GH, GH_PATIENCE),
                         new PullRequestWatchRepository()),
-                new PullRequestReviewApplicationService(
+                new PullRequestDiffApplicationService(
                         new GhPullRequestDiffRepository(GH, GH_PATIENCE), new GhThreadRepository(GH, GH_PATIENCE)));
         int exit = start(
                 Path.of("").toAbsolutePath(),

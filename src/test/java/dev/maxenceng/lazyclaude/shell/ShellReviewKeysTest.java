@@ -1,12 +1,17 @@
 package dev.maxenceng.lazyclaude.shell;
 
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.fileWithOldNumbersFarAboveNewOnesView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.openThreadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.outdatedThreadView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readDiffViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.unavailableDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.unavailableThreadsView;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.leftOn;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
@@ -65,9 +70,20 @@ class ShellReviewKeysTest {
         Screen screen = Screen.of(shellReviewing(twoFileDiffView(), threadsOnTwoFiles()));
 
         assertThat(screen.boardPanelLines())
-                .containsSubsequence("◆ Board.java:3 alice", "  Board.java  outdated", "  Docs.java:1 alice");
+                .containsSubsequence("◆ Board.java:3 alice", "  Docs.java:1 alice", "  Board.java  outdated");
         assertThat(screen.dimText()).anySatisfy(text -> assertThat(text).contains("Docs.java:1 alice"));
         assertThat(screen.dimText()).noneSatisfy(text -> assertThat(text).contains("Board.java:3"));
+    }
+
+    @Test
+    void shouldListThreadsInCommentsInDiffOrderEvenWhereTheirLineNumbersSayOtherwise() {
+        Screen screen = Screen.of(shellReviewing(
+                readDiffViewOf(fileWithOldNumbersFarAboveNewOnesView()),
+                readThreadsViewOf(openThreadView(diffPath(), rightOn(50)), openThreadView(diffPath(), leftOn(100)))));
+
+        assertThat(screen.boardPanelLines())
+                .as("old line 100 is removed above where new line 50 is added, so its thread is listed first, marked as the old side")
+                .containsSubsequence("◆ Board.java:-100 alice", "◆ Board.java:50 alice");
     }
 
     @Test
@@ -169,6 +185,7 @@ class ShellReviewKeysTest {
         Shell shell = shellReviewing(twoFileDiffView(), threadsOnTwoFiles());
         shell.press(key('h'));
         shell.press(alt('j'));
+        shell.press(key('j'));
         shell.press(key('j'));
 
         shell.press(enter());

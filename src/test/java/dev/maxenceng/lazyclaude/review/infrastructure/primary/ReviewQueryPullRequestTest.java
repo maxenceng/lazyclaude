@@ -3,14 +3,19 @@ package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.addedFile;
 import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.modifiedFile;
 import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.pullRequestDiffOf;
-import static dev.maxenceng.lazyclaude.review.domain.PullRequestReviewManagerFixture.diffTooLarge;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDiffManagerFixture.diffTooLarge;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.pullRequestsUnavailable;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.threadAt;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.onLineView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.onNoLineView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.openThreadView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.outdatedThreadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.pullRequestPayload;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.tooLargeDiffView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.unavailableDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.unavailableThreadsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.viewOf;
@@ -18,6 +23,7 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDiffPath;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.leftOn;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,7 +93,7 @@ class ReviewQueryPullRequestTest {
     }
 
     @Test
-    void shouldViewTheThreadsInDiffOrderWithWhetherEachIsOpen() {
+    void shouldViewTheThreadsByFileAndLineWithWhetherEachIsOpen() {
         var late = threadAt(secondDiffPath(), rightOn(9));
         var early = threadAt(diffPath(), rightOn(2));
         when(threads.threads(project(), pullRequestNumber())).thenReturn(List.of(late, early));
@@ -100,5 +106,30 @@ class ReviewQueryPullRequestTest {
         when(threads.threads(project(), pullRequestNumber())).thenThrow(pullRequestsUnavailable());
 
         assertThat(query.threadsOf(OF_THE_PULL_REQUEST)).isEqualTo(unavailableThreadsView());
+    }
+
+    @Test
+    void shouldPlaceTheThreadsItHandedOutOnTheDiffItHandedOut() {
+        ReviewThreadView onTheOldSide = openThreadView(diffPath(), leftOn(3));
+        ReviewThreadView outdated = outdatedThreadView(diffPath());
+
+        assertThat(query.threadsInDiff(twoFileDiffView(), readThreadsViewOf(outdated, onTheOldSide)))
+                .isEqualTo(new ThreadsInDiffView(List.of(onLineView(onTheOldSide, 1), onNoLineView(outdated))));
+    }
+
+    @Test
+    void shouldPutEveryThreadOnNoLineWhileTheDiffItHandedOutIsNotRead() {
+        ReviewThreadView thread = openThreadView(diffPath(), rightOn(3));
+
+        assertThat(query.threadsInDiff(tooLargeDiffView(), readThreadsViewOf(thread)))
+                .isEqualTo(new ThreadsInDiffView(List.of(onNoLineView(thread))));
+        assertThat(query.threadsInDiff(loadingDiffView(), readThreadsViewOf(thread)))
+                .isEqualTo(new ThreadsInDiffView(List.of(onNoLineView(thread))));
+    }
+
+    @Test
+    void shouldPlaceNoThreadWhileTheThreadsItHandedOutAreNotRead() {
+        assertThat(query.threadsInDiff(twoFileDiffView(), loadingThreadsView())).isEqualTo(new ThreadsInDiffView(List.of()));
+        assertThat(query.threadsInDiff(twoFileDiffView(), unavailableThreadsView())).isEqualTo(new ThreadsInDiffView(List.of()));
     }
 }

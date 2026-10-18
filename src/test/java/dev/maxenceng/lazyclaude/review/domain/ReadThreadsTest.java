@@ -21,7 +21,7 @@ class ReadThreadsTest {
         ReviewThread earlyInSecond = threadAt(secondDiffPath(), rightOn(3));
         ReviewThread inFirst = threadAt(diffPath(), rightOn(5));
 
-        assertThat(new ReadThreads(List.of(outdatedInFirst, lateInSecond, earlyInSecond, inFirst)).inDiffOrder())
+        assertThat(new ReadThreads(List.of(outdatedInFirst, lateInSecond, earlyInSecond, inFirst)).byFileAndLine())
                 .containsExactly(inFirst, earlyInSecond, lateInSecond, outdatedInFirst);
     }
 
@@ -30,7 +30,7 @@ class ReadThreadsTest {
         ReviewThread range = threadAt(diffPath(), rightRange(2, 12));
         ReviewThread single = threadAt(diffPath(), rightOn(8));
 
-        assertThat(new ReadThreads(List.of(range, single)).inDiffOrder()).containsExactly(single, range);
+        assertThat(new ReadThreads(List.of(range, single)).byFileAndLine()).containsExactly(single, range);
     }
 
     @Test
@@ -38,6 +38,6 @@ class ReadThreadsTest {
         ReviewThread inSecond = outdatedThreadIn(secondDiffPath());
         ReviewThread inFirst = outdatedThreadIn(diffPath());
 
-        assertThat(new ReadThreads(List.of(inSecond, inFirst)).inDiffOrder()).containsExactly(inFirst, inSecond);
+        assertThat(new ReadThreads(List.of(inSecond, inFirst)).byFileAndLine()).containsExactly(inFirst, inSecond);
     }
 }

@@ -9,18 +9,16 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.DiffFileView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.HunkView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadDiffView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadThreadsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffView;
 import dev.maxenceng.lazyclaude.review.published.AddedLine;
 import dev.maxenceng.lazyclaude.review.published.ContextLine;
 import dev.maxenceng.lazyclaude.review.published.DiffLine;
-import dev.maxenceng.lazyclaude.review.published.PlacedThread;
+import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
 import dev.maxenceng.lazyclaude.review.published.RemovedLine;
-import dev.maxenceng.lazyclaude.review.published.ThreadSide;
 
 /**
  * The rows of a review's main view, built once whenever the diff, the threads or whether resolved threads show change, so that drawing a
@@ -37,7 +35,6 @@ final class DiffRows {
     private final int[] rowOfLine;
     private final int[] fileOfLine;
     private final int[] fileStarts;
-    private final Map<ThreadAnchor, Integer> lineOfAnchor;
     private final int numberWidth;
 
     private DiffRows(List<DiffFileView> files, List<DiffRow> rows) {
@@ -48,11 +45,6 @@ final class DiffRows {
         this.fileStarts = IntStream.range(0, fileOfLine.length)
                 .filter(line -> line == 0 || fileOfLine[line] != fileOfLine[line - 1])
                 .toArray();
-        this.lineOfAnchor = IntStream.range(0, rowOfLine.length)
-                .boxed()
-                .flatMap(line -> anchorsOf(files.get(fileOfLine[line]), ((LineRow) rows.get(rowOfLine[line])).line())
-                        .map(anchor -> Map.entry(anchor, line)))
-                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue, (first, _) -> first));
         this.numberWidth = Arrays.stream(rowOfLine)
                 .map(row -> digitsOf(((LineRow) rows.get(row)).line()))
                 .max()
@@ -73,62 +65,47 @@ final class DiffRows {
         return numberWidth;
     }
 
-    /** The rows of {@code diff} with the threads that sit on its lines; none when the diff was not read. */
-    static DiffRows of(PullRequestDiffView diff, ThreadsView threads, boolean showResolved) {
+    /** The rows of {@code diff} with the threads that show under its lines; none when the diff was not read. */
+    static DiffRows of(PullRequestDiffView diff, ThreadsInDiffView threads, boolean showResolved) {
         if (!(diff instanceof ReadDiffView read)) {
             return NONE;
         }
-        Map<ThreadAnchor, List<ReviewThreadView>> inline = inlineThreads(threads, showResolved);
-        return new DiffRows(
-                read.files(),
-                IntStream.range(0, read.files().size())
-                        .boxed()
-                        .flatMap(file -> fileRows(file, read.files().get(file), inline))
-                        .toList());
+        List<DiffRow> lineRows = IntStream.range(0, read.files().size())
+                .boxed()
+                .flatMap(file -> fileRows(file, read.files().get(file)))
+                .toList();
+        return new DiffRows(read.files(), withThreads(lineRows, inlineThreads(threads, showResolved)));
     }
 
-    private static Map<ThreadAnchor, List<ReviewThreadView>> inlineThreads(ThreadsView threads, boolean showResolved) {
-        if (!(threads instanceof ReadThreadsView read)) {
-            return Map.of();
-        }
-        return read.threads().stream()
-                .filter(thread -> thread.position() instanceof PlacedThread)
-                .filter(thread -> !thread.resolved() || showResolved)
-                .collect(Collectors.groupingBy(DiffRows::anchorOf));
+    private static Map<Integer, List<ReviewThreadView>> inlineThreads(ThreadsInDiffView threads, boolean showResolved) {
+        return threads.threads().stream()
+                .filter(placed -> placed.line() instanceof OnDiffLine)
+                .filter(placed -> !placed.thread().resolved() || showResolved)
+                .collect(Collectors.groupingBy(
+                        placed -> ((OnDiffLine) placed.line()).index().value(),
+                        Collectors.mapping(ThreadInDiffView::thread, Collectors.toList())));
     }
 
-    private static ThreadAnchor anchorOf(ReviewThreadView thread) {
-        PlacedThread placed = (PlacedThread) thread.position();
-        return new ThreadAnchor(thread.path(), placed.side(), placed.last());
-    }
-
-    private static Stream<DiffRow> fileRows(int index, DiffFileView file, Map<ThreadAnchor, List<ReviewThreadView>> inline) {
+    private static Stream<DiffRow> fileRows(int index, DiffFileView file) {
         return Stream.concat(
                 Stream.of(new FileHeaderRow(file)),
-                file.hunks().stream().flatMap(hunk -> hunkRows(index, file, hunk, inline)));
+                file.hunks().stream()
+                        .flatMap(hunk -> Stream.concat(
+                                Stream.of(new HunkHeaderRow(hunk.header())),
+                                hunk.lines().stream().map(line -> new LineRow(line, index)))));
     }
 
-    private static Stream<DiffRow> hunkRows(int index, DiffFileView file, HunkView hunk, Map<ThreadAnchor, List<ReviewThreadView>> inline) {
-        return Stream.concat(
-                Stream.of(new HunkHeaderRow(hunk.header())),
-                hunk.lines().stream()
-                        .flatMap(line -> Stream.concat(
-                                Stream.of(new LineRow(line, index)),
-                                anchorsOf(file, line)
-                                        .flatMap(anchor -> inline.getOrDefault(anchor, List.of()).stream())
-                                        .map(ThreadRow::new))));
-    }
-
-    /** The places a thread can hang on a line: its new number on the right, its old number on the left, a context line having both. */
-    private static Stream<ThreadAnchor> anchorsOf(DiffFileView file, DiffLine line) {
-        return switch (line) {
-            case AddedLine added -> Stream.of(new ThreadAnchor(file.path(), ThreadSide.RIGHT, added.newNumber()));
-            case RemovedLine removed -> Stream.of(new ThreadAnchor(file.path(), ThreadSide.LEFT, removed.oldNumber()));
-            case ContextLine kept ->
-                Stream.of(
-                        new ThreadAnchor(file.path(), ThreadSide.RIGHT, kept.newNumber()),
-                        new ThreadAnchor(file.path(), ThreadSide.LEFT, kept.oldNumber()));
-        };
+    /** {@code rows} with each line's threads under it, the lines counted in the order they are listed. */
+    private static List<DiffRow> withThreads(List<DiffRow> rows, Map<Integer, List<ReviewThreadView>> inline) {
+        int[] lineRows = IntStream.range(0, rows.size()).filter(row -> rows.get(row) instanceof LineRow).toArray();
+        return IntStream.range(0, rows.size())
+                .boxed()
+                .flatMap(row -> Stream.concat(
+                        Stream.of(rows.get(row)),
+                        rows.get(row) instanceof LineRow
+                                ? inline.getOrDefault(Arrays.binarySearch(lineRows, row), List.of()).stream().map(ThreadRow::new)
+                                : Stream.empty()))
+                .toList();
     }
 
     List<DiffFileView> files() {
@@ -168,12 +145,5 @@ final class DiffRows {
     Optional<Integer> firstLineOfPreviousFile(int line) {
         int current = firstLineOf(fileOfLine[line]).orElse(0);
         return Arrays.stream(fileStarts).filter(start -> start < current).boxed().reduce((_, later) -> later);
-    }
-
-    /** The line the thread shows under; none for an outdated thread, or one on a line the diff does not hold. */
-    Optional<Integer> lineOf(ReviewThreadView thread) {
-        return thread.position() instanceof PlacedThread
-                ? Optional.ofNullable(lineOfAnchor.get(anchorOf(thread)))
-                : Optional.empty();
     }
 }

@@ -3,10 +3,12 @@ package dev.maxenceng.lazyclaude.shell;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadThreadsView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
+import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 import dev.maxenceng.lazyclaude.review.published.PullRequestTitle;
 
@@ -21,8 +23,10 @@ final class ReviewPane {
 
     private final PullRequestNumber number;
     private final PullRequestTitle title;
+    private final ReviewQuery reviews;
     private PullRequestDiffView diff;
     private ThreadsView threads;
+    private ThreadsInDiffView placed;
     private boolean showResolved;
     private DiffRows rows;
     private int cursor;
@@ -33,12 +37,14 @@ final class ReviewPane {
     private long diffReads;
     private long threadsReads;
 
-    ReviewPane(PullRequestNumber number, PullRequestTitle title, PullRequestDiffView diff, ThreadsView threads) {
+    ReviewPane(PullRequestNumber number, PullRequestTitle title, PullRequestDiffView diff, ThreadsView threads, ReviewQuery reviews) {
         this.number = number;
         this.title = title;
         this.diff = diff;
         this.threads = threads;
-        this.rows = DiffRows.of(diff, threads, showResolved);
+        this.reviews = reviews;
+        this.placed = reviews.threadsInDiff(diff, threads);
+        this.rows = DiffRows.of(diff, placed, showResolved);
     }
 
     PullRequestNumber number() {
@@ -113,8 +119,8 @@ final class ReviewPane {
     void applyThreads(long read, ThreadsView view) {
         if (read == threadsReads) {
             threads = view;
-            selectedComment = clamp(selectedComment, comments().size());
             rebuild();
+            selectedComment = clamp(selectedComment, comments().size());
         }
     }
 
@@ -123,14 +129,17 @@ final class ReviewPane {
         rebuild();
     }
 
-    /** The threads in diff order, by file and then line, the outdated ones last; none until they are read. */
-    List<ReviewThreadView> comments() {
-        return threads instanceof ReadThreadsView read ? read.threads() : List.of();
+    /** The threads in diff order, the ones on no line last; none until they are read. */
+    List<ThreadInDiffView> comments() {
+        return placed.threads();
     }
 
     /** How many threads of the file at {@code path} still wait for an answer: not resolved, and not outdated. */
     int openThreadsIn(DiffPath path) {
-        return (int) comments().stream().filter(thread -> thread.open() && thread.path().equals(path)).count();
+        return (int) comments().stream()
+                .map(ThreadInDiffView::thread)
+                .filter(thread -> thread.open() && thread.path().equals(path))
+                .count();
     }
 
     void lineDown() {
@@ -185,12 +194,15 @@ final class ReviewPane {
     /** To the line the selected thread shows under; nowhere for an outdated one. */
     void goToSelectedComment() {
         if (selectedComment < comments().size()) {
-            rows.lineOf(comments().get(selectedComment)).ifPresent(this::moveTo);
+            if (comments().get(selectedComment).line() instanceof OnDiffLine on) {
+                moveTo(on.index().value());
+            }
         }
     }
 
     private void rebuild() {
-        rows = DiffRows.of(diff, threads, showResolved);
+        placed = reviews.threadsInDiff(diff, threads);
+        rows = DiffRows.of(diff, placed, showResolved);
         moveTo(cursor);
     }
 

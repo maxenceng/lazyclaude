@@ -2,7 +2,7 @@ package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
 import static org.mockito.Mockito.mock;
 
-import dev.maxenceng.lazyclaude.review.application.PullRequestReviewApplicationService;
+import dev.maxenceng.lazyclaude.review.application.PullRequestDiffApplicationService;
 import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.domain.MergedPullRequestPort;
 import dev.maxenceng.lazyclaude.review.domain.OpenPullRequestPort;
@@ -32,6 +32,6 @@ public final class ReviewQueryFixture {
             ThreadPort threads) {
         return new ReviewQuery(
                 new ReviewApplicationService(pullRequests, mergedPullRequests, watch),
-                new PullRequestReviewApplicationService(diffs, threads));
+                new PullRequestDiffApplicationService(diffs, threads));
     }
 }

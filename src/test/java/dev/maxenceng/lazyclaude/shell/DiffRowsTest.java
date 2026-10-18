@@ -20,6 +20,7 @@ import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDi
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.leftOn;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightRange;
+import static dev.maxenceng.lazyclaude.shell.ReviewPaneFixture.rowsOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,7 @@ class DiffRowsTest {
 
     @Test
     void shouldListEachFileUnderItsHeaderAndEachHunkUnderItsOwn() {
-        DiffRows rows = DiffRows.of(twoFileDiffView(), loadingThreadsView(), false);
+        DiffRows rows = rowsOf(twoFileDiffView(), loadingThreadsView(), false);
 
         assertThat(rows.size()).isEqualTo(10);
         assertThat(rows.row(0)).isEqualTo(new FileHeaderRow(changedFileView()));
@@ -43,7 +44,7 @@ class DiffRowsTest {
 
     @Test
     void shouldCountOnlyDiffLinesAsPlacesTheCursorCanBe() {
-        DiffRows rows = DiffRows.of(twoFileDiffView(), loadingThreadsView(), false);
+        DiffRows rows = rowsOf(twoFileDiffView(), loadingThreadsView(), false);
 
         assertThat(rows.lineCount()).isEqualTo(6);
         assertThat(rows.rowOfLine(0)).isEqualTo(2);
@@ -55,7 +56,7 @@ class DiffRowsTest {
     void shouldPlaceAThreadOnTheNewSideUnderTheAddedLineItNames() {
         ReviewThreadView thread = openThreadView(diffPath(), rightOn(3));
 
-        DiffRows rows = DiffRows.of(twoFileDiffView(), readThreadsViewOf(thread), false);
+        DiffRows rows = rowsOf(twoFileDiffView(), readThreadsViewOf(thread), false);
 
         assertThat(rows.row(rows.rowOfLine(2) + 1)).isEqualTo(new ThreadRow(thread));
         assertThat(rows.row(rows.rowOfLine(1) + 1)).isEqualTo(new LineRow(added("new", 3), 0));
@@ -65,7 +66,7 @@ class DiffRowsTest {
     void shouldPlaceAThreadOnTheOldSideUnderTheRemovedLineItNamesNotTheAddedOneWithTheSameNumber() {
         ReviewThreadView thread = openThreadView(diffPath(), leftOn(3));
 
-        DiffRows rows = DiffRows.of(twoFileDiffView(), readThreadsViewOf(thread), false);
+        DiffRows rows = rowsOf(twoFileDiffView(), readThreadsViewOf(thread), false);
 
         assertThat(rows.row(rows.rowOfLine(1) + 1)).isEqualTo(new ThreadRow(thread));
         assertThat(rows.row(rows.rowOfLine(2) + 1)).isEqualTo(new LineRow(context("end", 4, 4), 0));
@@ -76,7 +77,7 @@ class DiffRowsTest {
         ReviewThreadView onTheNewSide = openThreadView(diffPath(), rightOn(2));
         ReviewThreadView onTheOldSide = openThreadView(diffPath(), leftOn(4));
 
-        DiffRows rows = DiffRows.of(twoFileDiffView(), readThreadsViewOf(onTheNewSide, onTheOldSide), false);
+        DiffRows rows = rowsOf(twoFileDiffView(), readThreadsViewOf(onTheNewSide, onTheOldSide), false);
 
         assertThat(rows.row(rows.rowOfLine(0) + 1)).isEqualTo(new ThreadRow(onTheNewSide));
         assertThat(rows.row(rows.rowOfLine(3) + 1)).isEqualTo(new ThreadRow(onTheOldSide));
@@ -86,7 +87,7 @@ class DiffRowsTest {
     void shouldPlaceARangeUnderTheLastLineOfIt() {
         ReviewThreadView thread = openThreadView(diffPath(), rightRange(2, 3));
 
-        DiffRows rows = DiffRows.of(twoFileDiffView(), readThreadsViewOf(thread), false);
+        DiffRows rows = rowsOf(twoFileDiffView(), readThreadsViewOf(thread), false);
 
         assertThat(rows.row(rows.rowOfLine(2) + 1)).isEqualTo(new ThreadRow(thread));
         assertThat(rows.row(rows.rowOfLine(0) + 1)).isEqualTo(new LineRow(removed("old", 3), 0));
@@ -94,7 +95,7 @@ class DiffRowsTest {
 
     @Test
     void shouldNotPlaceAThreadOnTheFileOfAnotherPathWithTheSameLine() {
-        DiffRows rows = DiffRows.of(twoFileDiffView(), readThreadsViewOf(openThreadView(secondDiffPath(), rightOn(3))), false);
+        DiffRows rows = rowsOf(twoFileDiffView(), readThreadsViewOf(openThreadView(secondDiffPath(), rightOn(3))), false);
 
         assertThat(rows.size()).isEqualTo(10);
     }
@@ -103,25 +104,25 @@ class DiffRowsTest {
     void shouldHideAResolvedThreadUntilResolvedOnesAreShown() {
         ReviewThreadView resolved = resolvedThreadView(diffPath(), rightOn(3));
 
-        assertThat(DiffRows.of(twoFileDiffView(), readThreadsViewOf(resolved), false).size()).isEqualTo(10);
-        assertThat(DiffRows.of(twoFileDiffView(), readThreadsViewOf(resolved), true).size()).isEqualTo(11);
+        assertThat(rowsOf(twoFileDiffView(), readThreadsViewOf(resolved), false).size()).isEqualTo(10);
+        assertThat(rowsOf(twoFileDiffView(), readThreadsViewOf(resolved), true).size()).isEqualTo(11);
     }
 
     @Test
     void shouldNeverPlaceAnOutdatedThreadInline() {
-        DiffRows rows = DiffRows.of(twoFileDiffView(), readThreadsViewOf(outdatedThreadView(diffPath())), true);
+        DiffRows rows = rowsOf(twoFileDiffView(), readThreadsViewOf(outdatedThreadView(diffPath())), true);
 
         assertThat(rows.size()).isEqualTo(10);
     }
 
     @Test
     void shouldPlaceNoThreadWhenTheThreadsWereNotRead() {
-        assertThat(DiffRows.of(twoFileDiffView(), unavailableThreadsView(), true).size()).isEqualTo(10);
+        assertThat(rowsOf(twoFileDiffView(), unavailableThreadsView(), true).size()).isEqualTo(10);
     }
 
     @Test
     void shouldHoldNoRowsWhenTheDiffWasNotRead() {
-        DiffRows rows = DiffRows.of(loadingDiffView(), loadingThreadsView(), false);
+        DiffRows rows = rowsOf(loadingDiffView(), loadingThreadsView(), false);
 
         assertThat(rows.size()).isZero();
         assertThat(rows.lineCount()).isZero();
@@ -130,7 +131,7 @@ class DiffRowsTest {
 
     @Test
     void shouldFindTheFirstLineOfEachFileAndNoneInAFileWithoutLines() {
-        DiffRows rows = DiffRows.of(readDiffViewOf(changedFileView(), renamedFileView(), addedFileView()), loadingThreadsView(), false);
+        DiffRows rows = rowsOf(readDiffViewOf(changedFileView(), renamedFileView(), addedFileView()), loadingThreadsView(), false);
 
         assertThat(rows.firstLineOf(0)).hasValue(0);
         assertThat(rows.firstLineOf(1)).isEmpty();
@@ -139,7 +140,7 @@ class DiffRowsTest {
 
     @Test
     void shouldSayWhichFileALineBelongsTo() {
-        DiffRows rows = DiffRows.of(twoFileDiffView(), loadingThreadsView(), false);
+        DiffRows rows = rowsOf(twoFileDiffView(), loadingThreadsView(), false);
 
         assertThat(rows.fileOfLine(3)).isZero();
         assertThat(rows.fileOfLine(4)).isEqualTo(1);
@@ -147,28 +148,11 @@ class DiffRowsTest {
 
     @Test
     void shouldFindTheFirstLineOfTheNextAndOfThePreviousFileSkippingFilesWithoutLines() {
-        DiffRows rows = DiffRows.of(readDiffViewOf(changedFileView(), renamedFileView(), addedFileView()), loadingThreadsView(), false);
+        DiffRows rows = rowsOf(readDiffViewOf(changedFileView(), renamedFileView(), addedFileView()), loadingThreadsView(), false);
 
         assertThat(rows.firstLineOfNextFile(1)).hasValue(4);
         assertThat(rows.firstLineOfNextFile(5)).isEmpty();
         assertThat(rows.firstLineOfPreviousFile(5)).hasValue(0);
         assertThat(rows.firstLineOfPreviousFile(2)).isEmpty();
-    }
-
-    @Test
-    void shouldFindTheLineAThreadSitsOn() {
-        DiffRows rows = DiffRows.of(twoFileDiffView(), loadingThreadsView(), false);
-
-        assertThat(rows.lineOf(openThreadView(diffPath(), rightOn(3)))).hasValue(2);
-        assertThat(rows.lineOf(openThreadView(diffPath(), leftOn(3)))).hasValue(1);
-        assertThat(rows.lineOf(openThreadView(diffPath(), rightRange(2, 3)))).hasValue(2);
-    }
-
-    @Test
-    void shouldFindNoLineForAnOutdatedThreadOrOneOnALineTheDiffDoesNotHold() {
-        DiffRows rows = DiffRows.of(twoFileDiffView(), loadingThreadsView(), false);
-
-        assertThat(rows.lineOf(outdatedThreadView(diffPath()))).isEmpty();
-        assertThat(rows.lineOf(openThreadView(diffPath(), rightOn(99)))).isEmpty();
     }
 }

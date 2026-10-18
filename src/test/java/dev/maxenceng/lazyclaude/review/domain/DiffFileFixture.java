@@ -86,6 +86,10 @@ public final class DiffFileFixture {
                 hunk("@@ -1,3 +1,3 @@", context("a", 1, 1), context("", 2, 2), removed("-- not a header", 3), added("++ nor this", 3)));
     }
 
+    public static DiffFile fileWithOldNumbersFarAboveNewOnes() {
+        return file(diffPath(), new ModifiedFile(), hunk("@@ -100,1 +50,1 @@", removed("gone", 100), added("came", 50)));
+    }
+
     public static PullRequestDiff pullRequestDiffOf(DiffFile... files) {
         return new PullRequestDiff(List.of(files));
     }
