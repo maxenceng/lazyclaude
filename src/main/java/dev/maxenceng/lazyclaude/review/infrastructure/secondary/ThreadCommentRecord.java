@@ -5,7 +5,7 @@ import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.published.ThreadComment;
 
 /** One comment of a thread as the threads query writes it, null where the JSON lacks it. */
-record ThreadCommentRecord(ThreadAuthorRecord author, String state, String body) {
+record ThreadCommentRecord(String id, ThreadAuthorRecord author, String state, String body) {
 
     /** What GitHub calls the author of a comment whose account is gone. */
     private static final String GHOST = "ghost";

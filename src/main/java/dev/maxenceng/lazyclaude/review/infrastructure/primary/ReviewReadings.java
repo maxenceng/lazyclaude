@@ -1,8 +1,11 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
+import java.util.List;
+
 import dev.maxenceng.lazyclaude.review.domain.DiffReading;
 import dev.maxenceng.lazyclaude.review.domain.LoadingDiff;
 import dev.maxenceng.lazyclaude.review.domain.LoadingThreads;
+import dev.maxenceng.lazyclaude.review.domain.PendingComment;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestDiff;
 import dev.maxenceng.lazyclaude.review.domain.ReadDiff;
 import dev.maxenceng.lazyclaude.review.domain.ReadThreads;
@@ -30,5 +33,10 @@ final class ReviewReadings {
             case ReadThreadsView read -> new ReadThreads(read.threads().stream().map(ReviewThreadView::toDomain).toList());
             case UnavailableThreadsView unavailable -> new UnavailableThreads(unavailable.reason());
         };
+    }
+
+    /** The pending comments a read pending review holds; none until it is read, and none when it has none. */
+    static List<PendingComment> commentsOf(PendingReviewView view) {
+        return view instanceof OpenPendingReviewView open ? open.comments().stream().map(PendingCommentView::toDomain).toList() : List.of();
     }
 }

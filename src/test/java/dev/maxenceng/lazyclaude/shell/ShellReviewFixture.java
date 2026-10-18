@@ -29,6 +29,7 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadThreadsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
@@ -66,6 +67,7 @@ final class ShellReviewFixture {
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 reviews,
+                mock(PendingReviewCommand.class),
                 background);
         shell.press(key('j'));
         return shell;

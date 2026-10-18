@@ -39,6 +39,7 @@ import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.JumpPayload;
@@ -82,7 +83,7 @@ final class ShellFixture {
                 mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
-                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
+                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), Runnable::run);
     }
 
     static Shell shellReading(BoardQuery boards, TicketView... tickets) {
@@ -96,7 +97,7 @@ final class ShellFixture {
                 mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
-                boards, mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
+                boards, mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), Runnable::run);
     }
 
     static Shell shellRefreshing(
@@ -114,6 +115,7 @@ final class ShellFixture {
                 boards,
                 docs,
                 reviews,
+                mock(PendingReviewCommand.class),
                 background);
     }
 
@@ -140,6 +142,7 @@ final class ShellFixture {
                 boards,
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
+                mock(PendingReviewCommand.class),
                 Runnable::run);
     }
 
@@ -158,7 +161,7 @@ final class ShellFixture {
                 mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
-                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
+                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), Runnable::run);
         shell.press(key('j'));
         return shell;
     }
@@ -174,7 +177,7 @@ final class ShellFixture {
                 mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
-                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
+                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), Runnable::run);
         shell.press(key('j'));
         return shell;
     }
@@ -241,6 +244,7 @@ final class ShellFixture {
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
+                mock(PendingReviewCommand.class),
                 background);
     }
 
@@ -284,6 +288,7 @@ final class ShellFixture {
                 boards,
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
+                mock(PendingReviewCommand.class),
                 background);
         pressed(shell, key('j'), Status.DONE.ordinal());
         shell.press(enter());
@@ -346,7 +351,7 @@ final class ShellFixture {
                 mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 screens,
-                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), Runnable::run);
+                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), Runnable::run);
         pressed(shell, key('j'), ticket.status().ordinal());
         if (ticket.status().finished()) {
             shell.press(enter());
@@ -406,6 +411,7 @@ final class ShellFixture {
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
+                mock(PendingReviewCommand.class),
                 background);
     }
 
@@ -436,6 +442,7 @@ final class ShellFixture {
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 reviews,
+                mock(PendingReviewCommand.class),
                 Runnable::run);
         Screen.of(shell);
         shell.press(alt('l'));

@@ -87,18 +87,12 @@ public record PendingReviewManager(PendingReviewPort reviews) {
         }
     }
 
-    /**
-     * The pending comments with the diff lines they show under, from whatever each read last answered: none until the pending review is
-     * read, and every one on no line until the diff is.
-     */
-    public PendingCommentsInDiff pendingInDiff(DiffReading diff, PendingReviewReading pending) {
-        if (!(pending instanceof ReadPendingReview read) || !(read.pullRequest().review() instanceof PendingReview review)) {
-            return new PendingCommentsInDiff(List.of());
-        }
+    /** The pending {@code comments} with the diff lines they show under: every one on no line until the diff is read. */
+    public PendingCommentsInDiff pendingInDiff(DiffReading diff, List<PendingComment> comments) {
         if (diff instanceof ReadDiff readDiff) {
-            return readDiff.diff().place(review);
+            return readDiff.diff().place(comments);
         }
-        return new PendingCommentsInDiff(review.comments().stream()
+        return new PendingCommentsInDiff(comments.stream()
                 .map(comment -> PendingInDiff.builder().comment(comment).line(new NoDiffLine()).build())
                 .toList());
     }

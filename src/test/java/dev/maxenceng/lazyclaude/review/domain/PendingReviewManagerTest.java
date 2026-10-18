@@ -6,9 +6,7 @@ import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.commen
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onDiff;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onDiffLine;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onNoDiffLine;
-import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pendingReviewOf;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.replyToThread;
-import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.reviewedPullRequestWith;
 import static dev.maxenceng.lazyclaude.review.domain.PullRequestDiffManagerFixture.unavailableDiff;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
@@ -263,12 +261,10 @@ class PendingReviewManagerTest {
     }
 
     @Test
-    void shouldPlaceThePendingCommentsOnTheDiffOnceBothAreRead() {
+    void shouldPlaceThePendingCommentsOnTheDiffOnceItIsRead() {
         PendingComment onTheAddedLine = commentOn(diffPath(), rightOn(3));
 
-        assertThat(manager.pendingInDiff(
-                        new ReadDiff(pullRequestDiffOf(modifiedFile())),
-                        new ReadPendingReview(reviewedPullRequestWith(pendingReviewOf(onTheAddedLine)))))
+        assertThat(manager.pendingInDiff(new ReadDiff(pullRequestDiffOf(modifiedFile())), List.of(onTheAddedLine)))
                 .isEqualTo(new PendingCommentsInDiff(List.of(onDiffLine(onTheAddedLine, 2))));
     }
 
@@ -276,20 +272,9 @@ class PendingReviewManagerTest {
     void shouldPutEveryPendingCommentOnNoLineUntilTheDiffIsRead() {
         PendingComment onTheAddedLine = commentOn(diffPath(), rightOn(3));
 
-        assertThat(manager.pendingInDiff(
-                        unavailableDiff(), new ReadPendingReview(reviewedPullRequestWith(pendingReviewOf(onTheAddedLine, replyToThread())))))
+        assertThat(manager.pendingInDiff(unavailableDiff(), List.of(onTheAddedLine, replyToThread())))
                 .as("the Comments panel lists the pending comments as soon as they are read, whatever became of the diff")
                 .isEqualTo(new PendingCommentsInDiff(List.of(onNoDiffLine(onTheAddedLine), onNoDiffLine(replyToThread()))));
-    }
-
-    @Test
-    void shouldHoldNoPendingCommentUntilThePendingReviewIsReadOrWhenThereIsNone() {
-        ReadDiff diff = new ReadDiff(pullRequestDiffOf(modifiedFile()));
-
-        assertThat(manager.pendingInDiff(diff, unavailablePendingReview())).isEqualTo(new PendingCommentsInDiff(List.of()));
-        assertThat(manager.pendingInDiff(diff, new LoadingPendingReview())).isEqualTo(new PendingCommentsInDiff(List.of()));
-        assertThat(manager.pendingInDiff(diff, new ReadPendingReview(unreviewedPullRequest())))
-                .isEqualTo(new PendingCommentsInDiff(List.of()));
     }
 
     @Test

@@ -47,10 +47,10 @@ public record PullRequestDiff(List<DiffFile> files) {
                 .toList());
     }
 
-    /** Each of the pending review's comments with the diff line it shows under, in diff order; one on a line this diff does not hold shows under none. */
-    public PendingCommentsInDiff place(PendingReview review) {
+    /** Each of the pending {@code comments} with the diff line it shows under, in diff order; one on a line this diff does not hold shows under none. */
+    public PendingCommentsInDiff place(List<PendingComment> comments) {
         Map<LineAnchor, DiffLineIndex> lineOfAnchor = lineOfAnchor();
-        return new PendingCommentsInDiff(review.comments().stream()
+        return new PendingCommentsInDiff(comments.stream()
                 .map(comment -> PendingInDiff.builder()
                         .comment(comment)
                         .line(lineOf(comment.anchor().path(), comment.anchor().position(), lineOfAnchor))

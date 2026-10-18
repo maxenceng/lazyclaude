@@ -23,11 +23,14 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsRepository;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchRepository;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
+import dev.maxenceng.lazyclaude.review.application.PendingReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.application.PullRequestDiffApplicationService;
 import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhMergedPullRequestsRepository;
+import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPendingReviewRepository;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestDiffRepository;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestsRepository;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhThreadRepository;
@@ -112,20 +115,24 @@ public final class LazyClaude {
         WatchedSessionCommand watching = new WatchedSessionCommand(sessionService);
         OutsideSessionCommand outside = new OutsideSessionCommand(sessionService);
         TicketWorktreeCommand removing = new TicketWorktreeCommand(sessionService);
+        PendingReviewApplicationService pendingReview =
+                new PendingReviewApplicationService(new GhPendingReviewRepository(GH, GH_PATIENCE));
         ReviewQuery reviews = new ReviewQuery(
                 new ReviewApplicationService(
                         new GhPullRequestsRepository(GH, GH_PATIENCE),
                         new GhMergedPullRequestsRepository(GH, GH_PATIENCE),
                         new PullRequestWatchRepository()),
                 new PullRequestDiffApplicationService(
-                        new GhPullRequestDiffRepository(GH, GH_PATIENCE), new GhThreadRepository(GH, GH_PATIENCE)));
+                        new GhPullRequestDiffRepository(GH, GH_PATIENCE), new GhThreadRepository(GH, GH_PATIENCE)),
+                pendingReview);
+        PendingReviewCommand writing = new PendingReviewCommand(pendingReview);
         int exit = start(
                 Path.of("").toAbsolutePath(),
                 board,
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, hosting, watching, outside, removing, warnings));
+                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, writing, hosting, watching, outside, removing, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -223,13 +230,14 @@ public final class LazyClaude {
             DocsQuery docs,
             SessionQuery sessions,
             ReviewQuery reviews,
+            PendingReviewCommand writing,
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
             OutsideSessionCommand outside,
             TicketWorktreeCommand removing,
             WarningQuery warnings)
             throws Exception {
-        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, hosting, watching, outside, removing, warnings)::run, hosting);
+        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, writing, hosting, watching, outside, removing, warnings)::run, hosting);
     }
 
     /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
@@ -255,12 +263,13 @@ public final class LazyClaude {
             DocsQuery docs,
             SessionQuery sessions,
             ReviewQuery reviews,
+            PendingReviewCommand writing,
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
             OutsideSessionCommand outside,
             TicketWorktreeCommand removing,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, watching, outside, removing, sessions, board, docs, reviews);
+        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, watching, outside, removing, sessions, board, docs, reviews, writing);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         board.subscribe(new BoardWatchPayload(view.root().value()), shell::boardChanged);
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);

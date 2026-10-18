@@ -18,8 +18,11 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.review.domain.MergedPullRequest;
+import dev.maxenceng.lazyclaude.review.domain.PendingComment;
+import dev.maxenceng.lazyclaude.review.domain.PendingReview;
 import dev.maxenceng.lazyclaude.review.domain.PullRequest;
 import dev.maxenceng.lazyclaude.review.domain.ReviewThread;
+import dev.maxenceng.lazyclaude.review.domain.ReviewedPullRequest;
 import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
@@ -202,6 +205,67 @@ public final class FakeGhFixture {
         return """
                 {"author":%s,"state":"%s","body":"%s"}"""
                 .formatted(login == null ? "null" : "{\"login\":\"" + login + "\"}", state, body);
+    }
+
+    public static GhPendingReviewRepository pendingRepositoryOver(Path gh) {
+        return new GhPendingReviewRepository(gh.toString(), PATIENCE);
+    }
+
+    public static GhPendingReviewRepository impatientPendingRepositoryOver(Path gh) {
+        return new GhPendingReviewRepository(gh.toString(), IMPATIENCE);
+    }
+
+    public static GhPendingReviewRepository pendingRepositoryOverMissingGh() {
+        return new GhPendingReviewRepository(missingCommand(), PATIENCE);
+    }
+
+    public static ReviewedPullRequest readPendingPrinted(Path directory, String output) throws IOException {
+        return pendingRepositoryOver(ghPrinting(directory, output)).pullRequest(projectAt(directory), pullRequestNumber());
+    }
+
+    public static List<PendingComment> readPendingCommentsPrinted(Path directory, String output) throws IOException {
+        return ((PendingReview) readPendingPrinted(directory, output).review()).comments();
+    }
+
+    public static Path ghAnsweringPendingWithItsArguments(Path directory) throws IOException {
+        return script(
+                directory,
+                "printf '{\"data\":{\"repository\":{\"pullRequest\":{\"id\":\"PR_1\",\"headRefOid\":\"abc\",\"reviews\":{\"nodes\":[{\"id\":\"PRR_1\",\"body\":\"%s\",\"commit\":{\"oid\":\"abc\"}}]},\"reviewThreads\":{\"nodes\":[]}}}}}' \"$(echo $*)\"\n");
+    }
+
+    public static Path ghRecordingItsArguments(Path directory, String output) throws IOException {
+        return script(directory, "printf '%%s\\0' \"$@\" > '%s'\nprintf '%%s' '%s'\n".formatted(recordedArguments(directory), output));
+    }
+
+    public static List<String> argumentsRecordedIn(Path directory) throws IOException {
+        return Arrays.asList(Files.readString(recordedArguments(directory), StandardCharsets.UTF_8).split("\0"));
+    }
+
+    private static Path recordedArguments(Path directory) {
+        return directory.resolve("arguments");
+    }
+
+    public static String pendingPageJson(String reviews, String... threads) {
+        return """
+                {"data":{"repository":{"pullRequest":{"id":"PR_1","headRefOid":"9f3c2e1a0b8d7c6e5f4a3b2c1d0e9f8a7b6c5d4e","reviews":{"nodes":[%s]},"reviewThreads":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[%s]}}}}}"""
+                .formatted(reviews, String.join(",", threads));
+    }
+
+    public static String pendingReviewJson(String id, String body, String oid) {
+        return """
+                {"id":"%s","body":"%s","commit":{"oid":"%s"},"comments":{"nodes":[]}}""".formatted(id, body, oid);
+    }
+
+    public static String pendingThreadJson(
+            String id, String path, String line, String originalLine, String startLine, String side, boolean outdated, String... comments) {
+        return """
+                {"id":"%s","path":"%s","line":%s,"originalLine":%s,"startLine":%s,"originalStartLine":null,"diffSide":"%s","isResolved":false,"isOutdated":%b,"comments":{"nodes":[%s]}}"""
+                .formatted(id, path, line, originalLine, startLine, side, outdated, String.join(",", comments));
+    }
+
+    public static String threadCommentJson(String id, String state, String body) {
+        return """
+                {"id":"%s","author":{"login":"alice"},"state":"%s","body":"%s"}""".formatted(id, state, body);
     }
 
     public static String missingCommand() {

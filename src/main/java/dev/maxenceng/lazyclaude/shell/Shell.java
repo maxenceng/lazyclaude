@@ -33,6 +33,7 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
@@ -201,6 +202,7 @@ public final class Shell extends ToolkitApp {
     private final BoardQuery boards;
     private final DocsQuery docsQuery;
     private final ReviewQuery reviews;
+    private final PendingReviewCommand writing;
     private final Path root;
     private final DockTabs dock = new DockTabs();
     private Map<HostedSessionId, PaneSize> paneSizes = Map.of();
@@ -248,7 +250,8 @@ public final class Shell extends ToolkitApp {
             SessionQuery screens,
             BoardQuery boards,
             DocsQuery docsQuery,
-            ReviewQuery reviews) {
+            ReviewQuery reviews,
+            PendingReviewCommand writing) {
         this(
                 board,
                 docs,
@@ -262,6 +265,7 @@ public final class Shell extends ToolkitApp {
                 boards,
                 docsQuery,
                 reviews,
+                writing,
                 Executors.newVirtualThreadPerTaskExecutor());
     }
 
@@ -279,6 +283,7 @@ public final class Shell extends ToolkitApp {
             BoardQuery boards,
             DocsQuery docsQuery,
             ReviewQuery reviews,
+            PendingReviewCommand writing,
             Executor background) {
         this.background = background;
         this.board = new BoardRows(board);
@@ -296,6 +301,7 @@ public final class Shell extends ToolkitApp {
         this.boards = boards;
         this.docsQuery = docsQuery;
         this.reviews = reviews;
+        this.writing = writing;
         this.root = board.root().value();
         this.dock.replace(sessions.hosted());
     }

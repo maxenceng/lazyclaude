@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.review.domain;
 import static dev.maxenceng.lazyclaude.review.published.CommentBodyFixture.commentBody;
 import static dev.maxenceng.lazyclaude.review.published.CommentBodyFixture.editedCommentBody;
 import static dev.maxenceng.lazyclaude.review.published.CommitShaFixture.commitSha;
+import static dev.maxenceng.lazyclaude.review.published.CommitShaFixture.movedCommitSha;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.pendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.secondPendingCommentId;
@@ -92,16 +93,16 @@ public final class PendingReviewFixture {
         return pendingReviewBuilder().build();
     }
 
-    public static PendingReview pendingReviewOf(PendingComment... comments) {
-        return pendingReviewBuilder().comments(List.of(comments)).build();
-    }
-
     public static ReviewedPullRequest reviewedPullRequestWith(ReviewInProgress review) {
         return ReviewedPullRequest.builder().id(pullRequestNodeId()).head(commitSha()).review(review).build();
     }
 
     public static ReviewedPullRequest reviewedPullRequest() {
         return reviewedPullRequestWith(pendingReview());
+    }
+
+    public static ReviewedPullRequest movedReviewedPullRequest() {
+        return ReviewedPullRequest.builder().id(pullRequestNodeId()).head(movedCommitSha()).review(pendingReview()).build();
     }
 
     public static ReviewedPullRequest unreviewedPullRequest() {

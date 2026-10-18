@@ -7,7 +7,6 @@ import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.pullRequest
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.commentOn;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onDiffLine;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onNoDiffLine;
-import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pendingReviewOf;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.replyCommentOn;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDiffPath;
@@ -27,7 +26,7 @@ class PullRequestDiffPendingTest {
         PendingComment onTheNewSide = commentOn(diffPath(), rightOn(3));
         PendingComment onTheOldSide = commentOn(diffPath(), leftOn(3));
 
-        assertThat(pullRequestDiffOf(modifiedFile()).place(pendingReviewOf(onTheNewSide, onTheOldSide)).comments())
+        assertThat(pullRequestDiffOf(modifiedFile()).place(List.of(onTheNewSide, onTheOldSide)).comments())
                 .as("new line 3 is the added line, old line 3 the removed one above it")
                 .containsExactly(onDiffLine(onTheOldSide, 1), onDiffLine(onTheNewSide, 2));
     }
@@ -36,7 +35,7 @@ class PullRequestDiffPendingTest {
     void shouldPutAReplyOnTheLineOfItsThread() {
         PendingComment reply = replyCommentOn(diffPath(), rightOn(3));
 
-        assertThat(pullRequestDiffOf(modifiedFile()).place(pendingReviewOf(reply)).comments()).containsExactly(onDiffLine(reply, 2));
+        assertThat(pullRequestDiffOf(modifiedFile()).place(List.of(reply)).comments()).containsExactly(onDiffLine(reply, 2));
     }
 
     @Test
@@ -45,7 +44,7 @@ class PullRequestDiffPendingTest {
         PendingComment offTheDiff = commentOn(diffPath(), rightOn(99));
         PendingComment placed = commentOn(diffPath(), rightOn(3));
 
-        assertThat(pullRequestDiffOf(modifiedFile()).place(pendingReviewOf(outdatedReply, offTheDiff, placed)).comments())
+        assertThat(pullRequestDiffOf(modifiedFile()).place(List.of(outdatedReply, offTheDiff, placed)).comments())
                 .containsExactly(onDiffLine(placed, 2), onNoDiffLine(outdatedReply), onNoDiffLine(offTheDiff));
     }
 
@@ -55,7 +54,7 @@ class PullRequestDiffPendingTest {
         PendingComment onOldLineHundred = commentOn(diffPath(), leftOn(100));
 
         assertThat(pullRequestDiffOf(fileWithOldNumbersFarAboveNewOnes())
-                        .place(pendingReviewOf(onNewLineFifty, onOldLineHundred))
+                        .place(List.of(onNewLineFifty, onOldLineHundred))
                         .comments())
                 .containsExactly(onDiffLine(onOldLineHundred, 0), onDiffLine(onNewLineFifty, 1));
     }
@@ -64,12 +63,12 @@ class PullRequestDiffPendingTest {
     void shouldNotPutAPendingCommentOnTheLineOfAnotherFileWithTheSameNumber() {
         PendingComment inSecond = commentOn(secondDiffPath(), rightOn(3));
 
-        assertThat(pullRequestDiffOf(modifiedFile(), addedFile()).place(pendingReviewOf(inSecond)).comments())
+        assertThat(pullRequestDiffOf(modifiedFile(), addedFile()).place(List.of(inSecond)).comments())
                 .containsExactly(onNoDiffLine(inSecond));
     }
 
     @Test
     void shouldHoldNoCommentForAReviewWithNone() {
-        assertThat(pullRequestDiffOf(modifiedFile()).place(pendingReviewOf()).comments()).isEqualTo(List.of());
+        assertThat(pullRequestDiffOf(modifiedFile()).place(List.of()).comments()).isEmpty();
     }
 }
