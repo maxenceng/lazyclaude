@@ -91,7 +91,10 @@ words mean.
 | CI result | The checks collapsed into *passed*, *failed* or *pending*: failed wins over pending, pending over passed. A pull request with no checks has none. | `review` |
 | Pending review | Your one unsubmitted review on a pull request, kept on GitHub. An existing one is adopted, wherever it was started. | `review` (expected) |
 | Pending comment | A comment in your pending review, on one line or a range of lines inside one hunk. | `review` (expected) |
-| Thread | Comments already on the pull request; *resolved* or *outdated* ones are shown differently. | `review` (expected) |
+| Diff | The pull request's unified diff, every file in one scroll. | `review` |
+| Hunk | One `@@` section of a file's diff. | `review` |
+| Diff line | A `+`, `-` or context line in a hunk; the only rows a cursor or a comment lands on. | `review` |
+| Thread | Comments already on the pull request; *resolved* or *outdated* ones are shown differently. | `review` |
 | Summary | The pending review's body. | `review` (expected) |
 | Submit | Send the pending review as a *Comment* review — the only kind GitHub allows on your own pull request. | `review` (expected) |
 | Moved head | The pull request's head is no longer the commit the pending review was written on. Warned about, never blocking. | `review` (expected) |
