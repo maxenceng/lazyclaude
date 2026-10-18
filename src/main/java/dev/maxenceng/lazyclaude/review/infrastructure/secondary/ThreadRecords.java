@@ -18,7 +18,7 @@ final class ThreadRecords {
                 .flatMap(page -> nodesOf(page).orElseThrow(() -> new PullRequestsUnavailableException("%s holds no review threads".formatted(source))).stream())
                 .toList();
         try {
-            return records.stream().map(ThreadRecord::toThread).toList();
+            return records.stream().filter(ThreadRecord::hasSubmittedComments).map(ThreadRecord::toThread).toList();
         } catch (DomainException refused) {
             throw new PullRequestsUnavailableException(
                     "%s is not a review thread: %s".formatted(source, refused.getMessage()), refused);

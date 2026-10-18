@@ -175,7 +175,7 @@ public final class FakeGhFixture {
     public static Path ghAnsweringThreadsWithItsArguments(Path directory) throws IOException {
         return script(
                 directory,
-                "printf '{\"data\":{\"repository\":{\"pullRequest\":{\"reviewThreads\":{\"nodes\":[{\"path\":\"p\",\"line\":1,\"startLine\":null,\"diffSide\":\"RIGHT\",\"isResolved\":false,\"isOutdated\":false,\"comments\":{\"nodes\":[{\"author\":{\"login\":\"a\"},\"body\":\"%s\"}]}}]}}}}}' \"$(echo $*)\"\n");
+                "printf '{\"data\":{\"repository\":{\"pullRequest\":{\"reviewThreads\":{\"nodes\":[{\"id\":\"PRRT_1\",\"path\":\"p\",\"line\":1,\"startLine\":null,\"diffSide\":\"RIGHT\",\"isResolved\":false,\"isOutdated\":false,\"comments\":{\"nodes\":[{\"author\":{\"login\":\"a\"},\"state\":\"SUBMITTED\",\"body\":\"%s\"}]}}]}}}}}' \"$(echo $*)\"\n");
     }
 
     public static String threadsPageJson(String... threads) {
@@ -186,13 +186,22 @@ public final class FakeGhFixture {
 
     public static String threadJson(String path, String line, String startLine, String side, boolean resolved, boolean outdated, String... comments) {
         return """
-                {"path":%s,"line":%s,"startLine":%s,"diffSide":"%s","isResolved":%b,"isOutdated":%b,"comments":{"nodes":[%s]},"unknown":"ignored"}"""
+                {"id":"PRRT_1","path":%s,"line":%s,"startLine":%s,"diffSide":"%s","isResolved":%b,"isOutdated":%b,"comments":{"nodes":[%s]},"unknown":"ignored"}"""
                 .formatted(path == null ? "null" : "\"" + path + "\"", line, startLine, side, resolved, outdated, String.join(",", comments));
     }
 
     public static String commentJson(String login, String body) {
+        return commentJsonIn(login, body, "SUBMITTED");
+    }
+
+    public static String pendingCommentJson(String login, String body) {
+        return commentJsonIn(login, body, "PENDING");
+    }
+
+    private static String commentJsonIn(String login, String body, String state) {
         return """
-                {"author":%s,"body":"%s"}""".formatted(login == null ? "null" : "{\"login\":\"" + login + "\"}", body);
+                {"author":%s,"state":"%s","body":"%s"}"""
+                .formatted(login == null ? "null" : "{\"login\":\"" + login + "\"}", state, body);
     }
 
     public static String missingCommand() {

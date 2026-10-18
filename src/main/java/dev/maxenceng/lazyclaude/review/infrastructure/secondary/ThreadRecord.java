@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.secondary;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestsUnavailableException;
@@ -9,11 +10,13 @@ import dev.maxenceng.lazyclaude.review.published.DiffLineNumber;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.OutdatedThread;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
+import dev.maxenceng.lazyclaude.review.published.ThreadId;
 import dev.maxenceng.lazyclaude.review.published.ThreadPosition;
 import dev.maxenceng.lazyclaude.review.published.ThreadSide;
 
 /** One review thread as the threads query writes it, null where the JSON lacks it. */
 record ThreadRecord(
+        String id,
         String path,
         Integer line,
         Integer startLine,
@@ -24,13 +27,23 @@ record ThreadRecord(
 
     /** @throws dev.maxenceng.lazyclaude.error.domain.DomainException when a field the domain needs is missing or refused */
     ReviewThread toThread() {
-        Assert.notNull("thread comments", comments);
         return ReviewThread.builder()
+                .id(new ThreadId(id))
                 .path(new DiffPath(path))
                 .position(position())
                 .resolved(Boolean.TRUE.equals(isResolved))
-                .comments(comments.nodes().stream().map(ThreadCommentRecord::toComment).toList())
+                .comments(submittedComments().map(ThreadCommentRecord::toComment).toList())
                 .build();
+    }
+
+    /** Whether anything but pending comments is said in the thread; a thread of nothing else is shown as pending comments, not as a thread. */
+    boolean hasSubmittedComments() {
+        return submittedComments().findAny().isPresent();
+    }
+
+    private Stream<ThreadCommentRecord> submittedComments() {
+        Assert.notNull("thread comments", comments);
+        return comments.nodes().stream().filter(comment -> !comment.pending());
     }
 
     /** A thread GitHub marks outdated, or that names no line, sits on none; a range runs from its start line to its line. */

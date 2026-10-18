@@ -23,8 +23,8 @@ public final class GhThreadRepository implements ThreadPort {
                   reviewThreads(first: 100, after: $endCursor) {
                     pageInfo { hasNextPage endCursor }
                     nodes {
-                      path line startLine diffSide isResolved isOutdated
-                      comments(first: 50) { nodes { author { login } body } }
+                      id path line startLine diffSide isResolved isOutdated
+                      comments(first: 50) { nodes { author { login } state body } }
                     }
                   }
                 }

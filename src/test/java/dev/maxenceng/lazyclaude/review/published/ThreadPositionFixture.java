@@ -20,6 +20,10 @@ public final class ThreadPositionFixture {
         return placed(ThreadSide.LEFT, line, line);
     }
 
+    public static PlacedThread leftRange(int first, int last) {
+        return placed(ThreadSide.LEFT, first, last);
+    }
+
     public static PlacedThread rightRange(int first, int last) {
         return placed(ThreadSide.RIGHT, first, last);
     }

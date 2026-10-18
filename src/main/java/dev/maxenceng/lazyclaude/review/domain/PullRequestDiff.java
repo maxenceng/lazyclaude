@@ -14,11 +14,13 @@ import dev.maxenceng.lazyclaude.review.published.ContextLine;
 import dev.maxenceng.lazyclaude.review.published.DiffLine;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
 import dev.maxenceng.lazyclaude.review.published.DiffLineNumber;
+import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.NoDiffLine;
 import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 import dev.maxenceng.lazyclaude.review.published.RemovedLine;
 import dev.maxenceng.lazyclaude.review.published.ThreadLine;
+import dev.maxenceng.lazyclaude.review.published.ThreadPosition;
 import dev.maxenceng.lazyclaude.review.published.ThreadSide;
 
 /**
@@ -29,6 +31,8 @@ public record PullRequestDiff(List<DiffFile> files) {
 
     private static final Comparator<ThreadInDiff> IN_DIFF_ORDER = Comparator.comparing((ThreadInDiff placed) -> placed.line() instanceof NoDiffLine)
             .thenComparingInt(PullRequestDiff::indexOf);
+    private static final Comparator<PendingInDiff> PENDING_IN_DIFF_ORDER = Comparator.comparing((PendingInDiff placed) -> placed.line() instanceof NoDiffLine)
+            .thenComparingInt(placed -> indexOf(placed.line()));
 
     public PullRequestDiff {
         Assert.notNull("files", files);
@@ -43,15 +47,92 @@ public record PullRequestDiff(List<DiffFile> files) {
                 .toList());
     }
 
+    /** Each of the pending review's comments with the diff line it shows under, in diff order; one on a line this diff does not hold shows under none. */
+    public PendingCommentsInDiff place(PendingReview review) {
+        Map<LineAnchor, DiffLineIndex> lineOfAnchor = lineOfAnchor();
+        return new PendingCommentsInDiff(review.comments().stream()
+                .map(comment -> PendingInDiff.builder()
+                        .comment(comment)
+                        .line(lineOf(comment.anchor().path(), comment.anchor().position(), lineOfAnchor))
+                        .build())
+                .sorted(PENDING_IN_DIFF_ORDER)
+                .toList());
+    }
+
+    /** The comment on the line at {@code first} or on the range from it to {@code last}, in whichever order they come. */
+    public PendingOnDiff commentOn(DiffLineIndex first, DiffLineIndex last) {
+        int from = Math.min(first.value(), last.value());
+        int to = Math.max(first.value(), last.value());
+        if (to >= lineCount()) {
+            throw new DiffLineMissingException();
+        }
+        HunkInDiff hunk = hunks().stream()
+                .filter(candidate -> candidate.holds(from))
+                .findFirst()
+                .orElseThrow(DiffLineMissingException::new);
+        if (!hunk.holds(to)) {
+            throw new RangeAcrossHunksException();
+        }
+        List<DiffLine> range = hunk.linesFrom(from, to);
+        ThreadSide side = sideOf(range.getLast());
+        return PendingOnDiff.builder()
+                .path(hunk.file().path())
+                .position(PlacedThread.builder()
+                        .side(side)
+                        .first(range.stream().flatMap(line -> numberOn(side, line).stream()).findFirst().orElseThrow())
+                        .last(numberOn(side, range.getLast()).orElseThrow())
+                        .build())
+                .build();
+    }
+
+    private int lineCount() {
+        return files.stream().flatMap(file -> file.hunks().stream()).mapToInt(hunk -> hunk.lines().size()).sum();
+    }
+
+    private List<HunkInDiff> hunks() {
+        List<Map.Entry<DiffFile, Hunk>> hunks =
+                files.stream().flatMap(file -> file.hunks().stream().map(hunk -> Map.entry(file, hunk))).toList();
+        return IntStream.range(0, hunks.size())
+                .mapToObj(index -> HunkInDiff.builder()
+                        .file(hunks.get(index).getKey())
+                        .hunk(hunks.get(index).getValue())
+                        .start(new DiffLineIndex(hunks.subList(0, index).stream()
+                                .mapToInt(before -> before.getValue().lines().size())
+                                .sum()))
+                        .build())
+                .toList();
+    }
+
+    /** A comment on a removed line is on the old side, and on an added or an unchanged one on the new. */
+    private static ThreadSide sideOf(DiffLine line) {
+        return line instanceof RemovedLine ? ThreadSide.LEFT : ThreadSide.RIGHT;
+    }
+
+    private static Optional<DiffLineNumber> numberOn(ThreadSide side, DiffLine line) {
+        return switch (line) {
+            case AddedLine added -> side == ThreadSide.RIGHT ? Optional.of(added.newNumber()) : Optional.empty();
+            case RemovedLine removed -> side == ThreadSide.LEFT ? Optional.of(removed.oldNumber()) : Optional.empty();
+            case ContextLine kept -> Optional.of(side == ThreadSide.RIGHT ? kept.newNumber() : kept.oldNumber());
+        };
+    }
+
     private static int indexOf(ThreadInDiff placed) {
-        return placed.line() instanceof OnDiffLine on ? on.index().value() : 0;
+        return indexOf(placed.line());
+    }
+
+    private static int indexOf(ThreadLine line) {
+        return line instanceof OnDiffLine on ? on.index().value() : 0;
     }
 
     private static ThreadLine lineOf(ReviewThread thread, Map<LineAnchor, DiffLineIndex> lineOfAnchor) {
-        if (!(thread.position() instanceof PlacedThread placed)) {
+        return lineOf(thread.path(), thread.position(), lineOfAnchor);
+    }
+
+    private static ThreadLine lineOf(DiffPath path, ThreadPosition position, Map<LineAnchor, DiffLineIndex> lineOfAnchor) {
+        if (!(position instanceof PlacedThread placed)) {
             return new NoDiffLine();
         }
-        return Optional.ofNullable(lineOfAnchor.get(LineAnchor.builder().path(thread.path()).side(placed.side()).number(placed.last()).build()))
+        return Optional.ofNullable(lineOfAnchor.get(LineAnchor.builder().path(path).side(placed.side()).number(placed.last()).build()))
                 .<ThreadLine>map(OnDiffLine::new)
                 .orElseGet(NoDiffLine::new);
     }
