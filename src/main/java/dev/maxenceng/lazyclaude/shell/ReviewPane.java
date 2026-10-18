@@ -60,7 +60,7 @@ final class ReviewPane {
         this.reviews = reviews;
         this.placed = reviews.threadsInDiff(diff, threads);
         this.placedPending = reviews.pendingInDiff(diff, pending);
-        this.rows = DiffRows.of(diff, placed, showResolved);
+        this.rows = DiffRows.of(diff, placed, placedPending, showResolved);
     }
 
     PullRequestNumber number() {
@@ -260,7 +260,7 @@ final class ReviewPane {
     private void rebuild() {
         placed = reviews.threadsInDiff(diff, threads);
         placedPending = reviews.pendingInDiff(diff, pending);
-        rows = DiffRows.of(diff, placed, showResolved);
+        rows = DiffRows.of(diff, placed, placedPending, showResolved);
         moveTo(cursor);
     }
 

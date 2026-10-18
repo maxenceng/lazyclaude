@@ -71,9 +71,13 @@ final class DiffElement implements Element {
 
     /** The row a line is scrolled up to: the file and hunk headers above it come along. */
     private static int withItsHeaders(DiffRows rows, int row) {
-        return row > 0 && !(rows.row(row - 1) instanceof LineRow) && !(rows.row(row - 1) instanceof ThreadRow)
+        return row > 0 && !isAttachedOrLine(rows.row(row - 1))
                 ? withItsHeaders(rows, row - 1)
                 : row;
+    }
+
+    private static boolean isAttachedOrLine(DiffRow row) {
+        return row instanceof LineRow || row instanceof ThreadRow || row instanceof PendingRow;
     }
 
     /** Whether rows {@code from} through {@code target} fit the area, looking at no more rows than the area is high. */

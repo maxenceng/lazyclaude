@@ -53,12 +53,19 @@ final class DiffText {
             case ThreadRow thread -> ThreadText.rows(thread.thread(), width, gutterWidth(numberWidth)).stream()
                     .map(spans -> clipped(spans, width))
                     .toList();
+            case PendingRow pending -> PendingText.rows(pending.comment(), width, gutterWidth(numberWidth)).stream()
+                    .map(spans -> clipped(spans, width))
+                    .toList();
         };
     }
 
     /** How many screen rows {@code row} takes in {@code width} cells. */
     static int height(DiffRow row, int width, int numberWidth) {
-        return row instanceof ThreadRow thread ? ThreadText.rows(thread.thread(), width, gutterWidth(numberWidth)).size() : 1;
+        return switch (row) {
+            case ThreadRow thread -> ThreadText.rows(thread.thread(), width, gutterWidth(numberWidth)).size();
+            case PendingRow pending -> PendingText.rows(pending.comment(), width, gutterWidth(numberWidth)).size();
+            case FileHeaderRow _, HunkHeaderRow _, LineRow _ -> 1;
+        };
     }
 
     /** A file's name as the Files panel and the rule name it: {@code old → new} for a renamed one. */

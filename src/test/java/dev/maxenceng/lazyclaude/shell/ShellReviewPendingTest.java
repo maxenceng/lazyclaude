@@ -1,12 +1,16 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.movedOpenPendingView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.commentOnView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.noPendingReviewView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.openPendingViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.replyViewOn;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.leftRange;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.outdated;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.unavailablePendingView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.openThreadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.pendingOnBothFiles;
@@ -86,5 +90,33 @@ class ShellReviewPendingTest {
 
         assertThat(screen.boardPanelText()).contains("pending unknown (gh: not");
         assertThat(screen.dimText()).anySatisfy(text -> assertThat(text).contains("pending unknown"));
+    }
+
+    @Test
+    void shouldShowAPendingCommentUnderItsLineInItsOwnColourAsComingFromYou() {
+        Screen screen = Screen.of(shellReviewing(twoFileDiffView(), readThreadsViewOf(), openPendingViewOf(commentOnView(diffPath(), rightOn(3)))));
+
+        assertThat(screen.mainViewRows().stream().map(String::strip).toList())
+                .containsSubsequence("3 + new", "✎ L3 you", "Does this need its own Element?");
+        assertThat(screen.foregroundTextOnLine(screen.lineOf("✎ L3 you"), PendingText.COLOUR)).contains("✎ L3");
+        assertThat(screen.text()).doesNotContain("◆ L3");
+    }
+
+    @Test
+    void shouldShowAPendingReplyUnderTheLineOfItsThreadAfterThePlacedThread() {
+        Screen screen = Screen.of(shellReviewing(
+                twoFileDiffView(),
+                readThreadsViewOf(openThreadView(diffPath(), rightOn(3))),
+                openPendingViewOf(replyViewOn(diffPath(), rightOn(3)))));
+
+        assertThat(screen.mainViewRows().stream().map(String::strip).toList()).containsSubsequence("◆ L3 alice", "bob  It assumes markdown.", "✎ reply you");
+    }
+
+    @Test
+    void shouldShowAPendingRangeAsItsLines() {
+        Screen screen = Screen.of(shellReviewing(
+                twoFileDiffView(), readThreadsViewOf(), openPendingViewOf(commentOnView(diffPath(), leftRange(2, 3)))));
+
+        assertThat(screen.mainViewRows()).anySatisfy(row -> assertThat(row).contains("✎ L2–3 you"));
     }
 }

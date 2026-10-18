@@ -19,6 +19,7 @@ import dev.maxenceng.lazyclaude.review.domain.PullRequestDiffPort;
 import dev.maxenceng.lazyclaude.review.domain.ThreadPort;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.DiffFileView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.HunkView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
@@ -43,7 +44,7 @@ final class ReviewPaneFixture {
     }
 
     static DiffRows rowsOf(PullRequestDiffView diff, ThreadsView threads, boolean showResolved) {
-        return DiffRows.of(diff, joiningReviews().threadsInDiff(diff, threads), showResolved);
+        return DiffRows.of(diff, joiningReviews().threadsInDiff(diff, threads), new PendingCommentsInDiffView(List.of()), showResolved);
     }
 
     static ReviewPane paneOver(PullRequestDiffView diff, ThreadsView threads) {
