@@ -37,7 +37,7 @@ created: 2026-10-10
       replies indented under the first.
 - [x] A resolved thread is hidden inline until `r`, which shows resolved threads dimmed;
       `r` again hides them.
-- [ ] An outdated thread (no `line`) is never placed inline. Comments lists every thread in
+- [x] An outdated thread (no `line`) is never placed inline. Comments lists every thread in
       diff order (file, then line), outdated ones last and marked `outdated`, resolved ones
       dimmed; `enter` on a placed thread moves the cursor to its line, and does nothing on
       an outdated one.
