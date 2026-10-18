@@ -44,7 +44,7 @@ final class RowsElement implements Element {
         int columnWidth = columnWidth(entry, area.width());
         String line = fit(entry.whole(), area.width() - reserved(columnWidth));
         boolean reversed = index == selected && highlighted;
-        Style style = reversed ? Style.EMPTY.reversed() : Style.EMPTY;
+        Style style = reversed ? entry.textStyle().reversed() : entry.textStyle();
         String padded = reversed ? line + PADDING.repeat(area.width() - line.codePointCount(0, line.length())) : line;
         frame.buffer().setString(area.x(), area.y() + row, padded, style);
         int gutterWidth = Math.min(entry.gutter().codePointCount(0, entry.gutter().length()), line.codePointCount(0, line.length()));

@@ -31,7 +31,8 @@ record TicketRow(TicketView ticket) implements Row {
                         SessionText.glyph(strongest) + GUTTER_GAP,
                         Style.EMPTY.fg(SessionText.colour(strongest)),
                         "%s %s".formatted(ticket.id().value(), TicketText.title(ticket)),
+                        Style.EMPTY,
                         column))
-                .orElseGet(() -> new RowLine("", Style.EMPTY, text(), column));
+                .orElseGet(() -> new RowLine("", Style.EMPTY, text(), Style.EMPTY, column));
     }
 }

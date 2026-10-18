@@ -33,6 +33,8 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
@@ -111,6 +113,9 @@ public final class Shell extends ToolkitApp {
     private static final int SMALL_PANEL_HEIGHT = 3;
     private static final int SHRUNK_PANEL_HEIGHT = 5;
 
+    private static final String FILES_TITLE = "Files";
+    private static final String COMMENTS_TITLE = "Comments";
+    private static final String REVIEW_TITLE = "PR #%d %s";
     private static final String BOARD_TITLE = "Board";
     private static final String SESSIONS_TITLE = "Sessions";
     private static final String DOCS_TITLE = "Docs";
@@ -137,6 +142,10 @@ public final class Shell extends ToolkitApp {
     private static final char YES = 'y';
     private static final char NO = 'n';
     private static final char JUMP = 'o';
+    private static final char OPEN_REVIEW = 'p';
+    private static final char RESOLVED = 'r';
+    private static final char NEXT_FILE = 'J';
+    private static final char PREVIOUS_FILE = 'K';
     private static final char REMOVE_WORKTREE = 'd';
     private static final char LEFT = 'h';
     private static final char DOWN = 'j';
@@ -157,6 +166,11 @@ public final class Shell extends ToolkitApp {
     private static final String QUIT_KEY = "q quit";
     private static final String REFRESH_KEY = "R refresh";
     private static final String JUMP_KEY = "o jump";
+    private static final String REVIEW_KEY = "p review";
+    private static final List<String> DIFF_KEYS =
+            List.of("j/k line", "J/K file", "^d/^u page", "r resolved", "R refresh", "esc back");
+    private static final List<String> PANEL_REVIEW_KEYS =
+            List.of("j/k move", "enter go to line", "r resolved", "R refresh", "esc back");
     private static final String REMOVE_WORKTREE_KEY = "d remove worktree";
     private static final String NEW_KEY = "N new";
     private static final String NEW_TICKET_KEY = "n new";
@@ -199,6 +213,7 @@ public final class Shell extends ToolkitApp {
     private volatile Set<String> mergedHeads = Set.of();
     private final AtomicReference<Set<String>> pendingMergedHeads = new AtomicReference<>();
     private final Executor background;
+    private Optional<ReviewPane> review = Optional.empty();
     private Optional<VerbPicker> picker = Optional.empty();
     private Optional<Rect> sessionsArea = Optional.empty();
     private boolean mergedRead;
@@ -575,6 +590,9 @@ public final class Shell extends ToolkitApp {
         if (inSession()) {
             return pressInSession(key);
         }
+        if (review.isPresent() && pressInReview(review.get(), key)) {
+            return true;
+        }
         if (key.hasCtrl()) {
             return key.isCtrlC() ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
         }
@@ -595,6 +613,9 @@ public final class Shell extends ToolkitApp {
         }
         if (key.isChar(REMOVE_WORKTREE) && removableTicket().isPresent()) {
             return checkRemoval(removableTicket().get());
+        }
+        if (key.isChar(OPEN_REVIEW)) {
+            return openReview();
         }
         if (key.isChar(NEW_TICKET_SESSION)) {
             return newFromTicket();
@@ -878,12 +899,139 @@ public final class Shell extends ToolkitApp {
 
     /** Reads everything again, off the render thread, and shows only what changed; the pull requests are fetched on their own thread. */
     private boolean refresh() {
+        review.ifPresent(this::readReview);
         background.execute(() -> {
             reviews.refresh();
             screens.refresh(new SessionPayload(root, linkedTicketIds));
             docsChanged(docsQuery.docsFor(new DocsPayload(root)));
             boardChanged();
         });
+        return true;
+    }
+
+    /** The open pull request whose head is the selected ticket's ticket branch, when {@code p} is to open its review. */
+    private Optional<PullRequestView> reviewablePullRequest() {
+        return (focus == Focus.BOARD || focus == Focus.SESSIONS) && review.isEmpty()
+                ? selectedTicket().flatMap(ticket -> PullRequestText.pullRequestOf(ticket, pullRequests))
+                : Optional.empty();
+    }
+
+    private boolean openReview() {
+        return reviewablePullRequest()
+                .map(pullRequest -> {
+                    ReviewPane pane = new ReviewPane(
+                            pullRequest.number(), pullRequest.title(), reviews.loadingDiff(), reviews.loadingThreads());
+                    review = Optional.of(pane);
+                    lastLeft = Focus.FILES;
+                    goUp(Focus.MAIN);
+                    readReview(pane);
+                    return true;
+                })
+                .orElse(false);
+    }
+
+    private boolean leaveReview() {
+        review = Optional.empty();
+        lastLeft = Focus.BOARD;
+        return focusOn(Focus.BOARD);
+    }
+
+    /**
+     * Reads the review's diff and threads off the render thread, each landing on the render thread. A read lands only in the pane it was
+     * begun for and only if no later read of its kind was begun, so one that is slow never shows over a newer answer or a later review.
+     */
+    private void readReview(ReviewPane pane) {
+        PullRequestPayload payload = new PullRequestPayload(root, pane.number());
+        long diffRead = pane.beginDiffRead();
+        long threadsRead = pane.beginThreadsRead();
+        CompletableFuture.supplyAsync(() -> reviews.diffOf(payload), background)
+                .exceptionally(ReviewReads::unreadableDiff)
+                .thenAccept(read -> onRenderThread(() -> landed(pane, () -> pane.applyDiff(diffRead, read))));
+        CompletableFuture.supplyAsync(() -> reviews.threadsOf(payload), background)
+                .exceptionally(ReviewReads::unreadableThreads)
+                .thenAccept(read -> onRenderThread(() -> landed(pane, () -> pane.applyThreads(threadsRead, read))));
+    }
+
+    private void landed(ReviewPane pane, Runnable apply) {
+        review.filter(open -> open == pane).ifPresent(_ -> apply.run());
+    }
+
+    /** The keys of the open review; {@code false} for one it leaves to the rest of the keys. */
+    private boolean pressInReview(ReviewPane pane, KeyEvent key) {
+        if (key.isKey(KeyCode.ESCAPE)) {
+            return leaveReview();
+        }
+        if (key.hasAlt()) {
+            return false;
+        }
+        if (key.hasCtrl()) {
+            return !key.isCtrlC() && focus == Focus.MAIN && pageReview(pane, key);
+        }
+        if (key.isChar(OPEN_REVIEW)) {
+            return true;
+        }
+        if (key.isChar(RESOLVED)) {
+            pane.toggleResolved();
+            return true;
+        }
+        return switch (focus) {
+            case MAIN -> moveInDiff(pane, key);
+            case FILES -> moveInFiles(pane, key);
+            case COMMENTS -> moveInComments(pane, key);
+            default -> false;
+        };
+    }
+
+    private static boolean pageReview(ReviewPane pane, KeyEvent key) {
+        if (key.isChar(HALF_PAGE_DOWN)) {
+            pane.halfPageDown();
+            return true;
+        }
+        if (key.isChar(HALF_PAGE_UP)) {
+            pane.halfPageUp();
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean moveInDiff(ReviewPane pane, KeyEvent key) {
+        if (key.isChar(DOWN)) {
+            pane.lineDown();
+        } else if (key.isChar(UP)) {
+            pane.lineUp();
+        } else if (key.isChar(NEXT_FILE)) {
+            pane.nextFile();
+        } else if (key.isChar(PREVIOUS_FILE)) {
+            pane.previousFile();
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean moveInFiles(ReviewPane pane, KeyEvent key) {
+        if (key.isChar(DOWN)) {
+            pane.selectFileDown();
+        } else if (key.isChar(UP)) {
+            pane.selectFileUp();
+        } else if (key.isKey(KeyCode.ENTER)) {
+            pane.goToSelectedFile();
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean moveInComments(ReviewPane pane, KeyEvent key) {
+        if (key.isChar(DOWN)) {
+            pane.selectCommentDown();
+        } else if (key.isChar(UP)) {
+            pane.selectCommentUp();
+        } else if (key.isKey(KeyCode.ENTER)) {
+            pane.goToSelectedComment();
+        } else {
+            return false;
+        }
         return true;
     }
 
@@ -1182,7 +1330,7 @@ public final class Shell extends ToolkitApp {
         } else {
             lastRight = target;
         }
-        if (target.column() == Column.LEFT && target != mainViewOwner) {
+        if (target.column() == Column.LEFT && !target.reviewing() && target != mainViewOwner) {
             mainViewOwner = target;
             mainViewScroll.reset();
         }
@@ -1208,12 +1356,7 @@ public final class Shell extends ToolkitApp {
                                 .map(SessionText::quitPrompt)
                                 .or(() -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree())))),
                 row(
-                        column(
-                                        boardPanel(),
-                                        sessionsPanel(),
-                                        docsPanel(),
-                                        elsewherePanel())
-                                .percent(LEFT_COLUMN_PERCENT),
+                        leftColumn(),
                         (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
                 new KeyBarElement(keyBar()));
         Element withPicker = picker.<Element>map(open -> stack(
@@ -1235,6 +1378,23 @@ public final class Shell extends ToolkitApp {
                                 RemoteControlPromptText.hint(prompt),
                                 () -> mainViewArea)))
                 .orElse(withPicker);
+    }
+
+    private Element leftColumn() {
+        return review.<Element>map(pane -> column(filesPanel(pane), commentsPanel(pane)).percent(LEFT_COLUMN_PERCENT))
+                .orElseGet(() -> column(boardPanel(), sessionsPanel(), docsPanel(), elsewherePanel()).percent(LEFT_COLUMN_PERCENT));
+    }
+
+    private Element filesPanel(ReviewPane pane) {
+        Element body = new RowsElement(ReviewText.fileLines(pane), pane.selectedFile(), true);
+        return framed(FILES_TITLE, Focus.FILES, body).fill();
+    }
+
+    private Element commentsPanel(ReviewPane pane) {
+        Element body = ReviewText.commentsNotice(pane.threads())
+                .<Element>map(notice -> richText(notice).wrapWord().dim())
+                .orElseGet(() -> new RowsElement(ReviewText.commentLines(pane), pane.selectedComment(), focus == Focus.COMMENTS));
+        return framed(COMMENTS_TITLE, Focus.COMMENTS, body).fill();
     }
 
     private Element boardPanel() {
@@ -1289,7 +1449,20 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element mainView() {
-        return framed(MAIN_VIEW_TITLE, Focus.MAIN, new PaneProbe(detail(), area -> mainViewArea = Optional.of(area))).fill();
+        return review.map(this::reviewMainView)
+                .orElseGet(() -> framed(MAIN_VIEW_TITLE, Focus.MAIN, new PaneProbe(detail(), area -> mainViewArea = Optional.of(area))).fill());
+    }
+
+    private Element reviewMainView(ReviewPane pane) {
+        Element body = ReviewText.diffNotice(pane.diff())
+                .<Element>map(notice -> richText(notice).wrapWord().dim())
+                .orElseGet(() -> new DiffElement(pane));
+        return framed(
+                        REVIEW_TITLE.formatted(pane.number().value(), pane.title().value()),
+                        Focus.MAIN,
+                        new PaneProbe(body, area -> mainViewArea = Optional.of(area)))
+                .titleEllipsis()
+                .fill();
     }
 
     private Element dock() {
@@ -1435,6 +1608,12 @@ public final class Shell extends ToolkitApp {
         if (inSession()) {
             return List.of(SESSION_KEYS);
         }
+        if (review.isPresent()) {
+            return Stream.concat(
+                            (focus == Focus.MAIN ? DIFF_KEYS : PANEL_REVIEW_KEYS).stream(),
+                            Stream.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY))
+                    .toList();
+        }
         return Stream.of(
                         Included.when(focus.column() == Column.LEFT, MOVE_KEYS),
                         Included.when(focus == Focus.MAIN, SCROLL_KEYS),
@@ -1448,6 +1627,7 @@ public final class Shell extends ToolkitApp {
                         Included.when(
                                 (focus == Focus.BOARD || focus == Focus.SESSIONS) && selectedTicket().isPresent(),
                                 NEW_TICKET_KEY),
+                        Included.when(reviewablePullRequest().isPresent(), REVIEW_KEY),
                         Stream.of(NEW_KEY, REFRESH_KEY, MAIN_VIEW_KEY))
                 .flatMap(Function.identity())
                 .toList();

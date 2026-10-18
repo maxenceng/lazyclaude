@@ -27,6 +27,7 @@ record ElsewhereSessionRow(PlaceName place, LiveSessionView session) implements 
                 GUTTER.formatted(Indent.STEP, SessionText.glyph(session.state())),
                 Style.EMPTY.fg(SessionText.colour(session.state())),
                 session.name().value(),
+                Style.EMPTY,
                 List.of());
     }
 }
