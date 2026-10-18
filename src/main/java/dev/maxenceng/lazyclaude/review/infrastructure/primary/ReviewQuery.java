@@ -2,15 +2,41 @@ package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
 import java.util.function.Consumer;
 
+import dev.maxenceng.lazyclaude.review.application.PullRequestReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
 
-/** What the shell asks of {@code review}: the open and the merged pull requests of a project as views, and a view again after each fetch. It only reads. */
+/**
+ * What the shell asks of {@code review}: the open and the merged pull requests of a project as views, and a view again after each fetch,
+ * and one pull request's diff and threads when it asks for them. It only reads.
+ */
 public final class ReviewQuery {
 
     private final ReviewApplicationService review;
+    private final PullRequestReviewApplicationService pullRequestReview;
 
-    public ReviewQuery(ReviewApplicationService review) {
+    public ReviewQuery(ReviewApplicationService review, PullRequestReviewApplicationService pullRequestReview) {
         this.review = review;
+        this.pullRequestReview = pullRequestReview;
+    }
+
+    /** What stands until the diff's read answers. */
+    public PullRequestDiffView loadingDiff() {
+        return PullRequestDiffView.from(pullRequestReview.loadingDiff());
+    }
+
+    /** What stands until the threads' read answers. */
+    public ThreadsView loadingThreads() {
+        return ThreadsView.from(pullRequestReview.loadingThreads());
+    }
+
+    /** Reads the pull request's diff now, on the caller's thread, which waits for {@code gh}; never a failure, the reason is the view. */
+    public PullRequestDiffView diffOf(PullRequestPayload payload) {
+        return PullRequestDiffView.from(pullRequestReview.diff(payload.project(), payload.number()));
+    }
+
+    /** Reads the pull request's threads now, on the caller's thread, which waits for {@code gh}; never a failure, the reason is the view. */
+    public ThreadsView threadsOf(PullRequestPayload payload) {
+        return ThreadsView.from(pullRequestReview.threads(payload.project(), payload.number()));
     }
 
     /** What stands until the first fetch answers. */

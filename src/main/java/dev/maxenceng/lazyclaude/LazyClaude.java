@@ -23,11 +23,14 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsRepository;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchRepository;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
+import dev.maxenceng.lazyclaude.review.application.PullRequestReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhMergedPullRequestsRepository;
+import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestDiffRepository;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestsRepository;
+import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhThreadRepository;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.PullRequestWatchRepository;
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
@@ -113,7 +116,9 @@ public final class LazyClaude {
                 new ReviewApplicationService(
                         new GhPullRequestsRepository(GH, GH_PATIENCE),
                         new GhMergedPullRequestsRepository(GH, GH_PATIENCE),
-                        new PullRequestWatchRepository()));
+                        new PullRequestWatchRepository()),
+                new PullRequestReviewApplicationService(
+                        new GhPullRequestDiffRepository(GH, GH_PATIENCE), new GhThreadRepository(GH, GH_PATIENCE)));
         int exit = start(
                 Path.of("").toAbsolutePath(),
                 board,
