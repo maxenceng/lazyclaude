@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -12,6 +14,7 @@ import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.review.domain.MergedPullRequest;
 import dev.maxenceng.lazyclaude.review.domain.PullRequest;
+import dev.maxenceng.lazyclaude.review.domain.ReviewThread;
 import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
@@ -97,6 +100,69 @@ public final class FakeGhFixture {
 
     public static String forkMergedPullRequestJson(int number, String head, String oid) {
         return mergedPullRequestJsonFrom(true, number, head, oid);
+    }
+
+    public static GhPullRequestDiffRepository diffRepositoryOver(Path gh) {
+        return new GhPullRequestDiffRepository(gh.toString(), PATIENCE);
+    }
+
+    public static GhPullRequestDiffRepository impatientDiffRepositoryOver(Path gh) {
+        return new GhPullRequestDiffRepository(gh.toString(), IMPATIENCE);
+    }
+
+    public static GhPullRequestDiffRepository diffRepositoryOverMissingGh() {
+        return new GhPullRequestDiffRepository(missingCommand(), PATIENCE);
+    }
+
+    public static Path ghDiffingWithItsArguments(Path directory) throws IOException {
+        return script(directory, "printf 'diff --git a/x b/x\\n--- a/x\\n+++ b/x\\n@@ -1 +1 @@\\n+%s\\n' \"$*\"\n");
+    }
+
+    public static Path ghDiffingWithItsDirectory(Path directory) throws IOException {
+        return script(directory, "printf 'diff --git a/x b/x\\n--- a/x\\n+++ b/x\\n@@ -1 +1 @@\\n+%s\\n' \"$(pwd)\"\n");
+    }
+
+    public static Path ghRefusingALargeDiff(Path directory) throws IOException {
+        return ghFailing(directory, 1, "could not find pull request diff: HTTP 406: Sorry, the diff exceeded the maximum number of lines (20000)");
+    }
+
+    public static GhThreadRepository threadRepositoryOver(Path gh) {
+        return new GhThreadRepository(gh.toString(), PATIENCE);
+    }
+
+    public static GhThreadRepository impatientThreadRepositoryOver(Path gh) {
+        return new GhThreadRepository(gh.toString(), IMPATIENCE);
+    }
+
+    public static GhThreadRepository threadRepositoryOverMissingGh() {
+        return new GhThreadRepository(missingCommand(), PATIENCE);
+    }
+
+    public static List<ReviewThread> readThreadsPrinted(Path directory, String output) throws IOException {
+        return threadRepositoryOver(ghPrinting(directory, output)).threads(projectAt(directory), pullRequestNumber());
+    }
+
+    public static Path ghAnsweringThreadsWithItsArguments(Path directory) throws IOException {
+        return script(
+                directory,
+                "printf '{\"data\":{\"repository\":{\"pullRequest\":{\"reviewThreads\":{\"nodes\":[{\"path\":\"p\",\"line\":1,\"startLine\":null,\"diffSide\":\"RIGHT\",\"isResolved\":false,\"isOutdated\":false,\"comments\":{\"nodes\":[{\"author\":{\"login\":\"a\"},\"body\":\"%s\"}]}}]}}}}}' \"$(echo $*)\"\n");
+    }
+
+    public static String threadsPageJson(String... threads) {
+        return """
+                {"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[%s]}}}}}"""
+                .formatted(String.join(",", threads));
+    }
+
+    public static String threadJson(String path, String line, String startLine, String side, boolean resolved, boolean outdated, String... comments) {
+        return """
+                {"path":%s,"line":%s,"startLine":%s,"diffSide":"%s","isResolved":%b,"isOutdated":%b,"comments":{"nodes":[%s]},"unknown":"ignored"}"""
+                .formatted(path == null ? "null" : "\"" + path + "\"", line, startLine, side, resolved, outdated, String.join(",", comments));
+    }
+
+    public static String commentJson(String login, String body) {
+        return """
+                {"author":%s,"body":"%s"}""".formatted(login == null ? "null" : "{\"login\":\"" + login + "\"}", body);
     }
 
     public static String missingCommand() {

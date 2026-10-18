@@ -141,7 +141,7 @@ class GhPullRequestsRepositoryTest {
         List<PullRequest> read = repositoryOver(ghTitlingWithItsArguments(root)).openPullRequests(projectAt(root));
 
         assertThat(read.getFirst().title().value())
-                .isEqualTo("pr list --state open --json number,title,headRefName,isDraft,isCrossRepository,statusCheckRollup");
+                .isEqualTo("pr list --state open --limit 100 --json number,title,headRefName,isDraft,isCrossRepository,statusCheckRollup");
     }
 
     @Test

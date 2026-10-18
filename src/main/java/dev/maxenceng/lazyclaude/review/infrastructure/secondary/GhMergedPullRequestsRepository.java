@@ -25,6 +25,6 @@ public final class GhMergedPullRequestsRepository implements MergedPullRequestPo
 
     @Override
     public List<MergedPullRequest> mergedPullRequests(Project project) {
-        return MergedPullRequestRecords.pullRequests(gh.output(project, ARGUMENTS), GhCommand.SOURCE);
+        return MergedPullRequestRecords.pullRequests(gh.output(project, ARGUMENTS), GhCommand.sourceOf(ARGUMENTS));
     }
 }
