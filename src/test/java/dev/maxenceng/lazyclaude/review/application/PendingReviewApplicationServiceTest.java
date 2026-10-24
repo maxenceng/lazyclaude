@@ -68,19 +68,17 @@ class PendingReviewApplicationServiceTest {
     }
 
     @Test
-    void shouldWriteAReplyAnEditADeletionASummaryAndASubmitThroughThePort() {
+    void shouldWriteAReplyAnEditADeletionAndASubmitThroughThePort() {
         when(reviews.pullRequest(project(), pullRequestNumber())).thenReturn(reviewedPullRequest());
         service.reply(project(), pullRequestNumber(), threadId(), commentBody());
         service.edit(project(), pullRequestNumber(), pendingCommentId(), commentBody());
         service.delete(project(), pullRequestNumber(), pendingCommentId());
-        service.summarise(project(), pullRequestNumber(), summary());
-        service.submit(project(), pullRequestNumber());
+        service.submit(project(), pullRequestNumber(), summary());
 
         verify(reviews).reply(project(), pendingReviewId(), threadId(), commentBody());
         verify(reviews).edit(project(), pendingCommentId(), commentBody());
         verify(reviews).delete(project(), pendingCommentId());
-        verify(reviews).summarise(project(), pendingReviewId(), summary());
-        verify(reviews).submit(project(), pendingReviewId());
+        verify(reviews).submit(project(), pendingReviewId(), summary());
     }
 
     @Test

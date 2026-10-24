@@ -19,8 +19,6 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
  */
 public record PendingReviewManager(PendingReviewPort reviews) {
 
-    private static final String NOTHING_TO_SUBMIT = "the pull request has no pending review to submit";
-
     /** What stands until the pending review's read answers. */
     public PendingReviewReading loading() {
         return new LoadingPendingReview();
@@ -67,24 +65,12 @@ public record PendingReviewManager(PendingReviewPort reviews) {
         return written(project, number, () -> reviews.delete(project, comment));
     }
 
-    /** Sets the pending review's summary, starting the review if it has none yet. */
-    public PendingReviewWrite summarise(Project project, PullRequestNumber number, Summary summary) {
-        return written(project, number, () -> reviews.summarise(project, reviewToWriteTo(project, number), summary));
-    }
-
-    /** Sends the pending review as a Comment review. GitHub is the one to refuse it: nothing is checked here but that there is one. */
-    public PendingReviewWrite submit(Project project, PullRequestNumber number) {
-        try {
-            return switch (reviews.pullRequest(project, number).review()) {
-                case PendingReview pending -> {
-                    reviews.submit(project, pending.id());
-                    yield new WrittenReview(read(project, number));
-                }
-                case NoPendingReview _ -> new RefusedWrite(new Reason(NOTHING_TO_SUBMIT));
-            };
-        } catch (PullRequestsUnavailableException refused) {
-            return new RefusedWrite(new Reason(refused.getMessage()));
-        }
+    /**
+     * Sends the pending review as a Comment review with {@code summary} as its body, starting the review if the summary is all there is.
+     * GitHub is the one to refuse it: nothing is checked here.
+     */
+    public PendingReviewWrite submit(Project project, PullRequestNumber number, Summary summary) {
+        return written(project, number, () -> reviews.submit(project, reviewToWriteTo(project, number), summary));
     }
 
     /** The pending {@code comments} with the diff lines they show under: every one on no line until the diff is read. */

@@ -5,7 +5,7 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
  * What the shell asks of {@code review} to write your pending review of a pull request, which GitHub keeps until it is submitted
- * (ADR 0009): a comment, a reply, an edit, a deletion, the summary, and the submit. Each waits for {@code gh}, so the caller is off the
+ * (ADR 0009): a comment, a reply, an edit, a deletion, and the submit with the summary. Each waits for {@code gh}, so the caller is off the
  * render thread, and answers what GitHub took or why it did not; it never fails.
  */
 public final class PendingReviewCommand {
@@ -36,12 +36,8 @@ public final class PendingReviewCommand {
         return PendingReviewWriteView.from(pendingReview.delete(new Project(payload.root()), payload.number(), payload.comment()));
     }
 
-    public PendingReviewWriteView summarise(PendingSummaryPayload payload) {
-        return PendingReviewWriteView.from(pendingReview.summarise(new Project(payload.root()), payload.number(), payload.summary()));
-    }
-
-    /** Sends the pending review as a Comment review. GitHub is the one to refuse it. */
-    public PendingReviewWriteView submit(PullRequestPayload payload) {
-        return PendingReviewWriteView.from(pendingReview.submit(payload.project(), payload.number()));
+    /** Sends the pending review as a Comment review with the summary as its body. GitHub is the one to refuse it. */
+    public PendingReviewWriteView submit(PendingSubmitPayload payload) {
+        return PendingReviewWriteView.from(pendingReview.submit(new Project(payload.root()), payload.number(), payload.summary()));
     }
 }

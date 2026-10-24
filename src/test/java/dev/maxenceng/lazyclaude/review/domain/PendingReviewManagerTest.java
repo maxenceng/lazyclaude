@@ -46,7 +46,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
-import dev.maxenceng.lazyclaude.review.published.Reason;
 
 @ExtendWith(MockitoExtension.class)
 class PendingReviewManagerTest {
@@ -203,52 +202,33 @@ class PendingReviewManagerTest {
     }
 
     @Test
-    void shouldSetTheSummaryOfTheExistingPendingReview() {
-        when(reviews.pullRequest(project(), pullRequestNumber())).thenReturn(reviewedPullRequest());
-
-        PendingReviewWrite written = manager.summarise(project(), pullRequestNumber(), summary());
-
-        verify(reviews).summarise(project(), pendingReviewId(), summary());
-        assertThat(written).isEqualTo(new WrittenReview(new ReadPendingReview(reviewedPullRequest())));
-    }
-
-    @Test
-    void shouldStartThePendingReviewWithTheSummaryWhenThereIsNoCommentYet() {
-        when(reviews.pullRequest(project(), pullRequestNumber())).thenReturn(unreviewedPullRequest(), reviewedPullRequest());
-        when(reviews.create(project(), pullRequestNodeId())).thenReturn(pendingReviewId());
-
-        manager.summarise(project(), pullRequestNumber(), summary());
-
-        InOrder order = inOrder(reviews);
-        order.verify(reviews).create(project(), pullRequestNodeId());
-        order.verify(reviews).summarise(project(), pendingReviewId(), summary());
-    }
-
-    @Test
     void shouldSubmitThePendingReviewAndAnswerThePullRequestAsGitHubHasItAfterwards() {
         when(reviews.pullRequest(project(), pullRequestNumber())).thenReturn(reviewedPullRequest(), unreviewedPullRequest());
 
-        PendingReviewWrite written = manager.submit(project(), pullRequestNumber());
+        PendingReviewWrite written = manager.submit(project(), pullRequestNumber(), summary());
 
-        verify(reviews).submit(project(), pendingReviewId());
+        verify(reviews).submit(project(), pendingReviewId(), summary());
         assertThat(written).isEqualTo(new WrittenReview(new ReadPendingReview(unreviewedPullRequest())));
     }
 
     @Test
     void shouldRefuseWithTheReasonWhenGitHubRefusesTheSubmit() {
         when(reviews.pullRequest(project(), pullRequestNumber())).thenReturn(reviewedPullRequest());
-        doThrow(pullRequestsUnavailable()).when(reviews).submit(any(), any());
+        doThrow(pullRequestsUnavailable()).when(reviews).submit(any(), any(), any());
 
-        assertThat(manager.submit(project(), pullRequestNumber())).isEqualTo(refusedWrite());
+        assertThat(manager.submit(project(), pullRequestNumber(), summary())).isEqualTo(refusedWrite());
     }
 
     @Test
-    void shouldRefuseASubmitWhenThePullRequestHasNoPendingReviewToSend() {
+    void shouldStartThePendingReviewToSubmitASummaryWrittenBeforeAnyComment() {
         when(reviews.pullRequest(project(), pullRequestNumber())).thenReturn(unreviewedPullRequest());
+        when(reviews.create(project(), pullRequestNodeId())).thenReturn(pendingReviewId());
 
-        assertThat(manager.submit(project(), pullRequestNumber()))
-                .isEqualTo(new RefusedWrite(new Reason("the pull request has no pending review to submit")));
-        verify(reviews, never()).submit(any(), any());
+        manager.submit(project(), pullRequestNumber(), summary());
+
+        InOrder order = inOrder(reviews);
+        order.verify(reviews).create(project(), pullRequestNodeId());
+        order.verify(reviews).submit(project(), pendingReviewId(), summary());
     }
 
     @Test

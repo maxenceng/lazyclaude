@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OnDiffAnchorView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffView;
@@ -23,6 +24,7 @@ import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 import dev.maxenceng.lazyclaude.review.published.PullRequestTitle;
 import dev.maxenceng.lazyclaude.review.published.Reason;
+import dev.maxenceng.lazyclaude.review.published.Summary;
 import dev.maxenceng.lazyclaude.review.published.ThreadLine;
 
 /**
@@ -53,6 +55,8 @@ final class ReviewPane {
     private long threadsReads;
     private long pendingReads;
     private Optional<CommentBox> box = Optional.empty();
+    // deferred: an unsubmitted summary does not survive leaving the review — GitHub accepting an edit of an empty-bodied pending review.
+    private Optional<Summary> typedSummary = Optional.empty();
     private Optional<Integer> rangeStart = Optional.empty();
     private Optional<Integer> rangeEnd = Optional.empty();
 
@@ -266,6 +270,20 @@ final class ReviewPane {
             case PendingEntry pending -> pending.placed().line();
             case ThreadEntry thread -> thread.placed().line();
         };
+    }
+
+    /** The summary typed on this screen and not yet submitted, if one was. */
+    Optional<Summary> typedSummary() {
+        return typedSummary;
+    }
+
+    void typeSummary(Summary summary) {
+        typedSummary = Optional.of(summary);
+    }
+
+    /** What the summary box starts from and a submit sends: the one typed here, else the body of the adopted review, else nothing. */
+    Summary summaryToSubmit() {
+        return typedSummary.orElseGet(() -> pending instanceof OpenPendingReviewView open ? open.summary() : new Summary(""));
     }
 
     Optional<CommentBox> box() {

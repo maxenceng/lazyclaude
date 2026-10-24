@@ -165,7 +165,6 @@ final class ShellReviewFixture {
         when(writing.reply(any())).thenReturn(answer);
         when(writing.edit(any())).thenReturn(answer);
         when(writing.delete(any())).thenReturn(answer);
-        when(writing.summarise(any())).thenReturn(answer);
         when(writing.submit(any())).thenReturn(answer);
         return writing;
     }

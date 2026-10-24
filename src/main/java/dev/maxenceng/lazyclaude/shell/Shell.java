@@ -45,7 +45,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReplyPayloa
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingSummaryPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingSubmitPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
@@ -1038,7 +1038,7 @@ public final class Shell extends ToolkitApp {
             return true;
         }
         if (key.isChar(SUMMARY)) {
-            pane.openBox(new CommentBox(new SummaryTarget(), Optional.empty(), summaryOf(pane.pending())));
+            pane.openBox(new CommentBox(new SummaryTarget(), Optional.empty(), pane.summaryToSubmit().value()));
             return true;
         }
         if (key.isChar(RESOLVED)) {
@@ -1053,15 +1053,11 @@ public final class Shell extends ToolkitApp {
         };
     }
 
-    private static String summaryOf(PendingReviewView pending) {
-        return pending instanceof OpenPendingReviewView open ? open.summary().value() : "";
-    }
-
     /** The confirm after the summary is saved: {@code y} submits the pending review as a Comment, any other key leaves it pending. */
     private boolean answerSubmitPrompt(ReviewPane pane, KeyEvent key) {
         submitPrompt = Optional.empty();
         if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
-            inReviewOrder(pane, () -> writing.submit(new PullRequestPayload(root, pane.number())), answer -> {
+            inReviewOrder(pane, () -> writing.submit(new PendingSubmitPayload(root, pane.number(), pane.summaryToSubmit())), answer -> {
                 switch (answer) {
                     case WrittenReviewView _ -> submitted();
                     case RefusedWriteView refused -> refusal = Optional.of(NOT_SUBMITTED.formatted(refused.reason().value()));
@@ -1146,38 +1142,46 @@ public final class Shell extends ToolkitApp {
         if (key.isKey(KeyCode.ESCAPE)) {
             pane.closeBox();
         } else if (key.hasCtrl() && key.isChar(SAVE)) {
-            save(pane, box);
+            saveBox(pane, box);
         } else {
             box.edit(key);
         }
         return true;
     }
 
-    /** Writes what the box holds off the render thread; GitHub's answer closes the box, or keeps it with the reason it was refused. */
-    private void save(ReviewPane pane, CommentBox box) {
-        box.saveBegun();
+    /** Saves what the box holds: the summary is kept here until the submit, anything else is written off the render thread. */
+    private void saveBox(ReviewPane pane, CommentBox box) {
         PendingReviewCommand command = writing;
         Path project = root;
         PullRequestNumber number = pane.number();
         String content = box.content();
-        Supplier<PendingReviewWriteView> write = switch (box.target()) {
+        switch (box.target()) {
             case NewCommentTarget target ->
-                () -> command.comment(new PendingCommentPayload(
-                        project, number, target.anchor().path(), target.anchor().position(), new CommentBody(content)));
+                write(pane, box, () -> command.comment(new PendingCommentPayload(
+                        project, number, target.anchor().path(), target.anchor().position(), new CommentBody(content))));
             case EditCommentTarget target ->
-                () -> command.edit(new PendingEditPayload(project, number, target.comment().id(), new CommentBody(content)));
+                write(pane, box, () -> command.edit(new PendingEditPayload(project, number, target.comment().id(), new CommentBody(content))));
             case ReplyTarget target ->
-                () -> command.reply(new PendingReplyPayload(project, number, target.thread().id(), new CommentBody(content)));
-            case SummaryTarget _ -> () -> command.summarise(new PendingSummaryPayload(project, number, new Summary(content)));
-        };
+                write(pane, box, () -> command.reply(new PendingReplyPayload(project, number, target.thread().id(), new CommentBody(content))));
+            case SummaryTarget _ -> holdSummary(pane, content);
+        }
+    }
+
+    /** The summary writes nothing: GitHub refuses to edit a pending review with no body, so it travels with the submit, and the confirm is asked at once. */
+    private void holdSummary(ReviewPane pane, String content) {
+        pane.typeSummary(new Summary(content));
+        pane.closeBox();
+        submitPrompt = Optional.of(pane);
+    }
+
+    /** Writes off the render thread; GitHub's answer closes the box, or keeps it with the reason it was refused. */
+    private void write(ReviewPane pane, CommentBox box, Supplier<PendingReviewWriteView> write) {
+        box.saveBegun();
         inReviewOrder(pane, write, answer -> {
             switch (answer) {
                 case WrittenReviewView written -> {
                     pane.applyWritten(written.pending());
                     pane.closeBox();
-                    if (box.target() instanceof SummaryTarget) {
-                        submitPrompt = Optional.of(pane);
-                    }
                 }
                 case RefusedWriteView refused -> box.saveRefused(refused.reason());
             }
@@ -1655,7 +1659,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element reviewPanel(ReviewPane pane) {
-        return panel(REVIEW_PANEL_TITLE, new RowsElement(ReviewText.reviewLines(pane.pending()), -1, false))
+        return panel(REVIEW_PANEL_TITLE, new RowsElement(ReviewText.reviewLines(pane.pending(), pane.typedSummary()), -1, false))
                 .rounded()
                 .length(REVIEW_PANEL_HEIGHT);
     }

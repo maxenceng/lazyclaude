@@ -76,14 +76,9 @@ public final class GhPendingReviewRepository implements PendingReviewPort {
               deletePullRequestReviewComment(input: {id: $comment}) { pullRequestReview { id } }
             }
             """;
-    private static final String SUMMARISE = """
-            mutation($review: ID!, $body: String!) {
-              updatePullRequestReview(input: {pullRequestReviewId: $review, body: $body}) { pullRequestReview { id } }
-            }
-            """;
     private static final String SUBMIT = """
-            mutation($review: ID!) {
-              submitPullRequestReview(input: {pullRequestReviewId: $review, event: COMMENT}) { pullRequestReview { id } }
+            mutation($review: ID!, $body: String!) {
+              submitPullRequestReview(input: {pullRequestReviewId: $review, event: COMMENT, body: $body}) { pullRequestReview { id } }
             }
             """;
     private static final String CREATED_ID = ".data.addPullRequestReview.pullRequestReview.id";
@@ -150,13 +145,8 @@ public final class GhPendingReviewRepository implements PendingReviewPort {
     }
 
     @Override
-    public void summarise(Project project, PendingReviewId review, Summary summary) {
-        run(project, mutation(SUMMARISE, List.of("-f", "review=" + review.value(), "-f", "body=" + summary.value())));
-    }
-
-    @Override
-    public void submit(Project project, PendingReviewId review) {
-        run(project, mutation(SUBMIT, List.of("-f", "review=" + review.value())));
+    public void submit(Project project, PendingReviewId review, Summary summary) {
+        run(project, mutation(SUBMIT, List.of("-f", "review=" + review.value(), "-f", "body=" + summary.value())));
     }
 
     /** The arguments of a {@code gh api graphql} call that runs {@code mutation} with {@code variables}, each given as {@code -f name=value} or {@code -F name=number}. */

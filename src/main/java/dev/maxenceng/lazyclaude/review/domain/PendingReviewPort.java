@@ -36,13 +36,11 @@ public interface PendingReviewPort {
     /** @throws PullRequestsUnavailableException when GitHub does not delete the comment, with the reason */
     void delete(Project project, PendingCommentId comment);
 
-    /** @throws PullRequestsUnavailableException when GitHub does not take the summary, with the reason */
-    void summarise(Project project, PendingReviewId review, Summary summary);
-
     /**
-     * Sends the pending review as a Comment review.
+     * Sends the pending review as a Comment review with {@code summary} as its body, which GitHub takes only now: it refuses to edit
+     * the body of a pending review that has none.
      *
      * @throws PullRequestsUnavailableException when GitHub refuses it or cannot be reached, with the reason
      */
-    void submit(Project project, PendingReviewId review);
+    void submit(Project project, PendingReviewId review, Summary summary);
 }

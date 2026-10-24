@@ -34,8 +34,6 @@ import dev.maxenceng.lazyclaude.review.domain.PendingReviewPort;
 @ExtendWith(MockitoExtension.class)
 class PendingReviewCommandTest {
 
-    private static final PullRequestPayload OF_THE_PULL_REQUEST = new PullRequestPayload(project().root(), pullRequestNumber());
-
     @Mock
     private PendingReviewPort pending;
 
@@ -94,20 +92,11 @@ class PendingReviewCommandTest {
     }
 
     @Test
-    void shouldSetTheSummary() {
-        when(pending.pullRequest(project(), pullRequestNumber())).thenReturn(reviewedPullRequest());
-
-        command.summarise(new PendingSummaryPayload(project().root(), pullRequestNumber(), summary()));
-
-        verify(pending).summarise(project(), pendingReviewId(), summary());
-    }
-
-    @Test
     void shouldSubmitThePendingReview() {
         when(pending.pullRequest(project(), pullRequestNumber())).thenReturn(reviewedPullRequest());
 
-        command.submit(OF_THE_PULL_REQUEST);
+        command.submit(new PendingSubmitPayload(project().root(), pullRequestNumber(), summary()));
 
-        verify(pending).submit(project(), pendingReviewId());
+        verify(pending).submit(project(), pendingReviewId(), summary());
     }
 }

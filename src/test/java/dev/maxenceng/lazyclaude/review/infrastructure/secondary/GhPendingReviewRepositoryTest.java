@@ -293,24 +293,14 @@ class GhPendingReviewRepositoryTest {
     }
 
     @Test
-    void shouldSetTheSummaryAsTheBodyOfThePendingReview() throws IOException {
-        GhPendingReviewRepository repository = pendingRepositoryOver(ghRecordingItsArguments(root, "{}"));
-
-        repository.summarise(projectAt(root), pendingReviewId(), new Summary("Looks close."));
-
-        assertThat(argumentsRecordedIn(root))
-                .contains("review=PRR_1", "body=Looks close.")
-                .anySatisfy(argument -> assertThat(argument).startsWith("query=mutation").contains("updatePullRequestReview("));
-    }
-
-    @Test
     void shouldSubmitThePendingReviewAsAComment() throws IOException {
         GhPendingReviewRepository repository = pendingRepositoryOver(ghRecordingItsArguments(root, "{}"));
 
-        repository.submit(projectAt(root), pendingReviewId());
+        repository.submit(projectAt(root), pendingReviewId(), new Summary("Looks close."));
 
         assertThat(argumentsRecordedIn(root))
-                .contains("review=PRR_1")
+                .contains("review=PRR_1", "body=Looks close.")
+                .noneSatisfy(argument -> assertThat(argument).contains("updatePullRequestReview"))
                 .anySatisfy(argument -> assertThat(argument).startsWith("query=mutation").contains("submitPullRequestReview(").contains("event: COMMENT"));
     }
 
@@ -318,7 +308,7 @@ class GhPendingReviewRepositoryTest {
     void shouldBeUnavailableSayingWhyGitHubRefusedAWrite() throws IOException {
         GhPendingReviewRepository repository = pendingRepositoryOver(ghFailing(root, 1, "gh: Review can not be submitted"));
 
-        assertThatThrownBy(() -> repository.submit(projectAt(root), pendingReviewId()))
+        assertThatThrownBy(() -> repository.submit(projectAt(root), pendingReviewId(), new Summary("")))
                 .isInstanceOf(PullRequestsUnavailableException.class)
                 .hasMessageContaining("gh api graphql exited with 1")
                 .hasMessageContaining("Review can not be submitted");

@@ -23,6 +23,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailablePending
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableThreadsView;
 import dev.maxenceng.lazyclaude.review.published.HeldHead;
 import dev.maxenceng.lazyclaude.review.published.MovedHead;
+import dev.maxenceng.lazyclaude.review.published.Summary;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 import dev.maxenceng.lazyclaude.review.published.RenamedFile;
 import dev.maxenceng.lazyclaude.review.published.ThreadSide;
@@ -162,14 +163,17 @@ final class ReviewText {
     }
 
     /** What the Review panel says: the summary's first line, the pending count and the moved-head warning; or why there is nothing to say. */
-    static List<RowLine> reviewLines(PendingReviewView pending) {
+    static List<RowLine> reviewLines(PendingReviewView pending, Optional<Summary> typed) {
         return switch (pending) {
             case LoadingPendingReviewView _ -> List.of(dim(LOADING));
-            case NoPendingReviewView _ -> List.of(dim(NO_PENDING_REVIEW));
+            case NoPendingReviewView _ ->
+                typed.filter(summary -> !summary.value().isBlank())
+                        .map(summary -> List.of(RowLine.plain(summary.firstLine()), RowLine.plain(PENDING_COUNT.formatted(0))))
+                        .orElseGet(() -> List.of(dim(NO_PENDING_REVIEW)));
             case UnavailablePendingReviewView unavailable -> List.of(dim(PENDING_UNKNOWN.formatted(unavailable.reason().value())));
             case OpenPendingReviewView open ->
                 Stream.of(
-                                Stream.of(open.summary().firstLine().isBlank() ? dim(NO_SUMMARY) : RowLine.plain(open.summary().firstLine())),
+                                Stream.of(summaryLine(typed.orElse(open.summary()))),
                                 Stream.of(RowLine.plain(PENDING_COUNT.formatted(open.comments().size()))),
                                 switch (open.headMove()) {
                                     case MovedHead moved -> Stream.of(
@@ -180,6 +184,10 @@ final class ReviewText {
                         .flatMap(Function.identity())
                         .toList();
         };
+    }
+
+    private static RowLine summaryLine(Summary summary) {
+        return summary.firstLine().isBlank() ? dim(NO_SUMMARY) : RowLine.plain(summary.firstLine());
     }
 
     private static RowLine dim(String text) {

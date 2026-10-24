@@ -59,11 +59,7 @@ public final class PendingReviewApplicationService {
         return manager.delete(project, number, comment);
     }
 
-    public PendingReviewWrite summarise(Project project, PullRequestNumber number, Summary summary) {
-        return manager.summarise(project, number, summary);
-    }
-
-    public PendingReviewWrite submit(Project project, PullRequestNumber number) {
-        return manager.submit(project, number);
+    public PendingReviewWrite submit(Project project, PullRequestNumber number, Summary summary) {
+        return manager.submit(project, number, summary);
     }
 }

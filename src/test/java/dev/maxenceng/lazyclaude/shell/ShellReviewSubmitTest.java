@@ -5,11 +5,14 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFi
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.noPendingReviewView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.refusedWriteView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.writtenView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.namedKey;
+import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.shellReviewing;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.shellSubmitting;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.typed;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.writingThatWrites;
@@ -26,8 +29,7 @@ import org.mockito.ArgumentCaptor;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingSummaryPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingSubmitPayload;
 import dev.maxenceng.lazyclaude.review.published.Summary;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
@@ -47,7 +49,7 @@ class ShellReviewSubmitTest {
     }
 
     @Test
-    void shouldSaveTheSummaryThenAskOnTheStatusLineWhetherToSubmitItAsAComment() {
+    void shouldAskWhetherToSubmitStraightAfterCtrlSWithoutWritingTheSummaryAnywhere() {
         PendingReviewCommand writing = writingThatWrites(writtenView(noPendingReviewView()));
         Shell shell = shellSubmitting(inReviewSlugTicketView(), writing, mock(HostedSessionCommand.class));
         shell.press(key('S'));
@@ -55,40 +57,57 @@ class ShellReviewSubmitTest {
 
         shell.press(ctrl('s'));
 
-        verify(writing).summarise(new PendingSummaryPayload(
-                project().root(), pullRequestNumber(), new Summary("Looks close. Two nits.\nThe second is about naming.!")));
         assertThat(Screen.of(shell).statusLine()).contains("submit review as Comment? y/n");
         assertThat(Screen.of(shell).text()).doesNotContain("^s save");
+        verifyNoInteractions(writing);
     }
 
     @Test
-    void shouldLeaveTheSummarySavedAndTheReviewPendingOnNOrEscapeAtTheConfirm() {
+    void shouldSendTheTypedSummaryAsTheBodyOfTheSubmit() {
         PendingReviewCommand writing = writingThatWrites(writtenView(noPendingReviewView()));
         Shell shell = shellSubmitting(inReviewSlugTicketView(), writing, mock(HostedSessionCommand.class));
         shell.press(key('S'));
+        typed(shell, "!");
         shell.press(ctrl('s'));
 
-        shell.press(key('n'));
-        assertThat(Screen.of(shell).statusLine()).doesNotContain("submit review");
-        shell.press(key('S'));
-        shell.press(ctrl('s'));
-        shell.press(namedKey(KeyCode.ESCAPE));
+        shell.press(key('y'));
 
-        assertThat(Screen.of(shell).statusLine()).doesNotContain("submit review");
-        assertThat(Screen.of(shell).text()).contains("╭Files");
-        verify(writing, never()).submit(any());
+        verify(writing).submit(new PendingSubmitPayload(
+                project().root(), pullRequestNumber(), new Summary("Looks close. Two nits.\nThe second is about naming.!")));
     }
 
     @Test
-    void shouldKeepTheSummaryBoxOpenWithWhyWhenItCannotBeSavedAndAskNothing() {
-        PendingReviewCommand writing = writingThatWrites(refusedWriteView());
-        Shell shell = shellSubmitting(inReviewSlugTicketView(), writing, mock(HostedSessionCommand.class));
+    void shouldKeepTheTypedSummaryForTheNextSWhileTheReviewIsOpenAndLoseItWhenTheReviewIsLeft() {
+        Shell shell = shellReviewing(twoFileDiffView(), readThreadsViewOf(), noPendingReviewView());
+        shell.press(key('S'));
+        typed(shell, "mine");
+        shell.press(ctrl('s'));
+        shell.press(key('n'));
+
+        shell.press(key('S'));
+        assertThat(Screen.of(shell).text()).contains("│ mine");
+        shell.press(namedKey(KeyCode.ESCAPE));
+        shell.press(namedKey(KeyCode.ESCAPE));
+        shell.press(key('p'));
         shell.press(key('S'));
 
-        shell.press(ctrl('s'));
+        assertThat(Screen.of(shell).text()).doesNotContain("mine");
+    }
 
-        assertThat(Screen.of(shell).text()).contains("not saved (gh: not logged in)");
-        assertThat(Screen.of(shell).statusLine()).doesNotContain("submit review");
+    @Test
+    void shouldShowTheTypedSummarysFirstLineInTheReviewPanelInsteadOfTheAdoptedBodyUntilItIsSubmitted() {
+        Shell shell = shellSubmitting(inReviewSlugTicketView(), mock(PendingReviewCommand.class), mock(HostedSessionCommand.class));
+        assertThat(Screen.of(shell).boardPanelLines()).contains("Looks close. Two nits.");
+        shell.press(key('S'));
+        ShellFixture.pressed(shell, namedKey(KeyCode.BACKSPACE), "The second is about naming.".length());
+        ShellFixture.pressed(shell, namedKey(KeyCode.BACKSPACE), 1);
+        shell.press(namedKey(KeyCode.HOME));
+        ShellFixture.pressed(shell, namedKey(KeyCode.DELETE), "Looks close. Two nits.".length());
+        typed(shell, "Rewritten");
+        shell.press(ctrl('s'));
+        shell.press(key('n'));
+
+        assertThat(Screen.of(shell).boardPanelLines()).contains("Rewritten").doesNotContain("Looks close. Two nits.");
     }
 
     @Test
@@ -101,7 +120,7 @@ class ShellReviewSubmitTest {
         shell.press(key('y'));
         Screen screen = Screen.of(shell);
 
-        verify(writing).submit(new PullRequestPayload(project().root(), pullRequestNumber()));
+        verify(writing).submit(any());
         assertThat(screen.text()).contains("start /ticket respond PROJ-1?", "y start  esc back");
     }
 
@@ -154,7 +173,6 @@ class ShellReviewSubmitTest {
     @Test
     void shouldSayNotSubmittedWithTheReasonAndKeepTheReviewPendingWhenGitHubRefusesTheSubmit() {
         PendingReviewCommand writing = mock(PendingReviewCommand.class);
-        when(writing.summarise(any())).thenReturn(writtenView(noPendingReviewView()));
         when(writing.submit(any())).thenReturn(refusedWriteView());
         Shell shell = shellSubmitting(inReviewSlugTicketView(), writing, mock(HostedSessionCommand.class));
         shell.press(key('S'));
