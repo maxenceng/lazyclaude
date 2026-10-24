@@ -52,7 +52,8 @@ created: 2026-10-10
       read dropped. No pending review shows nothing; a read that fails shows a dim
       `pending unknown (<reason>)`.
 - [ ] Leaving the review, quitting or a crash loses no comment saved, and quitting asks nothing
-      about the review. An unsubmitted summary is lost with the screen. A box open with unsaved text when the review is left is discarded.
+      about the review. An unsubmitted summary is lost with the screen. A box open with unsaved
+      text when the review is left is discarded.
 - [ ] `make contract` creates a pending review with a line comment and a reply on a pull
       request of this repository, reads it back through the pending-review read, asserts the
       thread read does not return its comments as threads, then deletes it.
