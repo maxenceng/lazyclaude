@@ -6,6 +6,8 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
 /** No {@code claude} could be started on a pty; the message says why, for the person reading the status line. */
 public final class HostUnavailableException extends DomainException {
 
+    private static final long serialVersionUID = 1L;
+
     public HostUnavailableException(String reason) {
         super(DomainErrorStatus.UNAVAILABLE, reason);
     }

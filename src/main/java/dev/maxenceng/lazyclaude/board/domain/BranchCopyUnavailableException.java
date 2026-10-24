@@ -9,6 +9,8 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
  */
 public final class BranchCopyUnavailableException extends DomainException {
 
+    private static final long serialVersionUID = 1L;
+
     public BranchCopyUnavailableException(String reason) {
         super(DomainErrorStatus.UNAVAILABLE, reason);
     }

@@ -6,6 +6,8 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
 /** A ticket worktree was asked to be removed while something stands in it; nothing was removed, and the state says what. */
 public final class WorktreeNotClearException extends DomainException {
 
+    private static final long serialVersionUID = 1L;
+
     private final transient WorktreeState state;
 
     public WorktreeNotClearException(WorktreeState state) {

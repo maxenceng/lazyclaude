@@ -806,7 +806,9 @@ class SessionManagerTest {
     void shouldMoveALiveSessionUnderItsTicketOnceItsTranscriptNamesIt() {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
         when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
-        when(past.linkFacts()).thenReturn(Map.of(), Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
+        when(past.linkFacts())
+                .thenReturn(Map.of())
+                .thenReturn(Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
         sessionManager(sessions, past, locator, watch, transcriptWatch, warnings).watch(project(), boardTickets(), listener);
         ArgumentCaptor<Runnable> registryChanged = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(registryChanged.capture(), any());

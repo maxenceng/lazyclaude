@@ -6,6 +6,8 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
 /** A transcript could not be read; the message says why, for the person reading the main view. */
 public final class TranscriptUnreadableException extends DomainException {
 
+    private static final long serialVersionUID = 1L;
+
     public TranscriptUnreadableException(String reason, Throwable cause) {
         super(DomainErrorStatus.UNAVAILABLE, reason, cause);
     }

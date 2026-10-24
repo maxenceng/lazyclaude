@@ -6,6 +6,8 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
 /** A source of sessions could not answer; the message says why, for the person reading the screen. */
 public final class SessionsUnavailableException extends DomainException {
 
+    private static final long serialVersionUID = 1L;
+
     public SessionsUnavailableException(String reason) {
         super(DomainErrorStatus.UNAVAILABLE, reason);
     }
