@@ -91,6 +91,7 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
 import dev.tamboui.terminal.BackendFactory;
+import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
@@ -583,28 +584,24 @@ public final class Shell extends ToolkitApp {
         applyPendingMergedHeads();
         applyPendingWarning();
         refusal = Optional.empty();
-        if (quitPrompt.isPresent()) {
-            return answerQuitPrompt(key);
-        }
-        if (removalPrompt.isPresent()) {
-            return answerRemovalPrompt(key);
-        }
-        if (reviewKeys.asksToSubmit()) {
-            return reviewKeys.answerSubmitPrompt(key);
-        }
-        if (respondPrompt.isPresent()) {
-            return answerRespondPrompt(respondPrompt.get(), key);
-        }
-        if (remoteControlPrompt.isPresent()) {
-            return answerRemoteControlPrompt(remoteControlPrompt.get(), key);
-        }
-        if (picker.isPresent()) {
-            return pressInPicker(picker.get(), key);
-        }
+        return answerPrompt(key).orElseGet(() -> pressWithoutPrompt(key));
+    }
+
+    private Optional<Boolean> answerPrompt(KeyEvent key) {
+        return quitPrompt
+                .map(_ -> answerQuitPrompt(key))
+                .or(() -> removalPrompt.map(asked -> answerRemovalPrompt(asked, key)))
+                .or(() -> reviewKeys.answerSubmitPrompt(key))
+                .or(() -> respondPrompt.map(asked -> answerRespondPrompt(asked, key)))
+                .or(() -> remoteControlPrompt.map(asked -> answerRemoteControlPrompt(asked, key)))
+                .or(() -> picker.map(open -> pressInPicker(open, key)));
+    }
+
+    private boolean pressWithoutPrompt(KeyEvent key) {
         if (inSession()) {
             return pressInSession(key);
         }
-        if (review.isPresent() && reviewKeys.press(review.get(), key)) {
+        if (review.map(pane -> reviewKeys.press(pane, key)).orElse(false)) {
             return true;
         }
         if (key.hasCtrl()) {
@@ -625,8 +622,8 @@ public final class Shell extends ToolkitApp {
         if (key.isChar(JUMP)) {
             return jump();
         }
-        if (key.isChar(REMOVE_WORKTREE) && removableTicket().isPresent()) {
-            return checkRemoval(removableTicket().get());
+        if (key.isChar(REMOVE_WORKTREE)) {
+            return removableTicket().map(this::checkRemoval).orElse(false);
         }
         if (key.isChar(OPEN_REVIEW)) {
             return openReview();
@@ -719,15 +716,12 @@ public final class Shell extends ToolkitApp {
 
     /** A mouse event over the pane reaches the selected tab's session at the matching cell, whatever has focus. */
     boolean mouse(MouseEvent event) {
-        Optional<HostedSessionView> tab = dock.selectedTab();
-        if (tab.isEmpty() || paneArea.isEmpty()) {
-            return false;
-        }
-        return TerminalInputs.mouse(event, paneArea.get())
-                .map(input -> {
-                    hosting.send(new HostedInputPayload(tab.get().id(), input));
-                    return true;
-                })
+        return dock.selectedTab()
+                .flatMap(tab -> paneArea.flatMap(area -> TerminalInputs.mouse(event, area))
+                        .map(input -> {
+                            hosting.send(new HostedInputPayload(tab.id(), input));
+                            return true;
+                        }))
                 .orElse(false);
     }
 
@@ -849,12 +843,7 @@ public final class Shell extends ToolkitApp {
                 latestMerged.mergedHeadOf(new HeadBranch(ticket.branch().value())));
     }
 
-    private static LinkedTicketId idOf(TicketView ticket) {
-        return new LinkedTicketId(ticket.id().value());
-    }
-
-    private boolean answerRemovalPrompt(KeyEvent key) {
-        RemovalPrompt asked = removalPrompt.get();
+    private boolean answerRemovalPrompt(RemovalPrompt asked, KeyEvent key) {
         removalPrompt = Optional.empty();
         if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
             inOrder(() -> {
@@ -984,7 +973,7 @@ public final class Shell extends ToolkitApp {
                 sized(List.of(started.id()), paneSize());
                 focusOn(Focus.DOCK);
             }
-            case NotStartedHost none -> {}
+            case NotStartedHost _ -> {}
         }
         return true;
     }
@@ -1059,15 +1048,15 @@ public final class Shell extends ToolkitApp {
     }
 
     private void showSelectedTicketsSessions() {
-        Optional<LinkedTicketId> ticket = board.selected() instanceof TicketRow row
-                ? Optional.of(new LinkedTicketId(row.ticket().id().value()))
+        Optional<LinkedTicketId> ticket = board.selected() instanceof TicketRow(TicketView selected)
+                ? Optional.of(new LinkedTicketId(selected.id().value()))
                 : Optional.empty();
         sessions.showTicket(ticket);
         refreshOffer();
     }
 
     private Optional<TicketView> selectedTicket() {
-        return board.selected() instanceof TicketRow row ? Optional.of(row.ticket()) : Optional.empty();
+        return board.selected() instanceof TicketRow(TicketView ticket) ? Optional.of(ticket) : Optional.empty();
     }
 
     /** Asks {@code session} again which verb the shown ticket's {@code n new} row offers; a ticket with no verb left offers none. */
@@ -1214,7 +1203,7 @@ public final class Shell extends ToolkitApp {
             case PastSessionRow past when past.session().isUnlinked() -> resume(past.session());
             case PastSessionRow past -> selectedTicket().map(ticket -> resumeInTicket(past.session(), ticket)).orElse(false);
             case StartingSessionRow starting -> focusTab(starting.tab().id());
-            case NewSessionRow newSession -> selectedTicket().map(this::newSessionFor).orElse(false);
+            case NewSessionRow _ -> selectedTicket().map(this::newSessionFor).orElse(false);
             default -> false;
         };
     }
@@ -1419,15 +1408,15 @@ public final class Shell extends ToolkitApp {
                 .map(row -> switch (row) {
                     case LiveSessionRow live when live.session().isHosted() ->
                         new DetailElement(width -> SessionText.facts(live.session()), Optional.empty(), mainViewScroll);
-                    case LiveSessionRow live -> transcriptDetail();
-                    case PastSessionRow past -> transcriptDetail();
-                    case OlderSessionsRow older -> column();
-                    case SectionHeaderRow header -> column();
-                    case NoSessionRow none -> column();
-                    case NewSessionRow newSession -> column();
-                    case StartingSessionRow starting -> column();
+                    case LiveSessionRow _ -> transcriptDetail();
+                    case PastSessionRow _ -> transcriptDetail();
+                    case OlderSessionsRow _ -> column();
+                    case SectionHeaderRow _ -> column();
+                    case NoSessionRow _ -> column();
+                    case NewSessionRow _ -> column();
+                    case StartingSessionRow _ -> column();
                 })
-                .orElseGet(() -> column());
+                .orElseGet(Toolkit::column);
     }
 
     private Element transcriptDetail() {
@@ -1441,7 +1430,7 @@ public final class Shell extends ToolkitApp {
     private void syncTranscript() {
         Optional<TranscriptSubject> wanted = mainViewOwner == Focus.SESSIONS ? sessions.selectedTranscript() : Optional.empty();
         wanted.ifPresent(subject -> {
-            if (!transcript.shows(subject.id())) {
+            if (transcript.isNotShowing(subject.id())) {
                 transcript.show(subject.id());
                 transcriptStale = true;
             }
@@ -1484,16 +1473,16 @@ public final class Shell extends ToolkitApp {
                 .selected()
                 .<Element>map(row -> new DetailElement(
                         width -> SessionText.elsewhereFacts(row.place(), row.session()), Optional.empty(), mainViewScroll))
-                .orElseGet(() -> column());
+                .orElseGet(Toolkit::column);
     }
 
     private Element docsDetail() {
         return docs.selected()
                 .map(row -> switch (row) {
-                    case FolderRow folder -> column();
+                    case FolderRow _ -> column();
                     case DocumentRow document -> documentDetail(document.document());
                 })
-                .orElseGet(() -> column());
+                .orElseGet(Toolkit::column);
     }
 
     private Element documentDetail(DocumentView document) {
@@ -1502,7 +1491,7 @@ public final class Shell extends ToolkitApp {
 
     private Element boardDetail() {
         return switch (board.selected()) {
-            case HeaderRow header -> column();
+            case HeaderRow _ -> column();
             case TicketRow row -> ticketDetail(row.ticket());
             case UnreadableRow row ->
                 column(text(row.unreadable().file().value()).bold(), text(row.unreadable().reason().value()));
@@ -1532,24 +1521,17 @@ public final class Shell extends ToolkitApp {
     }
 
     private List<String> keyBar() {
-        if (refusal.isPresent()) {
-            return List.of(refusal.get());
-        }
-        if (remoteControlPrompt.isPresent()) {
-            return List.of(RemoteControlPromptText.keys(remoteControlPrompt.get()));
-        }
-        if (picker.isPresent()) {
-            return List.of(VerbPickerText.keys());
-        }
-        if (inSession()) {
-            return List.of(SESSION_KEYS);
-        }
-        if (respondPrompt.isPresent()) {
-            return RESPOND_KEYS;
-        }
-        if (review.isPresent()) {
-            return reviewKeys.keys(review.get(), focus, List.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY));
-        }
+        return refusal
+                .map(List::of)
+                .or(() -> remoteControlPrompt.map(prompt -> List.of(RemoteControlPromptText.keys(prompt))))
+                .or(() -> picker.map(_ -> List.of(VerbPickerText.keys())))
+                .or(() -> Optional.of(SESSION_KEYS).filter(_ -> inSession()).map(List::of))
+                .or(() -> respondPrompt.map(_ -> RESPOND_KEYS))
+                .or(() -> review.map(pane -> reviewKeys.keys(pane, focus, List.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY))))
+                .orElseGet(this::boardKeys);
+    }
+
+    private List<String> boardKeys() {
         return Stream.of(
                         Included.when(focus.column() == Column.LEFT, MOVE_KEYS),
                         Included.when(focus == Focus.MAIN, SCROLL_KEYS),

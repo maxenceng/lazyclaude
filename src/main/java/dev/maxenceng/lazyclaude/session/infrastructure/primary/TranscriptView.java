@@ -11,7 +11,7 @@ public sealed interface TranscriptView permits ReadTranscriptView, NoTranscriptV
     static TranscriptView from(TranscriptRead read) {
         return switch (read) {
             case ReadEntries entries -> ReadTranscriptView.from(entries);
-            case NoTranscript none -> new NoTranscriptView();
+            case NoTranscript _ -> new NoTranscriptView();
             case UnreadableTranscript unreadable -> new UnreadableTranscriptView(unreadable.reason());
         };
     }

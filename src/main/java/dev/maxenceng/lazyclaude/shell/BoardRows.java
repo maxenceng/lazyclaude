@@ -62,7 +62,7 @@ final class BoardRows {
         int index = selectedIndex();
         board = next;
         List<RowKey> keys = visible().stream().map(Row::key).toList();
-        selected = RowSelection.kept(Optional.of(was), index, keys).orElseGet(() -> keys.getFirst());
+        selected = RowSelection.kept(Optional.of(was), index, keys).orElseGet(keys::getFirst);
     }
 
     List<Row> visible() {

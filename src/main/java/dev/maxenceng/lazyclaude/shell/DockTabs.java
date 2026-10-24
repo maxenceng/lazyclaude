@@ -38,9 +38,9 @@ final class DockTabs {
         return selectAt(selectedIndex() - 1);
     }
 
-    /** Selects the tab after the selected one, and says whether there was one. */
-    boolean selectNext() {
-        return selectAt(selectedIndex() + 1);
+    /** Selects the tab after the selected one, if there is one. */
+    void selectNext() {
+        selectAt(selectedIndex() + 1);
     }
 
     int selectedIndex() {
@@ -52,7 +52,7 @@ final class DockTabs {
         Optional<HostedSessionId> was = selectedTab().map(HostedSessionView::id);
         int index = selectedIndex();
         tabs = next;
-        if (was.isEmpty() || tabOf(was.get()).isPresent()) {
+        if (was.map(id -> tabOf(id).isPresent()).orElse(true)) {
             return TabClosing.NONE;
         }
         if (index < next.size()) {

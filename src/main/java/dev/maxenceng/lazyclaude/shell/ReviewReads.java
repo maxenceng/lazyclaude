@@ -13,7 +13,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailablePending
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableThreadsView;
 import dev.maxenceng.lazyclaude.review.published.Reason;
 
-/** What a review read that failed unexpectedly is shown as, so that the pane is never left loading for ever. */
+/** What a review read that failed unexpectedly is shown as, so that the pane is never left loading forever. */
 final class ReviewReads {
 
     private ReviewReads() {}

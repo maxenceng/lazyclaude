@@ -66,13 +66,16 @@ public final class DesktopNotificationManager {
         if (was.filter(session.state()::equals).isPresent()) {
             return;
         }
-        Optional<WaitingFor> reason = session.state().waitingFor();
-        if (reason.isEmpty()) {
-            closeFor(session.id());
-        } else if (was.flatMap(SessionState::waitingFor).isPresent()) {
-            replaceFor(session.id(), notificationOf(placed, reason.get()));
-        } else if (!watched.get().watches(session.id())) {
-            fireFor(session.id(), notificationOf(placed, reason.get()));
+        session.state().waitingFor().ifPresentOrElse(
+                reason -> notifyWaiting(placed, reason, was), () -> closeFor(session.id()));
+    }
+
+    private void notifyWaiting(PlacedSession placed, WaitingFor reason, Optional<SessionState> was) {
+        SessionId session = placed.session().id();
+        if (was.flatMap(SessionState::waitingFor).isPresent()) {
+            replaceFor(session, notificationOf(placed, reason));
+        } else if (!watched.get().watches(session)) {
+            fireFor(session, notificationOf(placed, reason));
         }
     }
 

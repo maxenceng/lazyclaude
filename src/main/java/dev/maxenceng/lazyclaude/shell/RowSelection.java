@@ -24,7 +24,7 @@ final class RowSelection {
         if (keys.isEmpty()) {
             return selected;
         }
-        return Optional.of(keys.get((int) Math.clamp(indexIn(selected, keys) + (long) step, 0, keys.size() - 1)));
+        return Optional.of(keys.get(Math.clamp(indexIn(selected, keys) + (long) step, 0, keys.size() - 1)));
     }
 
     /** Where the selection stands among the selectable {@code keys}, the first when it is on none of them. */

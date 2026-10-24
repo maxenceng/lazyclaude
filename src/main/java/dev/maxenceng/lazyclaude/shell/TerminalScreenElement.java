@@ -5,6 +5,8 @@ import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.published.CellColour;
+import dev.maxenceng.lazyclaude.session.published.CellColumn;
+import dev.maxenceng.lazyclaude.session.published.CellRow;
 import dev.maxenceng.lazyclaude.session.published.CursorAt;
 import dev.maxenceng.lazyclaude.session.published.DefaultColour;
 import dev.maxenceng.lazyclaude.session.published.IndexedColour;
@@ -90,10 +92,10 @@ final class TerminalScreenElement implements Element {
 
     private void placeCursor(Frame frame, Rect area) {
         ScreenCursor cursor = screen.cursor();
-        if (cursor instanceof CursorAt at
-                && at.column().value() < area.width()
-                && at.row().value() < area.height()) {
-            frame.setCursorPosition(area.x() + at.column().value(), area.y() + at.row().value());
+        if (cursor instanceof CursorAt(CellColumn column, CellRow row)
+                && column.value() < area.width()
+                && row.value() < area.height()) {
+            frame.setCursorPosition(area.x() + column.value(), area.y() + row.value());
         }
     }
 
@@ -124,7 +126,7 @@ final class TerminalScreenElement implements Element {
 
     private static Color colour(CellColour colour) {
         return switch (colour) {
-            case DefaultColour none -> Color.RESET;
+            case DefaultColour _ -> Color.RESET;
             case IndexedColour indexed -> Color.indexed(indexed.index());
             case RgbColour rgb ->
                 Color.rgb(

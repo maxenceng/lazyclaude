@@ -43,10 +43,12 @@ final class StatusLineElement implements Element {
         if (Areas.hasNoRoom(area)) {
             return;
         }
-        if (prompt.isPresent()) {
-            frame.buffer().setString(area.x(), area.y(), RowsElement.fit(prompt.get(), area.width()), Style.EMPTY.bold());
-            return;
-        }
+        prompt.ifPresentOrElse(
+                asked -> frame.buffer().setString(area.x(), area.y(), RowsElement.fit(asked, area.width()), Style.EMPTY.bold()),
+                () -> renderStatus(frame, area));
+    }
+
+    private void renderStatus(Frame frame, Rect area) {
         Optional<String> label = warning.map(shown -> RowsElement.fit(label(shown), area.width()));
         int reserved = label.map(text -> text.codePointCount(0, text.length()) + WARNING_GAP).orElse(0);
         drawSpans(frame, area, Math.max(0, area.width() - reserved));

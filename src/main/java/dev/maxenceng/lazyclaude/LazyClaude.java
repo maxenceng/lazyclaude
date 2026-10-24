@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
@@ -184,10 +185,11 @@ public final class LazyClaude {
 
     /** {@code $XDG_CACHE_HOME} when it is set to an absolute path, else {@code ~/.cache}, as the XDG base directory spec has it. */
     static Path cacheHome(Path home, String xdgCacheHome) {
-        if (xdgCacheHome != null && !xdgCacheHome.isBlank() && Path.of(xdgCacheHome).isAbsolute()) {
-            return Path.of(xdgCacheHome);
-        }
-        return home.resolve(DEFAULT_CACHE_HOME);
+        return Optional.ofNullable(xdgCacheHome)
+                .filter(set -> !set.isBlank())
+                .map(Path::of)
+                .filter(Path::isAbsolute)
+                .orElseGet(() -> home.resolve(DEFAULT_CACHE_HOME));
     }
 
     /**

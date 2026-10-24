@@ -79,8 +79,8 @@ public record PullRequestDiff(List<DiffFile> files) {
                 .path(hunk.file().path())
                 .position(PlacedThread.builder()
                         .side(side)
-                        .first(numberOn(side, range.getFirst()).orElseThrow())
-                        .last(numberOn(side, range.getLast()).orElseThrow())
+                        .first(numberOn(side, range.getFirst()).orElseThrow(RangeAcrossSidesException::new))
+                        .last(numberOn(side, range.getLast()).orElseThrow(RangeAcrossSidesException::new))
                         .build())
                 .build();
     }
@@ -128,7 +128,7 @@ public record PullRequestDiff(List<DiffFile> files) {
     }
 
     private static int indexOf(ThreadLine line) {
-        return line instanceof OnDiffLine on ? on.index().value() : 0;
+        return line instanceof OnDiffLine(DiffLineIndex index) ? index.value() : 0;
     }
 
     private static ThreadLine lineOf(ReviewThread thread, Map<LineAnchor, DiffLineIndex> lineOfAnchor) {
@@ -136,10 +136,10 @@ public record PullRequestDiff(List<DiffFile> files) {
     }
 
     private static ThreadLine lineOf(DiffPath path, ThreadPosition position, Map<LineAnchor, DiffLineIndex> lineOfAnchor) {
-        if (!(position instanceof PlacedThread placed)) {
+        if (!(position instanceof PlacedThread(ThreadSide side, _, DiffLineNumber last))) {
             return new NoDiffLine();
         }
-        return Optional.ofNullable(lineOfAnchor.get(LineAnchor.builder().path(path).side(placed.side()).number(placed.last()).build()))
+        return Optional.ofNullable(lineOfAnchor.get(LineAnchor.builder().path(path).side(side).number(last).build()))
                 .<ThreadLine>map(OnDiffLine::new)
                 .orElseGet(NoDiffLine::new);
     }

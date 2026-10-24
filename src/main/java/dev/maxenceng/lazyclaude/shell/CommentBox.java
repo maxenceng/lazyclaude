@@ -74,7 +74,7 @@ final class CommentBox {
             return false;
         }
         switch (key.code()) {
-            case CHAR -> text.insert(String.valueOf(key.character()));
+            case CHAR -> text.insert(Character.toString(key.codePoint()));
             case ENTER -> text.insert(NEWLINE);
             case BACKSPACE -> text.deleteBackward();
             case DELETE -> text.deleteForward();

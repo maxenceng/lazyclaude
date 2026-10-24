@@ -180,7 +180,7 @@ public final class TranscriptRepository implements PastSessionPort {
             ProjectLocation location = locator.locate(new WorkingDirectory(Path.of(read.cwd())));
             String root = switch (location) {
                 case LocatedInProject inProject -> inProject.project().root().toString();
-                case NotLocated nowhere -> null;
+                case NotLocated _ -> null;
             };
             return withProjectRoot(read, root);
         } catch (InvalidPathException notAPath) {

@@ -108,7 +108,7 @@ class SessionWatchRepositoryTest {
     void shouldReportARecordWhileAnotherFileIsRewrittenWithoutPause() throws Exception {
         watcher = watching(sweepingWatcher(sessions), probe, fallback);
 
-        try (AutoCloseable busy = rewritingWithoutPause(sessions.resolve("17234.0123abcd.key"))) {
+        try (AutoCloseable _ = rewritingWithoutPause(sessions.resolve("17234.0123abcd.key"))) {
             writeRecord(sessions, "17234.json", record(17234, "70c67de2-4563-47c2-b946-eb5198915ba2", CWD, "idle"));
 
             assertThat(probe.changedWithin(within()))

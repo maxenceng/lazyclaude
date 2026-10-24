@@ -36,7 +36,7 @@ public final class TreeWatcher implements AutoCloseable {
     static final Duration MAX_WAIT = Duration.ofSeconds(1);
     static final Duration POLL_INTERVAL = Duration.ofSeconds(5);
 
-    private static final String NO_SERVICE = "no watch service";
+    private static final String NOT_STARTED = "the watcher was not started";
     private static final String WORKER_NAME = "tree-watch";
     private static final String CAUSE = "cannot watch %s (%s; if the watch limit is reached, raise fs.inotify.max_user_watches)";
 
@@ -49,8 +49,7 @@ public final class TreeWatcher implements AutoCloseable {
     private final Map<Path, WatchKey> watched = new ConcurrentHashMap<>();
     private final Map<Path, Map<String, String>> polled = new ConcurrentHashMap<>();
     private final Set<Path> warnedOf = ConcurrentHashMap.newKeySet();
-    private volatile Optional<WatchService> service = Optional.empty();
-    private volatile Optional<IOException> serviceFailure = Optional.empty();
+    private volatile WatchServiceState state = new NotWatching(NOT_STARTED);
     private volatile TreePolling polling = (_, _, _) -> {};
     private volatile Thread worker;
 
@@ -82,11 +81,7 @@ public final class TreeWatcher implements AutoCloseable {
      */
     public void start(Runnable changed, TreePolling unwatchable) {
         this.polling = unwatchable;
-        try {
-            service = Optional.of(services.create());
-        } catch (IOException e) {
-            serviceFailure = Optional.of(e);
-        }
+        state = WatchServiceState.of(services);
         worker = Thread.ofPlatform().daemon().name(WORKER_NAME).start(() -> run(changed));
     }
 
@@ -114,16 +109,21 @@ public final class TreeWatcher implements AutoCloseable {
     @Override
     public void close() {
         Optional.ofNullable(worker).ifPresent(Thread::interrupt);
-        service.ifPresent(TreeWatcher::closeQuietly);
+        if (state instanceof Watching(WatchService service)) {
+            closeQuietly(service);
+        }
     }
 
     private void register(TreeScope scope, Path from) {
-        if (service.isEmpty()) {
-            giveUp(scope, serviceFailure.map(IOException::getMessage).orElse(NO_SERVICE));
-            return;
+        switch (state) {
+            case Watching(WatchService service) -> registerUnder(service, scope, from);
+            case NotWatching(String reason) -> giveUp(scope, reason);
         }
+    }
+
+    private void registerUnder(WatchService service, TreeScope scope, Path from) {
         try {
-            Files.walkFileTree(from, new TreeRegistration(service.get(), registrar, scope, watched));
+            Files.walkFileTree(from, new TreeRegistration(service, registrar, scope, watched));
         } catch (IOException e) {
             giveUp(scope, e.getMessage());
         }
@@ -141,7 +141,10 @@ public final class TreeWatcher implements AutoCloseable {
         long nextPoll = System.nanoTime() + pollInterval.toNanos();
         try {
             while (!Thread.currentThread().isInterrupted()) {
-                boolean relevant = batch();
+                boolean relevant = switch (state) {
+                    case Watching(WatchService service) -> batch(service);
+                    case NotWatching _ -> sleepThroughPoll();
+                };
                 if (!polled.isEmpty() && System.nanoTime() - nextPoll >= 0) {
                     nextPoll = System.nanoTime() + pollInterval.toNanos();
                     relevant |= pollTrees();
@@ -155,21 +158,22 @@ public final class TreeWatcher implements AutoCloseable {
         }
     }
 
-    private boolean batch() throws InterruptedException {
-        if (service.isEmpty()) {
-            Thread.sleep(pollInterval.toMillis());
-            return false;
-        }
-        WatchKey first = service.get().poll(pollInterval.toMillis(), TimeUnit.MILLISECONDS);
+    private boolean sleepThroughPoll() throws InterruptedException {
+        Thread.sleep(pollInterval.toMillis());
+        return false;
+    }
+
+    private boolean batch(WatchService service) throws InterruptedException {
+        WatchKey first = service.poll(pollInterval.toMillis(), TimeUnit.MILLISECONDS);
         if (first == null) {
             return false;
         }
         boolean relevant = process(first);
         long deadline = System.nanoTime() + maxWait.toNanos();
-        WatchKey more = service.get().poll(batchWindow.toMillis(), TimeUnit.MILLISECONDS);
+        WatchKey more = service.poll(batchWindow.toMillis(), TimeUnit.MILLISECONDS);
         while (more != null) {
             relevant |= process(more);
-            more = System.nanoTime() - deadline < 0 ? service.get().poll(batchWindow.toMillis(), TimeUnit.MILLISECONDS) : null;
+            more = System.nanoTime() - deadline < 0 ? service.poll(batchWindow.toMillis(), TimeUnit.MILLISECONDS) : null;
         }
         return relevant;
     }
@@ -177,14 +181,15 @@ public final class TreeWatcher implements AutoCloseable {
     private boolean process(WatchKey key) {
         Path directory = (Path) key.watchable();
         Optional<TreeScope> owner = ownerOf(directory).filter(scope -> !polled.containsKey(scope.root()));
-        boolean relevant = owner.isPresent()
-                && key.pollEvents().stream()
-                        .map(event -> handle(owner.get(), directory, event))
-                        .reduce(false, Boolean::logicalOr);
+        boolean relevant = owner.map(scope -> report(scope, directory, key)).orElse(false);
         if (!key.reset()) {
             watched.remove(directory, key);
         }
         return relevant;
+    }
+
+    private boolean report(TreeScope scope, Path directory, WatchKey key) {
+        return key.pollEvents().stream().map(event -> handle(scope, directory, event)).reduce(false, Boolean::logicalOr);
     }
 
     private Optional<TreeScope> ownerOf(Path directory) {

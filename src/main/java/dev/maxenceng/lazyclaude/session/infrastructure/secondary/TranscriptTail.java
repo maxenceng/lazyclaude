@@ -133,7 +133,7 @@ final class TranscriptTail {
 
     private static Optional<String> skillArgsOf(JsonNode block) {
         JsonNode input = block.get(INPUT);
-        if (input == null || !isText(block.get(TYPE), TOOL_USE) || !isText(block.get(NAME), SKILL)) {
+        if (input == null || isNotText(block.get(TYPE), TOOL_USE) || isNotText(block.get(NAME), SKILL)) {
             return Optional.empty();
         }
         JsonNode skill = input.get(SKILL_KEY);
@@ -142,8 +142,8 @@ final class TranscriptTail {
         return ticket && args != null && args.isString() ? Optional.of(args.asString()) : Optional.empty();
     }
 
-    private static boolean isText(JsonNode node, String expected) {
-        return node != null && node.isString() && expected.equals(node.asString());
+    private static boolean isNotText(JsonNode node, String expected) {
+        return node == null || !node.isString() || !expected.equals(node.asString());
     }
 
     private void seen(long millis) {

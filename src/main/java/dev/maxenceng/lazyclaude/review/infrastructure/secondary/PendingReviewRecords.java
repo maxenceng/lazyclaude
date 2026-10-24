@@ -25,7 +25,7 @@ final class PendingReviewRecords {
 
     /** @throws PullRequestsUnavailableException saying what {@code source} held that could not be read */
     static ReviewedPullRequest pullRequest(byte[] json, String source) {
-        List<ThreadPagePullRequestRecord> pages = GhJson.pages(json, ThreadPageRecord.class, source).stream()
+        List<ThreadPagePullRequestRecord> pages = GhJson.pages(json, source).stream()
                 .map(page -> pullRequestOf(page).orElseThrow(() -> new PullRequestsUnavailableException("%s holds no pull request".formatted(source))))
                 .toList();
         ThreadPagePullRequestRecord first = complete(

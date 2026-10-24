@@ -42,7 +42,7 @@ public final class JumpManager {
         return switch (session.residence()) {
             case InKitty window -> inKitty(window, own);
             case InTmux pane -> inTmux(pane, own);
-            case Nowhere nowhere -> unjumpable(NEITHER);
+            case Nowhere _ -> unjumpable(NEITHER);
         };
     }
 

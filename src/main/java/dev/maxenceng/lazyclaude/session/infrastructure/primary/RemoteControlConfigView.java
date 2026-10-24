@@ -15,7 +15,7 @@ public sealed interface RemoteControlConfigView permits AddRemoteControlView, Co
         return switch (config) {
             case AddRemoteControl adding -> Optional.of(AddRemoteControlView.from(adding));
             case ConflictingRemoteControl conflicting -> Optional.of(ConflictingRemoteControlView.from(conflicting));
-            case ConfiguredRemoteControl configured -> Optional.empty();
+            case ConfiguredRemoteControl _ -> Optional.empty();
         };
     }
 }

@@ -13,10 +13,6 @@ public record RunStyle(CellColour foreground, CellColour background, List<TextAt
         Assert.notNull("attributes", attributes);
     }
 
-    public boolean has(TextAttribute attribute) {
-        return attributes.contains(attribute);
-    }
-
     public static RunStyleBuilder builder() {
         return new RunStyleBuilder();
     }

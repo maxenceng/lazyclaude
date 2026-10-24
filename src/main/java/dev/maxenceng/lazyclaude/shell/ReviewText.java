@@ -21,6 +21,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailablePendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableThreadsView;
+import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.HeldHead;
 import dev.maxenceng.lazyclaude.review.published.MovedHead;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
@@ -113,7 +114,7 @@ final class ReviewText {
 
     private static String name(DiffFileView file) {
         String name = lastSegment(file.path().value());
-        return file.status() instanceof RenamedFile renamed ? RENAMED.formatted(lastSegment(renamed.from().value()), name) : name;
+        return file.status() instanceof RenamedFile(DiffPath from) ? RENAMED.formatted(lastSegment(from.value()), name) : name;
     }
 
     private static String lastSegment(String path) {

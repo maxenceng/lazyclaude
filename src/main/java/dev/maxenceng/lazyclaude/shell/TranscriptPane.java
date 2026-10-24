@@ -25,8 +25,8 @@ final class TranscriptPane {
     private TranscriptOffset offset = TranscriptOffset.start();
     private Optional<String> notice = Optional.empty();
 
-    boolean shows(SessionId session) {
-        return subject.filter(session::equals).isPresent();
+    boolean isNotShowing(SessionId session) {
+        return subject.filter(session::equals).isEmpty();
     }
 
     /** From now on {@code session}'s transcript is the one shown, read from its start. */
@@ -42,7 +42,7 @@ final class TranscriptPane {
     }
 
     void apply(SessionId session, TranscriptOffset from, TranscriptView read) {
-        if (!shows(session) || !offset.equals(from)) {
+        if (isNotShowing(session) || !offset.equals(from)) {
             return;
         }
         switch (read) {
@@ -53,7 +53,7 @@ final class TranscriptPane {
                 offset = entriesRead.next();
                 notice = Optional.empty();
             }
-            case NoTranscriptView none -> {
+            case NoTranscriptView _ -> {
                 entries = List.of();
                 offset = TranscriptOffset.start();
                 notice = Optional.of(SessionText.noTranscriptNotice());

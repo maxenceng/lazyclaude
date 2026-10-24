@@ -39,7 +39,7 @@ final class TicketText {
     static String title(TicketView ticket) {
         return switch (ticket.title()) {
             case Title title -> title.value();
-            case NoTitle noTitle -> ticket.id().value();
+            case NoTitle _ -> ticket.id().value();
         };
     }
 
@@ -66,18 +66,18 @@ final class TicketText {
     static Optional<String> markdown(TicketView ticket) {
         return switch (ticket.body()) {
             case Body text -> Optional.of(text.value());
-            case NoBody none -> Optional.empty();
+            case NoBody _ -> Optional.empty();
         };
     }
 
     static String facts(TicketView ticket) {
         Stream<String> context = switch (ticket.context()) {
             case ContextName name -> Stream.of(name.value());
-            case NoContext noContext -> Stream.empty();
+            case NoContext _ -> Stream.empty();
         };
         Stream<String> type = switch (ticket.type()) {
             case TypeName name -> Stream.of(name.value());
-            case NoType noType -> Stream.empty();
+            case NoType _ -> Stream.empty();
         };
         return Stream.of(Stream.of(ticket.id().value(), ticket.status().label()), context, type)
                 .flatMap(Function.identity())

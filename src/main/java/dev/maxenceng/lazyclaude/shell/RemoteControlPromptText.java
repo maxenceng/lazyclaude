@@ -31,8 +31,8 @@ final class RemoteControlPromptText {
 
     static String title(RemoteControlConfigView view) {
         return switch (view) {
-            case AddRemoteControlView adding -> OFFER_TITLE;
-            case ConflictingRemoteControlView conflicting -> CONFLICT_TITLE;
+            case AddRemoteControlView _ -> OFFER_TITLE;
+            case ConflictingRemoteControlView _ -> CONFLICT_TITLE;
         };
     }
 
@@ -57,15 +57,15 @@ final class RemoteControlPromptText {
 
     static String hint(RemoteControlConfigView view) {
         return switch (view) {
-            case AddRemoteControlView adding -> OFFER_HINT;
-            case ConflictingRemoteControlView conflicting -> CONFLICT_HINT;
+            case AddRemoteControlView _ -> OFFER_HINT;
+            case ConflictingRemoteControlView _ -> CONFLICT_HINT;
         };
     }
 
     static String keys(RemoteControlConfigView view) {
         return switch (view) {
-            case AddRemoteControlView adding -> OFFER_KEYS;
-            case ConflictingRemoteControlView conflicting -> CONFLICT_KEYS;
+            case AddRemoteControlView _ -> OFFER_KEYS;
+            case ConflictingRemoteControlView _ -> CONFLICT_KEYS;
         };
     }
 

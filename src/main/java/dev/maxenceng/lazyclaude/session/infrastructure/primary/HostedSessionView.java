@@ -32,9 +32,9 @@ public record HostedSessionView(
 
     private static Optional<LiveSessionView> liveOf(AvailableSessions available, HostedPhase phase) {
         return switch (phase) {
-            case StartingPhase starting -> Optional.empty();
+            case StartingPhase _ -> Optional.empty();
             case LivePhase live -> Optional.of(LiveSessionView.from(available, live.session()));
-            case UnreadPhase unread -> Optional.empty();
+            case UnreadPhase _ -> Optional.empty();
         };
     }
 

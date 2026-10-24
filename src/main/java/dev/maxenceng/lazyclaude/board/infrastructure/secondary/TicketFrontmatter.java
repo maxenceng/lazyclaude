@@ -1,11 +1,13 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
 import java.util.Arrays;
-import java.util.Optional;
 
+import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
 import dev.maxenceng.lazyclaude.board.domain.Frontmatter;
 import dev.maxenceng.lazyclaude.board.domain.Ticket;
+import dev.maxenceng.lazyclaude.board.domain.TicketFile;
 import dev.maxenceng.lazyclaude.board.published.ContextName;
+import dev.maxenceng.lazyclaude.board.published.FileName;
 import dev.maxenceng.lazyclaude.board.published.NoContext;
 import dev.maxenceng.lazyclaude.board.published.NoType;
 import dev.maxenceng.lazyclaude.board.published.Status;
@@ -28,23 +30,24 @@ record TicketFrontmatter(String id, String status, String context, String type, 
         return id != null;
     }
 
-    /** Why the board cannot take the ticket, read before anything is built from it: no status, or an id or a status the board has no word for. */
-    Optional<String> refusal() {
+    /** The ticket these fields describe in {@code name}, else why the board cannot take it: no status, or an id or a status it has no word for. */
+    BacklogEntry entry(FileName name, TicketBody body) {
         if (status == null) {
-            return Optional.of(NO_STATUS);
+            return TicketFileReader.refused(name, NO_STATUS);
         }
         if (!TicketId.fits(id)) {
-            return Optional.of(NOT_AN_ID.formatted(id, TicketId.shape()));
+            return TicketFileReader.refused(name, NOT_AN_ID.formatted(id, TicketId.shape()));
         }
-        return Status.find(status).isPresent() ? Optional.empty() : Optional.of(NOT_A_STATUS.formatted(status, labels()));
+        return Status.find(status)
+                .<BacklogEntry>map(found -> TicketFile.builder().file(name).ticket(toDomain(found, TicketBranch.of(name), body)).build())
+                .orElseGet(() -> TicketFileReader.refused(name, NOT_A_STATUS.formatted(status, labels())));
     }
 
-    /** Only once {@link #refusal()} is empty. */
-    Ticket toDomain(TicketBranch branch, TicketBody body) {
+    private Ticket toDomain(Status found, TicketBranch branch, TicketBody body) {
         return Ticket.builder()
                 .id(new TicketId(id))
                 .branch(branch)
-                .status(Status.find(status).orElseThrow())
+                .status(found)
                 .context(ticketContext())
                 .type(ticketType())
                 .frontmatter(otherKeys)

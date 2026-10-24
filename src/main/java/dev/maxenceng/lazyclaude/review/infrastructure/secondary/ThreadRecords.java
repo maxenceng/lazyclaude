@@ -13,7 +13,7 @@ final class ThreadRecords {
 
     /** @throws PullRequestsUnavailableException saying what {@code source} held that could not be read */
     static List<ReviewThread> threads(byte[] json, String source) {
-        List<ThreadRecord> records = GhJson.pages(json, ThreadPageRecord.class, source).stream()
+        List<ThreadRecord> records = GhJson.pages(json, source).stream()
                 .flatMap(page -> nodesOf(page).orElseThrow(() -> new PullRequestsUnavailableException("%s holds no review threads".formatted(source))).stream())
                 .toList();
         return records.stream()

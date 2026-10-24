@@ -34,13 +34,13 @@ final class DocsRows {
     List<DocsRow> visible() {
         return switch (docs) {
             case DocsTreeView tree -> list(tree.documents(), tree.folders(), 0).toList();
-            case UnavailableDocsView unavailable -> List.of();
+            case UnavailableDocsView _ -> List.of();
         };
     }
 
     /** Why there is no tree to show, when {@code docs/} could not be listed. */
     Optional<Reason> unavailable() {
-        return docs instanceof UnavailableDocsView unavailable ? Optional.of(unavailable.reason()) : Optional.empty();
+        return docs instanceof UnavailableDocsView(Reason reason) ? Optional.of(reason) : Optional.empty();
     }
 
     boolean isEmpty() {

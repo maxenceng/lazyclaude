@@ -63,6 +63,10 @@ REGISTRY = {
         "config-comments",
         "Makefile:1: comment runs 3 lines, limit is 2",
     ),
+    "check-no-var.py": FixtureTree(
+        "no-var",
+        "Thing.java:6: var instead of a type",
+    ),
     "check-no-skipped-tests.py": FixtureTree(
         "no-skipped-tests",
         "1 test(s) skipped",

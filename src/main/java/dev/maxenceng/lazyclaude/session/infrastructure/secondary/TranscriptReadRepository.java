@@ -42,10 +42,9 @@ public final class TranscriptReadRepository implements TranscriptReadPort {
     @Override
     public TranscriptRead read(SessionId session, WorkingDirectory directory, TranscriptOffset from) {
         try {
-            Optional<Path> file = locate(session, directory);
-            return file.isPresent() ? readFrom(file.get(), from) : new NoTranscript();
+            return locate(session, directory).<TranscriptRead>map(file -> readFrom(file, from)).orElseGet(NoTranscript::new);
         } catch (IOException e) {
-            throw new TranscriptUnreadableException(UNREADABLE.formatted(transcriptsRoot, FileFailure.causeOf(e)), e);
+            throw unreadable(e);
         } catch (UncheckedIOException e) {
             throw new TranscriptUnreadableException(
                     UNREADABLE.formatted(transcriptsRoot, FileFailure.causeOf(e.getCause())), e.getCause());
@@ -68,7 +67,19 @@ public final class TranscriptReadRepository implements TranscriptReadPort {
         }
     }
 
-    private static TranscriptRead readFrom(Path file, TranscriptOffset from) throws IOException {
+    private TranscriptRead readFrom(Path file, TranscriptOffset from) {
+        try {
+            return entriesFrom(file, from);
+        } catch (IOException e) {
+            throw unreadable(e);
+        }
+    }
+
+    private TranscriptUnreadableException unreadable(IOException e) {
+        return new TranscriptUnreadableException(UNREADABLE.formatted(transcriptsRoot, FileFailure.causeOf(e)), e);
+    }
+
+    private static TranscriptRead entriesFrom(Path file, TranscriptOffset from) throws IOException {
         TranscriptOffset start = TranscriptLines.endsALine(file, from.value()) ? from : TranscriptOffset.start();
         Stream.Builder<TranscriptEntry> entries = Stream.builder();
         long next = TranscriptLines.read(file, start.value(), line -> TranscriptEntryLine.entriesIn(line).forEach(entries));

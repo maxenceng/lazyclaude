@@ -163,9 +163,6 @@ public final class SessionManager {
         } catch (SessionsUnavailableException noSource) {
             lastLive.forget();
             return unavailable(noSource.getMessage());
-        } catch (ProjectUnavailableException noLocator) {
-            lastLive.forget();
-            return unavailable(noLocator.getMessage());
         }
     }
 
@@ -232,6 +229,14 @@ public final class SessionManager {
         }
     }
 
+    private ProjectLocation locationOfReported(WorkingDirectory directory) {
+        try {
+            return locationOf(directory);
+        } catch (ProjectUnavailableException noLocator) {
+            throw new SessionsUnavailableException(noLocator.getMessage(), noLocator);
+        }
+    }
+
     private void warnOfSweep(Reason cause, Duration every) {
         sweeping.raise(warnings, new Warning(SWEEP_WARNING.formatted(cause.value(), every.toSeconds())));
     }
@@ -257,7 +262,7 @@ public final class SessionManager {
         Map<WorkingDirectory, ProjectLocation> located = candidates.stream()
                 .map(ReportedSession::directory)
                 .distinct()
-                .collect(Collectors.toMap(Function.identity(), this::locationOf));
+                .collect(Collectors.toMap(Function.identity(), this::locationOfReported));
         return candidates.stream()
                 .sorted(NEWEST_FIRST)
                 .map(session -> PlacedSession.builder()
@@ -316,9 +321,8 @@ public final class SessionManager {
     }
 
     private static SessionState waiting(WaitingFor waitingFor) {
-        return switch (waitingFor) {
-            case WaitingReason reason when reason.isPermissionPrompt() -> new WaitingForPermission(reason);
-            default -> new WaitingForInput(waitingFor);
-        };
+        return waitingFor instanceof WaitingReason reason && reason.isPermissionPrompt()
+                ? new WaitingForPermission(reason)
+                : new WaitingForInput(waitingFor);
     }
 }

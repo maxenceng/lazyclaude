@@ -19,7 +19,7 @@ JAVA := $(if $(JAVA_HOME),$(JAVA_HOME)/bin/java,java)
 .DEFAULT_GOAL := help
 
 .PHONY: help doctor build test contract test-one arch fmt lint dup config-check adr-check
-.PHONY: ticket-check guard-fixtures guard-harness no-skipped-tests test-comment-check
+.PHONY: ticket-check guard-fixtures guard-harness no-skipped-tests test-comment-check var-check
 .PHONY: package run ci verify verify-report pr-checks clean
 
 help: ## Show available targets
@@ -66,6 +66,9 @@ adr-check: ## Fail on a duplicate or missing ADR number
 test-comment-check: ## Fail on a comment under src/test, where the test name is the explanation
 	@python3 scripts/check-test-comments.py
 
+var-check: ## Fail on `var` where a type should be written out
+	@python3 scripts/check-no-var.py
+
 ticket-check: ## Fail on a reference to a ticket that has already landed
 	@python3 scripts/check-ticket-references.py
 
@@ -84,7 +87,7 @@ package: ## Build the runnable jar into target/lazyclaude.jar
 run: package ## Start the TUI in this terminal
 	@$(JAVA) --enable-native-access=ALL-UNNAMED -jar $(JAR)
 
-ci: lint config-check adr-check ticket-check test-comment-check guard-fixtures guard-harness test dup rules ## CI's first step, cheapest check first
+ci: lint config-check adr-check ticket-check test-comment-check var-check guard-fixtures guard-harness test dup rules ## CI's first step, cheapest check first
 
 # CI runs these targets in this order. Adding a step to one without the other is what
 # makes "it passed locally" stop meaning anything.
