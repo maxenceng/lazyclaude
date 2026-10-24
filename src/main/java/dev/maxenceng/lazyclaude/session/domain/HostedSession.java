@@ -31,12 +31,12 @@ public record HostedSession(HostedSessionId id, ProcessId pid, WorkingDirectory 
 
     /** Whether this is {@code claude --resume} of {@code session}, which a second resume must not run beside. */
     public boolean resumes(SessionId session) {
-        return command instanceof ResumeClaude resume && resume.session().equals(session);
+        return command instanceof ResumeClaude(var resumed) && resumed.equals(session);
     }
 
     /** The ticket this session was started for, none for a plain or resumed one. */
     public Optional<LinkedTicketId> ticket() {
-        return command instanceof TicketClaude run ? Optional.of(run.ticket()) : Optional.empty();
+        return command instanceof TicketClaude(var ticket, _) ? Optional.of(ticket) : Optional.empty();
     }
 
     /** Whether its {@code claude} runs in {@code worktree} or below it. */
@@ -51,22 +51,22 @@ public record HostedSession(HostedSessionId id, ProcessId pid, WorkingDirectory 
 
     /** The ticket this session was started to close out with {@code /ticket done}, none for a session that ran any other verb. */
     public Optional<LinkedTicketId> doneTicket() {
-        return command instanceof TicketClaude run && run.verb() == Verb.DONE ? Optional.of(run.ticket()) : Optional.empty();
+        return command instanceof TicketClaude(var ticket, var verb) && verb == Verb.DONE ? Optional.of(ticket) : Optional.empty();
     }
 
     /** The link to its ticket that starting it gives it before any transcript does. */
     public Optional<StrongLink> startingLink() {
-        return command instanceof TicketClaude run
+        return command instanceof TicketClaude(var ticket, var verb)
                 ? Optional.of(StrongLink.builder()
-                        .ticket(run.ticket())
-                        .verb(new LinkVerb(run.verb().label()))
+                        .ticket(ticket)
+                        .verb(new LinkVerb(verb.label()))
                         .build())
                 : Optional.empty();
     }
 
     /** Whether this session was started to run {@code verb} on {@code ticket}. */
     public boolean runs(LinkedTicketId ticket, Verb verb) {
-        return command instanceof TicketClaude run && run.ticket().equals(ticket) && run.verb() == verb;
+        return command instanceof TicketClaude(var started, var ran) && started.equals(ticket) && ran == verb;
     }
 
     /** Where the session stands among the live sessions the registry lists: live as the one with its pid, else still starting. */

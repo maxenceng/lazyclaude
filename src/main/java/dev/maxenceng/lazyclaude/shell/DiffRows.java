@@ -76,14 +76,14 @@ final class DiffRows {
             PendingCommentsInDiffView pending,
             Optional<CommentBox> box,
             boolean showResolved) {
-        if (!(diff instanceof ReadDiffView read)) {
+        if (!(diff instanceof ReadDiffView(var files))) {
             return NONE;
         }
-        List<DiffRow> lineRows = IntStream.range(0, read.files().size())
+        List<DiffRow> lineRows = IntStream.range(0, files.size())
                 .boxed()
-                .flatMap(file -> fileRows(file, read.files().get(file)))
+                .flatMap(file -> fileRows(file, files.get(file)))
                 .toList();
-        return new DiffRows(read.files(), withThreads(lineRows, inlineThreads(threads, showResolved), inlinePending(pending), box));
+        return new DiffRows(files, withThreads(lineRows, inlineThreads(threads, showResolved), inlinePending(pending), box));
     }
 
     private static Map<Integer, List<ReviewThreadView>> inlineThreads(ThreadsInDiffView threads, boolean showResolved) {

@@ -113,7 +113,7 @@ final class ReviewText {
 
     private static String name(DiffFileView file) {
         String name = lastSegment(file.path().value());
-        return file.status() instanceof RenamedFile renamed ? RENAMED.formatted(lastSegment(renamed.from().value()), name) : name;
+        return file.status() instanceof RenamedFile(var from) ? RENAMED.formatted(lastSegment(from.value()), name) : name;
     }
 
     private static String lastSegment(String path) {

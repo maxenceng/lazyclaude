@@ -261,8 +261,8 @@ final class ReviewPane {
     /** To the line the selected thread shows under; nowhere for an outdated one. */
     void goToSelectedComment() {
         if (selectedComment < entries().size()) {
-            if (lineOf(entries().get(selectedComment)) instanceof OnDiffLine on) {
-                moveTo(on.index().value());
+            if (lineOf(entries().get(selectedComment)) instanceof OnDiffLine(var index)) {
+                moveTo(index.value());
             }
         }
     }
@@ -357,7 +357,7 @@ final class ReviewPane {
     /** The pending comment on the cursor's line that was written last, if the line has one. */
     Optional<PendingCommentView> pendingOnCursorLine() {
         return pendingComments().stream()
-                .filter(placed -> placed.line() instanceof OnDiffLine on && on.index().value() == cursor)
+                .filter(placed -> placed.line() instanceof OnDiffLine(var index) && index.value() == cursor)
                 .map(PendingInDiffView::comment)
                 .reduce((_, later) -> later);
     }
@@ -370,7 +370,7 @@ final class ReviewPane {
 
     /** The diff line a thread or a pending comment shows under, if it shows under one. */
     Optional<Integer> lineOf(ThreadLine line) {
-        return line instanceof OnDiffLine on ? Optional.of(on.index().value()) : Optional.empty();
+        return line instanceof OnDiffLine(var index) ? Optional.of(index.value()) : Optional.empty();
     }
 
     /** The diff line the thread shows under, if it is placed. */

@@ -47,8 +47,8 @@ final class DiffElement implements Element {
         List<List<StatusSpan>> lines = DiffText.rows(rows.row(row), area.width(), rows.numberWidth(), cursor, inRange);
         IntStream.range(0, Math.min(lines.size(), area.height() - y))
                 .forEach(line -> drawSpans(frame, area, y + line, lines.get(line)));
-        if (rows.row(row) instanceof BoxRow open && !open.box().saving()) {
-            placeCursor(frame, area, open.box(), rows.numberWidth(), y);
+        if (rows.row(row) instanceof BoxRow(var box) && !box.saving()) {
+            placeCursor(frame, area, box, rows.numberWidth(), y);
         }
         return lines.size();
     }

@@ -90,10 +90,10 @@ final class TerminalScreenElement implements Element {
 
     private void placeCursor(Frame frame, Rect area) {
         ScreenCursor cursor = screen.cursor();
-        if (cursor instanceof CursorAt at
-                && at.column().value() < area.width()
-                && at.row().value() < area.height()) {
-            frame.setCursorPosition(area.x() + at.column().value(), area.y() + at.row().value());
+        if (cursor instanceof CursorAt(var column, var row)
+                && column.value() < area.width()
+                && row.value() < area.height()) {
+            frame.setCursorPosition(area.x() + column.value(), area.y() + row.value());
         }
     }
 

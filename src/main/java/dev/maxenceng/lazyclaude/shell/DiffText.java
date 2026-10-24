@@ -79,8 +79,8 @@ final class DiffText {
 
     /** A file's name as the Files panel and the rule name it: {@code old → new} for a renamed one. */
     static String label(DiffFileView file) {
-        return file.status() instanceof RenamedFile renamed
-                ? RENAMED.formatted(renamed.from().value(), file.path().value())
+        return file.status() instanceof RenamedFile(var from)
+                ? RENAMED.formatted(from.value(), file.path().value())
                 : file.path().value();
     }
 
