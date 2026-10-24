@@ -36,7 +36,6 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OnDiffAnchorView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingDeletePayload;

@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
 
@@ -77,5 +78,23 @@ class ShellPendingDetailTest {
         background.releaseInOrder();
 
         assertThat(Screen.of(shell).mainViewRows()).anySatisfy(row -> assertThat(row).contains("✎3 pending"));
+    }
+
+    @Test
+    void shouldDropAPendingReadThatLandsAfterANewerOneWasBegun() {
+        HeldTasksFixture background = new HeldTasksFixture();
+        ReviewQuery reviews = reviewsAnswering(twoFileDiffView(), loadingThreadsView(), noPendingReviewView());
+        when(reviews.pendingOf(any())).thenReturn(pendingOnBothFiles(), unavailablePendingView());
+        Shell shell = shellOnATicketWithAnOpenPullRequest(reviews, background);
+        Screen.of(shell);
+        shell.press(key('R'));
+        Screen.of(shell);
+
+        background.runNewestFirst();
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .as("the older read answers last, and its answer must not replace the newer one")
+                .anySatisfy(row -> assertThat(row).contains("✎3 pending"))
+                .noneSatisfy(row -> assertThat(row).contains("pending unknown"));
     }
 }

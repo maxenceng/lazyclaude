@@ -23,9 +23,9 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailablePending
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableThreadsView;
 import dev.maxenceng.lazyclaude.review.published.HeldHead;
 import dev.maxenceng.lazyclaude.review.published.MovedHead;
-import dev.maxenceng.lazyclaude.review.published.Summary;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 import dev.maxenceng.lazyclaude.review.published.RenamedFile;
+import dev.maxenceng.lazyclaude.review.published.Summary;
 import dev.maxenceng.lazyclaude.review.published.ThreadSide;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;

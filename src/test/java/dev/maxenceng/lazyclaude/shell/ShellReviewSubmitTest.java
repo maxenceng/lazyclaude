@@ -19,7 +19,6 @@ import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.writingThatWrite
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -183,5 +182,24 @@ class ShellReviewSubmitTest {
 
         assertThat(screen.lines().getLast()).contains("not submitted (gh: not logged in)");
         assertThat(screen.text()).contains("╭Files").doesNotContain("start /ticket respond");
+    }
+
+    @Test
+    void shouldKeepTheRespondDialogUpOnAnyOtherKeyUntilEscapeClosesTheReviewWithTheTicketSelected() {
+        HostedSessionCommand hosting = mock(HostedSessionCommand.class);
+        Shell shell = shellSubmitting(inReviewSlugTicketView(), writingThatWrites(writtenView(noPendingReviewView())), hosting);
+        shell.press(key('S'));
+        shell.press(ctrl('s'));
+        shell.press(key('y'));
+
+        shell.press(key('j'));
+        shell.press(key('q'));
+        assertThat(Screen.of(shell).text()).contains("start /ticket respond PROJ-1?", "╭Files");
+        assertThat(shell.quitRequested()).isFalse();
+        shell.press(namedKey(KeyCode.ESCAPE));
+
+        assertThat(Screen.of(shell).text()).contains("╭Board").doesNotContain("start /ticket respond", "╭Files");
+        assertThat(Screen.of(shell).reversedText()).anySatisfy(row -> assertThat(row).contains("PROJ-1"));
+        verifyNoInteractions(hosting);
     }
 }
