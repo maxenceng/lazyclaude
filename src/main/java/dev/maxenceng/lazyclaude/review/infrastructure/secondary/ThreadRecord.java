@@ -77,7 +77,7 @@ record ThreadRecord(
      * A pending comment on a whole file names no line, and is left out. Only once {@link #missingFields()} and {@link #missingPendingFields()}
      * name none.
      */
-    // deferred: a pending comment on a whole file, made on github.com, is left out of the pending review — close it when one is seen.
+    // deferred: a pending comment on a whole file, made on GitHub.com, is left out of the pending review — close it when one is seen.
     List<PendingComment> pendingComments() {
         return IntStream.range(0, comments.nodes().size())
                 .filter(index -> comments.nodes().get(index).pending())
