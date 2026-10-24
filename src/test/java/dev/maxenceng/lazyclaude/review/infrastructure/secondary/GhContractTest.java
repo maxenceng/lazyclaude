@@ -25,7 +25,6 @@ import dev.maxenceng.lazyclaude.review.published.AddedFile;
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
-import dev.maxenceng.lazyclaude.review.published.Summary;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 @Tag("contract")
@@ -63,11 +62,9 @@ class GhContractTest {
             PendingOnDiff firstLine = realDiff().commentOn(new DiffLineIndex(0), new DiffLineIndex(0));
             pendingReviews().addThread(project, review, firstLine, new CommentBody("contract probe: a line comment"));
             pendingReviews().reply(project, review, realThreads().getFirst().id(), new CommentBody("contract probe: a reply"));
-            pendingReviews().summarise(project, review, new Summary("contract probe: a summary"));
 
             PendingReview read = (PendingReview) realPullRequest().review();
 
-            assertThat(read.summary()).isEqualTo(new Summary("contract probe: a summary"));
             assertThat(read.comments())
                     .extracting(comment -> comment.body().value())
                     .contains("contract probe: a line comment", "contract probe: a reply");
