@@ -76,11 +76,6 @@ final class ReviewKeys {
         this.host = host;
     }
 
-    /** Whether the confirm after the summary is waiting for its answer. */
-    boolean asksToSubmit() {
-        return submitPrompt.isPresent();
-    }
-
     /** The question the status line asks while the confirm waits. */
     Optional<String> prompt() {
         return submitPrompt.map(_ -> SUBMIT_PROMPT);
@@ -104,9 +99,10 @@ final class ReviewKeys {
 
     /** The keys of the open review; {@code false} for one it leaves to the rest of the keys. */
     boolean press(ReviewPane pane, KeyEvent key) {
-        if (pane.box().isPresent()) {
-            return pressInBox(pane, pane.box().get(), key);
-        }
+        return pane.box().map(box -> pressInBox(pane, box, key)).orElseGet(() -> pressOutsideBox(pane, key));
+    }
+
+    private boolean pressOutsideBox(ReviewPane pane, KeyEvent key) {
         if (key.isKey(KeyCode.ESCAPE)) {
             return pane.clearRange() || host.leave().getAsBoolean();
         }
@@ -135,9 +131,12 @@ final class ReviewKeys {
         };
     }
 
-    /** The confirm after the summary is saved: {@code y} submits the pending review as a Comment, any other key leaves it pending. */
-    boolean answerSubmitPrompt(KeyEvent key) {
-        ReviewPane pane = submitPrompt.orElseThrow();
+    /** The confirm after the summary is saved: {@code y} submits the pending review as a Comment, any other key leaves it pending; none while no confirm waits. */
+    Optional<Boolean> answerSubmitPrompt(KeyEvent key) {
+        return submitPrompt.map(pane -> answerSubmitPrompt(pane, key));
+    }
+
+    private boolean answerSubmitPrompt(ReviewPane pane, KeyEvent key) {
         submitPrompt = Optional.empty();
         if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
             PendingSubmitPayload submit = new PendingSubmitPayload(root, pane.number(), pane.summaryToSubmit());

@@ -584,28 +584,24 @@ public final class Shell extends ToolkitApp {
         applyPendingMergedHeads();
         applyPendingWarning();
         refusal = Optional.empty();
-        if (quitPrompt.isPresent()) {
-            return answerQuitPrompt(key);
-        }
-        if (removalPrompt.isPresent()) {
-            return answerRemovalPrompt(key);
-        }
-        if (reviewKeys.asksToSubmit()) {
-            return reviewKeys.answerSubmitPrompt(key);
-        }
-        if (respondPrompt.isPresent()) {
-            return answerRespondPrompt(respondPrompt.get(), key);
-        }
-        if (remoteControlPrompt.isPresent()) {
-            return answerRemoteControlPrompt(remoteControlPrompt.get(), key);
-        }
-        if (picker.isPresent()) {
-            return pressInPicker(picker.get(), key);
-        }
+        return answerPrompt(key).orElseGet(() -> pressWithoutPrompt(key));
+    }
+
+    private Optional<Boolean> answerPrompt(KeyEvent key) {
+        return quitPrompt
+                .map(_ -> answerQuitPrompt(key))
+                .or(() -> removalPrompt.map(asked -> answerRemovalPrompt(asked, key)))
+                .or(() -> reviewKeys.answerSubmitPrompt(key))
+                .or(() -> respondPrompt.map(asked -> answerRespondPrompt(asked, key)))
+                .or(() -> remoteControlPrompt.map(asked -> answerRemoteControlPrompt(asked, key)))
+                .or(() -> picker.map(open -> pressInPicker(open, key)));
+    }
+
+    private boolean pressWithoutPrompt(KeyEvent key) {
         if (inSession()) {
             return pressInSession(key);
         }
-        if (review.isPresent() && reviewKeys.press(review.get(), key)) {
+        if (review.map(pane -> reviewKeys.press(pane, key)).orElse(false)) {
             return true;
         }
         if (key.hasCtrl()) {
@@ -626,8 +622,8 @@ public final class Shell extends ToolkitApp {
         if (key.isChar(JUMP)) {
             return jump();
         }
-        if (key.isChar(REMOVE_WORKTREE) && removableTicket().isPresent()) {
-            return checkRemoval(removableTicket().get());
+        if (key.isChar(REMOVE_WORKTREE)) {
+            return removableTicket().map(this::checkRemoval).orElse(false);
         }
         if (key.isChar(OPEN_REVIEW)) {
             return openReview();
@@ -720,15 +716,12 @@ public final class Shell extends ToolkitApp {
 
     /** A mouse event over the pane reaches the selected tab's session at the matching cell, whatever has focus. */
     boolean mouse(MouseEvent event) {
-        Optional<HostedSessionView> tab = dock.selectedTab();
-        if (tab.isEmpty() || paneArea.isEmpty()) {
-            return false;
-        }
-        return TerminalInputs.mouse(event, paneArea.get())
-                .map(input -> {
-                    hosting.send(new HostedInputPayload(tab.get().id(), input));
-                    return true;
-                })
+        return dock.selectedTab()
+                .flatMap(tab -> paneArea.flatMap(area -> TerminalInputs.mouse(event, area))
+                        .map(input -> {
+                            hosting.send(new HostedInputPayload(tab.id(), input));
+                            return true;
+                        }))
                 .orElse(false);
     }
 
@@ -850,8 +843,7 @@ public final class Shell extends ToolkitApp {
                 latestMerged.mergedHeadOf(new HeadBranch(ticket.branch().value())));
     }
 
-    private boolean answerRemovalPrompt(KeyEvent key) {
-        RemovalPrompt asked = removalPrompt.get();
+    private boolean answerRemovalPrompt(RemovalPrompt asked, KeyEvent key) {
         removalPrompt = Optional.empty();
         if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
             inOrder(() -> {
@@ -1529,24 +1521,17 @@ public final class Shell extends ToolkitApp {
     }
 
     private List<String> keyBar() {
-        if (refusal.isPresent()) {
-            return List.of(refusal.get());
-        }
-        if (remoteControlPrompt.isPresent()) {
-            return List.of(RemoteControlPromptText.keys(remoteControlPrompt.get()));
-        }
-        if (picker.isPresent()) {
-            return List.of(VerbPickerText.keys());
-        }
-        if (inSession()) {
-            return List.of(SESSION_KEYS);
-        }
-        if (respondPrompt.isPresent()) {
-            return RESPOND_KEYS;
-        }
-        if (review.isPresent()) {
-            return reviewKeys.keys(review.get(), focus, List.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY));
-        }
+        return refusal
+                .map(List::of)
+                .or(() -> remoteControlPrompt.map(prompt -> List.of(RemoteControlPromptText.keys(prompt))))
+                .or(() -> picker.map(_ -> List.of(VerbPickerText.keys())))
+                .or(() -> Optional.of(SESSION_KEYS).filter(_ -> inSession()).map(List::of))
+                .or(() -> respondPrompt.map(_ -> RESPOND_KEYS))
+                .or(() -> review.map(pane -> reviewKeys.keys(pane, focus, List.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY))))
+                .orElseGet(this::boardKeys);
+    }
+
+    private List<String> boardKeys() {
         return Stream.of(
                         Included.when(focus.column() == Column.LEFT, MOVE_KEYS),
                         Included.when(focus == Focus.MAIN, SCROLL_KEYS),

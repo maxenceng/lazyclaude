@@ -52,7 +52,7 @@ public record AvailableSessionsView(
     public Optional<LiveSessionView> strongestSessionOf(LinkedTicketId ticket) {
         return live.stream()
                 .filter(session -> session.linkTo(ticket).isPresent() && session.marker().isPresent())
-                .max(Comparator.comparing(session -> session.marker().orElseThrow()));
+                .max(Comparator.comparing(session -> session.marker().orElse(Marker.YOUR_TURN)));
     }
 
     /** The live sessions linked to no ticket. */

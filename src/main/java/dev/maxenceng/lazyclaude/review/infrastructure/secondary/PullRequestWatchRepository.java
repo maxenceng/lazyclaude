@@ -60,11 +60,17 @@ public final class PullRequestWatchRepository implements PullRequestWatchPort, A
                 } finally {
                     running.set(false);
                 }
-                requests.tryAcquire(interval.toMillis(), TimeUnit.MILLISECONDS);
-                requests.drainPermits();
+                answerRequests();
             }
         } catch (InterruptedException stopped) {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    /** Waits for the next interval or a request, and a request that woke it answers every request made by then. */
+    private void answerRequests() throws InterruptedException {
+        if (requests.tryAcquire(interval.toMillis(), TimeUnit.MILLISECONDS)) {
+            requests.drainPermits();
         }
     }
 }

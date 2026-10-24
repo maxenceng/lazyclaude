@@ -151,6 +151,15 @@ class ArchitectureTest {
             .callMethod(CompletableFuture.class, "runAsync", Runnable.class)
             .allowEmptyShould(true);
 
+    // An Optional is unwrapped where it is checked, by map, or, orElse or a named exception; get() and orElseThrow() with no argument do not say what was absent.
+    @ArchTest
+    static final ArchRule an_optional_is_never_unwrapped_unchecked = noClasses()
+            .should()
+            .callMethod(Optional.class, "get")
+            .orShould()
+            .callMethod(Optional.class, "orElseThrow")
+            .allowEmptyShould(true);
+
     // Jackson parses what other tools write; it stays in the adapter that reads it, never in a domain or a screen.
     @ArchTest
     static final ArchRule json_is_parsed_only_in_secondary_adapters = noClasses()

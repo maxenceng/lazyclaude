@@ -29,6 +29,10 @@ import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.NotWatching;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WatchServiceFactory;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WatchServiceState;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Watching;
 
 /**
  * Keeps the transcripts current. Transcripts sit at a fixed depth, so it watches {@code ~/.claude/projects/} and each
@@ -45,6 +49,7 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
 
     private static final Duration TICK = Duration.ofMillis(100);
     private static final String WORKER_NAME = "transcript-watch";
+    private static final String NO_ROOT = "the transcripts root is not a directory";
     private static final String CAUSE = "cannot watch %s (%s); if the watch limit is reached, raise fs.inotify.max_user_watches";
 
     private final Path transcriptsRoot;
@@ -106,12 +111,12 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
     private void run(
             TranscriptLocator locator, Runnable changed, PollingFallback fallback, CacheFallback cache, RootFallback root) {
         try {
-            Optional<WatchService> service = watchOver(fallback);
+            WatchServiceState state = watchOver(fallback);
             transcripts.rescanAll(locator, cache, root);
             changed.run();
             // deferred: a transcripts root that does not exist when lazyclaude starts is not watched, so past sessions of a Claude Code first run in this session appear at the next start — close it when that is seen.
-            if (service.isPresent() || Files.isDirectory(transcriptsRoot)) {
-                follow(service, locator, changed, fallback, cache, root);
+            if (state instanceof Watching || Files.isDirectory(transcriptsRoot)) {
+                follow(state, locator, changed, fallback, cache, root);
             }
         } catch (InterruptedException | ClosedWatchServiceException stopped) {
             Thread.currentThread().interrupt();
@@ -119,30 +124,32 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
     }
 
     private void follow(
-            Optional<WatchService> initial,
+            WatchServiceState initial,
             TranscriptLocator locator,
             Runnable changed,
             PollingFallback fallback,
             CacheFallback cache,
             RootFallback root)
             throws InterruptedException {
-        Optional<WatchService> service = initial;
+        WatchServiceState state = initial;
         PendingTranscripts pending = PendingTranscripts.none();
         while (!Thread.currentThread().isInterrupted()) {
             boolean everything = false;
-            if (service.isPresent()) {
-                try {
-                    TranscriptChanges changes = drain(service.get());
-                    pending = pending.changed(changes.files(), Instant.now());
-                    everything = changes.everything() | rescanRequested(Duration.ZERO);
-                } catch (IOException cannotWatchFolder) {
-                    closeQuietly(service.get());
-                    giveUpWatching(cannotWatchFolder, fallback);
-                    service = Optional.empty();
+            switch (state) {
+                case Watching(var service) -> {
+                    try {
+                        TranscriptChanges changes = drain(service);
+                        pending = pending.changed(changes.files(), Instant.now());
+                        everything = changes.everything() | rescanRequested(Duration.ZERO);
+                    } catch (IOException cannotWatchFolder) {
+                        closeQuietly(service);
+                        state = giveUpWatching(cannotWatchFolder, fallback);
+                    }
                 }
-            } else {
-                rescanRequested(pollInterval);
-                everything = true;
+                case NotWatching _ -> {
+                    rescanRequested(pollInterval);
+                    everything = true;
+                }
             }
             List<Path> settled = pending.quietSince(Instant.now().minus(settle));
             if (everything) {
@@ -214,27 +221,26 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
         return TranscriptFile.isTranscript(changed) ? TranscriptChanges.of(List.of(changed)) : TranscriptChanges.none();
     }
 
-    private Optional<WatchService> watchOver(PollingFallback fallback) {
+    private WatchServiceState watchOver(PollingFallback fallback) {
         if (!Files.isDirectory(transcriptsRoot)) {
-            return Optional.empty();
+            return new NotWatching(NO_ROOT);
         }
-        WatchService service;
-        try {
-            service = services.create();
-        } catch (IOException e) {
-            giveUpWatching(e, fallback);
-            return Optional.empty();
-        }
+        return switch (WatchServiceState.of(services)) {
+            case Watching(var service) -> register(service, fallback);
+            case NotWatching(var reason) -> giveUpWatching(reason, fallback);
+        };
+    }
+
+    private WatchServiceState register(WatchService service, PollingFallback fallback) {
         open.add(service);
         try {
             transcriptsRoot.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
             watchFolders(service);
         } catch (IOException e) {
             closeQuietly(service);
-            giveUpWatching(e, fallback);
-            return Optional.empty();
+            return giveUpWatching(e, fallback);
         }
-        return Optional.of(service);
+        return new Watching(service);
     }
 
     /** Watches every folder; one already watched keeps its key, so this also catches a folder whose creation an overflow lost. */
@@ -255,8 +261,13 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
         }
     }
 
-    private void giveUpWatching(IOException cause, PollingFallback fallback) {
-        fallback.polling(new Reason(CAUSE.formatted(transcriptsRoot, FileFailure.causeOf(cause))), pollInterval);
+    private NotWatching giveUpWatching(IOException cause, PollingFallback fallback) {
+        return giveUpWatching(FileFailure.causeOf(cause), fallback);
+    }
+
+    private NotWatching giveUpWatching(String reason, PollingFallback fallback) {
+        fallback.polling(new Reason(CAUSE.formatted(transcriptsRoot, reason)), pollInterval);
+        return new NotWatching(reason);
     }
 
     private static void closeQuietly(WatchService service) {

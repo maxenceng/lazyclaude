@@ -109,4 +109,20 @@ class PullRequestWatchRepositoryTest {
                 .as("a gh already under way answers the request, so a second one is never queued behind it")
                 .isEmpty();
     }
+
+    @Test
+    void shouldAnswerRequestsMadeTogetherWithOneRun() throws InterruptedException {
+        RefreshProbe probe = instantRuns();
+        watcher = watcherWithoutAnotherRun();
+        watcher.runNow();
+        watcher.runNow();
+
+        watcher.watch(probe.refresh());
+        probe.nextRunWithin(within());
+        probe.nextRunWithin(within());
+
+        assertThat(probe.nextRunWithin(settled()))
+                .as("one run follows every request made so far, so two asks are not two fetches")
+                .isEmpty();
+    }
 }

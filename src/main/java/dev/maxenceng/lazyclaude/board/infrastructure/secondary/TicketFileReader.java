@@ -13,12 +13,10 @@ import java.util.stream.IntStream;
 import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
-import dev.maxenceng.lazyclaude.board.domain.TicketFile;
 import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
 import dev.maxenceng.lazyclaude.board.published.FileName;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
-import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Utf8Text;
 
 /**
@@ -77,12 +75,10 @@ final class TicketFileReader {
     }
 
     private static BacklogEntry entry(FileName name, TicketFrontmatter fields, TicketBody body) {
-        return fields.refusal()
-                .<BacklogEntry>map(reason -> refused(name, reason))
-                .orElseGet(() -> TicketFile.builder().file(name).ticket(fields.toDomain(TicketBranch.of(name), body)).build());
+        return fields.entry(name, body);
     }
 
-    private static UnreadableTicket refused(FileName name, String reason) {
+    static UnreadableTicket refused(FileName name, String reason) {
         return UnreadableTicket.builder().file(name).reason(new Reason(reason)).build();
     }
 

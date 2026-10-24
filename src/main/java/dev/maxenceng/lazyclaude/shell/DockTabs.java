@@ -52,7 +52,7 @@ final class DockTabs {
         Optional<HostedSessionId> was = selectedTab().map(HostedSessionView::id);
         int index = selectedIndex();
         tabs = next;
-        if (was.isEmpty() || tabOf(was.get()).isPresent()) {
+        if (was.map(id -> tabOf(id).isPresent()).orElse(true)) {
             return TabClosing.NONE;
         }
         if (index < next.size()) {

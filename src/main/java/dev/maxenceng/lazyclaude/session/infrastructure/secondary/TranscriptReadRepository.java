@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.NoTranscript;
@@ -42,8 +41,8 @@ public final class TranscriptReadRepository implements TranscriptReadPort {
     @Override
     public TranscriptRead read(SessionId session, WorkingDirectory directory, TranscriptOffset from) {
         try {
-            Optional<Path> file = locate(session, directory);
-            return file.isPresent() ? readFrom(file.get(), from) : new NoTranscript();
+            Path file = locate(session, directory);
+            return Files.isRegularFile(file) ? readFrom(file, from) : new NoTranscript();
         } catch (IOException e) {
             throw new TranscriptUnreadableException(UNREADABLE.formatted(transcriptsRoot, FileFailure.causeOf(e)), e);
         } catch (UncheckedIOException e) {
@@ -52,19 +51,17 @@ public final class TranscriptReadRepository implements TranscriptReadPort {
         }
     }
 
-    private Optional<Path> locate(SessionId session, WorkingDirectory directory) throws IOException {
+    /** The transcript's file wherever it is, else where it was expected, which then is not a file. */
+    private Path locate(SessionId session, WorkingDirectory directory) throws IOException {
         String name = session.value() + SUFFIX;
         Path expected = transcriptsRoot
                 .resolve(directory.path().toString().replaceAll(NOT_A_FOLDER_NAME_CHARACTER, FOLDER_NAME_SEPARATOR))
                 .resolve(name);
-        if (Files.isRegularFile(expected)) {
-            return Optional.of(expected);
-        }
-        if (Files.notExists(transcriptsRoot)) {
-            return Optional.empty();
+        if (Files.isRegularFile(expected) || Files.notExists(transcriptsRoot)) {
+            return expected;
         }
         try (Stream<Path> folders = Files.list(transcriptsRoot)) {
-            return folders.map(folder -> folder.resolve(name)).filter(Files::isRegularFile).findFirst();
+            return folders.map(folder -> folder.resolve(name)).filter(Files::isRegularFile).findFirst().orElse(expected);
         }
     }
 

@@ -14,13 +14,16 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.WatchFallback;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.NotWatching;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WatchServiceFactory;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WatchServiceState;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Watching;
 
 /**
  * Tells the domain when the session registry may have changed: at once when Claude Code rewrites a
@@ -63,8 +66,8 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
 
     @Override
     public void watch(Runnable changed, WatchFallback fallback) {
-        Optional<WatchService> service = watchOver(fallback);
-        workers.add(Thread.ofPlatform().daemon().name(WORKER_NAME).start(() -> loop(service, changed)));
+        WatchServiceState state = watchOver(fallback);
+        workers.add(Thread.ofPlatform().daemon().name(WORKER_NAME).start(() -> loop(state, changed)));
     }
 
     @Override
@@ -73,30 +76,32 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
         open.forEach(SessionWatchRepository::closeQuietly);
     }
 
-    private Optional<WatchService> watchOver(WatchFallback fallback) {
-        WatchService service;
-        try {
-            service = services.create();
-        } catch (IOException e) {
-            giveUpWatching(e, fallback);
-            return Optional.empty();
-        }
+    private WatchServiceState watchOver(WatchFallback fallback) {
+        return switch (WatchServiceState.of(services)) {
+            case Watching(var service) -> register(service, fallback);
+            case NotWatching(var reason) -> giveUpWatching(reason, fallback);
+        };
+    }
+
+    private WatchServiceState register(WatchService service, WatchFallback fallback) {
         open.add(service);
         try {
             sessions.register(service, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
         } catch (IOException e) {
             closeQuietly(service);
-            giveUpWatching(e, fallback);
-            return Optional.empty();
+            return giveUpWatching(e.getMessage(), fallback);
         }
-        return Optional.of(service);
+        return new Watching(service);
     }
 
     // deferred: an exception other than a closed or interrupted watch ends this thread, and the sessions stop updating with only a warning to say so — close it when a re-read can fail in a way the domain does not turn into a value.
-    private void loop(Optional<WatchService> service, Runnable changed) {
+    private void loop(WatchServiceState state, Runnable changed) {
         try {
             while (!Thread.currentThread().isInterrupted()) {
-                boolean relevant = service.isPresent() ? waitForEvents(service.get()) : sleepThroughSweep();
+                boolean relevant = switch (state) {
+                    case Watching(var service) -> waitForEvents(service);
+                    case NotWatching _ -> sleepThroughSweep();
+                };
                 if (relevant) {
                     changed.run();
                 }
@@ -139,8 +144,9 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
         return event.context() instanceof Path name && name.toString().endsWith(RECORD_SUFFIX);
     }
 
-    private void giveUpWatching(IOException cause, WatchFallback fallback) {
-        fallback.sweepingAlone(new Reason(CAUSE.formatted(sessions, cause.getMessage())), sweepInterval);
+    private NotWatching giveUpWatching(String reason, WatchFallback fallback) {
+        fallback.sweepingAlone(new Reason(CAUSE.formatted(sessions, reason)), sweepInterval);
+        return new NotWatching(reason);
     }
 
     private static void closeQuietly(WatchService service) {

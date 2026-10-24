@@ -95,11 +95,14 @@ public final class HostedSessionManager {
      * session already resuming it when there is one, since two {@code claude} on one transcript would both write to it.
      */
     public HostStart resume(SessionId session, WorkingDirectory recorded, PaneSize size) {
-        Optional<HostedSession> resuming =
-                open().sessions().stream().filter(hosted -> hosted.resumes(session)).findFirst();
-        if (resuming.isPresent()) {
-            return new StartedHost(resuming.get().id());
-        }
+        return open().sessions().stream()
+                .filter(hosted -> hosted.resumes(session))
+                .findFirst()
+                .<HostStart>map(resuming -> new StartedHost(resuming.id()))
+                .orElseGet(() -> resumeAt(session, recorded, size));
+    }
+
+    private HostStart resumeAt(SessionId session, WorkingDirectory recorded, PaneSize size) {
         if (!hosts.exists(recorded)) {
             warnings.raise(new Warning(GONE_WARNING.formatted(recorded.path())));
             return new NotStartedHost();
@@ -146,10 +149,10 @@ public final class HostedSessionManager {
     }
 
     private WorkingDirectory ticketDirectory(TicketWorktree worktree) {
-        Optional<WorkingDirectory> held = worktrees.checkedOutAt(worktree.project(), worktree.branch());
-        if (held.isPresent()) {
-            return held.get();
-        }
+        return worktrees.checkedOutAt(worktree.project(), worktree.branch()).orElseGet(() -> addedWorktree(worktree));
+    }
+
+    private WorkingDirectory addedWorktree(TicketWorktree worktree) {
         WorkingDirectory planned = worktree.path()
                 .orElseThrow(() -> new WorktreeUnavailableException(NO_PLACE.formatted(worktree.project().root())));
         if (hosts.exists(planned)) {
@@ -210,10 +213,15 @@ public final class HostedSessionManager {
                 open.add(session);
             }
         }
-        if (earlyExit.isPresent()) {
-            warnOfFailure(earlyExit.get());
-            return new NotStartedHost();
-        }
+        return earlyExit.<HostStart>map(this::notStartedAfter).orElseGet(() -> startedAs(session));
+    }
+
+    private HostStart notStartedAfter(ExitCode exit) {
+        warnOfFailure(exit);
+        return new NotStartedHost();
+    }
+
+    private HostStart startedAs(HostedSession session) {
         changed();
         return new StartedHost(session.id());
     }
