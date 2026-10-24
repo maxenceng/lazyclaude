@@ -20,7 +20,9 @@ change. Three kinds would come back unless a gate stopped them: a compiler warni
 - **PMD `IdenticalCatchBranches` and `LambdaCanBeMethodReference`** in `config/pmd-rules.xml` at priority 1 (the plugin's `failurePriority`; the rules' own default of 3 would only warn), run by
   `make rules`. A merged
   `catch` of two exceptions whose common type is `DomainException` would make a manager depend on `error`, so a context's
-  exceptions that are handled alike get a common base of their own, as `KittyConfigException` does.
+  exceptions that are handled alike get a common base of their own, as `KittyConfigException` does. An exception from another
+  module, which cannot share that base, is translated into the context's own at the call that receives it, as `SessionManager`
+  turns the shared kernel's `ProjectUnavailableException` into `SessionsUnavailableException`.
 - **`ArchitectureTest`**: `an_optional_is_never_unwrapped_unchecked` fails a call to `Optional.get()` or to `orElseThrow()` with
   no argument anywhere in `src/main`. An `Optional` is unwrapped where it is checked: the method that checks hands the value on
   as a parameter (`removalPrompt.map(asked -> answerRemovalPrompt(asked, key))`), or takes a default through `orElse`, or a named

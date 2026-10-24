@@ -79,8 +79,8 @@ public record PullRequestDiff(List<DiffFile> files) {
                 .path(hunk.file().path())
                 .position(PlacedThread.builder()
                         .side(side)
-                        .first(numberOn(side, range.getFirst()).orElseThrow(DiffLineMissingException::new))
-                        .last(numberOn(side, range.getLast()).orElseThrow(DiffLineMissingException::new))
+                        .first(numberOn(side, range.getFirst()).orElseThrow(RangeAcrossSidesException::new))
+                        .last(numberOn(side, range.getLast()).orElseThrow(RangeAcrossSidesException::new))
                         .build())
                 .build();
     }

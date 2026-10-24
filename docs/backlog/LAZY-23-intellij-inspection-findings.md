@@ -1,6 +1,6 @@
 ---
 id: LAZY-23
-status: in-progress
+status: in-review
 context: cross-context
 type: chore
 tracker_id: 92
@@ -11,8 +11,8 @@ created: 2026-10-24
 
 ## Acceptance criteria
 
-- [ ] Every unused pattern binding (74, e.g. `case NoBody noBody ->`) is the unnamed `_`.
-- [ ] `Shell.idOf` and `RunStyle.has`, never called, are gone; `CommentBox` no longer calls the deprecated `character()`.
+- [x] Every unused pattern binding (74, e.g. `case NoBody noBody ->`) is the unnamed `_`.
+- [x] `Shell.idOf` and `RunStyle.has`, never called, are gone; `CommentBox` no longer calls the deprecated `character()`.
 - [ ] The one-off findings are fixed: identical `catch` branches (`KittyConfigManager`, `SessionManager`), lambdas that are a method
       reference, inferable type arguments, the redundant cast, the two `Math.clamp` migrations, `Files.readString`, the duplicated
       `Path.of(xdgCacheHome)`, the pattern variable hiding a field in `BoardManager`, the single-case `switch`, the Javadoc blank
@@ -20,23 +20,23 @@ created: 2026-10-24
 - [ ] The 19 `DeconstructionCanBeUsed` sites use a record pattern.
 - [ ] Genuine typos and grammar mistakes in comments are fixed; project words (`lazyclaude`, `gitdir`, `truecolor`), British
       spelling and domain verbs used as nouns ("the submit", "a write") are left.
-- [ ] No `Optional` is checked in one place and unwrapped in another: the method that checks hands the value on as a parameter
+- [x] No `Optional` is checked in one place and unwrapped in another: the method that checks hands the value on as a parameter
       (`removalPrompt.map(asked -> answerRemovalPrompt(asked, key))`, `ReviewKeys`' submit prompt likewise) — every check-then-get
       pair in `src/main`, not only the five IntelliJ flagged.
-- [ ] A watcher's service is one sealed state, `Watching(WatchService) | NotWatching(reason)`, replacing the paired `service` /
+- [x] A watcher's service is one sealed state, `Watching(WatchService) | NotWatching(reason)`, replacing the paired `service` /
       `serviceFailure` optionals in `TreeWatcher`, `SessionWatchRepository` and `TranscriptWatchRepository`; each loop matches it
       once and its helpers take the `WatchService`.
-- [ ] The no-argument `orElseThrow()` sites (`TicketFrontmatter`, `PullRequestDiff`, `AvailableSessionsView`) take their value
+- [x] The no-argument `orElseThrow()` sites (`TicketFrontmatter`, `PullRequestDiff`, `AvailableSessionsView`) take their value
       through `map` / `or` / `orElse` or a named exception instead.
-- [ ] `PullRequestWatchRepository` drains its request permits only when `tryAcquire` reports a request woke it.
-- [ ] `make verify` fails on any `javac -Xlint:all` warning (`-Werror`); whatever it reports beyond the IDE's list is fixed here.
-- [ ] `make verify` fails on PMD `IdenticalCatchBranches` and `LambdaCanBeMethodReference`.
-- [ ] `ArchitectureTest` fails on a call to `Optional.get()` or no-argument `Optional.orElseThrow()` in `src/main`.
-- [ ] `make verify` fails on an unused pattern binding if Checkstyle or PMD can be shown to catch one; if neither can, Notes says so
+- [x] `PullRequestWatchRepository` drains its request permits only when `tryAcquire` reports a request woke it.
+- [x] `make verify` fails on any `javac -Xlint:all` warning (`-Werror`); whatever it reports beyond the IDE's list is fixed here.
+- [x] `make verify` fails on PMD `IdenticalCatchBranches` and `LambdaCanBeMethodReference`.
+- [x] `ArchitectureTest` fails on a call to `Optional.get()` or no-argument `Optional.orElseThrow()` in `src/main`.
+- [x] `make verify` fails on an unused pattern binding if Checkstyle or PMD can be shown to catch one; if neither can, Notes says so
       and it stays a one-off fix.
-- [ ] Each new gate has been watched to fail on a planted case — a deprecated call, an identical catch, a lambda that is a method
+- [x] Each new gate has been watched to fail on a planted case — a deprecated call, an identical catch, a lambda that is a method
       reference, an `Optional.get()` — and the PR says so.
-- [ ] Left showing in the IDE, unfixed: "constructor never used" on the Jackson-read `*Record`s, "enum never used" on `ModuleType`,
+- [x] Left showing in the IDE, unfixed: "constructor never used" on the Jackson-read `*Record`s, "enum never used" on `ModuleType`,
       `SameReturnValue` on the `||`-chained key handlers, `NullableProblems` on library overrides, `AutoCloseableResource` on
       `ToolkitRunner`, the 75 `Optional` fields and parameters, and the prose excluded above.
 

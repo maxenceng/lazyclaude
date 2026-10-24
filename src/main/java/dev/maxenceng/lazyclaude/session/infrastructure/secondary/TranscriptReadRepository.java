@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.NoTranscript;
@@ -41,31 +42,44 @@ public final class TranscriptReadRepository implements TranscriptReadPort {
     @Override
     public TranscriptRead read(SessionId session, WorkingDirectory directory, TranscriptOffset from) {
         try {
-            Path file = locate(session, directory);
-            return Files.isRegularFile(file) ? readFrom(file, from) : new NoTranscript();
+            return locate(session, directory).<TranscriptRead>map(file -> readFrom(file, from)).orElseGet(NoTranscript::new);
         } catch (IOException e) {
-            throw new TranscriptUnreadableException(UNREADABLE.formatted(transcriptsRoot, FileFailure.causeOf(e)), e);
+            throw unreadable(e);
         } catch (UncheckedIOException e) {
             throw new TranscriptUnreadableException(
                     UNREADABLE.formatted(transcriptsRoot, FileFailure.causeOf(e.getCause())), e.getCause());
         }
     }
 
-    /** The transcript's file wherever it is, else where it was expected, which then is not a file. */
-    private Path locate(SessionId session, WorkingDirectory directory) throws IOException {
+    private Optional<Path> locate(SessionId session, WorkingDirectory directory) throws IOException {
         String name = session.value() + SUFFIX;
         Path expected = transcriptsRoot
                 .resolve(directory.path().toString().replaceAll(NOT_A_FOLDER_NAME_CHARACTER, FOLDER_NAME_SEPARATOR))
                 .resolve(name);
-        if (Files.isRegularFile(expected) || Files.notExists(transcriptsRoot)) {
-            return expected;
+        if (Files.isRegularFile(expected)) {
+            return Optional.of(expected);
+        }
+        if (Files.notExists(transcriptsRoot)) {
+            return Optional.empty();
         }
         try (Stream<Path> folders = Files.list(transcriptsRoot)) {
-            return folders.map(folder -> folder.resolve(name)).filter(Files::isRegularFile).findFirst().orElse(expected);
+            return folders.map(folder -> folder.resolve(name)).filter(Files::isRegularFile).findFirst();
         }
     }
 
-    private static TranscriptRead readFrom(Path file, TranscriptOffset from) throws IOException {
+    private TranscriptRead readFrom(Path file, TranscriptOffset from) {
+        try {
+            return entriesFrom(file, from);
+        } catch (IOException e) {
+            throw unreadable(e);
+        }
+    }
+
+    private TranscriptUnreadableException unreadable(IOException e) {
+        return new TranscriptUnreadableException(UNREADABLE.formatted(transcriptsRoot, FileFailure.causeOf(e)), e);
+    }
+
+    private static TranscriptRead entriesFrom(Path file, TranscriptOffset from) throws IOException {
         TranscriptOffset start = TranscriptLines.endsALine(file, from.value()) ? from : TranscriptOffset.start();
         Stream.Builder<TranscriptEntry> entries = Stream.builder();
         long next = TranscriptLines.read(file, start.value(), line -> TranscriptEntryLine.entriesIn(line).forEach(entries));
