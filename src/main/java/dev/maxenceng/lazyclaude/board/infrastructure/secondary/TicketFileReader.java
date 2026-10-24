@@ -19,7 +19,6 @@ import dev.maxenceng.lazyclaude.board.published.FileName;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
 import dev.maxenceng.lazyclaude.board.published.TicketBranch;
-import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Utf8Text;
 
 /**
@@ -29,6 +28,7 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Utf8Text;
  */
 final class TicketFileReader {
 
+    private static final String NOT_UTF_8 = "cannot be read: not valid UTF-8";
     private static final String FENCE = "---";
     private static final String LINE_BREAK = "\n";
     private static final Pattern ID_LINE = Pattern.compile("(?m)^id:[ \\t]*\\S");
@@ -45,9 +45,9 @@ final class TicketFileReader {
             return Optional.empty();
         }
         OptionalInt closing = closingFence(lines);
-        String frontmatter = String.join("\n", lines.subList(1, closing.orElse(lines.size())));
+        String frontmatter = String.join(LINE_BREAK, lines.subList(1, closing.orElse(lines.size())));
         if (decoded.isEmpty()) {
-            return refusedIfClaimed(name, frontmatter, "cannot be read: not valid UTF-8");
+            return refusedIfClaimed(name, frontmatter, NOT_UTF_8);
         }
         if (closing.isEmpty()) {
             return refusedIfClaimed(name, frontmatter, "frontmatter has no closing %s".formatted(FENCE));
@@ -77,11 +77,9 @@ final class TicketFileReader {
     }
 
     private static BacklogEntry entry(FileName name, TicketFrontmatter fields, TicketBody body) {
-        try {
-            return TicketFile.builder().file(name).ticket(fields.toDomain(TicketBranch.of(name), body)).build();
-        } catch (DomainException e) {
-            return refused(name, e.getMessage());
-        }
+        return fields.refusal()
+                .<BacklogEntry>map(reason -> refused(name, reason))
+                .orElseGet(() -> TicketFile.builder().file(name).ticket(fields.toDomain(TicketBranch.of(name), body)).build());
     }
 
     private static UnreadableTicket refused(FileName name, String reason) {

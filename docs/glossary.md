@@ -29,6 +29,7 @@ words mean.
 | Dock tab | One hosted session's pane in the dock, labelled with its marker and name, or `starting`. | `shell` |
 | Refresh | `R`: reads the board, the docs tree, the open and merged pull requests, and the sessions and transcripts again at once, off the render thread. It shows only as the rows that changed; nothing flashes and nothing says "refreshed". | `shell` |
 | Ticket detail | What the main view shows for a ticket: its facts line, its other frontmatter keys, a rule, then its body rendered as markdown. It scrolls as one unit. | `shell` |
+| Review panel | The review screen's third left panel, under Files and Comments: the summary's first line, the pending count, and the moved-head warning. | `shell`, read from `review` |
 
 ## board
 
@@ -89,17 +90,18 @@ words mean.
 | Draft pull request | A pull request GitHub marks as draft. Always written in full ("draft PR" in UI text), never a bare "draft", which stays the ticket status. | `review` |
 | Checks | The check runs and commit statuses on a pull request's head. | `review` |
 | CI result | The checks collapsed into *passed*, *failed* or *pending*: failed wins over pending, pending over passed. A pull request with no checks has none. | `review` |
-| Pending review | Your one unsubmitted review on a pull request, kept on GitHub. An existing one is adopted, wherever it was started. | `review` (expected) |
-| Pending comment | A comment in your pending review, on one line or a range of lines inside one hunk. | `review` (expected) |
+| Pending review | Your one unsubmitted review on a pull request, kept on GitHub. An existing one is adopted, wherever it was started. | `review` |
+| Pending comment | A comment in your pending review, on one line or a range of lines inside one hunk. | `review` |
 | Review screen | The screen `p` opens on a ticket's pull request: its diff, with Files and Comments beside it. Reading it is not GitHub's *review*; in code "review" is kept for the pending review and submitting. | `shell`, read from `review` |
 | Diff | The pull request's unified diff, every file in one scroll. | `review` |
 | Hunk | One `@@` section of a file's diff. | `review` |
 | Diff line | A `+`, `-` or context line in a hunk; the only rows a cursor or a comment lands on. | `review` |
 | Thread | Comments already on the pull request; *resolved* or *outdated* ones are shown differently. `ReviewThread` in code, beside `java.lang.Thread`. | `review` |
 | Thread's line | The diff line a placed thread shows under: its last line, on the new side for `RIGHT` and the old side for `LEFT`. An outdated thread, or one whose line the diff does not hold, has none. Threads in diff order follow these lines; the ones with none come last. | `review` |
-| Summary | The pending review's body. | `review` (expected) |
-| Submit | Send the pending review as a *Comment* review — the only kind GitHub allows on your own pull request. | `review` (expected) |
-| Moved head | The pull request's head is no longer the commit the pending review was written on. Warned about, never blocking. | `review` (expected) |
+| Summary | What the review says as a whole: typed on the review screen, or an adopted pending review's body, and sent as its body by the submit (ADR 0042). | `review` |
+| Submit | Send the pending review as a *Comment* review — the only kind GitHub allows on your own pull request. | `review` |
+| Moved head | The pull request's head is no longer the commit the pending review was written on. Warned about, never blocking. | `review` |
+| Reply | A pending comment answering an existing thread, sent with the pending review rather than on its own. | `review` |
 
 ## docs
 

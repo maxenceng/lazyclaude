@@ -4,7 +4,7 @@ Date: 2026-10-18
 
 ## Status
 
-Accepted. Amends ADR 0008, which fixes the left column at four panels.
+Accepted. Amends ADR 0008, which fixes the left column at four panels. Amended by ADR 0040, which adds a third panel, Review.
 
 ## Context
 

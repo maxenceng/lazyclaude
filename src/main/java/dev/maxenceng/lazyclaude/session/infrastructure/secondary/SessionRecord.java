@@ -3,7 +3,6 @@ package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 import java.nio.file.Path;
 import java.time.Instant;
 
-import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.domain.Entrypoint;
 import dev.maxenceng.lazyclaude.session.domain.NoEntrypoint;
 import dev.maxenceng.lazyclaude.session.domain.OtherEntrypoint;
@@ -21,6 +20,7 @@ import dev.maxenceng.lazyclaude.session.published.Version;
 import dev.maxenceng.lazyclaude.session.published.WaitingFor;
 import dev.maxenceng.lazyclaude.session.published.WaitingReason;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.MissingFields;
 
 /**
  * One session as Claude Code writes it, in a registry record or in {@code claude agents --json}: every
@@ -45,12 +45,26 @@ record SessionRecord(
     private static final String IDLE = "idle";
     private static final String WAITING = "waiting";
     private static final String SDK_CLI = "sdk-cli";
+    private static final String PID = "pid";
+    private static final String SESSION_ID = "sessionId";
+    private static final String CWD = "cwd";
+    private static final String STARTED_AT = "startedAt";
+    private static final String NAME = "name";
+    private static final String VERSION = "version";
 
-    /** @throws dev.maxenceng.lazyclaude.error.domain.DomainException when a field the domain needs is missing or refused */
+    /** The fields a session cannot be read without that the JSON lacks; a version is optional, but one written blank is not a version. */
+    MissingFields missingFields() {
+        MissingFields required = new MissingFields()
+                .absent(PID, pid)
+                .blank(SESSION_ID, sessionId)
+                .blank(CWD, cwd)
+                .absent(STARTED_AT, startedAt)
+                .blank(NAME, name);
+        return version == null ? required : required.blank(VERSION, version);
+    }
+
+    /** Only once {@link #missingFields()} names none. @throws java.nio.file.InvalidPathException when {@code cwd} is not a path */
     ReportedSession toReportedSession() {
-        Assert.notNull("pid", pid);
-        Assert.notNull("startedAt", startedAt);
-        Assert.notBlank("cwd", cwd);
         return ReportedSession.builder()
                 .id(new SessionId(sessionId))
                 .pid(new ProcessId(pid))

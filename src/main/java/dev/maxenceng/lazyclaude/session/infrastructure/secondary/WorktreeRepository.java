@@ -27,6 +27,30 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitResult;
  */
 public final class WorktreeRepository implements WorktreePort {
 
+    private static final String WORKTREE = "worktree";
+    private static final String LIST = "list";
+    private static final String PORCELAIN = "--porcelain";
+    private static final String REV_PARSE = "rev-parse";
+    private static final String VERIFY = "--verify";
+    private static final String QUIET = "--quiet";
+    private static final String ADD = "add";
+    private static final String NEW_BRANCH = "-b";
+    private static final String STATUS = "status";
+    private static final String ALL_UNTRACKED = "--untracked-files=all";
+    private static final String REV_LIST = "rev-list";
+    private static final String HEAD = "HEAD";
+    private static final String NOT = "--not";
+    private static final String REMOTES = "--remotes";
+    private static final String REMOVE = "remove";
+    private static final String END_OF_OPTIONS = "--";
+    private static final String PRUNE = "prune";
+    private static final String LIST_COMMAND = "git worktree list";
+    private static final String REV_PARSE_COMMAND = "git rev-parse";
+    private static final String STATUS_COMMAND = "git status";
+    private static final String REV_LIST_COMMAND = "git rev-list";
+    private static final String REMOVE_COMMAND = "git worktree remove";
+    private static final String PRUNE_COMMAND = "git worktree prune";
+    private static final String ADD_COMMAND = "git worktree add";
     private static final String GIT = "git";
     private static final String MAIN = "main";
     private static final String LOCAL_BRANCHES = "refs/heads/";
@@ -49,9 +73,9 @@ public final class WorktreeRepository implements WorktreePort {
 
     @Override
     public Optional<WorkingDirectory> checkedOutAt(Project project, BranchName branch) {
-        GitResult listed = run(project.root(), List.of("worktree", "list", "--porcelain"));
+        GitResult listed = run(project.root(), List.of(WORKTREE, LIST, PORCELAIN));
         if (!listed.succeeded()) {
-            throw new WorktreeUnavailableException(failure("git worktree list", listed));
+            throw new WorktreeUnavailableException(failure(LIST_COMMAND, listed));
         }
         String checkedOut = BRANCH_PREFIX + branch.value();
         return BLANK_LINE.splitAsStream(listed.outputText().strip())
@@ -66,31 +90,31 @@ public final class WorktreeRepository implements WorktreePort {
 
     @Override
     public boolean branchExists(Project project, BranchName branch) {
-        GitResult found = run(project.root(), List.of("rev-parse", "--verify", "--quiet", LOCAL_BRANCHES + branch.value()));
+        GitResult found = run(project.root(), List.of(REV_PARSE, VERIFY, QUIET, LOCAL_BRANCHES + branch.value()));
         if (found.exitValue() == NO_SUCH_REF) {
             return false;
         }
         if (!found.succeeded()) {
-            throw new WorktreeUnavailableException(failure("git rev-parse", found));
+            throw new WorktreeUnavailableException(failure(REV_PARSE_COMMAND, found));
         }
         return true;
     }
 
     @Override
     public void addOnBranch(Project project, BranchName branch, WorkingDirectory at) {
-        add(project, List.of("worktree", "add", at.path().toString(), branch.value()));
+        add(project, List.of(WORKTREE, ADD, at.path().toString(), branch.value()));
     }
 
     @Override
     public void addOnNewBranch(Project project, BranchName branch, WorkingDirectory at) {
-        add(project, List.of("worktree", "add", "-b", branch.value(), at.path().toString(), MAIN));
+        add(project, List.of(WORKTREE, ADD, NEW_BRANCH, branch.value(), at.path().toString(), MAIN));
     }
 
     @Override
     public boolean isWorktreeAt(Project project, WorkingDirectory at) {
-        GitResult listed = run(project.root(), List.of("worktree", "list", "--porcelain"));
+        GitResult listed = run(project.root(), List.of(WORKTREE, LIST, PORCELAIN));
         if (!listed.succeeded()) {
-            throw new WorktreeUnavailableException(failure("git worktree list", listed));
+            throw new WorktreeUnavailableException(failure(LIST_COMMAND, listed));
         }
         return listed.outputText()
                 .lines()
@@ -102,7 +126,7 @@ public final class WorktreeRepository implements WorktreePort {
 
     @Override
     public List<DirtyPath> dirtyPaths(WorkingDirectory worktree) {
-        GitResult status = unreadableUnless(worktree, List.of("status", "--porcelain", "--untracked-files=all"), "git status");
+        GitResult status = unreadableUnless(worktree, List.of(STATUS, PORCELAIN, ALL_UNTRACKED), STATUS_COMMAND);
         return status.outputText()
                 .lines()
                 .filter(line -> line.length() > STATUS_PREFIX_LENGTH)
@@ -115,8 +139,8 @@ public final class WorktreeRepository implements WorktreePort {
     public List<CommitId> commitsBeyond(WorkingDirectory worktree, HeadCommit mergedHead) {
         GitResult listed = unreadableUnless(
                 worktree,
-                List.of("rev-list", "HEAD", NOT_PREFIX + mergedHead.value(), "--not", "--remotes"),
-                "git rev-list");
+                List.of(REV_LIST, HEAD, NOT_PREFIX + mergedHead.value(), NOT, REMOTES),
+                REV_LIST_COMMAND);
         return listed.outputText().lines().filter(line -> !line.isBlank()).map(CommitId::new).toList();
     }
 
@@ -124,12 +148,12 @@ public final class WorktreeRepository implements WorktreePort {
     public void remove(Project project, WorkingDirectory worktree) {
         GitResult removed;
         try {
-            removed = git.run(project.root(), List.of("worktree", "remove", "--", worktree.path().toString()));
+            removed = git.run(project.root(), List.of(WORKTREE, REMOVE, END_OF_OPTIONS, worktree.path().toString()));
         } catch (GitNotRunException e) {
             throw new WorktreeNotRemovedException(e.getMessage(), e);
         }
         if (!removed.succeeded()) {
-            throw new WorktreeNotRemovedException(failure("git worktree remove", removed));
+            throw new WorktreeNotRemovedException(failure(REMOVE_COMMAND, removed));
         }
     }
 
@@ -163,13 +187,13 @@ public final class WorktreeRepository implements WorktreePort {
     }
 
     private void add(Project project, List<String> arguments) {
-        GitResult pruned = run(project.root(), List.of("worktree", "prune"));
+        GitResult pruned = run(project.root(), List.of(WORKTREE, PRUNE));
         if (!pruned.succeeded()) {
-            throw new WorktreeUnavailableException(failure("git worktree prune", pruned));
+            throw new WorktreeUnavailableException(failure(PRUNE_COMMAND, pruned));
         }
         GitResult added = run(project.root(), arguments);
         if (!added.succeeded()) {
-            throw new WorktreeUnavailableException(failure("git worktree add", added));
+            throw new WorktreeUnavailableException(failure(ADD_COMMAND, added));
         }
     }
 

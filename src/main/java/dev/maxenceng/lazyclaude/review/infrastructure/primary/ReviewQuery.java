@@ -2,8 +2,12 @@ package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
 import java.util.function.Consumer;
 
+import dev.maxenceng.lazyclaude.error.domain.DomainException;
+import dev.maxenceng.lazyclaude.review.application.PendingReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.application.PullRequestDiffApplicationService;
 import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
+import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
+import dev.maxenceng.lazyclaude.review.published.Reason;
 
 /**
  * What the shell asks of {@code review}: the open and the merged pull requests of a project as views, and a view again after each fetch,
@@ -13,10 +17,15 @@ public final class ReviewQuery {
 
     private final ReviewApplicationService review;
     private final PullRequestDiffApplicationService pullRequestDiff;
+    private final PendingReviewApplicationService pendingReview;
 
-    public ReviewQuery(ReviewApplicationService review, PullRequestDiffApplicationService pullRequestDiff) {
+    public ReviewQuery(
+            ReviewApplicationService review,
+            PullRequestDiffApplicationService pullRequestDiff,
+            PendingReviewApplicationService pendingReview) {
         this.review = review;
         this.pullRequestDiff = pullRequestDiff;
+        this.pendingReview = pendingReview;
     }
 
     /** What stands until the diff's read answers. */
@@ -46,6 +55,37 @@ public final class ReviewQuery {
     public ThreadsInDiffView threadsInDiff(PullRequestDiffView diff, ThreadsView threads) {
         return ThreadsInDiffView.from(
                 pullRequestDiff.threadsInDiff(ReviewReadings.diffOf(diff), ReviewReadings.threadsOf(threads)));
+    }
+
+    /** What stands until the pending review's read answers. */
+    public PendingReviewView loadingPending() {
+        return PendingReviewView.from(pendingReview.loading());
+    }
+
+    /** Reads your pending review of the pull request now, on the caller's thread, which waits for {@code gh}; never a failure, the reason is the view. */
+    public PendingReviewView pendingOf(PullRequestPayload payload) {
+        return PendingReviewView.from(pendingReview.read(payload.project(), payload.number()));
+    }
+
+    /**
+     * Where a comment on the diff lines from {@code first} to {@code last} would hang, or why it cannot: the range runs out of its hunk,
+     * or a line is not in the diff. It reads nothing.
+     */
+    public CommentAnchorView anchorOf(PullRequestDiffView diff, DiffLineIndex first, DiffLineIndex last) {
+        try {
+            return OnDiffAnchorView.from(pendingReview.anchor(ReviewReadings.diffOf(diff), first, last));
+        } catch (DomainException refused) {
+            return new RefusedAnchorView(new Reason(refused.getMessage()));
+        }
+    }
+
+    /**
+     * The pending comments with the diff lines they show under, in diff order, from whatever each read last answered: none until the
+     * pending review is read, and every one on no line until the diff is. It reads nothing.
+     */
+    public PendingCommentsInDiffView pendingInDiff(PullRequestDiffView diff, PendingReviewView pending) {
+        return PendingCommentsInDiffView.from(
+                pendingReview.pendingInDiff(ReviewReadings.diffOf(diff), ReviewReadings.commentsOf(pending)));
     }
 
     /** What stands until the first fetch answers. */

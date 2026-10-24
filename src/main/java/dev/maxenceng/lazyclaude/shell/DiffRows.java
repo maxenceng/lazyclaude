@@ -9,6 +9,9 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.DiffFileView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
@@ -27,6 +30,7 @@ import dev.maxenceng.lazyclaude.review.published.RemovedLine;
  */
 final class DiffRows {
 
+    private static final int NO_LINES = 0;
     private static final int MIN_NUMBER_WIDTH = 4;
     private static final DiffRows NONE = new DiffRows(List.of(), List.of());
 
@@ -66,7 +70,12 @@ final class DiffRows {
     }
 
     /** The rows of {@code diff} with the threads that show under its lines; none when the diff was not read. */
-    static DiffRows of(PullRequestDiffView diff, ThreadsInDiffView threads, boolean showResolved) {
+    static DiffRows of(
+            PullRequestDiffView diff,
+            ThreadsInDiffView threads,
+            PendingCommentsInDiffView pending,
+            Optional<CommentBox> box,
+            boolean showResolved) {
         if (!(diff instanceof ReadDiffView read)) {
             return NONE;
         }
@@ -74,7 +83,7 @@ final class DiffRows {
                 .boxed()
                 .flatMap(file -> fileRows(file, read.files().get(file)))
                 .toList();
-        return new DiffRows(read.files(), withThreads(lineRows, inlineThreads(threads, showResolved)));
+        return new DiffRows(read.files(), withThreads(lineRows, inlineThreads(threads, showResolved), inlinePending(pending), box));
     }
 
     private static Map<Integer, List<ReviewThreadView>> inlineThreads(ThreadsInDiffView threads, boolean showResolved) {
@@ -84,6 +93,14 @@ final class DiffRows {
                 .collect(Collectors.groupingBy(
                         placed -> ((OnDiffLine) placed.line()).index().value(),
                         Collectors.mapping(ThreadInDiffView::thread, Collectors.toList())));
+    }
+
+    private static Map<Integer, List<PendingCommentView>> inlinePending(PendingCommentsInDiffView pending) {
+        return pending.comments().stream()
+                .filter(placed -> placed.line() instanceof OnDiffLine)
+                .collect(Collectors.groupingBy(
+                        placed -> ((OnDiffLine) placed.line()).index().value(),
+                        Collectors.mapping(PendingInDiffView::comment, Collectors.toList())));
     }
 
     private static Stream<DiffRow> fileRows(int index, DiffFileView file) {
@@ -96,15 +113,25 @@ final class DiffRows {
     }
 
     /** {@code rows} with each line's threads under it, the lines counted in the order they are listed. */
-    private static List<DiffRow> withThreads(List<DiffRow> rows, Map<Integer, List<ReviewThreadView>> inline) {
+    private static List<DiffRow> withThreads(
+            List<DiffRow> rows,
+            Map<Integer, List<ReviewThreadView>> inline,
+            Map<Integer, List<PendingCommentView>> pending,
+            Optional<CommentBox> box) {
         int[] lineRows = IntStream.range(0, rows.size()).filter(row -> rows.get(row) instanceof LineRow).toArray();
         return IntStream.range(0, rows.size())
                 .boxed()
                 .flatMap(row -> Stream.concat(
                         Stream.of(rows.get(row)),
                         rows.get(row) instanceof LineRow
-                                ? inline.getOrDefault(Arrays.binarySearch(lineRows, row), List.of()).stream().map(ThreadRow::new)
-                                : Stream.empty()))
+                                ? Stream.concat(
+                                        inline.getOrDefault(Arrays.binarySearch(lineRows, row), List.of()).stream().map(ThreadRow::new),
+                                        Stream.concat(
+                                                pending.getOrDefault(Arrays.binarySearch(lineRows, row), List.of()).stream().map(PendingRow::new),
+                                                box.filter(open -> open.inlineAt().equals(Optional.of(Arrays.binarySearch(lineRows, row))))
+                                                        .stream()
+                                                        .map(BoxRow::new)))
+                                : Stream.<DiffRow>empty()))
                 .toList();
     }
 
@@ -120,12 +147,32 @@ final class DiffRows {
         return rows.get(index);
     }
 
+    /** The row of the box drawn inline, if one is. */
+    Optional<Integer> boxRow() {
+        return IntStream.range(0, rows.size()).filter(row -> rows.get(row) instanceof BoxRow).boxed().findFirst();
+    }
+
     int lineCount() {
         return rowOfLine.length;
     }
 
+    /** Whether the diff has a line the cursor can stand on. */
+    boolean hasLines() {
+        return rowOfLine.length != NO_LINES;
+    }
+
+    boolean isEmpty() {
+        return rows.isEmpty();
+    }
+
     int rowOfLine(int line) {
         return rowOfLine[line];
+    }
+
+    /** The diff line the row at {@code row} is, if it is one. */
+    Optional<Integer> lineOfRow(int row) {
+        int line = Arrays.binarySearch(rowOfLine, row);
+        return line >= 0 ? Optional.of(line) : Optional.empty();
     }
 
     int fileOfLine(int line) {

@@ -29,6 +29,7 @@ public record Ticket(
         TicketBody body,
         BranchChanges changes) {
 
+    private static final String CUT = "";
     private static final String TITLE_PREFIX = "# ";
     private static final Pattern FENCED_BLOCK = Pattern.compile("(?ms)^(?:```|~~~).*?(?:^(?:```|~~~)[^\\n]*$|\\z)");
 
@@ -69,7 +70,7 @@ public record Ticket(
 
     private static TicketTitle titleIn(String text) {
         // deferred: any fence marker closes a fence, not only its own, so a `~~~` inside ``` ends it — close it when a ticket is mis-titled by one.
-        return FENCED_BLOCK.matcher(text).replaceAll("").lines()
+        return FENCED_BLOCK.matcher(text).replaceAll(CUT).lines()
                 .filter(line -> line.startsWith(TITLE_PREFIX))
                 .map(line -> line.substring(TITLE_PREFIX.length()).strip())
                 .findFirst()

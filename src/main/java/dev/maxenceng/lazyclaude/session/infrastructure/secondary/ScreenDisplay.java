@@ -13,11 +13,13 @@ import com.jediterm.terminal.model.TerminalSelection;
  */
 final class ScreenDisplay implements TerminalDisplay {
 
+    private static final String NO_TITLE = "";
+
     private volatile boolean cursorVisible = true;
     private volatile boolean bracketedPaste;
     private volatile MouseMode mouseMode = MouseMode.MOUSE_REPORTING_NONE;
     private volatile MouseFormat mouseFormat = MouseFormat.MOUSE_FORMAT_XTERM;
-    private volatile String title = "";
+    private volatile String title = NO_TITLE;
 
     boolean cursorVisible() {
         return cursorVisible;

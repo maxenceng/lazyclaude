@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.shell;
 
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.noPendingReviewView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.addedFileView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.changedFileView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingDiffView;
@@ -12,12 +13,14 @@ import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.review.domain.PullRequestDiffPort;
 import dev.maxenceng.lazyclaude.review.domain.ThreadPort;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.DiffFileView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.HunkView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
@@ -42,11 +45,11 @@ final class ReviewPaneFixture {
     }
 
     static DiffRows rowsOf(PullRequestDiffView diff, ThreadsView threads, boolean showResolved) {
-        return DiffRows.of(diff, joiningReviews().threadsInDiff(diff, threads), showResolved);
+        return DiffRows.of(diff, joiningReviews().threadsInDiff(diff, threads), new PendingCommentsInDiffView(List.of()), Optional.empty(), showResolved);
     }
 
     static ReviewPane paneOver(PullRequestDiffView diff, ThreadsView threads) {
-        return new ReviewPane(pullRequestNumber(), pullRequestTitle(), diff, threads, joiningReviews());
+        return new ReviewPane(pullRequestNumber(), pullRequestTitle(), diff, threads, noPendingReviewView(), joiningReviews());
     }
 
     static ReviewPane loadingPane() {

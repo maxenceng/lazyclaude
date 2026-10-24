@@ -39,6 +39,7 @@ import dev.maxenceng.lazyclaude.session.published.Reason;
  */
 public final class TranscriptWatchRepository implements TranscriptWatchPort, AutoCloseable {
 
+    private static final int NONE = 0;
     static final Duration SETTLE = Duration.ofSeconds(1);
     static final Duration POLL_INTERVAL = Duration.ofSeconds(5);
 
@@ -159,7 +160,7 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
     /** Whether a rescan was asked for, waiting up to {@code wait} for one; every request made so far is answered by the one rescan that follows. */
     private boolean rescanRequested(Duration wait) throws InterruptedException {
         boolean asked = rescans.tryAcquire(wait.toMillis(), TimeUnit.MILLISECONDS);
-        return rescans.drainPermits() > 0 || asked;
+        return rescans.drainPermits() > NONE || asked;
     }
 
     private TranscriptChanges drain(WatchService service) throws InterruptedException, IOException {

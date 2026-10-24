@@ -4,7 +4,6 @@ import java.nio.file.InvalidPathException;
 import java.util.Arrays;
 import java.util.List;
 
-import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
 import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
 
@@ -36,11 +35,15 @@ final class SessionRecords {
         }
     }
 
-    /** @throws SessionsUnavailableException saying which {@code source} held the record that was refused */
+    /** @throws SessionsUnavailableException saying what {@code source} left out of the record, or that its directory is not a path */
     static ReportedSession session(SessionRecord record, String source) {
+        if (record.missingFields().any()) {
+            throw new SessionsUnavailableException(
+                    "%s is not a session record: it has no %s".formatted(source, record.missingFields().listed()));
+        }
         try {
             return record.toReportedSession();
-        } catch (DomainException | InvalidPathException refused) {
+        } catch (InvalidPathException refused) {
             throw new SessionsUnavailableException("%s is not a session record: %s".formatted(source, refused.getMessage()), refused);
         }
     }

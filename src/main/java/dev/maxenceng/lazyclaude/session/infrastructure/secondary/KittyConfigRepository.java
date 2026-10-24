@@ -41,6 +41,8 @@ import dev.maxenceng.lazyclaude.session.domain.KittySettings;
  */
 public final class KittyConfigRepository implements KittyConfigPort {
 
+    private static final int NOT_FOUND = -1;
+    private static final String NOTHING = "";
     private static final String CONFIG_DIRECTORY = "KITTY_CONFIG_DIRECTORY";
     private static final String CONFIG_FILE = "kitty.conf";
     private static final String XDG_CONFIG_HOME = "XDG_CONFIG_HOME";
@@ -95,7 +97,7 @@ public final class KittyConfigRepository implements KittyConfigPort {
         try {
             Files.createDirectories(file.path().getParent());
             String existing = existingText(file.path());
-            String separator = existing.isEmpty() ? "" : existing.endsWith(NEWLINE) ? NEWLINE : NEWLINE + NEWLINE;
+            String separator = existing.isEmpty() ? NOTHING : existing.endsWith(NEWLINE) ? NEWLINE : NEWLINE + NEWLINE;
             String added = adding.text().stream().collect(Collectors.joining(NEWLINE, separator, NEWLINE));
             Files.writeString(
                     file.path(), added, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
@@ -108,7 +110,7 @@ public final class KittyConfigRepository implements KittyConfigPort {
         try {
             return Files.readString(file, StandardCharsets.UTF_8);
         } catch (NoSuchFileException missing) {
-            return "";
+            return NOTHING;
         }
     }
 
@@ -157,7 +159,7 @@ public final class KittyConfigRepository implements KittyConfigPort {
         Path base = absolute.getRoot();
         Path prefix = IntStream.range(0, absolute.getNameCount())
                 .mapToObj(absolute::getName)
-                .takeWhile(name -> GLOB_CHARACTERS.chars().noneMatch(glob -> name.toString().indexOf(glob) >= 0))
+                .takeWhile(name -> name.toString().chars().noneMatch(character -> GLOB_CHARACTERS.indexOf(character) != NOT_FOUND))
                 .reduce(base, Path::resolve);
         int depth = pattern.contains(RECURSIVE_GLOB) ? Integer.MAX_VALUE : absolute.getNameCount() - prefix.getNameCount();
         List<PathMatcher> matchers = Stream.of(absolute.toString(), absolute.toString().replace(ANY_DIRECTORIES, NO_DIRECTORY))

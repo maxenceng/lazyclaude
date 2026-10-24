@@ -44,7 +44,7 @@ final class DetailElement implements Element {
 
     @Override
     public void render(Frame frame, Rect area, RenderContext context) {
-        if (area.width() <= 0 || area.height() <= 0) {
+        if (Areas.hasNoRoom(area)) {
             return;
         }
         List<DetailRow> head = this.head.apply(area.width());

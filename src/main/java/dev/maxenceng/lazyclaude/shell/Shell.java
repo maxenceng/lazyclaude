@@ -28,11 +28,13 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
@@ -65,7 +67,6 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCom
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadableTranscriptView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadableWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
@@ -113,9 +114,9 @@ public final class Shell extends ToolkitApp {
     private static final int SMALL_PANEL_HEIGHT = 3;
     private static final int SHRUNK_PANEL_HEIGHT = 5;
 
-    private static final String FILES_TITLE = "Files";
-    private static final String COMMENTS_TITLE = "Comments";
-    private static final String REVIEW_TITLE = "PR #%d %s";
+    private static final String RESPOND_TITLE = "Respond";
+    private static final String RESPOND_PROMPT = "start /ticket respond %s?";
+    private static final String RESPOND_HINT = "y start  esc back";
     private static final String BOARD_TITLE = "Board";
     private static final String SESSIONS_TITLE = "Sessions";
     private static final String DOCS_TITLE = "Docs";
@@ -143,9 +144,6 @@ public final class Shell extends ToolkitApp {
     private static final char NO = 'n';
     private static final char JUMP = 'o';
     private static final char OPEN_REVIEW = 'p';
-    private static final char RESOLVED = 'r';
-    private static final char NEXT_FILE = 'J';
-    private static final char PREVIOUS_FILE = 'K';
     private static final char REMOVE_WORKTREE = 'd';
     private static final char LEFT = 'h';
     private static final char DOWN = 'j';
@@ -167,10 +165,7 @@ public final class Shell extends ToolkitApp {
     private static final String REFRESH_KEY = "R refresh";
     private static final String JUMP_KEY = "o jump";
     private static final String REVIEW_KEY = "p review";
-    private static final List<String> DIFF_KEYS =
-            List.of("j/k line", "J/K file", "^d/^u page", "r resolved", "R refresh", "esc back");
-    private static final List<String> PANEL_REVIEW_KEYS =
-            List.of("j/k move", "enter go to line", "r resolved", "R refresh", "esc back");
+    private static final List<String> RESPOND_KEYS = List.of("y start  esc back");
     private static final String REMOVE_WORKTREE_KEY = "d remove worktree";
     private static final String NEW_KEY = "N new";
     private static final String NEW_TICKET_KEY = "n new";
@@ -201,6 +196,7 @@ public final class Shell extends ToolkitApp {
     private final BoardQuery boards;
     private final DocsQuery docsQuery;
     private final ReviewQuery reviews;
+    private final ReviewKeys reviewKeys;
     private final Path root;
     private final DockTabs dock = new DockTabs();
     private Map<HostedSessionId, PaneSize> paneSizes = Map.of();
@@ -221,10 +217,10 @@ public final class Shell extends ToolkitApp {
     private Optional<Long> quitPrompt = Optional.empty();
     private Optional<RemoteControlConfigView> remoteControlPrompt = Optional.empty();
     private Optional<RemovalPrompt> removalPrompt = Optional.empty();
+    private Optional<TicketView> respondPrompt = Optional.empty();
     private Optional<String> refusal = Optional.empty();
-    private Optional<ShownWorktree> shownWorktree = Optional.empty();
-    private boolean worktreeStale;
-    private final AtomicBoolean worktreeReading = new AtomicBoolean();
+    private final WorktreeDetail worktree;
+    private final PendingDetail pendingDetail;
     private volatile MergedPullRequestsView latestMerged = new MergedPullRequestsView(List.of());
     private Optional<Rect> mainViewArea = Optional.empty();
     private CompletableFuture<Void> outsideCommands = CompletableFuture.completedFuture(null);
@@ -248,7 +244,8 @@ public final class Shell extends ToolkitApp {
             SessionQuery screens,
             BoardQuery boards,
             DocsQuery docsQuery,
-            ReviewQuery reviews) {
+            ReviewQuery reviews,
+            PendingReviewCommand writing) {
         this(
                 board,
                 docs,
@@ -262,6 +259,7 @@ public final class Shell extends ToolkitApp {
                 boards,
                 docsQuery,
                 reviews,
+                writing,
                 Executors.newVirtualThreadPerTaskExecutor());
     }
 
@@ -279,6 +277,7 @@ public final class Shell extends ToolkitApp {
             BoardQuery boards,
             DocsQuery docsQuery,
             ReviewQuery reviews,
+            PendingReviewCommand writing,
             Executor background) {
         this.background = background;
         this.board = new BoardRows(board);
@@ -297,6 +296,15 @@ public final class Shell extends ToolkitApp {
         this.docsQuery = docsQuery;
         this.reviews = reviews;
         this.root = board.root().value();
+        this.reviewKeys = new ReviewKeys(writing, root, background, new ReviewHost(
+                this::focus,
+                this::leaveReview,
+                reason -> refusal = Optional.of(reason),
+                this::submitted,
+                this::onRenderThread,
+                pane -> review.filter(open -> open == pane).isPresent()));
+        this.worktree = new WorktreeDetail(screens, background, this::onRenderThread);
+        this.pendingDetail = new PendingDetail(reviews, root, background, this::onRenderThread);
         this.dock.replace(sessions.hosted());
     }
 
@@ -351,7 +359,7 @@ public final class Shell extends ToolkitApp {
             mainViewScroll.reset();
         }
         transcriptStale = true;
-        worktreeStale = true;
+        worktree.markStale();
         refreshOffer();
         TabClosing closing = dock.replace(sessions.hosted());
         if (focus == Focus.DOCK && closing == TabClosing.LAST_ONE_GONE) {
@@ -444,7 +452,7 @@ public final class Shell extends ToolkitApp {
         }
         mergedHeads = heads;
         mergedRead = true;
-        worktreeStale = true;
+        worktree.markStale();
         picker.ifPresent(open -> {
             open.checked();
             open.preselecting(choiceFor(open.ticket()));
@@ -455,7 +463,7 @@ public final class Shell extends ToolkitApp {
     private void applyPendingBoard() {
         BoardView next = pendingBoard.getAndSet(null);
         if (next != null) {
-            worktreeStale = true;
+            worktree.markStale();
             RowKey before = board.selected().key();
             board.replace(next);
             if (!board.selected().key().equals(before) && mainViewOwner == Focus.BOARD) {
@@ -581,6 +589,12 @@ public final class Shell extends ToolkitApp {
         if (removalPrompt.isPresent()) {
             return answerRemovalPrompt(key);
         }
+        if (reviewKeys.asksToSubmit()) {
+            return reviewKeys.answerSubmitPrompt(key);
+        }
+        if (respondPrompt.isPresent()) {
+            return answerRespondPrompt(respondPrompt.get(), key);
+        }
         if (remoteControlPrompt.isPresent()) {
             return answerRemoteControlPrompt(remoteControlPrompt.get(), key);
         }
@@ -590,7 +604,7 @@ public final class Shell extends ToolkitApp {
         if (inSession()) {
             return pressInSession(key);
         }
-        if (review.isPresent() && pressInReview(review.get(), key)) {
+        if (review.isPresent() && reviewKeys.press(review.get(), key)) {
             return true;
         }
         if (key.hasCtrl()) {
@@ -798,9 +812,7 @@ public final class Shell extends ToolkitApp {
     private Optional<TicketView> removableTicket() {
         return selectedTicket()
                 .filter(ticket -> focus == Focus.BOARD && ticket.status().finished())
-                .filter(ticket -> shownWorktree
-                        .filter(shown -> shown.ticket().equals(idOf(ticket)) && shown.view() instanceof HeldWorktreeView)
-                        .isPresent());
+                .filter(ticket -> worktree.of(ticket).filter(HeldWorktreeView.class::isInstance).isPresent());
     }
 
     private boolean checkRemoval(TicketView ticket) {
@@ -855,50 +867,15 @@ public final class Shell extends ToolkitApp {
 
     private void removed(WorktreeRemovalView result) {
         switch (result) {
-            case RemovedWorktreeView _ -> {
-                shownWorktree = Optional.empty();
-                worktreeStale = true;
-            }
+            case RemovedWorktreeView _ -> worktree.forget();
             case RefusedRemovalView refused -> refusal = Optional.of(WorktreeText.refusal(refused.state()));
             case FailedRemovalView failed -> refusal = Optional.of(WorktreeText.failure(failed.reason()));
         }
     }
 
-    /**
-     * Reads the selected ticket's worktree off the render thread, when another ticket was selected or something it is judged by
-     * changed; one read at a time, and what lands is kept with the ticket it is about.
-     */
-    private void syncWorktree() {
-        Optional<TicketView> wanted = mainViewOwner == Focus.BOARD ? selectedTicket() : Optional.empty();
-        wanted.ifPresent(ticket -> {
-            boolean shown = shownWorktree.filter(read -> read.ticket().equals(idOf(ticket))).isPresent();
-            if ((!shown || worktreeStale) && worktreeReading.compareAndSet(false, true)) {
-                worktreeStale = false;
-                readWorktree(ticket);
-            }
-        });
-    }
-
-    /** A read that fails unexpectedly is shown as unreadable, so the next read is not held back by one that never landed. */
-    private void readWorktree(TicketView ticket) {
-        WorktreePayload payload = worktreePayload(ticket);
-        CompletableFuture.supplyAsync(() -> screens.worktreeOf(payload), background)
-                .exceptionally(Shell::unreadableWorktree)
-                .thenAccept(read -> onRenderThread(() -> {
-                    shownWorktree = Optional.of(new ShownWorktree(idOf(ticket), read));
-                    worktreeReading.set(false);
-                }));
-    }
-
-    private static WorktreeView unreadableWorktree(Throwable failed) {
-        Throwable cause = failed instanceof CompletionException wrapped && wrapped.getCause() != null ? wrapped.getCause() : failed;
-        return new UnreadableWorktreeView(new Reason(Optional.ofNullable(cause.getMessage())
-                .filter(message -> !message.isBlank())
-                .orElseGet(() -> cause.getClass().getSimpleName())));
-    }
-
     /** Reads everything again, off the render thread, and shows only what changed; the pull requests are fetched on their own thread. */
     private boolean refresh() {
+        pendingDetail.markStale();
         review.ifPresent(this::readReview);
         background.execute(() -> {
             reviews.refresh();
@@ -920,7 +897,12 @@ public final class Shell extends ToolkitApp {
         return reviewablePullRequest()
                 .map(pullRequest -> {
                     ReviewPane pane = new ReviewPane(
-                            pullRequest.number(), pullRequest.title(), reviews.loadingDiff(), reviews.loadingThreads(), reviews);
+                            pullRequest.number(),
+                            pullRequest.title(),
+                            reviews.loadingDiff(),
+                            reviews.loadingThreads(),
+                            reviews.loadingPending(),
+                            reviews);
                     review = Optional.of(pane);
                     lastLeft = Focus.FILES;
                     goUp(Focus.MAIN);
@@ -932,6 +914,7 @@ public final class Shell extends ToolkitApp {
 
     private boolean leaveReview() {
         review = Optional.empty();
+        pendingDetail.markStale();
         lastLeft = Focus.BOARD;
         return focusOn(Focus.BOARD);
     }
@@ -944,6 +927,10 @@ public final class Shell extends ToolkitApp {
         PullRequestPayload payload = new PullRequestPayload(root, pane.number());
         long diffRead = pane.beginDiffRead();
         long threadsRead = pane.beginThreadsRead();
+        long pendingRead = pane.beginPendingRead();
+        CompletableFuture.supplyAsync(() -> reviews.pendingOf(payload), background)
+                .exceptionally(ReviewReads::unreadablePending)
+                .thenAccept(read -> onRenderThread(() -> landed(pane, () -> pane.applyPending(pendingRead, read))));
         CompletableFuture.supplyAsync(() -> reviews.diffOf(payload), background)
                 .exceptionally(ReviewReads::unreadableDiff)
                 .thenAccept(read -> onRenderThread(() -> landed(pane, () -> pane.applyDiff(diffRead, read))));
@@ -956,81 +943,26 @@ public final class Shell extends ToolkitApp {
         review.filter(open -> open == pane).ifPresent(_ -> apply.run());
     }
 
-    /** The keys of the open review; {@code false} for one it leaves to the rest of the keys. */
-    private boolean pressInReview(ReviewPane pane, KeyEvent key) {
-        if (key.isKey(KeyCode.ESCAPE)) {
-            return leaveReview();
-        }
-        if (key.hasAlt()) {
-            return false;
-        }
-        if (key.hasCtrl()) {
-            return !key.isCtrlC() && focus == Focus.MAIN && pageReview(pane, key);
-        }
-        if (key.isChar(OPEN_REVIEW)) {
-            return true;
-        }
-        if (key.isChar(RESOLVED)) {
-            pane.toggleResolved();
-            return true;
-        }
-        return switch (focus) {
-            case MAIN -> moveInDiff(pane, key);
-            case FILES -> moveInFiles(pane, key);
-            case COMMENTS -> moveInComments(pane, key);
-            default -> false;
-        };
-    }
-
-    private static boolean pageReview(ReviewPane pane, KeyEvent key) {
-        if (key.isChar(HALF_PAGE_DOWN)) {
-            pane.halfPageDown();
-            return true;
-        }
-        if (key.isChar(HALF_PAGE_UP)) {
-            pane.halfPageUp();
-            return true;
-        }
-        return false;
-    }
-
-    private static boolean moveInDiff(ReviewPane pane, KeyEvent key) {
-        if (key.isChar(DOWN)) {
-            pane.lineDown();
-        } else if (key.isChar(UP)) {
-            pane.lineUp();
-        } else if (key.isChar(NEXT_FILE)) {
-            pane.nextFile();
-        } else if (key.isChar(PREVIOUS_FILE)) {
-            pane.previousFile();
+    /** GitHub took the submit: the review closes and the ticket is selected, after offering to respond when the ticket's status allows it. */
+    private void submitted() {
+        Optional<TicketView> ticket = selectedTicket().filter(found -> found.verbs().contains(Verb.RESPOND));
+        if (ticket.isPresent()) {
+            respondPrompt = ticket;
         } else {
-            return false;
+            leaveReview();
         }
-        return true;
     }
 
-    private static boolean moveInFiles(ReviewPane pane, KeyEvent key) {
-        if (key.isChar(DOWN)) {
-            pane.selectFileDown();
-        } else if (key.isChar(UP)) {
-            pane.selectFileUp();
-        } else if (key.isKey(KeyCode.ENTER)) {
-            pane.goToSelectedFile();
-        } else {
-            return false;
-        }
-        return true;
-    }
-
-    private static boolean moveInComments(ReviewPane pane, KeyEvent key) {
-        if (key.isChar(DOWN)) {
-            pane.selectCommentDown();
-        } else if (key.isChar(UP)) {
-            pane.selectCommentUp();
-        } else if (key.isKey(KeyCode.ENTER)) {
-            pane.goToSelectedComment();
-        } else {
-            return false;
+    private boolean answerRespondPrompt(TicketView ticket, KeyEvent key) {
+        if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
+            respondPrompt = Optional.empty();
+            leaveReview();
+            TicketHostedPayload payload = new TicketHostedPayload(
+                    root, new LinkedTicketId(ticket.id().value()), ticket.branch().value(), Verb.RESPOND, paneSize());
+            inBackground(() -> hosting.startTicket(payload));
+        } else if (key.isKey(KeyCode.ESCAPE)) {
+            respondPrompt = Optional.empty();
+            leaveReview();
         }
         return true;
     }
@@ -1348,13 +1280,15 @@ public final class Shell extends ToolkitApp {
         syncWatched();
         syncTranscript();
         syncWorktree();
+        syncPending();
         Element screen = column(
                 new StatusLineElement(
                         StatusText.spans(sessions.markerCounts(), elsewhere.groups()),
                         warning,
                         quitPrompt
                                 .map(SessionText::quitPrompt)
-                                .or(() -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree())))),
+                                .or(() -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree())))
+                                .or(reviewKeys::prompt)),
                 row(
                         leftColumn(),
                         (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
@@ -1368,33 +1302,36 @@ public final class Shell extends ToolkitApp {
                                 VerbPickerText.hint(),
                                 () -> sessionsArea)))
                 .orElse(screen);
+        Element withRespond = respondPrompt
+                .<Element>map(ticket -> stack(
+                        withPicker,
+                        new PopupElement(
+                                RESPOND_TITLE,
+                                List.of(RESPOND_PROMPT.formatted(ticket.id().value())),
+                                Optional.empty(),
+                                RESPOND_HINT,
+                                () -> mainViewArea)))
+                .orElse(withPicker);
+        Element withBox = review.flatMap(ReviewPane::box)
+                .filter(open -> open.inlineAt().isEmpty())
+                .<Element>map(open -> stack(withRespond, ReviewPanels.boxPopup(open, () -> mainViewArea)))
+                .orElse(withRespond);
         return remoteControlPrompt
                 .<Element>map(prompt -> stack(
-                        withPicker,
+                        withBox,
                         new PopupElement(
                                 RemoteControlPromptText.title(prompt),
                                 RemoteControlPromptText.rows(prompt),
                                 Optional.empty(),
                                 RemoteControlPromptText.hint(prompt),
                                 () -> mainViewArea)))
-                .orElse(withPicker);
+                .orElse(withBox);
     }
 
     private Element leftColumn() {
-        return review.<Element>map(pane -> column(filesPanel(pane), commentsPanel(pane)).percent(LEFT_COLUMN_PERCENT))
+        return review.<Element>map(pane -> column(ReviewPanels.files(pane, focus), ReviewPanels.comments(pane, focus), ReviewPanels.review(pane))
+                        .percent(LEFT_COLUMN_PERCENT))
                 .orElseGet(() -> column(boardPanel(), sessionsPanel(), docsPanel(), elsewherePanel()).percent(LEFT_COLUMN_PERCENT));
-    }
-
-    private Element filesPanel(ReviewPane pane) {
-        Element body = new RowsElement(ReviewText.fileLines(pane), pane.selectedFile(), true);
-        return framed(FILES_TITLE, Focus.FILES, body).fill();
-    }
-
-    private Element commentsPanel(ReviewPane pane) {
-        Element body = ReviewText.commentsNotice(pane.threads())
-                .<Element>map(notice -> richText(notice).wrapWord().dim())
-                .orElseGet(() -> new RowsElement(ReviewText.commentLines(pane), pane.selectedComment(), focus == Focus.COMMENTS));
-        return framed(COMMENTS_TITLE, Focus.COMMENTS, body).fill();
     }
 
     private Element boardPanel() {
@@ -1449,20 +1386,8 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element mainView() {
-        return review.map(this::reviewMainView)
+        return review.map(pane -> ReviewPanels.diff(pane, focus, area -> mainViewArea = Optional.of(area)))
                 .orElseGet(() -> framed(MAIN_VIEW_TITLE, Focus.MAIN, new PaneProbe(detail(), area -> mainViewArea = Optional.of(area))).fill());
-    }
-
-    private Element reviewMainView(ReviewPane pane) {
-        Element body = ReviewText.diffNotice(pane.diff())
-                .<Element>map(notice -> richText(notice).wrapWord().dim())
-                .orElseGet(() -> new DiffElement(pane));
-        return framed(
-                        REVIEW_TITLE.formatted(pane.number().value(), pane.title().value()),
-                        Focus.MAIN,
-                        new PaneProbe(body, area -> mainViewArea = Optional.of(area)))
-                .titleEllipsis()
-                .fill();
     }
 
     private Element dock() {
@@ -1477,8 +1402,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Panel framed(String title, Focus owner, Element body) {
-        Panel panel = panel(title, body).rounded();
-        return focus == owner ? panel.borderColor(Color.CYAN) : panel;
+        return Frames.framed(title, body, focus == owner);
     }
 
     private Element detail() {
@@ -1585,14 +1509,26 @@ public final class Shell extends ToolkitApp {
         };
     }
 
+    /** Reads the selected ticket's worktree while the Board owns the main view. */
+    private void syncWorktree() {
+        Optional<TicketView> wanted = mainViewOwner == Focus.BOARD ? selectedTicket() : Optional.empty();
+        wanted.ifPresent(ticket -> worktree.sync(ticket, () -> worktreePayload(ticket)));
+    }
+
+    /** Reads the pending review of the selected ticket's open pull request while the Board owns the main view and no review is open. */
+    private void syncPending() {
+        if (review.isEmpty() && mainViewOwner == Focus.BOARD) {
+            selectedTicket().ifPresent(ticket -> PullRequestText.pullRequestOf(ticket, pullRequests)
+                    .ifPresent(pullRequest -> pendingDetail.sync(ticket, pullRequest.number())));
+        }
+    }
+
     private Optional<WorktreeFacts> worktreeDetail(TicketView ticket) {
-        return shownWorktree
-                .filter(shown -> shown.ticket().equals(idOf(ticket)))
-                .flatMap(shown -> WorktreeText.detail(root, shown.view()));
+        return worktree.of(ticket).flatMap(view -> WorktreeText.detail(root, view));
     }
 
     private Element ticketDetail(TicketView ticket) {
-        return new DetailElement(width -> TicketText.head(ticket, pullRequests, worktreeDetail(ticket), width), TicketText.markdown(ticket), mainViewScroll);
+        return new DetailElement(width -> TicketText.head(ticket, pullRequests, pendingDetail.of(ticket), worktreeDetail(ticket), width), TicketText.markdown(ticket), mainViewScroll);
     }
 
     private List<String> keyBar() {
@@ -1608,11 +1544,11 @@ public final class Shell extends ToolkitApp {
         if (inSession()) {
             return List.of(SESSION_KEYS);
         }
+        if (respondPrompt.isPresent()) {
+            return RESPOND_KEYS;
+        }
         if (review.isPresent()) {
-            return Stream.concat(
-                            (focus == Focus.MAIN ? DIFF_KEYS : PANEL_REVIEW_KEYS).stream(),
-                            Stream.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY))
-                    .toList();
+            return reviewKeys.keys(review.get(), focus, List.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY));
         }
         return Stream.of(
                         Included.when(focus.column() == Column.LEFT, MOVE_KEYS),

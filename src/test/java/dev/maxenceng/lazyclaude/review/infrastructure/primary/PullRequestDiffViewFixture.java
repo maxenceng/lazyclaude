@@ -7,6 +7,7 @@ import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.newDiffPath;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.oldDiffPath;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDiffPath;
+import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.threadId;
 import static dev.maxenceng.lazyclaude.review.published.ReasonFixture.reason;
 import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.answer;
 import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.question;
@@ -129,6 +130,7 @@ public final class PullRequestDiffViewFixture {
     public static ReviewThreadView threadView(
             DiffPath path, ThreadPosition position, boolean resolved, boolean open, ThreadComment... comments) {
         return ReviewThreadView.builder()
+                .id(threadId())
                 .path(path)
                 .position(position)
                 .resolved(resolved)

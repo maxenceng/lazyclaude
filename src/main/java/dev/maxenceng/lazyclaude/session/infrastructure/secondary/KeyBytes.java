@@ -16,6 +16,21 @@ import dev.maxenceng.lazyclaude.session.published.TypedCharacter;
  */
 final class KeyBytes {
 
+    private static final int INSERT_CODE = 2;
+    private static final int DELETE_CODE = 3;
+    private static final int PAGE_UP_CODE = 5;
+    private static final int PAGE_DOWN_CODE = 6;
+    private static final int F5_CODE = 15;
+    private static final int F6_CODE = 17;
+    private static final int F7_CODE = 18;
+    private static final int F8_CODE = 19;
+    private static final int F9_CODE = 20;
+    private static final int F10_CODE = 21;
+    private static final int F11_CODE = 23;
+    private static final int F12_CODE = 24;
+    private static final String MODIFIED_KEY = "%s1;%d%c";
+    private static final String TILDE_KEY = "%s%d~";
+    private static final String MODIFIED_TILDE_KEY = "%s%d;%d~";
     private static final String ESCAPE = "\u001b";
     private static final String CSI = ESCAPE + "[";
     private static final String SS3 = ESCAPE + "O";
@@ -88,22 +103,22 @@ final class KeyBytes {
             case LEFT -> cursor('D', modifiers, applicationCursor);
             case HOME -> cursor('H', modifiers, applicationCursor);
             case END -> cursor('F', modifiers, applicationCursor);
-            case INSERT -> tilde("2", modifiers);
-            case DELETE -> tilde("3", modifiers);
-            case PAGE_UP -> tilde("5", modifiers);
-            case PAGE_DOWN -> tilde("6", modifiers);
+            case INSERT -> tilde(INSERT_CODE, modifiers);
+            case DELETE -> tilde(DELETE_CODE, modifiers);
+            case PAGE_UP -> tilde(PAGE_UP_CODE, modifiers);
+            case PAGE_DOWN -> tilde(PAGE_DOWN_CODE, modifiers);
             case F1 -> function('P', modifiers);
             case F2 -> function('Q', modifiers);
             case F3 -> function('R', modifiers);
             case F4 -> function('S', modifiers);
-            case F5 -> tilde("15", modifiers);
-            case F6 -> tilde("17", modifiers);
-            case F7 -> tilde("18", modifiers);
-            case F8 -> tilde("19", modifiers);
-            case F9 -> tilde("20", modifiers);
-            case F10 -> tilde("21", modifiers);
-            case F11 -> tilde("23", modifiers);
-            case F12 -> tilde("24", modifiers);
+            case F5 -> tilde(F5_CODE, modifiers);
+            case F6 -> tilde(F6_CODE, modifiers);
+            case F7 -> tilde(F7_CODE, modifiers);
+            case F8 -> tilde(F8_CODE, modifiers);
+            case F9 -> tilde(F9_CODE, modifiers);
+            case F10 -> tilde(F10_CODE, modifiers);
+            case F11 -> tilde(F11_CODE, modifiers);
+            case F12 -> tilde(F12_CODE, modifiers);
         };
     }
 
@@ -114,19 +129,19 @@ final class KeyBytes {
     private static byte[] cursor(char final_, Modifiers modifiers, boolean applicationCursor) {
         int parameter = parameter(modifiers);
         if (parameter != PLAIN_PARAMETER) {
-            return ascii(CSI + "1;" + parameter + final_);
+            return ascii(MODIFIED_KEY.formatted(CSI, parameter, final_));
         }
         return ascii((applicationCursor ? SS3 : CSI) + final_);
     }
 
     private static byte[] function(char final_, Modifiers modifiers) {
         int parameter = parameter(modifiers);
-        return parameter == PLAIN_PARAMETER ? ascii(SS3 + final_) : ascii(CSI + "1;" + parameter + final_);
+        return parameter == PLAIN_PARAMETER ? ascii(SS3 + final_) : ascii(MODIFIED_KEY.formatted(CSI, parameter, final_));
     }
 
-    private static byte[] tilde(String number, Modifiers modifiers) {
+    private static byte[] tilde(int number, Modifiers modifiers) {
         int parameter = parameter(modifiers);
-        return parameter == PLAIN_PARAMETER ? ascii(CSI + number + "~") : ascii(CSI + number + ";" + parameter + "~");
+        return parameter == PLAIN_PARAMETER ? ascii(TILDE_KEY.formatted(CSI, number)) : ascii(MODIFIED_TILDE_KEY.formatted(CSI, number, parameter));
     }
 
     private static int parameter(Modifiers modifiers) {

@@ -34,6 +34,7 @@ import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 /** One {@code claude} on a pty: the process, the emulator that reads its output, and the encoding of what is sent to it. */
 final class HostedPty {
 
+    private static final String READER_NAME = "pty-%d";
     private static final String START_FAILURE = "claude could not be started: %s";
     private static final long GRACE_SECONDS = 1;
 
@@ -94,7 +95,7 @@ final class HostedPty {
     /** Starts reading the child's output on a thread of its own, which ends by telling {@code onExit} the exit code. */
     void listen(Runnable onScreenChange, Consumer<ExitCode> onExit) {
         buffer.addModelListener(onScreenChange::run);
-        Thread.ofPlatform().daemon().name("pty-" + process.pid()).start(() -> read(onExit));
+        Thread.ofPlatform().daemon().name(READER_NAME.formatted(process.pid())).start(() -> read(onExit));
     }
 
     private void read(Consumer<ExitCode> onExit) {

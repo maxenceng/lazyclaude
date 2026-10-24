@@ -154,6 +154,16 @@ class TranscriptRepositoryTest {
     }
 
     @Test
+    void shouldTitleASessionWhoseAiTitleIsBlankByItsFirstPrompt() throws IOException {
+        writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"), assistantLine(cwd(), later()), aiTitleLine(" "));
+
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
+                .as("a blank title says nothing, so the session is still listed")
+                .singleElement()
+                .satisfies(session -> assertThat(session.session().title()).isEqualTo(new FirstPrompt("Refine")));
+    }
+
+    @Test
     void shouldTitleAnUntitledSessionByItsFirstPromptCutToOneLine() throws IOException {
         writeTranscript(
                 projects,

@@ -31,7 +31,7 @@ final class RowsElement implements Element {
     @Override
     public void render(Frame frame, Rect area, RenderContext context) {
         int height = area.height();
-        if (height <= 0 || area.width() <= 0) {
+        if (Areas.noRoomIn(height) || Areas.noRoomIn(area.width())) {
             return;
         }
         int first = Math.max(0, Math.min(selected - height + 1, lines.size() - height));

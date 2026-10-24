@@ -7,6 +7,7 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFix
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghHanging;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.impatientThreadRepositoryOver;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.missingCommand;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pendingCommentJson;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.projectAt;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.readThreadsPrinted;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.threadJson;
@@ -15,6 +16,7 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFix
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.threadsPageJson;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDiffPath;
+import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.threadId;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.answer;
 import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.comment;
@@ -101,6 +103,26 @@ class GhThreadRepositoryTest {
     }
 
     @Test
+    void shouldReadTheIdOfAThreadAndSkipTheCommentsOfAPendingReview() throws IOException {
+        String output = threadsPageJson(threadJson(
+                "src/Board.java", "3", "null", "RIGHT", false, false, QUESTION, pendingCommentJson("me", "my reply")));
+
+        assertThat(readThreadsPrinted(root, output))
+                .as("a pending comment is shown as one, never also as a comment of a thread")
+                .containsExactly(threadOn(diffPath(), rightOn(3), question()));
+        assertThat(readThreadsPrinted(root, output).getFirst().id()).isEqualTo(threadId());
+    }
+
+    @Test
+    void shouldLeaveOutAThreadWhoseOnlyCommentsArePending() throws IOException {
+        String output = threadsPageJson(
+                threadJson("src/Board.java", "3", "null", "RIGHT", false, false, pendingCommentJson("me", "mine")),
+                threadJson("src/Docs.java", "4", "null", "RIGHT", false, false, ANSWER));
+
+        assertThat(readThreadsPrinted(root, output)).containsExactly(threadOn(secondDiffPath(), rightOn(4), answer()));
+    }
+
+    @Test
     void shouldReadEveryPageOfThreadsInTheOrderGhPrintsThem() throws IOException {
         String first = threadsPageJson(threadJson("src/Board.java", "3", "null", "RIGHT", false, false, QUESTION));
         String second = threadsPageJson(threadJson("src/Docs.java", "4", "null", "RIGHT", false, false, ANSWER));
@@ -170,6 +192,6 @@ class GhThreadRepositoryTest {
 
         assertThatThrownBy(() -> readThreadsPrinted(root, output))
                 .isInstanceOf(PullRequestsUnavailableException.class)
-                .hasMessageContaining("is not a review thread");
+                .hasMessageContaining("wrote a review thread without path");
     }
 }

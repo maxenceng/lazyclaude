@@ -18,6 +18,16 @@ public record TicketId(String value) implements Comparable<TicketId> {
         Assert.matchesPattern("id", value, SHAPE, SHAPE_IN_WORDS);
     }
 
+    /** Whether {@code value} has the shape of a ticket id. */
+    public static boolean fits(String value) {
+        return value != null && SHAPE.matcher(value).matches();
+    }
+
+    /** The shape of a ticket id, in words. */
+    public static String shape() {
+        return SHAPE_IN_WORDS;
+    }
+
     private String prefix() {
         return value.substring(0, value.indexOf(SEPARATOR));
     }

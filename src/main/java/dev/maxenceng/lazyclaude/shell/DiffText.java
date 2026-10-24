@@ -22,8 +22,13 @@ import dev.tamboui.style.Style;
 /** How the review words the rows of a diff: a rule for a file, a dim hunk header, and a line between two number gutters. */
 final class DiffText {
 
+    private static final String ADDED_LETTER = "A";
+    private static final String MODIFIED_LETTER = "M";
+    private static final String DELETED_LETTER = "D";
+    private static final String RENAMED_LETTER = "R";
     private static final String CURSOR_MARK = "▌";
     private static final String NO_MARK = " ";
+    private static final String RANGE_MARK = "┃";
     private static final String SPACE = " ";
     private static final String RULE = "─";
     private static final String RULE_LEAD = "── ";
@@ -44,13 +49,19 @@ final class DiffText {
     }
 
     /** The screen rows of {@code row} in {@code width} cells, the cursor row reversed edge to edge. */
-    static List<List<StatusSpan>> rows(DiffRow row, int width, int numberWidth, boolean cursor) {
+    static List<List<StatusSpan>> rows(DiffRow row, int width, int numberWidth, boolean cursor, boolean inRange) {
         return switch (row) {
             case FileHeaderRow header -> List.of(clipped(fileHeader(header.file(), width), width));
             case HunkHeaderRow header ->
                 List.of(clipped(List.of(new StatusSpan(header.header().value(), Style.EMPTY.dim())), width));
-            case LineRow line -> List.of(lineRow(line.line(), width, numberWidth, cursor));
+            case LineRow line -> List.of(lineRow(line.line(), width, numberWidth, cursor, inRange));
             case ThreadRow thread -> ThreadText.rows(thread.thread(), width, gutterWidth(numberWidth)).stream()
+                    .map(spans -> clipped(spans, width))
+                    .toList();
+            case PendingRow pending -> PendingText.rows(pending.comment(), width, gutterWidth(numberWidth)).stream()
+                    .map(spans -> clipped(spans, width))
+                    .toList();
+            case BoxRow box -> BoxText.inline(box.box(), width, gutterWidth(numberWidth)).stream()
                     .map(spans -> clipped(spans, width))
                     .toList();
         };
@@ -58,7 +69,12 @@ final class DiffText {
 
     /** How many screen rows {@code row} takes in {@code width} cells. */
     static int height(DiffRow row, int width, int numberWidth) {
-        return row instanceof ThreadRow thread ? ThreadText.rows(thread.thread(), width, gutterWidth(numberWidth)).size() : 1;
+        return switch (row) {
+            case ThreadRow thread -> ThreadText.rows(thread.thread(), width, gutterWidth(numberWidth)).size();
+            case PendingRow pending -> PendingText.rows(pending.comment(), width, gutterWidth(numberWidth)).size();
+            case BoxRow box -> BoxText.rowCount(box.box(), width, gutterWidth(numberWidth));
+            case FileHeaderRow _, HunkHeaderRow _, LineRow _ -> 1;
+        };
     }
 
     /** A file's name as the Files panel and the rule name it: {@code old → new} for a renamed one. */
@@ -71,10 +87,10 @@ final class DiffText {
     /** The letter that says what the pull request does to a file. */
     static String letter(FileStatus status) {
         return switch (status) {
-            case AddedFile _ -> "A";
-            case ModifiedFile _ -> "M";
-            case DeletedFile _ -> "D";
-            case RenamedFile _ -> "R";
+            case AddedFile _ -> ADDED_LETTER;
+            case ModifiedFile _ -> MODIFIED_LETTER;
+            case DeletedFile _ -> DELETED_LETTER;
+            case RenamedFile _ -> RENAMED_LETTER;
         };
     }
 
@@ -92,10 +108,10 @@ final class DiffText {
         return List.of(new StatusSpan(lead + RULE.repeat(Math.max(0, width - lead.codePointCount(0, lead.length()))), Style.EMPTY.bold()));
     }
 
-    private static List<StatusSpan> lineRow(DiffLine line, int width, int numberWidth, boolean cursor) {
+    private static List<StatusSpan> lineRow(DiffLine line, int width, int numberWidth, boolean cursor, boolean inRange) {
         Style reversal = cursor ? Style.EMPTY.reversed() : Style.EMPTY;
         StatusSpan gutter = new StatusSpan(
-                (cursor ? CURSOR_MARK : NO_MARK) + number(oldNumber(line), numberWidth) + SPACE + number(newNumber(line), numberWidth) + SPACE,
+                (cursor ? CURSOR_MARK : inRange ? RANGE_MARK : NO_MARK) + number(oldNumber(line), numberWidth) + SPACE + number(newNumber(line), numberWidth) + SPACE,
                 Style.EMPTY.dim().patch(reversal));
         StatusSpan text = new StatusSpan(sign(line) + printable(content(line)), colour(line).patch(reversal));
         List<StatusSpan> spans = clipped(List.of(gutter, text), width);

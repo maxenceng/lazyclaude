@@ -25,7 +25,7 @@ final class DiffElement implements Element {
     @Override
     public void render(Frame frame, Rect area, RenderContext context) {
         DiffRows rows = pane.rows();
-        if (area.width() <= 0 || area.height() <= 0 || rows.size() == 0) {
+        if (Areas.hasNoRoom(area) || rows.isEmpty()) {
             return;
         }
         pane.observeHeight(area.height());
@@ -42,11 +42,22 @@ final class DiffElement implements Element {
 
     /** Draws a row from screen row {@code y} down, as much of it as fits; answers how many screen rows it takes. */
     private int draw(Frame frame, Rect area, DiffRows rows, int row, int y) {
-        boolean cursor = rows.lineCount() > 0 && row == rows.rowOfLine(pane.cursor());
-        List<List<StatusSpan>> lines = DiffText.rows(rows.row(row), area.width(), rows.numberWidth(), cursor);
+        boolean cursor = rows.hasLines() && row == rows.rowOfLine(pane.cursor());
+        boolean inRange = rows.lineOfRow(row).filter(pane::inRange).isPresent();
+        List<List<StatusSpan>> lines = DiffText.rows(rows.row(row), area.width(), rows.numberWidth(), cursor, inRange);
         IntStream.range(0, Math.min(lines.size(), area.height() - y))
                 .forEach(line -> drawSpans(frame, area, y + line, lines.get(line)));
+        if (rows.row(row) instanceof BoxRow open && !open.box().saving()) {
+            placeCursor(frame, area, open.box(), rows.numberWidth(), y);
+        }
         return lines.size();
+    }
+
+    private static void placeCursor(Frame frame, Rect area, CommentBox box, int numberWidth, int y) {
+        BoxCaret caret = BoxText.inlineCaret(box, area.width(), DiffText.gutterWidth(numberWidth));
+        if (y + caret.row() < area.height()) {
+            frame.setCursorPosition(area.x() + caret.column(), area.y() + y + caret.row());
+        }
     }
 
     private static void drawSpans(Frame frame, Rect area, int y, List<StatusSpan> spans) {
@@ -58,22 +69,27 @@ final class DiffElement implements Element {
 
     /** The first row to draw so that the cursor's line is whole in view: the one scrolled to if it is, else the nearest that shows it. */
     private int scrolled(DiffRows rows, Rect area) {
-        if (rows.lineCount() == 0) {
+        if (!rows.hasLines()) {
             return 0;
         }
         int cursorRow = rows.rowOfLine(pane.cursor());
+        int target = rows.boxRow().orElse(cursorRow);
         int top = Math.min(pane.top(), rows.size() - 1);
         if (cursorRow < top) {
             return withItsHeaders(rows, cursorRow);
         }
-        return reaches(rows, area, top, cursorRow, 0) ? top : earliestStart(rows, area, cursorRow, heightOf(rows, area, cursorRow));
+        return reaches(rows, area, top, target, 0) ? top : earliestStart(rows, area, target, heightOf(rows, area, target));
     }
 
     /** The row a line is scrolled up to: the file and hunk headers above it come along. */
     private static int withItsHeaders(DiffRows rows, int row) {
-        return row > 0 && !(rows.row(row - 1) instanceof LineRow) && !(rows.row(row - 1) instanceof ThreadRow)
+        return row > 0 && !isAttachedOrLine(rows.row(row - 1))
                 ? withItsHeaders(rows, row - 1)
                 : row;
+    }
+
+    private static boolean isAttachedOrLine(DiffRow row) {
+        return row instanceof LineRow || row instanceof ThreadRow || row instanceof PendingRow || row instanceof BoxRow;
     }
 
     /** Whether rows {@code from} through {@code target} fit the area, looking at no more rows than the area is high. */

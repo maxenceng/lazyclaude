@@ -6,12 +6,14 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 import dev.maxenceng.lazyclaude.review.published.ThreadComment;
+import dev.maxenceng.lazyclaude.review.published.ThreadId;
 import dev.maxenceng.lazyclaude.review.published.ThreadPosition;
 
 /** A conversation on a pull request's diff: where it sits, whether it is resolved, and its comments, first to last. */
-public record ReviewThread(DiffPath path, ThreadPosition position, boolean resolved, List<ThreadComment> comments) {
+public record ReviewThread(ThreadId id, DiffPath path, ThreadPosition position, boolean resolved, List<ThreadComment> comments) {
 
     public ReviewThread {
+        Assert.notNull("id", id);
         Assert.notNull("path", path);
         Assert.notNull("position", position);
         Assert.notNull("comments", comments);
@@ -27,12 +29,18 @@ public record ReviewThread(DiffPath path, ThreadPosition position, boolean resol
     }
 
     public static final class ReviewThreadBuilder {
+        private ThreadId id;
         private DiffPath path;
         private ThreadPosition position;
         private boolean resolved;
         private List<ThreadComment> comments;
 
         private ReviewThreadBuilder() {}
+
+        public ReviewThreadBuilder id(ThreadId id) {
+            this.id = id;
+            return this;
+        }
 
         public ReviewThreadBuilder path(DiffPath path) {
             this.path = path;
@@ -55,7 +63,7 @@ public record ReviewThread(DiffPath path, ThreadPosition position, boolean resol
         }
 
         public ReviewThread build() {
-            return new ReviewThread(path, position, resolved, comments);
+            return new ReviewThread(id, path, position, resolved, comments);
         }
     }
 }

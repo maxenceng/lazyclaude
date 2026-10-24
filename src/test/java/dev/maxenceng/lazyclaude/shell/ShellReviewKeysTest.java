@@ -239,7 +239,7 @@ class ShellReviewKeysTest {
         Screen screen = Screen.of(shellReviewing(twoFileDiffView(), loadingThreadsView()));
 
         assertThat(screen.lines().getLast())
-                .contains("j/k line  J/K file  ^d/^u page  r resolved  R refresh  esc back");
+                .contains("c comment  v range  enter edit  x delete  S submit  j/k line");
     }
 
     @Test

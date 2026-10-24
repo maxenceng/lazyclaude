@@ -8,4 +8,9 @@ public record CommentBody(String value) {
     public CommentBody {
         Assert.notNull("value", value);
     }
+
+    /** Whether it says nothing: empty, or only white space. */
+    public boolean isBlank() {
+        return value.isBlank();
+    }
 }

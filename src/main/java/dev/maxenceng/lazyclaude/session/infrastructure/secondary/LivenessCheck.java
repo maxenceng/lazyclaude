@@ -16,6 +16,7 @@ import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
  */
 final class LivenessCheck {
 
+    private static final String FIELD_GAP = "\\s+";
     private static final String DOMAIN_PREFIX = "linux:";
     private static final String SELF_NAMESPACE = "self/ns/pid";
     private static final String STAT = "stat";
@@ -58,7 +59,7 @@ final class LivenessCheck {
         try {
             String stat = Files.readString(proc.resolve(Long.toString(pid)).resolve(STAT), StandardCharsets.UTF_8);
             int endOfCommand = stat.lastIndexOf(')');
-            String[] fields = stat.substring(endOfCommand + 1).strip().split("\\s+");
+            String[] fields = stat.substring(endOfCommand + 1).strip().split(FIELD_GAP);
             int index = START_TIME_FIELD - STAT_FIELDS_BEFORE_STATE - 1;
             return index < fields.length ? Optional.of(fields[index]) : Optional.empty();
         } catch (IOException goneOrUnreadable) {

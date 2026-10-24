@@ -4,8 +4,10 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
+import dev.maxenceng.lazyclaude.review.domain.PendingReviewId;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestDiff;
 import dev.maxenceng.lazyclaude.review.domain.ReviewThread;
+import dev.maxenceng.lazyclaude.review.domain.ReviewedPullRequest;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
@@ -29,5 +31,23 @@ public final class GhContractFixture {
 
     public static List<ReviewThread> realThreads() {
         return new GhThreadRepository("gh", PATIENCE).threads(thisRepository(), aMergedPullRequestWithAThread());
+    }
+
+    public static GhPendingReviewRepository pendingReviews() {
+        return new GhPendingReviewRepository("gh", PATIENCE);
+    }
+
+    public static ReviewedPullRequest realPullRequest() {
+        return pendingReviews().pullRequest(thisRepository(), aMergedPullRequestWithAThread());
+    }
+
+    public static void discard(PendingReviewId review) {
+        new GhCommand("gh", PATIENCE)
+                .output(
+                        thisRepository(),
+                        List.of(
+                                "api", "graphql",
+                                "-f", "review=" + review.value(),
+                                "-f", "query=mutation($review: ID!) { deletePullRequestReview(input: {pullRequestReviewId: $review}) { clientMutationId } }"));
     }
 }

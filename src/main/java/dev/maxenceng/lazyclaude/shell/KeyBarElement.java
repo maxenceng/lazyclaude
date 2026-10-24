@@ -26,7 +26,7 @@ final class KeyBarElement implements Element {
 
     @Override
     public void render(Frame frame, Rect area, RenderContext context) {
-        if (area.height() <= 0 || area.width() <= 0 || keys.isEmpty()) {
+        if (Areas.hasNoRoom(area) || keys.isEmpty()) {
             return;
         }
         String line = RowsElement.fit(INDENT + fitting(area.width()), area.width());

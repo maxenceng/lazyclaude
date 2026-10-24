@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.review.domain;
 
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDiffPath;
+import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.threadId;
 import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.answer;
 import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.question;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.outdated;
@@ -23,6 +24,7 @@ public final class ReviewThreadFixture {
 
     public static ReviewThreadBuilder reviewThreadBuilder() {
         return ReviewThread.builder()
+                .id(threadId())
                 .path(diffPath())
                 .position(rightOn(3))
                 .resolved(false)
