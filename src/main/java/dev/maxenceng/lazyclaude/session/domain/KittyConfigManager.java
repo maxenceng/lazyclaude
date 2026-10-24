@@ -37,10 +37,8 @@ public final class KittyConfigManager {
                         conflicting.found().line().key().value())));
                 case ConfiguredRemoteControl configured -> warnings.raise(new Warning(configured.needsRestart()));
             }
-        } catch (KittyConfigUnreadableException unreadable) {
-            cannotUpdate(unreadable.getMessage());
-        } catch (KittyConfigUnwritableException unwritable) {
-            cannotUpdate(unwritable.getMessage());
+        } catch (KittyConfigException refused) {
+            cannotUpdate(refused.getMessage());
         }
     }
 

@@ -91,6 +91,7 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
 import dev.tamboui.terminal.BackendFactory;
+import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.app.ToolkitApp;
 import dev.tamboui.toolkit.app.ToolkitRunner;
 import dev.tamboui.toolkit.element.Element;
@@ -849,10 +850,6 @@ public final class Shell extends ToolkitApp {
                 latestMerged.mergedHeadOf(new HeadBranch(ticket.branch().value())));
     }
 
-    private static LinkedTicketId idOf(TicketView ticket) {
-        return new LinkedTicketId(ticket.id().value());
-    }
-
     private boolean answerRemovalPrompt(KeyEvent key) {
         RemovalPrompt asked = removalPrompt.get();
         removalPrompt = Optional.empty();
@@ -1427,7 +1424,7 @@ public final class Shell extends ToolkitApp {
                     case NewSessionRow _ -> column();
                     case StartingSessionRow _ -> column();
                 })
-                .orElseGet(() -> column());
+                .orElseGet(Toolkit::column);
     }
 
     private Element transcriptDetail() {
@@ -1441,7 +1438,7 @@ public final class Shell extends ToolkitApp {
     private void syncTranscript() {
         Optional<TranscriptSubject> wanted = mainViewOwner == Focus.SESSIONS ? sessions.selectedTranscript() : Optional.empty();
         wanted.ifPresent(subject -> {
-            if (!transcript.shows(subject.id())) {
+            if (transcript.isNotShowing(subject.id())) {
                 transcript.show(subject.id());
                 transcriptStale = true;
             }
@@ -1484,7 +1481,7 @@ public final class Shell extends ToolkitApp {
                 .selected()
                 .<Element>map(row -> new DetailElement(
                         width -> SessionText.elsewhereFacts(row.place(), row.session()), Optional.empty(), mainViewScroll))
-                .orElseGet(() -> column());
+                .orElseGet(Toolkit::column);
     }
 
     private Element docsDetail() {
@@ -1493,7 +1490,7 @@ public final class Shell extends ToolkitApp {
                     case FolderRow _ -> column();
                     case DocumentRow document -> documentDetail(document.document());
                 })
-                .orElseGet(() -> column());
+                .orElseGet(Toolkit::column);
     }
 
     private Element documentDetail(DocumentView document) {

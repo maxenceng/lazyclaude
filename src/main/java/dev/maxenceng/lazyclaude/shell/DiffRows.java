@@ -131,7 +131,7 @@ final class DiffRows {
                                                 box.filter(open -> open.inlineAt().equals(Optional.of(Arrays.binarySearch(lineRows, row))))
                                                         .stream()
                                                         .map(BoxRow::new)))
-                                : Stream.<DiffRow>empty()))
+                                : Stream.empty()))
                 .toList();
     }
 

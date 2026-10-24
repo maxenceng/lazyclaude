@@ -38,9 +38,9 @@ final class DockTabs {
         return selectAt(selectedIndex() - 1);
     }
 
-    /** Selects the tab after the selected one, and says whether there was one. */
-    boolean selectNext() {
-        return selectAt(selectedIndex() + 1);
+    /** Selects the tab after the selected one, if there is one. */
+    void selectNext() {
+        selectAt(selectedIndex() + 1);
     }
 
     int selectedIndex() {

@@ -8,7 +8,7 @@ public interface LiveSessionPort {
     /**
      * Every session whose process runs on this machine, whatever project it belongs to, liveness already
      * checked, with its status as Claude Code reported it.
-     *
+     * <p>
      * When the registry is unusable and another source answers, {@code fallback} is told, on every read that falls back.
      *
      * @throws SessionsUnavailableException when no source answers, with the reason

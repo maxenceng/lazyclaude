@@ -1,7 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -41,7 +40,7 @@ public final class ProcessEnvironmentRepository implements ProcessEnvironmentPor
     public ProcessEnvironment of(ProcessId pid) {
         Path file = proc.resolve(Long.toString(pid.value())).resolve(ENVIRON);
         try {
-            String entries = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+            String entries = Files.readString(file);
             return environmentOf(Stream.of(entries.split(ENTRY_SEPARATOR))
                     .map(entry -> entry.split(NAME_SEPARATOR, NAME_AND_VALUE))
                     .filter(parts -> parts.length == NAME_AND_VALUE)

@@ -34,7 +34,7 @@ final class RowsElement implements Element {
         if (Areas.noRoomIn(height) || Areas.noRoomIn(area.width())) {
             return;
         }
-        int first = Math.max(0, Math.min(selected - height + 1, lines.size() - height));
+        int first = Math.clamp(selected - height + 1, 0, Math.max(0, lines.size() - height));
         IntStream.range(0, Math.min(height, lines.size() - first))
                 .forEach(row -> renderRow(frame, area, row, first + row));
     }

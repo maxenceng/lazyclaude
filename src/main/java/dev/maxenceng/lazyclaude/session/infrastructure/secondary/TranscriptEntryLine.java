@@ -73,7 +73,7 @@ final class TranscriptEntryLine {
             if (isText(block.get(TYPE), TEXT)) {
                 return text(block.get(TEXT)).<TranscriptEntry>map(ReplyEntry::new).stream();
             }
-            return isText(block.get(TYPE), TOOL_USE) ? toolCall(block).stream() : Stream.<TranscriptEntry>empty();
+            return isText(block.get(TYPE), TOOL_USE) ? toolCall(block).stream() : Stream.empty();
         });
     }
 

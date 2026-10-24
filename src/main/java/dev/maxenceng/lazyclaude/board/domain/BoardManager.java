@@ -140,7 +140,7 @@ public final class BoardManager {
                 .flatMap(entry -> entry instanceof TicketFile read ? Stream.of(read) : Stream.empty())
                 .collect(Collectors.groupingBy(read -> read.ticket().id(), LinkedHashMap::new, Collectors.toList()));
         Stream<UnreadableTicket> refused = entries.stream()
-                .flatMap(entry -> entry instanceof UnreadableTicket unreadable ? Stream.of(unreadable) : Stream.empty());
+                .flatMap(entry -> entry instanceof UnreadableTicket refusedTicket ? Stream.of(refusedTicket) : Stream.empty());
         Stream<UnreadableTicket> claimedTwice = byId.values().stream()
                 .flatMap(files -> files.stream().skip(1))
                 .map(BoardManager::alreadyClaimed);

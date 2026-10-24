@@ -26,8 +26,8 @@ final class GhJson {
     }
 
     /** The values {@code gh --paginate} wrote one after another, a page each; none for no output at all. @throws PullRequestsUnavailableException saying what {@code source} printed that does not parse */
-    static <T> List<T> pages(byte[] json, Class<T> type, String source) {
-        try (MappingIterator<T> pages = MAPPER.readerFor(type).readValues(json)) {
+    static List<ThreadPageRecord> pages(byte[] json, String source) {
+        try (MappingIterator<ThreadPageRecord> pages = MAPPER.readerFor(ThreadPageRecord.class).readValues(json)) {
             return pages.readAll();
         } catch (JacksonException e) {
             throw new PullRequestsUnavailableException(

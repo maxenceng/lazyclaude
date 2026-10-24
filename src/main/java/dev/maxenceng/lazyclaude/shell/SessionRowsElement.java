@@ -41,7 +41,7 @@ final class SessionRowsElement implements Element {
         if (Areas.noRoomIn(height) || Areas.noRoomIn(area.width())) {
             return;
         }
-        int first = Math.max(0, Math.min(selected - height + 1, sessions.size() - height));
+        int first = Math.clamp(selected - height + 1, 0, Math.max(0, sessions.size() - height));
         int verbWidth = verbWidth(sessions);
         IntStream.range(0, Math.min(height, sessions.size() - first))
                 .forEach(row -> draw(frame, area, row, sessions.get(first + row), first + row == selected && highlighted, verbWidth));

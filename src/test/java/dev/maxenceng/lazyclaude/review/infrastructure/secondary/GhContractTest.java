@@ -55,7 +55,7 @@ class GhContractTest {
         PullRequestNumber number = aMergedPullRequestWithAThread();
         ReviewedPullRequest before = realPullRequest();
         PendingReviewId review = switch (before.review()) {
-            case PendingReview _ -> existing.id();
+            case PendingReview existing -> existing.id();
             case NoPendingReview _ -> pendingReviews().create(project, before.id());
         };
         try {

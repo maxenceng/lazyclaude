@@ -155,14 +155,13 @@ final class SessionRows {
         offered = verb;
     }
 
-    /** Shows {@code next}'s section, the selection going to its first row. Says whether the ticket changed. */
-    boolean showTicket(Optional<LinkedTicketId> next) {
+    /** Shows {@code next}'s section, the selection going to its first row when the ticket changed. */
+    void showTicket(Optional<LinkedTicketId> next) {
         if (next.equals(ticket)) {
-            return false;
+            return;
         }
         ticket = next;
         selected = firstSelectable();
-        return true;
     }
 
     /** Selects the session of the shown ticket with the strongest marker, the first of any tied, else its {@code n new} row, else the first row. */
