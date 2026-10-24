@@ -1,12 +1,13 @@
 <?xml version="1.0"?>
 <!DOCTYPE module PUBLIC "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN" "https://checkstyle.org/dtds/configuration_1_3.dtd">
 <module name="Checker">
-    <!-- Only what review kept flagging; formatting is spotless's. -->
+    <!-- Only what review kept flagging; formatting is spotless's. A binding nothing reads is `_`. -->
     <module name="TreeWalker">
         <module name="MagicNumber">
             <property name="ignoreNumbers" value="-1, 0, 1"/>
             <property name="ignoreHashCodeMethod" value="true"/>
         </module>
+        <module name="UnusedLocalVariable"/>
         <module name="SuppressWarningsHolder"/>
     </module>
     <module name="SuppressWarningsFilter"/>

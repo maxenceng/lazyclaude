@@ -75,4 +75,11 @@
             </property>
         </properties>
     </rule>
+    <!-- A catch that repeats another, and a lambda that is a method reference, are merged and shortened (ADR 0045). -->
+    <rule ref="category/java/codestyle.xml/IdenticalCatchBranches">
+        <priority>1</priority>
+    </rule>
+    <rule ref="category/java/codestyle.xml/LambdaCanBeMethodReference">
+        <priority>1</priority>
+    </rule>
 </ruleset>
