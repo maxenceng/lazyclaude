@@ -45,12 +45,18 @@ class PullRequestDiffCommentTest {
     }
 
     @Test
-    void shouldTakeTheSideOfTheLastLineOfARangeAndStartItAtTheFirstLineThatHasANumberThere() {
-        assertThat(pullRequestDiffOf(modifiedFile()).commentOn(new DiffLineIndex(1), new DiffLineIndex(3)))
-                .as("the removed line has no new number, so a range that ends on a new line starts at the first new line in it")
-                .isEqualTo(onDiff(diffPath(), rightRange(3, 4)));
+    void shouldPutARangeOfUnchangedAndRemovedLinesOnTheOldSideWhicheverComesFirst() {
         assertThat(pullRequestDiffOf(modifiedFile()).commentOn(new DiffLineIndex(0), new DiffLineIndex(1)))
                 .isEqualTo(onDiff(diffPath(), leftRange(2, 3)));
+        assertThat(pullRequestDiffOf(fileWithTwoHunks()).commentOn(new DiffLineIndex(2), new DiffLineIndex(3)))
+                .as("a removed line has no new number, so a range starting on one is on the old side even when it ends on an unchanged line")
+                .isEqualTo(onDiff(diffPath(), leftRange(40, 41)));
+    }
+
+    @Test
+    void shouldRefuseARangeHoldingBothARemovedAndAnAddedLine() {
+        assertThatThrownBy(() -> pullRequestDiffOf(modifiedFile()).commentOn(new DiffLineIndex(1), new DiffLineIndex(3)))
+                .isInstanceOf(RangeAcrossSidesException.class);
     }
 
     @Test

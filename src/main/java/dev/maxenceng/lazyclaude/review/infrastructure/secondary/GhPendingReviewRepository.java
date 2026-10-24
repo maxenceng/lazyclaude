@@ -3,7 +3,6 @@ package dev.maxenceng.lazyclaude.review.infrastructure.secondary;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
-import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.review.domain.PendingOnDiff;
 import dev.maxenceng.lazyclaude.review.domain.PendingReviewId;
@@ -82,6 +81,21 @@ public final class GhPendingReviewRepository implements PendingReviewPort {
             }
             """;
     private static final String CREATED_ID = ".data.addPullRequestReview.pullRequestReview.id";
+    private static final String OWNER = "owner";
+    private static final String THIS_OWNER = "{owner}";
+    private static final String REPO = "repo";
+    private static final String THIS_REPO = "{repo}";
+    private static final String NUMBER = "number";
+    private static final String PULL_REQUEST_ID = "pullRequestId";
+    private static final String REVIEW = "review";
+    private static final String THREAD = "thread";
+    private static final String COMMENT = "comment";
+    private static final String PATH = "path";
+    private static final String BODY = "body";
+    private static final String LINE = "line";
+    private static final String SIDE = "side";
+    private static final String START_LINE = "startLine";
+    private static final String START_SIDE = "startSide";
 
     private final GhCommand gh;
 
@@ -91,18 +105,19 @@ public final class GhPendingReviewRepository implements PendingReviewPort {
 
     @Override
     public ReviewedPullRequest pullRequest(Project project, PullRequestNumber number) {
-        List<String> arguments = List.of(
-                "api", "graphql", "--paginate",
-                "-F", "owner={owner}",
-                "-F", "repo={repo}",
-                "-F", "number=%d".formatted(number.value()),
-                "-f", "query=" + QUERY);
+        List<String> arguments = new GraphqlCall()
+                .paginated()
+                .typed(OWNER, THIS_OWNER)
+                .typed(REPO, THIS_REPO)
+                .typed(NUMBER, number.value())
+                .query(QUERY)
+                .arguments();
         return PendingReviewRecords.pullRequest(gh.output(project, arguments), GhCommand.sourceOf(arguments));
     }
 
     @Override
     public PendingReviewId create(Project project, PullRequestNodeId pullRequest) {
-        List<String> arguments = mutation(CREATE, List.of("-f", "pullRequestId=" + pullRequest.value(), "--jq", CREATED_ID));
+        List<String> arguments = mutation(CREATE).text(PULL_REQUEST_ID, pullRequest.value()).picking(CREATED_ID).arguments();
         String printed = new String(gh.output(project, arguments), StandardCharsets.UTF_8).strip();
         if (printed.isEmpty()) {
             throw new PullRequestsUnavailableException("%s printed no review id".formatted(GhCommand.sourceOf(arguments)));
@@ -113,45 +128,41 @@ public final class GhPendingReviewRepository implements PendingReviewPort {
     @Override
     public void comment(Project project, PendingReviewId review, PendingOnDiff where, CommentBody body) {
         PlacedThread position = where.position();
-        List<String> range = position.first().equals(position.last())
-                ? List.of()
-                : List.of("-F", "startLine=%d".formatted(position.first().value()), "-f", "startSide=" + position.side().name());
-        run(project, mutation(
-                ADD_THREAD,
-                Stream.concat(
-                                Stream.of(
-                                        "-f", "review=" + review.value(),
-                                        "-f", "path=" + where.path().value(),
-                                        "-f", "body=" + body.value(),
-                                        "-F", "line=%d".formatted(position.last().value()),
-                                        "-f", "side=" + position.side().name()),
-                                range.stream())
-                        .toList()));
+        GraphqlCall onLast = mutation(ADD_THREAD)
+                .text(REVIEW, review.value())
+                .text(PATH, where.path().value())
+                .text(BODY, body.value())
+                .typed(LINE, position.last().value())
+                .text(SIDE, position.side().name());
+        GraphqlCall call = position.first().equals(position.last())
+                ? onLast
+                : onLast.typed(START_LINE, position.first().value()).text(START_SIDE, position.side().name());
+        run(project, call.arguments());
     }
 
     @Override
     public void reply(Project project, PendingReviewId review, ThreadId thread, CommentBody body) {
-        run(project, mutation(REPLY, List.of("-f", "review=" + review.value(), "-f", "thread=" + thread.value(), "-f", "body=" + body.value())));
+        run(project, mutation(REPLY).text(REVIEW, review.value()).text(THREAD, thread.value()).text(BODY, body.value()).arguments());
     }
 
     @Override
     public void edit(Project project, PendingCommentId comment, CommentBody body) {
-        run(project, mutation(EDIT, List.of("-f", "comment=" + comment.value(), "-f", "body=" + body.value())));
+        run(project, mutation(EDIT).text(COMMENT, comment.value()).text(BODY, body.value()).arguments());
     }
 
     @Override
     public void delete(Project project, PendingCommentId comment) {
-        run(project, mutation(DELETE, List.of("-f", "comment=" + comment.value())));
+        run(project, mutation(DELETE).text(COMMENT, comment.value()).arguments());
     }
 
     @Override
     public void submit(Project project, PendingReviewId review, Summary summary) {
-        run(project, mutation(SUBMIT, List.of("-f", "review=" + review.value(), "-f", "body=" + summary.value())));
+        run(project, mutation(SUBMIT).text(REVIEW, review.value()).text(BODY, summary.value()).arguments());
     }
 
-    /** The arguments of a {@code gh api graphql} call that runs {@code mutation} with {@code variables}, each given as {@code -f name=value} or {@code -F name=number}. */
-    private static List<String> mutation(String mutation, List<String> variables) {
-        return Stream.concat(Stream.of("api", "graphql", "-f", "query=" + mutation), variables.stream()).toList();
+    /** A {@code gh api graphql} call that runs {@code mutation}, its variables still to add. */
+    private static GraphqlCall mutation(String mutation) {
+        return new GraphqlCall().query(mutation);
     }
 
     private void run(Project project, List<String> arguments) {

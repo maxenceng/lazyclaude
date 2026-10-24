@@ -5,6 +5,8 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 /** What the review says as a whole: typed on the review screen, or read as an adopted pending review's body, and sent as its body by the submit. */
 public record Summary(String value) {
 
+    private static final String NO_LINE = "";
+
     public Summary {
         Assert.notNull("summary", value);
     }
@@ -16,6 +18,6 @@ public record Summary(String value) {
 
     /** The first line, which is all the Review panel has room for. */
     public String firstLine() {
-        return value.lines().findFirst().orElse("");
+        return value.lines().findFirst().orElse(NO_LINE);
     }
 }

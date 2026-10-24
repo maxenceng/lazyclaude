@@ -74,12 +74,12 @@ public record PullRequestDiff(List<DiffFile> files) {
             throw new RangeAcrossHunksException();
         }
         List<DiffLine> range = hunk.linesFrom(from, to);
-        ThreadSide side = sideOf(range.getLast());
+        ThreadSide side = sideOf(range);
         return PendingOnDiff.builder()
                 .path(hunk.file().path())
                 .position(PlacedThread.builder()
                         .side(side)
-                        .first(range.stream().flatMap(line -> numberOn(side, line).stream()).findFirst().orElseThrow())
+                        .first(numberOn(side, range.getFirst()).orElseThrow())
                         .last(numberOn(side, range.getLast()).orElseThrow())
                         .build())
                 .build();
@@ -103,9 +103,16 @@ public record PullRequestDiff(List<DiffFile> files) {
                 .toList();
     }
 
-    /** A comment on a removed line is on the old side, and on an added or an unchanged one on the new. */
-    private static ThreadSide sideOf(DiffLine line) {
-        return line instanceof RemovedLine ? ThreadSide.LEFT : ThreadSide.RIGHT;
+    /**
+     * A range holding a removed line is on the old side, and one holding an added line, or only unchanged ones, on the new; one holding both
+     * has no side numbering all of it.
+     */
+    private static ThreadSide sideOf(List<DiffLine> range) {
+        boolean removes = range.stream().anyMatch(RemovedLine.class::isInstance);
+        if (removes && range.stream().anyMatch(AddedLine.class::isInstance)) {
+            throw new RangeAcrossSidesException();
+        }
+        return removes ? ThreadSide.LEFT : ThreadSide.RIGHT;
     }
 
     private static Optional<DiffLineNumber> numberOn(ThreadSide side, DiffLine line) {

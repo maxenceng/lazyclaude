@@ -70,6 +70,7 @@ import dev.maxenceng.lazyclaude.shell.Shell;
 /** Composition root: the one place that builds adapters and hands them to the shell. */
 public final class LazyClaude {
 
+    private static final String HERE = "";
     private static final String PREFIX = "lazyclaude: ";
     private static final String USER_HOME = "user.home";
     private static final String REGISTRY = ".claude/sessions";
@@ -127,7 +128,7 @@ public final class LazyClaude {
                 pendingReview);
         PendingReviewCommand writing = new PendingReviewCommand(pendingReview);
         int exit = start(
-                Path.of("").toAbsolutePath(),
+                Path.of(HERE).toAbsolutePath(),
                 board,
                 docs,
                 sessions,

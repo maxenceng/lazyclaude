@@ -23,6 +23,10 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 final class GhCommand {
 
     // A reader blocks until the process exits, so each gets its own virtual thread rather than a slot of the shared pool.
+    private static final String GH = "gh";
+    private static final String WORD_GAP = " ";
+    private static final String SAID_LEAD = ": ";
+    private static final String NOTHING_SAID = "";
     private static final Executor READERS = task -> Thread.ofVirtual().start(task);
     private static final int SUCCESS = 0;
     private static final int WORDS_OF_A_COMMAND = 2;
@@ -37,7 +41,7 @@ final class GhCommand {
 
     /** What a call is named in a message: {@code gh} and the two words that say what it does, as in {@code gh pr diff}. */
     static String sourceOf(List<String> arguments) {
-        return Stream.concat(Stream.of("gh"), arguments.stream().limit(WORDS_OF_A_COMMAND)).collect(Collectors.joining(" "));
+        return Stream.concat(Stream.of(GH), arguments.stream().limit(WORDS_OF_A_COMMAND)).collect(Collectors.joining(WORD_GAP));
     }
 
     /** @throws PullRequestsUnavailableException when {@code gh} does not answer, saying why */
@@ -96,7 +100,7 @@ final class GhCommand {
                 .map(String::strip)
                 .filter(line -> !line.isEmpty())
                 .findFirst()
-                .map(": "::concat)
-                .orElse("");
+                .map(SAID_LEAD::concat)
+                .orElse(NOTHING_SAID);
     }
 }

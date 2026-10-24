@@ -29,6 +29,15 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitResult;
  */
 public final class BranchCopyRepository implements BranchCopyPort {
 
+    private static final String WORKTREE = "worktree";
+    private static final String LIST = "list";
+    private static final String PORCELAIN = "--porcelain";
+    private static final String REV_PARSE = "rev-parse";
+    private static final String VERIFY = "--verify";
+    private static final String QUIET = "--quiet";
+    private static final String SHOW = "show";
+    private static final String LS_TREE = "ls-tree";
+    private static final String NAMES_ONLY = "--name-only";
     private static final String GIT = "git";
     private static final Path BACKLOG = Path.of("docs", "backlog");
     private static final String LOCAL_BRANCHES = "refs/heads/";
@@ -51,7 +60,7 @@ public final class BranchCopyRepository implements BranchCopyPort {
 
     @Override
     public List<Worktree> worktrees(Project project) {
-        GitResult listed = run(project.root(), List.of("worktree", "list", "--porcelain"));
+        GitResult listed = run(project.root(), List.of(WORKTREE, LIST, PORCELAIN));
         if (!listed.succeeded()) {
             throw new BranchCopyUnavailableException(
                     "git worktree list exited with %d%s".formatted(listed.exitValue(), listed.reason()));
@@ -72,7 +81,7 @@ public final class BranchCopyRepository implements BranchCopyPort {
     @Override
     public Optional<BacklogEntry> onBranch(Project project, TicketBranch branch, FileName file) {
         String ref = LOCAL_BRANCHES + branch.value();
-        GitResult found = run(project.root(), List.of("rev-parse", "--verify", "--quiet", ref));
+        GitResult found = run(project.root(), List.of(REV_PARSE, VERIFY, QUIET, ref));
         if (found.exitValue() == NO_SUCH_REF) {
             return Optional.empty();
         }
@@ -81,11 +90,11 @@ public final class BranchCopyRepository implements BranchCopyPort {
                     "git rev-parse %s exited with %d%s".formatted(ref, found.exitValue(), found.reason()));
         }
         String path = "%s:%s".formatted(ref, BACKLOG.resolve(file.value()));
-        GitResult shown = run(project.root(), List.of("show", path));
+        GitResult shown = run(project.root(), List.of(SHOW, path));
         if (shown.succeeded()) {
             return reader.read(file, shown.output());
         }
-        GitResult listed = run(project.root(), List.of("ls-tree", "--name-only", ref, BACKLOG.resolve(file.value()).toString()));
+        GitResult listed = run(project.root(), List.of(LS_TREE, NAMES_ONLY, ref, BACKLOG.resolve(file.value()).toString()));
         if (listed.succeeded() && listed.outputText().isBlank()) {
             return Optional.empty();
         }

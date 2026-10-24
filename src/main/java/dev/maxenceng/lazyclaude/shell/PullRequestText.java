@@ -29,6 +29,7 @@ import dev.tamboui.style.Style;
  */
 final class PullRequestText {
 
+    private static final String PAD = " ";
     private static final String MARK_GLYPH = "⊙";
     private static final String PASSED_GLYPH = "✓";
     private static final String FAILED_GLYPH = "✗";
@@ -102,7 +103,7 @@ final class PullRequestText {
     }
 
     private static String keyed(String key, String value, int keyWidth) {
-        return key + " ".repeat(keyWidth - key.length()) + KEY_GAP + value;
+        return key + PAD.repeat(keyWidth - key.length()) + KEY_GAP + value;
     }
 
     /** The number, the title and the draft suffix in {@code room} cells: a long title gives way to the suffix, not the reverse. */

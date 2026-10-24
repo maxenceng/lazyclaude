@@ -34,6 +34,7 @@ import dev.maxenceng.lazyclaude.review.published.ThreadLine;
  */
 final class ReviewPane {
 
+    private static final Summary NO_SUMMARY = new Summary("");
     private static final int HALF = 2;
 
     private final PullRequestNumber number;
@@ -226,13 +227,13 @@ final class ReviewPane {
 
     /** To the first line of the next file that has lines; nowhere from the last. */
     void nextFile() {
-        if (rows.lineCount() > 0) {
+        if (rows.hasLines()) {
             rows.firstLineOfNextFile(cursor).ifPresent(this::moveTo);
         }
     }
 
     void previousFile() {
-        if (rows.lineCount() > 0) {
+        if (rows.hasLines()) {
             rows.firstLineOfPreviousFile(cursor).ifPresent(this::moveTo);
         }
     }
@@ -279,7 +280,7 @@ final class ReviewPane {
 
     /** What the summary box starts from and a submit sends: the one typed here, else the body of the adopted review, else nothing. */
     Summary summaryToSubmit() {
-        return typedSummary.orElseGet(() -> pending instanceof OpenPendingReviewView open ? open.summary() : new Summary(""));
+        return typedSummary.orElseGet(() -> pending instanceof OpenPendingReviewView open ? open.summary() : NO_SUMMARY);
     }
 
     Optional<CommentBox> box() {
@@ -402,7 +403,7 @@ final class ReviewPane {
     /** The cursor on {@code line}, held within the lines there are; the Files selection goes to the cursor's file. */
     private void moveTo(int line) {
         cursor = clamp(line, rows.lineCount());
-        selectedFile = rows.lineCount() == 0 ? clamp(selectedFile, rows.files().size()) : rows.fileOfLine(cursor);
+        selectedFile = !rows.hasLines() ? clamp(selectedFile, rows.files().size()) : rows.fileOfLine(cursor);
     }
 
     private int halfPage() {

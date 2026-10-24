@@ -33,6 +33,6 @@ record TicketRow(TicketView ticket) implements Row {
                         "%s %s".formatted(ticket.id().value(), TicketText.title(ticket)),
                         Style.EMPTY,
                         column))
-                .orElseGet(() -> new RowLine("", Style.EMPTY, text(), Style.EMPTY, column));
+                .orElseGet(() -> RowLine.ungutteredOf(text(), Style.EMPTY, column));
     }
 }

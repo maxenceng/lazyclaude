@@ -185,6 +185,15 @@ class GhPullRequestsRepositoryTest {
     }
 
     @Test
+    void shouldBeUnavailableWhenACheckLacksItsName() {
+        String output = "[{\"number\":1,\"title\":\"t\",\"headRefName\":\"b\",\"isDraft\":false,\"statusCheckRollup\":[{\"status\":\"COMPLETED\"}]}]";
+
+        assertThatThrownBy(() -> readPrinted(root, output))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("wrote a pull request without check name");
+    }
+
+    @Test
     void shouldBeUnavailableWhenGhDoesNotAnswerInTime() throws IOException {
         GhPullRequestsRepository repository = impatientRepositoryOver(ghHanging(root));
 

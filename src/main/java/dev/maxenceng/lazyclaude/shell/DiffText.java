@@ -22,6 +22,10 @@ import dev.tamboui.style.Style;
 /** How the review words the rows of a diff: a rule for a file, a dim hunk header, and a line between two number gutters. */
 final class DiffText {
 
+    private static final String ADDED_LETTER = "A";
+    private static final String MODIFIED_LETTER = "M";
+    private static final String DELETED_LETTER = "D";
+    private static final String RENAMED_LETTER = "R";
     private static final String CURSOR_MARK = "▌";
     private static final String NO_MARK = " ";
     private static final String RANGE_MARK = "┃";
@@ -83,10 +87,10 @@ final class DiffText {
     /** The letter that says what the pull request does to a file. */
     static String letter(FileStatus status) {
         return switch (status) {
-            case AddedFile _ -> "A";
-            case ModifiedFile _ -> "M";
-            case DeletedFile _ -> "D";
-            case RenamedFile _ -> "R";
+            case AddedFile _ -> ADDED_LETTER;
+            case ModifiedFile _ -> MODIFIED_LETTER;
+            case DeletedFile _ -> DELETED_LETTER;
+            case RenamedFile _ -> RENAMED_LETTER;
         };
     }
 

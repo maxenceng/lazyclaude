@@ -19,7 +19,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -35,27 +34,12 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.OnDiffAnchorView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingDeletePayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingEditPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReplyPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingSubmitPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedAnchorView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.WrittenReviewView;
-import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
-import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
-import dev.maxenceng.lazyclaude.review.published.Summary;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.AddRemoteControlView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.FailedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HeldWorktreeView;
@@ -83,7 +67,6 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCom
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadableTranscriptView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadableWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
@@ -130,15 +113,7 @@ public final class Shell extends ToolkitApp {
     private static final int LEFT_COLUMN_PERCENT = 35;
     private static final int SMALL_PANEL_HEIGHT = 3;
     private static final int SHRUNK_PANEL_HEIGHT = 5;
-    private static final int REVIEW_PANEL_HEIGHT = 6;
 
-    private static final String FILES_TITLE = "Files";
-    private static final String COMMENTS_TITLE = "Comments";
-    private static final String REVIEW_PANEL_TITLE = "Review";
-    private static final String REVIEW_TITLE = "PR #%d %s";
-    private static final String NOT_DELETED = "not deleted (%s)";
-    private static final String NOT_SUBMITTED = "not submitted (%s)";
-    private static final String SUBMIT_PROMPT = "submit review as Comment? y/n";
     private static final String RESPOND_TITLE = "Respond";
     private static final String RESPOND_PROMPT = "start /ticket respond %s?";
     private static final String RESPOND_HINT = "y start  esc back";
@@ -156,7 +131,6 @@ public final class Shell extends ToolkitApp {
     private static final String SESSIONS_UNAVAILABLE = "sessions unavailable: ";
 
     private static final int DEFAULT_PANE_WIDTH = 80;
-    private static final int POPUP_BORDERS = 2;
     private static final int DEFAULT_PANE_HEIGHT = 24;
 
     private static final char QUIT = 'q';
@@ -170,14 +144,6 @@ public final class Shell extends ToolkitApp {
     private static final char NO = 'n';
     private static final char JUMP = 'o';
     private static final char OPEN_REVIEW = 'p';
-    private static final char RESOLVED = 'r';
-    private static final char COMMENT = 'c';
-    private static final char RANGE = 'v';
-    private static final char DELETE = 'x';
-    private static final char SUMMARY = 'S';
-    private static final char SAVE = 's';
-    private static final char NEXT_FILE = 'J';
-    private static final char PREVIOUS_FILE = 'K';
     private static final char REMOVE_WORKTREE = 'd';
     private static final char LEFT = 'h';
     private static final char DOWN = 'j';
@@ -199,14 +165,7 @@ public final class Shell extends ToolkitApp {
     private static final String REFRESH_KEY = "R refresh";
     private static final String JUMP_KEY = "o jump";
     private static final String REVIEW_KEY = "p review";
-    private static final List<String> DIFF_KEYS = List.of(
-            "c comment", "v range", "enter edit", "x delete", "S submit", "j/k line", "J/K file", "^d/^u page", "r resolved", "R refresh", "esc back");
-    private static final List<String> COMMENTS_REVIEW_KEYS = List.of(
-            "c reply", "enter open", "x delete", "S submit", "j/k move", "r resolved", "R refresh", "esc back");
-    private static final List<String> FILES_REVIEW_KEYS = List.of("j/k move", "enter go to line", "S submit", "r resolved", "R refresh", "esc back");
-    private static final List<String> BOX_KEYS = List.of("^s save  esc cancel");
     private static final List<String> RESPOND_KEYS = List.of("y start  esc back");
-    private static final List<String> SUBMIT_KEYS = List.of("y submit  any other key keeps it pending");
     private static final String REMOVE_WORKTREE_KEY = "d remove worktree";
     private static final String NEW_KEY = "N new";
     private static final String NEW_TICKET_KEY = "n new";
@@ -237,7 +196,7 @@ public final class Shell extends ToolkitApp {
     private final BoardQuery boards;
     private final DocsQuery docsQuery;
     private final ReviewQuery reviews;
-    private final PendingReviewCommand writing;
+    private final ReviewKeys reviewKeys;
     private final Path root;
     private final DockTabs dock = new DockTabs();
     private Map<HostedSessionId, PaneSize> paneSizes = Map.of();
@@ -258,19 +217,13 @@ public final class Shell extends ToolkitApp {
     private Optional<Long> quitPrompt = Optional.empty();
     private Optional<RemoteControlConfigView> remoteControlPrompt = Optional.empty();
     private Optional<RemovalPrompt> removalPrompt = Optional.empty();
-    private Optional<ReviewPane> submitPrompt = Optional.empty();
     private Optional<TicketView> respondPrompt = Optional.empty();
     private Optional<String> refusal = Optional.empty();
-    private Optional<ShownWorktree> shownWorktree = Optional.empty();
-    private boolean worktreeStale;
-    private Optional<ShownPending> shownPending = Optional.empty();
-    private boolean pendingStale;
-    private long pendingDetailReads;
-    private final AtomicBoolean worktreeReading = new AtomicBoolean();
+    private final WorktreeDetail worktree;
+    private final PendingDetail pendingDetail;
     private volatile MergedPullRequestsView latestMerged = new MergedPullRequestsView(List.of());
     private Optional<Rect> mainViewArea = Optional.empty();
     private CompletableFuture<Void> outsideCommands = CompletableFuture.completedFuture(null);
-    private CompletableFuture<Void> reviewWrites = CompletableFuture.completedFuture(null);
     private boolean mainViewHidden;
     private Focus focus = Focus.BOARD;
     private Focus lastLeft = Focus.BOARD;
@@ -342,8 +295,16 @@ public final class Shell extends ToolkitApp {
         this.boards = boards;
         this.docsQuery = docsQuery;
         this.reviews = reviews;
-        this.writing = writing;
         this.root = board.root().value();
+        this.reviewKeys = new ReviewKeys(writing, root, background, new ReviewHost(
+                this::focus,
+                this::leaveReview,
+                reason -> refusal = Optional.of(reason),
+                this::submitted,
+                this::onRenderThread,
+                pane -> review.filter(open -> open == pane).isPresent()));
+        this.worktree = new WorktreeDetail(screens, background, this::onRenderThread);
+        this.pendingDetail = new PendingDetail(reviews, root, background, this::onRenderThread);
         this.dock.replace(sessions.hosted());
     }
 
@@ -398,7 +359,7 @@ public final class Shell extends ToolkitApp {
             mainViewScroll.reset();
         }
         transcriptStale = true;
-        worktreeStale = true;
+        worktree.markStale();
         refreshOffer();
         TabClosing closing = dock.replace(sessions.hosted());
         if (focus == Focus.DOCK && closing == TabClosing.LAST_ONE_GONE) {
@@ -491,7 +452,7 @@ public final class Shell extends ToolkitApp {
         }
         mergedHeads = heads;
         mergedRead = true;
-        worktreeStale = true;
+        worktree.markStale();
         picker.ifPresent(open -> {
             open.checked();
             open.preselecting(choiceFor(open.ticket()));
@@ -502,7 +463,7 @@ public final class Shell extends ToolkitApp {
     private void applyPendingBoard() {
         BoardView next = pendingBoard.getAndSet(null);
         if (next != null) {
-            worktreeStale = true;
+            worktree.markStale();
             RowKey before = board.selected().key();
             board.replace(next);
             if (!board.selected().key().equals(before) && mainViewOwner == Focus.BOARD) {
@@ -628,8 +589,8 @@ public final class Shell extends ToolkitApp {
         if (removalPrompt.isPresent()) {
             return answerRemovalPrompt(key);
         }
-        if (submitPrompt.isPresent()) {
-            return answerSubmitPrompt(submitPrompt.get(), key);
+        if (reviewKeys.asksToSubmit()) {
+            return reviewKeys.answerSubmitPrompt(key);
         }
         if (respondPrompt.isPresent()) {
             return answerRespondPrompt(respondPrompt.get(), key);
@@ -643,7 +604,7 @@ public final class Shell extends ToolkitApp {
         if (inSession()) {
             return pressInSession(key);
         }
-        if (review.isPresent() && pressInReview(review.get(), key)) {
+        if (review.isPresent() && reviewKeys.press(review.get(), key)) {
             return true;
         }
         if (key.hasCtrl()) {
@@ -851,9 +812,7 @@ public final class Shell extends ToolkitApp {
     private Optional<TicketView> removableTicket() {
         return selectedTicket()
                 .filter(ticket -> focus == Focus.BOARD && ticket.status().finished())
-                .filter(ticket -> shownWorktree
-                        .filter(shown -> shown.ticket().equals(idOf(ticket)) && shown.view() instanceof HeldWorktreeView)
-                        .isPresent());
+                .filter(ticket -> worktree.of(ticket).filter(HeldWorktreeView.class::isInstance).isPresent());
     }
 
     private boolean checkRemoval(TicketView ticket) {
@@ -908,51 +867,15 @@ public final class Shell extends ToolkitApp {
 
     private void removed(WorktreeRemovalView result) {
         switch (result) {
-            case RemovedWorktreeView _ -> {
-                shownWorktree = Optional.empty();
-                worktreeStale = true;
-            }
+            case RemovedWorktreeView _ -> worktree.forget();
             case RefusedRemovalView refused -> refusal = Optional.of(WorktreeText.refusal(refused.state()));
             case FailedRemovalView failed -> refusal = Optional.of(WorktreeText.failure(failed.reason()));
         }
     }
 
-    /**
-     * Reads the selected ticket's worktree off the render thread, when another ticket was selected or something it is judged by
-     * changed; one read at a time, and what lands is kept with the ticket it is about.
-     */
-    private void syncWorktree() {
-        Optional<TicketView> wanted = mainViewOwner == Focus.BOARD ? selectedTicket() : Optional.empty();
-        wanted.ifPresent(ticket -> {
-            boolean shown = shownWorktree.filter(read -> read.ticket().equals(idOf(ticket))).isPresent();
-            if ((!shown || worktreeStale) && worktreeReading.compareAndSet(false, true)) {
-                worktreeStale = false;
-                readWorktree(ticket);
-            }
-        });
-    }
-
-    /** A read that fails unexpectedly is shown as unreadable, so the next read is not held back by one that never landed. */
-    private void readWorktree(TicketView ticket) {
-        WorktreePayload payload = worktreePayload(ticket);
-        CompletableFuture.supplyAsync(() -> screens.worktreeOf(payload), background)
-                .exceptionally(Shell::unreadableWorktree)
-                .thenAccept(read -> onRenderThread(() -> {
-                    shownWorktree = Optional.of(new ShownWorktree(idOf(ticket), read));
-                    worktreeReading.set(false);
-                }));
-    }
-
-    private static WorktreeView unreadableWorktree(Throwable failed) {
-        Throwable cause = failed instanceof CompletionException wrapped && wrapped.getCause() != null ? wrapped.getCause() : failed;
-        return new UnreadableWorktreeView(new Reason(Optional.ofNullable(cause.getMessage())
-                .filter(message -> !message.isBlank())
-                .orElseGet(() -> cause.getClass().getSimpleName())));
-    }
-
     /** Reads everything again, off the render thread, and shows only what changed; the pull requests are fetched on their own thread. */
     private boolean refresh() {
-        pendingStale = true;
+        pendingDetail.markStale();
         review.ifPresent(this::readReview);
         background.execute(() -> {
             reviews.refresh();
@@ -991,7 +914,7 @@ public final class Shell extends ToolkitApp {
 
     private boolean leaveReview() {
         review = Optional.empty();
-        pendingStale = true;
+        pendingDetail.markStale();
         lastLeft = Focus.BOARD;
         return focusOn(Focus.BOARD);
     }
@@ -1020,54 +943,6 @@ public final class Shell extends ToolkitApp {
         review.filter(open -> open == pane).ifPresent(_ -> apply.run());
     }
 
-    /** The keys of the open review; {@code false} for one it leaves to the rest of the keys. */
-    private boolean pressInReview(ReviewPane pane, KeyEvent key) {
-        if (pane.box().isPresent()) {
-            return pressInBox(pane, pane.box().get(), key);
-        }
-        if (key.isKey(KeyCode.ESCAPE)) {
-            return pane.clearRange() || leaveReview();
-        }
-        if (key.hasAlt()) {
-            return false;
-        }
-        if (key.hasCtrl()) {
-            return !key.isCtrlC() && focus == Focus.MAIN && pageReview(pane, key);
-        }
-        if (key.isChar(OPEN_REVIEW)) {
-            return true;
-        }
-        if (key.isChar(SUMMARY)) {
-            pane.openBox(new CommentBox(new SummaryTarget(), Optional.empty(), pane.summaryToSubmit().value()));
-            return true;
-        }
-        if (key.isChar(RESOLVED)) {
-            pane.toggleResolved();
-            return true;
-        }
-        return switch (focus) {
-            case MAIN -> moveInDiff(pane, key) || writeInDiff(pane, key);
-            case FILES -> moveInFiles(pane, key);
-            case COMMENTS -> moveInComments(pane, key);
-            default -> false;
-        };
-    }
-
-    /** The confirm after the summary is saved: {@code y} submits the pending review as a Comment, any other key leaves it pending. */
-    private boolean answerSubmitPrompt(ReviewPane pane, KeyEvent key) {
-        submitPrompt = Optional.empty();
-        if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
-            PendingSubmitPayload submit = new PendingSubmitPayload(root, pane.number(), pane.summaryToSubmit());
-            inReviewOrder(pane, () -> writing.submit(submit), answer -> {
-                switch (answer) {
-                    case WrittenReviewView _ -> submitted();
-                    case RefusedWriteView refused -> refusal = Optional.of(NOT_SUBMITTED.formatted(refused.reason().value()));
-                }
-            });
-        }
-        return true;
-    }
-
     /** GitHub took the submit: the review closes and the ticket is selected, after offering to respond when the ticket's status allows it. */
     private void submitted() {
         Optional<TicketView> ticket = selectedTicket().filter(found -> found.verbs().contains(Verb.RESPOND));
@@ -1090,182 +965,6 @@ public final class Shell extends ToolkitApp {
             leaveReview();
         }
         return true;
-    }
-
-    /** {@code c} on the cursor's line, or on the range marked, opens the comment box under it. */
-    private boolean writeInDiff(ReviewPane pane, KeyEvent key) {
-        if (key.isChar(RANGE)) {
-            pane.markRange().ifPresent(reason -> refusal = Optional.of(reason.value()));
-            return true;
-        }
-        if (key.isKey(KeyCode.ENTER) || key.isChar(DELETE)) {
-            pane.pendingOnCursorLine().ifPresent(comment -> editOrDelete(pane, key, comment, Optional.of(pane.cursor())));
-            return true;
-        }
-        if (!key.isChar(COMMENT)) {
-            return false;
-        }
-        if (pane.rows().lineCount() > 0) {
-            switch (pane.anchor()) {
-                case OnDiffAnchorView anchor ->
-                    pane.openBox(new CommentBox(new NewCommentTarget(anchor), Optional.of(pane.anchorLine()), ""));
-                case RefusedAnchorView refused -> refusal = Optional.of(refused.reason().value());
-            }
-        }
-        return true;
-    }
-
-    /** {@code enter} opens a pending comment in the box, under {@code inlineAt} if it has a line; {@code x} deletes it. */
-    private void editOrDelete(ReviewPane pane, KeyEvent key, PendingCommentView comment, Optional<Integer> inlineAt) {
-        if (key.isKey(KeyCode.ENTER)) {
-            pane.openBox(new CommentBox(new EditCommentTarget(comment), inlineAt, comment.body().value()));
-        } else {
-            inReviewOrder(
-                    pane,
-                    () -> writing.delete(new PendingDeletePayload(root, pane.number(), comment.id())),
-                    answer -> {
-                        switch (answer) {
-                            case WrittenReviewView written -> pane.applyWritten(written.pending());
-                            case RefusedWriteView refused -> refusal = Optional.of(NOT_DELETED.formatted(refused.reason().value()));
-                        }
-                    });
-        }
-    }
-
-    /** The box takes every key: {@code ctrl+s} saves, {@code esc} throws it away, the rest edit its text; only {@code ctrl+c} still quits. */
-    private boolean pressInBox(ReviewPane pane, CommentBox box, KeyEvent key) {
-        if (key.isCtrlC()) {
-            return false;
-        }
-        if (box.saving()) {
-            return true;
-        }
-        if (key.isKey(KeyCode.ESCAPE)) {
-            pane.closeBox();
-        } else if (key.hasCtrl() && key.isChar(SAVE)) {
-            saveBox(pane, box);
-        } else {
-            box.edit(key);
-        }
-        return true;
-    }
-
-    /** Saves what the box holds: the summary is kept here until the submit, anything else is written off the render thread. */
-    private void saveBox(ReviewPane pane, CommentBox box) {
-        PendingReviewCommand command = writing;
-        Path project = root;
-        PullRequestNumber number = pane.number();
-        String content = box.content();
-        switch (box.target()) {
-            case NewCommentTarget target ->
-                write(pane, box, () -> command.comment(new PendingCommentPayload(
-                        project, number, target.anchor().path(), target.anchor().position(), new CommentBody(content))));
-            case EditCommentTarget target ->
-                write(pane, box, () -> command.edit(new PendingEditPayload(project, number, target.comment().id(), new CommentBody(content))));
-            case ReplyTarget target ->
-                write(pane, box, () -> command.reply(new PendingReplyPayload(project, number, target.thread().id(), new CommentBody(content))));
-            case SummaryTarget _ -> holdSummary(pane, content);
-        }
-    }
-
-    /** The summary writes nothing: GitHub refuses to edit a pending review with no body, so it travels with the submit, and the confirm is asked at once. */
-    private void holdSummary(ReviewPane pane, String content) {
-        pane.typeSummary(new Summary(content));
-        pane.closeBox();
-        submitPrompt = Optional.of(pane);
-    }
-
-    /** Writes off the render thread; GitHub's answer closes the box, or keeps it with the reason it was refused. */
-    private void write(ReviewPane pane, CommentBox box, Supplier<PendingReviewWriteView> write) {
-        box.saveBegun();
-        inReviewOrder(pane, write, answer -> {
-            switch (answer) {
-                case WrittenReviewView written -> {
-                    pane.applyWritten(written.pending());
-                    pane.closeBox();
-                }
-                case RefusedWriteView refused -> box.saveRefused(refused.reason());
-            }
-        });
-    }
-
-    /** Writes to the pending review one after the other, off the render thread; an answer for a review since left is dropped. */
-    private void inReviewOrder(ReviewPane pane, Supplier<PendingReviewWriteView> write, Consumer<PendingReviewWriteView> answered) {
-        reviewWrites = reviewWrites
-                .exceptionally(_ -> null)
-                .thenApplyAsync(_ -> write.get(), background)
-                .exceptionally(ReviewReads::refusedWrite)
-                .thenAccept(answer -> onRenderThread(() -> landed(pane, () -> answered.accept(answer))));
-    }
-
-    private static boolean pageReview(ReviewPane pane, KeyEvent key) {
-        if (key.isChar(HALF_PAGE_DOWN)) {
-            pane.halfPageDown();
-            return true;
-        }
-        if (key.isChar(HALF_PAGE_UP)) {
-            pane.halfPageUp();
-            return true;
-        }
-        return false;
-    }
-
-    private static boolean moveInDiff(ReviewPane pane, KeyEvent key) {
-        if (key.isChar(DOWN)) {
-            pane.lineDown();
-        } else if (key.isChar(UP)) {
-            pane.lineUp();
-        } else if (key.isChar(NEXT_FILE)) {
-            pane.nextFile();
-        } else if (key.isChar(PREVIOUS_FILE)) {
-            pane.previousFile();
-        } else {
-            return false;
-        }
-        return true;
-    }
-
-    private static boolean moveInFiles(ReviewPane pane, KeyEvent key) {
-        if (key.isChar(DOWN)) {
-            pane.selectFileDown();
-        } else if (key.isChar(UP)) {
-            pane.selectFileUp();
-        } else if (key.isKey(KeyCode.ENTER)) {
-            pane.goToSelectedFile();
-        } else {
-            return false;
-        }
-        return true;
-    }
-
-    private boolean moveInComments(ReviewPane pane, KeyEvent key) {
-        if (key.isChar(DOWN)) {
-            pane.selectCommentDown();
-        } else if (key.isChar(UP)) {
-            pane.selectCommentUp();
-        } else if (key.isKey(KeyCode.ENTER) || key.isChar(DELETE) || key.isChar(COMMENT)) {
-            actOnSelectedComment(pane, key);
-        } else {
-            return false;
-        }
-        return true;
-    }
-
-    /** {@code enter} goes to a thread's line or opens a pending comment, {@code x} deletes a pending comment and {@code c} replies to a thread. */
-    private void actOnSelectedComment(ReviewPane pane, KeyEvent key) {
-        pane.selectedEntry().ifPresent(entry -> {
-            switch (entry) {
-                case PendingEntry pending when !key.isChar(COMMENT) -> {
-                    pane.goToSelectedComment();
-                    editOrDelete(pane, key, pending.placed().comment(), pane.lineOf(pending.placed().line()));
-                }
-                case ThreadEntry thread when key.isChar(COMMENT) ->
-                    pane.openBox(new CommentBox(
-                            new ReplyTarget(thread.placed().thread()), pane.lineOfThread(thread.placed().thread()), ""));
-                case ThreadEntry _ when key.isKey(KeyCode.ENTER) -> pane.goToSelectedComment();
-                default -> {}
-            }
-        });
     }
 
     private boolean toggleMainView() {
@@ -1589,7 +1288,7 @@ public final class Shell extends ToolkitApp {
                         quitPrompt
                                 .map(SessionText::quitPrompt)
                                 .or(() -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree())))
-                                .or(() -> submitPrompt.map(_ -> SUBMIT_PROMPT))),
+                                .or(reviewKeys::prompt)),
                 row(
                         leftColumn(),
                         (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
@@ -1615,7 +1314,7 @@ public final class Shell extends ToolkitApp {
                 .orElse(withPicker);
         Element withBox = review.flatMap(ReviewPane::box)
                 .filter(open -> open.inlineAt().isEmpty())
-                .<Element>map(open -> stack(withRespond, boxPopup(open)))
+                .<Element>map(open -> stack(withRespond, ReviewPanels.boxPopup(open, () -> mainViewArea)))
                 .orElse(withRespond);
         return remoteControlPrompt
                 .<Element>map(prompt -> stack(
@@ -1629,41 +1328,10 @@ public final class Shell extends ToolkitApp {
                 .orElse(withBox);
     }
 
-    /** The box of the summary, or of a comment or reply whose line is not in the diff, over the main view. */
-    private Element boxPopup(CommentBox open) {
-        int inner = BoxPopupText.inner(mainViewArea.map(Rect::width).orElse(DEFAULT_PANE_WIDTH));
-        List<String> above = BoxPopupText.above(open, inner);
-        int room = mainViewArea.map(area -> area.height() - POPUP_BORDERS).orElse(Integer.MAX_VALUE);
-        return new PopupElement(
-                BoxPopupText.title(open),
-                BoxText.popupRows(open, inner, above, room),
-                Optional.empty(),
-                BoxText.HINT,
-                () -> mainViewArea,
-                open.saving() ? Optional.empty() : Optional.of(BoxText.popupCaret(open, inner, above, room)));
-    }
-
     private Element leftColumn() {
-        return review.<Element>map(pane -> column(filesPanel(pane), commentsPanel(pane), reviewPanel(pane)).percent(LEFT_COLUMN_PERCENT))
+        return review.<Element>map(pane -> column(ReviewPanels.files(pane, focus), ReviewPanels.comments(pane, focus), ReviewPanels.review(pane))
+                        .percent(LEFT_COLUMN_PERCENT))
                 .orElseGet(() -> column(boardPanel(), sessionsPanel(), docsPanel(), elsewherePanel()).percent(LEFT_COLUMN_PERCENT));
-    }
-
-    private Element filesPanel(ReviewPane pane) {
-        Element body = new RowsElement(ReviewText.fileLines(pane), pane.selectedFile(), true);
-        return framed(FILES_TITLE, Focus.FILES, body).fill();
-    }
-
-    private Element commentsPanel(ReviewPane pane) {
-        Element body = ReviewText.commentsNotice(pane.threads())
-                .<Element>map(notice -> richText(notice).wrapWord().dim())
-                .orElseGet(() -> new RowsElement(ReviewText.commentLines(pane), pane.selectedComment(), focus == Focus.COMMENTS));
-        return framed(COMMENTS_TITLE, Focus.COMMENTS, body).fill();
-    }
-
-    private Element reviewPanel(ReviewPane pane) {
-        return panel(REVIEW_PANEL_TITLE, new RowsElement(ReviewText.reviewLines(pane.pending(), pane.summaryToSubmit()), -1, false))
-                .rounded()
-                .length(REVIEW_PANEL_HEIGHT);
     }
 
     private Element boardPanel() {
@@ -1718,20 +1386,8 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element mainView() {
-        return review.map(this::reviewMainView)
+        return review.map(pane -> ReviewPanels.diff(pane, focus, area -> mainViewArea = Optional.of(area)))
                 .orElseGet(() -> framed(MAIN_VIEW_TITLE, Focus.MAIN, new PaneProbe(detail(), area -> mainViewArea = Optional.of(area))).fill());
-    }
-
-    private Element reviewMainView(ReviewPane pane) {
-        Element body = ReviewText.diffNotice(pane.diff())
-                .<Element>map(notice -> richText(notice).wrapWord().dim())
-                .orElseGet(() -> new DiffElement(pane));
-        return framed(
-                        REVIEW_TITLE.formatted(pane.number().value(), pane.title().value()),
-                        Focus.MAIN,
-                        new PaneProbe(body, area -> mainViewArea = Optional.of(area)))
-                .titleEllipsis()
-                .fill();
     }
 
     private Element dock() {
@@ -1746,8 +1402,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Panel framed(String title, Focus owner, Element body) {
-        Panel panel = panel(title, body).rounded();
-        return focus == owner ? panel.borderColor(Color.CYAN) : panel;
+        return Frames.framed(title, body, focus == owner);
     }
 
     private Element detail() {
@@ -1854,49 +1509,26 @@ public final class Shell extends ToolkitApp {
         };
     }
 
-    private Optional<PendingReviewView> pendingDetail(TicketView ticket) {
-        return shownPending.filter(shown -> shown.ticket().equals(idOf(ticket))).map(ShownPending::view);
+    /** Reads the selected ticket's worktree while the Board owns the main view. */
+    private void syncWorktree() {
+        Optional<TicketView> wanted = mainViewOwner == Focus.BOARD ? selectedTicket() : Optional.empty();
+        wanted.ifPresent(ticket -> worktree.sync(ticket, () -> worktreePayload(ticket)));
     }
 
-    /**
-     * Reads the selected ticket's pending review, off the render thread, when the selection lands on a ticket with an open pull request,
-     * on {@code R} and when the review is left. A read that lands after the selection moved on is dropped.
-     */
+    /** Reads the pending review of the selected ticket's open pull request while the Board owns the main view and no review is open. */
     private void syncPending() {
-        Optional<TicketView> wanted = review.isEmpty() && mainViewOwner == Focus.BOARD
-                ? selectedTicket().filter(ticket -> PullRequestText.pullRequestOf(ticket, pullRequests).isPresent())
-                : Optional.empty();
-        wanted.ifPresent(ticket -> {
-            boolean shown = shownPending.filter(read -> read.ticket().equals(idOf(ticket))).isPresent();
-            if (!shown || pendingStale) {
-                pendingStale = false;
-                readPending(ticket);
-            }
-        });
-    }
-
-    private void readPending(TicketView ticket) {
-        long read = ++pendingDetailReads;
-        shownPending = Optional.of(new ShownPending(idOf(ticket), reviews.loadingPending()));
-        PullRequestPayload payload = new PullRequestPayload(
-                root, PullRequestText.pullRequestOf(ticket, pullRequests).orElseThrow().number());
-        CompletableFuture.supplyAsync(() -> reviews.pendingOf(payload), background)
-                .exceptionally(ReviewReads::unreadablePending)
-                .thenAccept(answer -> onRenderThread(() -> {
-                    if (read == pendingDetailReads) {
-                        shownPending = Optional.of(new ShownPending(idOf(ticket), answer));
-                    }
-                }));
+        if (review.isEmpty() && mainViewOwner == Focus.BOARD) {
+            selectedTicket().ifPresent(ticket -> PullRequestText.pullRequestOf(ticket, pullRequests)
+                    .ifPresent(pullRequest -> pendingDetail.sync(ticket, pullRequest.number())));
+        }
     }
 
     private Optional<WorktreeFacts> worktreeDetail(TicketView ticket) {
-        return shownWorktree
-                .filter(shown -> shown.ticket().equals(idOf(ticket)))
-                .flatMap(shown -> WorktreeText.detail(root, shown.view()));
+        return worktree.of(ticket).flatMap(view -> WorktreeText.detail(root, view));
     }
 
     private Element ticketDetail(TicketView ticket) {
-        return new DetailElement(width -> TicketText.head(ticket, pullRequests, pendingDetail(ticket), worktreeDetail(ticket), width), TicketText.markdown(ticket), mainViewScroll);
+        return new DetailElement(width -> TicketText.head(ticket, pullRequests, pendingDetail.of(ticket), worktreeDetail(ticket), width), TicketText.markdown(ticket), mainViewScroll);
     }
 
     private List<String> keyBar() {
@@ -1915,21 +1547,8 @@ public final class Shell extends ToolkitApp {
         if (respondPrompt.isPresent()) {
             return RESPOND_KEYS;
         }
-        if (submitPrompt.isPresent()) {
-            return SUBMIT_KEYS;
-        }
-        if (review.flatMap(ReviewPane::box).isPresent()) {
-            return BOX_KEYS;
-        }
         if (review.isPresent()) {
-            return Stream.concat(
-                            (switch (focus) {
-                                case MAIN -> DIFF_KEYS;
-                                case COMMENTS -> COMMENTS_REVIEW_KEYS;
-                                default -> FILES_REVIEW_KEYS;
-                            }).stream(),
-                            Stream.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY))
-                    .toList();
+            return reviewKeys.keys(review.get(), focus, List.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY));
         }
         return Stream.of(
                         Included.when(focus.column() == Column.LEFT, MOVE_KEYS),

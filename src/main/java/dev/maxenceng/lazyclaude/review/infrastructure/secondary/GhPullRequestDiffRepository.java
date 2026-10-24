@@ -18,6 +18,10 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
  */
 public final class GhPullRequestDiffRepository implements PullRequestDiffPort {
 
+    private static final String PR = "pr";
+    private static final String DIFF = "diff";
+    private static final String COLOR = "--color";
+    private static final String NEVER = "never";
     private static final String TOO_LARGE_STATUS = "HTTP 406";
 
     private final GhCommand gh;
@@ -28,7 +32,7 @@ public final class GhPullRequestDiffRepository implements PullRequestDiffPort {
 
     @Override
     public PullRequestDiff diff(Project project, PullRequestNumber number) {
-        List<String> arguments = List.of("pr", "diff", String.valueOf(number.value()), "--color", "never");
+        List<String> arguments = List.of(PR, DIFF, String.valueOf(number.value()), COLOR, NEVER);
         try {
             return UnifiedDiff.parse(new String(gh.output(project, arguments), StandardCharsets.UTF_8));
         } catch (PullRequestsUnavailableException noAnswer) {

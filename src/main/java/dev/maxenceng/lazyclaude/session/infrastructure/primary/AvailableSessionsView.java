@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,7 +52,7 @@ public record AvailableSessionsView(
     public Optional<LiveSessionView> strongestSessionOf(LinkedTicketId ticket) {
         return live.stream()
                 .filter(session -> session.linkTo(ticket).isPresent() && session.marker().isPresent())
-                .reduce((best, next) -> next.marker().orElseThrow().compareTo(best.marker().orElseThrow()) > 0 ? next : best);
+                .max(Comparator.comparing(session -> session.marker().orElseThrow()));
     }
 
     /** The live sessions linked to no ticket. */

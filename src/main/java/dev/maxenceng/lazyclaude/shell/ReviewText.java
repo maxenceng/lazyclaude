@@ -191,10 +191,10 @@ final class ReviewText {
     }
 
     private static RowLine dim(String text) {
-        return new RowLine("", Style.EMPTY, text, Style.EMPTY.dim(), List.of());
+        return RowLine.ungutteredOf(text, Style.EMPTY.dim(), List.of());
     }
 
     private static RowLine warning(String text) {
-        return new RowLine("", Style.EMPTY, text, Style.EMPTY.fg(Color.YELLOW), List.of());
+        return RowLine.ungutteredOf(text, Style.EMPTY.fg(Color.YELLOW), List.of());
     }
 }

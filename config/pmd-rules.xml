@@ -39,4 +39,40 @@
             </property>
         </properties>
     </rule>
+    <!-- A string is named once, as a constant; messages, Assert fields and .formatted templates are exempt (ADR 0044). -->
+    <rule name="NameStringLiterals"
+          language="java"
+          message="Name this string as a static final constant"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <priority>1</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+//StringLiteral[
+    not(ancestor::FieldDeclaration[pmd-java:modifiers() = 'static' and pmd-java:modifiers() = 'final'])
+    and not(ancestor::Annotation)
+    and not(ancestor::ClassDeclaration[ends-with(@SimpleName, 'Exception')])
+    and not(parent::ArgumentList/parent::EnumConstant)
+    and not(parent::ArgumentList/parent::MethodCall[TypeExpression/ClassType[@SimpleName = 'Assert']])
+    and not(parent::ArgumentList/parent::ConstructorCall[ends-with(ClassType/@SimpleName, 'Exception')])
+    and not(parent::MethodCall[@MethodName = 'formatted'])
+]
+]]></value>
+            </property>
+        </properties>
+    </rule>
+    <!-- A count or a size compared to 0 is a question with a name: isEmpty, hasLines (ADR 0044). -->
+    <rule name="NameZeroComparisons"
+          language="java"
+          message="Ask a named question (isEmpty, hasLines...) rather than comparing a count to 0"
+          class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+        <priority>1</priority>
+        <properties>
+            <property name="xpath">
+                <value><![CDATA[
+//InfixExpression[@Operator = ('>', '<', '>=', '<=', '==', '!=')][NumericLiteral[@ValueAsInt = 0]][MethodCall]
+]]></value>
+            </property>
+        </properties>
+    </rule>
 </ruleset>

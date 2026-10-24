@@ -38,6 +38,13 @@ class TicketIdTest {
     }
 
     @Test
+    void shouldTellWhetherAValueHasTheShapeOfATicketId() {
+        assertThat(TicketId.fits("PROJ-20")).isTrue();
+        assertThat(TicketId.fits("LAZY")).isFalse();
+        assertThat(TicketId.fits(null)).isFalse();
+    }
+
+    @Test
     void shouldRefuseABlankId() {
         assertThatThrownBy(() -> new TicketId(" ")).isInstanceOf(NotMatchingExpectedPatternException.class);
     }

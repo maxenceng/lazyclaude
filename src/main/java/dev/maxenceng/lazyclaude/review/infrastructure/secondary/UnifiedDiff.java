@@ -7,7 +7,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Gatherers;
 import java.util.stream.Stream;
 
-import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.review.domain.DiffFile;
 import dev.maxenceng.lazyclaude.review.domain.Hunk;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestDiff;
@@ -29,6 +28,7 @@ import dev.maxenceng.lazyclaude.review.published.RenamedFile;
 /** Reads the unified diff {@code gh pr diff} prints into a {@link PullRequestDiff}. */
 final class UnifiedDiff {
 
+    private static final String NO_LINE_YET = "";
     private static final String SOURCE = "gh pr diff";
     private static final String UNPARSED = "%s does not parse: %s";
     private static final Pattern FILE_START = Pattern.compile("(?m)^(?=diff --git )");
@@ -52,11 +52,7 @@ final class UnifiedDiff {
 
     /** @throws PullRequestsUnavailableException saying what {@code gh pr diff} printed that is not a unified diff */
     static PullRequestDiff parse(String text) {
-        try {
-            return new PullRequestDiff(FILE_START.splitAsStream(text).filter(section -> !section.isBlank()).map(UnifiedDiff::file).toList());
-        } catch (DomainException refused) {
-            throw new PullRequestsUnavailableException(UNPARSED.formatted(SOURCE, refused.getMessage()), refused);
-        }
+        return new PullRequestDiff(FILE_START.splitAsStream(text).filter(section -> !section.isBlank()).map(UnifiedDiff::file).toList());
     }
 
     private static DiffFile file(String section) {
@@ -65,8 +61,7 @@ final class UnifiedDiff {
         Stream<String> hunks = firstHunk < 0 ? Stream.empty() : HUNK_START.splitAsStream(section.substring(firstHunk + 1));
         List<String> headLines = LINE_BREAK.splitAsStream(head).toList();
         return DiffFile.builder()
-                .path(new DiffPath(
-                        after(headLines, RENAME_TO).orElseGet(() -> pathOf(headLines.getFirst()))))
+                .path(named(after(headLines, RENAME_TO).orElseGet(() -> pathOf(headLines.getFirst())), headLines.getFirst()))
                 .status(statusOf(headLines))
                 .hunks(hunks.map(UnifiedDiff::hunk).toList())
                 .build();
@@ -74,10 +69,18 @@ final class UnifiedDiff {
 
     private static FileStatus statusOf(List<String> head) {
         return after(head, RENAME_FROM)
-                .<FileStatus>map(from -> new RenamedFile(new DiffPath(from)))
+                .<FileStatus>map(from -> new RenamedFile(named(from, head.getFirst())))
                 .or(() -> after(head, NEW_FILE).map(_ -> new AddedFile()))
                 .or(() -> after(head, DELETED_FILE).map(_ -> new DeletedFile()))
                 .orElseGet(ModifiedFile::new);
+    }
+
+    /** @throws PullRequestsUnavailableException when the header of the file starting at {@code fileLine} names no path */
+    private static DiffPath named(String path, String fileLine) {
+        if (path.isBlank()) {
+            throw new PullRequestsUnavailableException(UNPARSED.formatted(SOURCE, fileLine));
+        }
+        return new DiffPath(path);
     }
 
     /** What follows {@code prefix} on the first header line that starts with it. */
@@ -101,7 +104,7 @@ final class UnifiedDiff {
         if (!header.matches()) {
             throw new PullRequestsUnavailableException(UNPARSED.formatted(SOURCE, lines.getFirst()));
         }
-        ScannedDiffLine before = new ScannedDiffLine("", Integer.parseInt(header.group(OLD_START)), Integer.parseInt(header.group(NEW_START)));
+        ScannedDiffLine before = new ScannedDiffLine(NO_LINE_YET, Integer.parseInt(header.group(OLD_START)), Integer.parseInt(header.group(NEW_START)));
         return Hunk.builder()
                 .header(new HunkHeader(lines.getFirst()))
                 .lines(lines.stream()

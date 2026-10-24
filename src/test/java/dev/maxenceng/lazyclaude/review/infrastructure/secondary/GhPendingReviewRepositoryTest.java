@@ -207,7 +207,19 @@ class GhPendingReviewRepositoryTest {
 
         assertThatThrownBy(() -> readPendingPrinted(root, output))
                 .isInstanceOf(PullRequestsUnavailableException.class)
-                .hasMessageContaining("is not a pull request");
+                .hasMessageContaining("wrote a pull request without head commit");
+    }
+
+    @Test
+    void shouldBeUnavailableWhenAPendingCommentLacksItsId() {
+        String output = pendingPageJson(
+                pendingReviewJson("PRR_1", "", "abc"),
+                pendingThreadJson("PRRT_1", "src/Board.java", "3", "3", "null", "RIGHT", false, threadCommentJson("", "PENDING", COMMENT)));
+
+        assertThatThrownBy(() -> readPendingPrinted(root, output))
+                .as("editing or deleting a pending comment needs its id")
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("wrote a review thread without comment id");
     }
 
     @Test
@@ -217,7 +229,7 @@ class GhPendingReviewRepositoryTest {
         assertThatThrownBy(() -> readPendingPrinted(root, output))
                 .as("GitHub's schema lets a review's commit be null; that is a reason, not a crash")
                 .isInstanceOf(PullRequestsUnavailableException.class)
-                .hasMessageContaining("names no commit");
+                .hasMessageContaining("wrote a pull request without pending review commit");
     }
 
     @Test

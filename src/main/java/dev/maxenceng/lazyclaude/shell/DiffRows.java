@@ -30,6 +30,7 @@ import dev.maxenceng.lazyclaude.review.published.RemovedLine;
  */
 final class DiffRows {
 
+    private static final int NO_LINES = 0;
     private static final int MIN_NUMBER_WIDTH = 4;
     private static final DiffRows NONE = new DiffRows(List.of(), List.of());
 
@@ -153,6 +154,15 @@ final class DiffRows {
 
     int lineCount() {
         return rowOfLine.length;
+    }
+
+    /** Whether the diff has a line the cursor can stand on. */
+    boolean hasLines() {
+        return rowOfLine.length != NO_LINES;
+    }
+
+    boolean isEmpty() {
+        return rows.isEmpty();
     }
 
     int rowOfLine(int line) {

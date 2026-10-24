@@ -38,6 +38,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  */
 public final class TranscriptRepository implements PastSessionPort {
 
+    private static final String NO_FILE_KEY = "";
     private static final String CACHE_UNWRITABLE = "cannot write the cache %s: %s";
     private static final String ROOT_UNLISTABLE = "cannot list %s: %s";
 
@@ -165,7 +166,7 @@ public final class TranscriptRepository implements PastSessionPort {
 
     private static CachedTranscript empty(Path file) {
         String sessionId = TranscriptFile.sessionIdOf(file);
-        return new CachedTranscript(file.toString(), 0, 0, "", 0, sessionId, null, null, null, null, null, null, List.of(), List.of());
+        return new CachedTranscript(file.toString(), 0, 0, NO_FILE_KEY, 0, sessionId, null, null, null, null, null, null, List.of(), List.of());
     }
 
     private static CachedTranscript located(CachedTranscript read, CachedTranscript before, TranscriptLocator locator) {

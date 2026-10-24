@@ -52,7 +52,7 @@ final class TerminalScreenElement implements Element {
 
     @Override
     public void render(Frame frame, Rect area, RenderContext context) {
-        if (area.height() <= 0 || area.width() <= 0) {
+        if (Areas.hasNoRoom(area)) {
             return;
         }
         IntStream.range(0, Math.min(area.height(), screen.rows().size()))

@@ -25,7 +25,7 @@ final class DiffElement implements Element {
     @Override
     public void render(Frame frame, Rect area, RenderContext context) {
         DiffRows rows = pane.rows();
-        if (area.width() <= 0 || area.height() <= 0 || rows.size() == 0) {
+        if (Areas.hasNoRoom(area) || rows.isEmpty()) {
             return;
         }
         pane.observeHeight(area.height());
@@ -42,7 +42,7 @@ final class DiffElement implements Element {
 
     /** Draws a row from screen row {@code y} down, as much of it as fits; answers how many screen rows it takes. */
     private int draw(Frame frame, Rect area, DiffRows rows, int row, int y) {
-        boolean cursor = rows.lineCount() > 0 && row == rows.rowOfLine(pane.cursor());
+        boolean cursor = rows.hasLines() && row == rows.rowOfLine(pane.cursor());
         boolean inRange = rows.lineOfRow(row).filter(pane::inRange).isPresent();
         List<List<StatusSpan>> lines = DiffText.rows(rows.row(row), area.width(), rows.numberWidth(), cursor, inRange);
         IntStream.range(0, Math.min(lines.size(), area.height() - y))
@@ -69,7 +69,7 @@ final class DiffElement implements Element {
 
     /** The first row to draw so that the cursor's line is whole in view: the one scrolled to if it is, else the nearest that shows it. */
     private int scrolled(DiffRows rows, Rect area) {
-        if (rows.lineCount() == 0) {
+        if (!rows.hasLines()) {
             return 0;
         }
         int cursorRow = rows.rowOfLine(pane.cursor());

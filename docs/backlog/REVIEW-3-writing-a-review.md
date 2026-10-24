@@ -12,8 +12,8 @@ created: 2026-10-10
 ## Acceptance criteria
 
 - [ ] `c` on a `+`, `-` or context line of the diff opens the comment box inline under that
-      line; `v` starts a range and `v` again ends it, and a range that leaves its hunk is
-      refused with a message, the range unchanged. File and hunk headers take no comment and
+      line; `v` starts a range and `v` again ends it, and a range that leaves its hunk, or
+      holds both a removed and an added line, is refused with a message, the range unchanged. File and hunk headers take no comment and
       `c` on them does nothing.
 - [ ] In the box `enter` is a newline, `ctrl+s` saves and `esc` cancels, throwing the text
       away. While a save is out the box shows a dim `saving…`; the `✎` appears only once GitHub
@@ -22,7 +22,7 @@ created: 2026-10-10
       it; `ctrl+s` retries.
 - [ ] The first saved comment creates the pending review; later ones add to it. A comment on a
       `-` line is `LEFT` on its old line number, on a `+` or context line `RIGHT` on the new;
-      a range carries its first line as start.
+      a range carries its first line as start, on the old side when it holds a removed line.
 - [ ] In the diff, `enter` on a line with a `✎` opens its last pending comment in the box and
       `x` deletes that one; in Comments, `enter` and `x` act on the selected pending comment.
       Saving an empty comment deletes it. On a line without a `✎`, `enter` and `x` do nothing.
@@ -142,3 +142,7 @@ Refined 2026-10-18. Replying to a thread was added while refining; the draft did
 The ticket detail's `✎n pending` reads per selected ticket rather than riding the 60 s open-PR
 read, which cannot see pending reviews.
 The summary travels with the submit instead of being saved first, since GitHub refuses to edit a pending review with no body ([ADR 0042](../adr/0042-the-summary-travels-with-the-submit.md)).
+Decided in review, 2026-10-24: a range mixing sides is refused rather than given a start side; the one-hunk rule is not re-checked
+at write time and a retry after a lost answer may write twice, both left as `// deferred:` on `PendingReviewManager.comment`.
+Review also moved every adapter off catching the domain's refusals ([ADR 0043](../adr/0043-an-adapter-checks-what-a-tool-wrote-before-building-from-it.md))
+and named every string and zero comparison ([ADR 0044](../adr/0044-a-string-is-named-and-a-count-is-not-compared-to-zero.md)).

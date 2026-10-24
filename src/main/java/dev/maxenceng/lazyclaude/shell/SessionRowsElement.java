@@ -21,6 +21,7 @@ import dev.tamboui.toolkit.element.Size;
  */
 final class SessionRowsElement implements Element {
 
+    private static final String NOTHING = "";
     private static final String GAP = " ";
     private static final int VERB_GAP = 2;
 
@@ -37,7 +38,7 @@ final class SessionRowsElement implements Element {
     @Override
     public void render(Frame frame, Rect area, RenderContext context) {
         int height = area.height();
-        if (height <= 0 || area.width() <= 0) {
+        if (Areas.noRoomIn(height) || Areas.noRoomIn(area.width())) {
             return;
         }
         int first = Math.max(0, Math.min(selected - height + 1, sessions.size() - height));
@@ -63,26 +64,26 @@ final class SessionRowsElement implements Element {
             }
             case OlderSessionsRow older ->
                 line(frame, area, y, SessionText.olderGlyph(), plain.dim(),
-                        new MiddleText("", plain, SessionText.olderLabel(older), plain.dim(), ""), "", plain);
+                        new MiddleText(NOTHING, plain, SessionText.olderLabel(older), plain.dim(), NOTHING), NOTHING, plain);
             case SectionHeaderRow header ->
                 frame.buffer().setString(area.x(), y, RowsElement.fit(header.label(), area.width()), Style.EMPTY.dim());
             case NoSessionRow none -> dimLabel(frame, area, y, SessionText.noSessionLabel(), plain);
             case NewSessionRow newSession -> dimLabel(frame, area, y, SessionText.newSessionLabel(newSession), plain);
             case StartingSessionRow starting ->
                 line(frame, area, y, SessionText.startingGlyph(), plain.dim(),
-                        new MiddleText("", plain, SessionText.startingLabel(), plain.dim(), ""), SessionText.paneLabel(), plain);
+                        new MiddleText(NOTHING, plain, SessionText.startingLabel(), plain.dim(), NOTHING), SessionText.paneLabel(), plain);
         }
     }
 
     private static void dimLabel(Frame frame, Rect area, int y, String text, Style plain) {
         String label = RowsElement.fit(text, area.width());
-        String padded = label + " ".repeat(Math.max(0, area.width() - label.codePointCount(0, label.length())));
+        String padded = label + GAP.repeat(Math.max(0, area.width() - label.codePointCount(0, label.length())));
         frame.buffer().setString(area.x(), y, padded, plain.dim());
     }
 
     private static MiddleText middle(Optional<TicketLink> link, String title, Style plain, Style titleStyle, int verbWidth) {
-        String verb = SessionText.verb(link).map(found -> found + " ".repeat(verbWidth - found.length() + VERB_GAP)).orElse("");
-        String suffix = SessionText.isWeak(link) ? GAP + SessionText.branchSuffix() : "";
+        String verb = SessionText.verb(link).map(found -> found + GAP.repeat(verbWidth - found.length() + VERB_GAP)).orElse(NOTHING);
+        String suffix = SessionText.isWeak(link) ? GAP + SessionText.branchSuffix() : NOTHING;
         return new MiddleText(verb, plain, title, titleStyle, suffix);
     }
 
@@ -104,8 +105,8 @@ final class SessionRowsElement implements Element {
         int ageWidth = age.isEmpty() ? 0 : GAP.length() + age.length();
         int textWidth = Math.max(0, area.width() - glyph.length() - GAP.length() - ageWidth);
         int titleWidth = Math.max(0, textWidth - middle.verb().length() - middle.suffix().length());
-        String fitted = titleWidth == 0 ? "" : RowsElement.fit(middle.title(), titleWidth);
-        String padding = " ".repeat(Math.max(0, titleWidth - fitted.codePointCount(0, fitted.length())));
+        String fitted = titleWidth == 0 ? NOTHING : RowsElement.fit(middle.title(), titleWidth);
+        String padding = GAP.repeat(Math.max(0, titleWidth - fitted.codePointCount(0, fitted.length())));
         int x = area.x() + glyph.length();
         frame.buffer().setString(area.x(), y, glyph, glyphStyle);
         frame.buffer().setString(x, y, GAP, middle.titleStyle());

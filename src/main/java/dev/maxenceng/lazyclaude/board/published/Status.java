@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.board.published;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 /** A ticket's place in its lifecycle; declaration order is lifecycle order. */
 public enum Status {
@@ -33,10 +34,8 @@ public enum Status {
         return this == DONE;
     }
 
-    public static Status parse(String label) {
-        return Arrays.stream(values())
-                .filter(status -> status.label.equals(label))
-                .findFirst()
-                .orElseThrow(() -> new UnknownStatusException(label));
+    /** The status {@code label} names, if any does. */
+    public static Optional<Status> find(String label) {
+        return Arrays.stream(values()).filter(status -> status.label.equals(label)).findFirst();
     }
 }

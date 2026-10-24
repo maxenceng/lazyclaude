@@ -13,6 +13,7 @@ import dev.tamboui.style.Style;
 /** How the review words a thread shown under its line: its range in the thread colour, then its comments as plain wrapped text. */
 final class ThreadText {
 
+    private static final String NO_AUTHOR = "";
     static final Color COLOUR = Color.MAGENTA;
 
     private static final String MARK = "◆ ";
@@ -47,7 +48,7 @@ final class ThreadText {
                 new StatusSpan(indent, Style.EMPTY),
                 new StatusSpan(MARK + range(placed), dimmed.patch(Style.EMPTY.fg(COLOUR))),
                 new StatusSpan(
-                        comments.isEmpty() ? "" : SPACE + comments.getFirst().author().value(), dimmed.patch(Style.EMPTY.bold()))));
+                        comments.isEmpty() ? NO_AUTHOR : SPACE + comments.getFirst().author().value(), dimmed.patch(Style.EMPTY.bold()))));
         Stream<List<StatusSpan>> first = comments.stream()
                 .limit(1)
                 .flatMap(comment -> Wrapping.lines(comment.body().value(), width - gutter - BODY_INDENT).stream())

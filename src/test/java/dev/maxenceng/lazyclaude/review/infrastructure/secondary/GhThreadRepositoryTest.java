@@ -192,6 +192,6 @@ class GhThreadRepositoryTest {
 
         assertThatThrownBy(() -> readThreadsPrinted(root, output))
                 .isInstanceOf(PullRequestsUnavailableException.class)
-                .hasMessageContaining("is not a review thread");
+                .hasMessageContaining("wrote a review thread without path");
     }
 }

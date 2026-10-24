@@ -5,7 +5,6 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.review.domain.PendingAnchor;
 import dev.maxenceng.lazyclaude.review.domain.PendingComment;
 import dev.maxenceng.lazyclaude.review.domain.PendingOnDiff;
@@ -21,6 +20,7 @@ import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 import dev.maxenceng.lazyclaude.review.published.ThreadId;
 import dev.maxenceng.lazyclaude.review.published.ThreadPosition;
 import dev.maxenceng.lazyclaude.review.published.ThreadSide;
+import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.MissingFields;
 
 /** One review thread as the threads query writes it, null where the JSON lacks it. */
 record ThreadRecord(
@@ -35,7 +35,24 @@ record ThreadRecord(
         Boolean isOutdated,
         ThreadCommentConnectionRecord comments) {
 
-    /** @throws dev.maxenceng.lazyclaude.error.domain.DomainException when a field the domain needs is missing or refused */
+    private static final String ID = "thread id";
+    private static final String PATH = "path";
+    private static final String COMMENTS = "comments";
+
+    /** The fields a thread cannot be read without that the JSON lacks, its comments' included. */
+    MissingFields missingFields() {
+        return Optional.ofNullable(comments).stream()
+                .flatMap(connection -> connection.nodes().stream())
+                .map(ThreadCommentRecord::missingFields)
+                .reduce(new MissingFields().blank(ID, id).blank(PATH, path).absent(COMMENTS, comments), MissingFields::and);
+    }
+
+    /** The fields the thread's pending comments cannot be read without that the JSON lacks. */
+    MissingFields missingPendingFields() {
+        return comments.nodes().stream().map(ThreadCommentRecord::missingPendingFields).reduce(new MissingFields(), MissingFields::and);
+    }
+
+    /** Only once {@link #missingFields()} names none. */
     ReviewThread toThread() {
         return ReviewThread.builder()
                 .id(new ThreadId(id))
@@ -52,13 +69,13 @@ record ThreadRecord(
     }
 
     private Stream<ThreadCommentRecord> submittedComments() {
-        Assert.notNull("thread comments", comments);
         return comments.nodes().stream().filter(comment -> !comment.pending());
     }
 
     /**
      * The pending comments of the thread: the one that starts it is a comment on lines of the diff, and any other a reply to the thread.
-     * A pending comment on a whole file names no line, and is left out.
+     * A pending comment on a whole file names no line, and is left out. Only once {@link #missingFields()} and {@link #missingPendingFields()}
+     * name none.
      */
     // deferred: a pending comment on a whole file, made on github.com, is left out of the pending review — close it when one is seen.
     List<PendingComment> pendingComments() {

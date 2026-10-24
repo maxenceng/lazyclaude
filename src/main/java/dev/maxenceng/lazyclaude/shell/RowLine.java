@@ -10,8 +10,15 @@ import dev.tamboui.style.Style;
  */
 record RowLine(String gutter, Style gutterStyle, String text, Style textStyle, List<RowCell> column) {
 
+    private static final String NO_GUTTER = "";
+
     static RowLine plain(String text) {
-        return new RowLine("", Style.EMPTY, text, Style.EMPTY, List.of());
+        return ungutteredOf(text, Style.EMPTY, List.of());
+    }
+
+    /** A line with nothing in its gutter. */
+    static RowLine ungutteredOf(String text, Style textStyle, List<RowCell> column) {
+        return new RowLine(NO_GUTTER, Style.EMPTY, text, textStyle, column);
     }
 
     String whole() {

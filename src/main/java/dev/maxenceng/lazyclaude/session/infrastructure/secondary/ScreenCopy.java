@@ -30,6 +30,7 @@ import dev.maxenceng.lazyclaude.session.published.TextAttribute;
 /** Copies the emulator's cell grid into a {@link TerminalScreen}, so that nothing of jediterm leaves this package. */
 final class ScreenCopy {
 
+    private static final String NOTHING = "";
     private static final int RGB_MASK = 0xFFFFFF;
     private static final String EMPTY_CELL = " ";
     private static final List<Map.Entry<TextStyle.Option, TextAttribute>> ATTRIBUTES = List.of(
@@ -68,7 +69,7 @@ final class ScreenCopy {
     }
 
     private static String text(String raw) {
-        return raw.replace(CharUtils.NUL_CHAR + "", EMPTY_CELL).replace(CharUtils.DWC + "", "");
+        return raw.replace(String.valueOf(CharUtils.NUL_CHAR), EMPTY_CELL).replace(String.valueOf(CharUtils.DWC), NOTHING);
     }
 
     private static Optional<StyledRun> run(String text, TextStyle style) {

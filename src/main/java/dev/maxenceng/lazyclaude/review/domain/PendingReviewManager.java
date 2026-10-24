@@ -33,6 +33,8 @@ public record PendingReviewManager(PendingReviewPort reviews) {
     }
 
     /** Adds a comment on the diff to the pending review; an empty one writes nothing. */
+    // deferred: the one-hunk rule ran when the box opened, so a diff re-read since then is checked by GitHub alone — close it when a comment lands on a line it was not written on.
+    // deferred: a retry after a write GitHub took but never answered adds it twice, shown as a second ✎ — close it when a duplicate is seen.
     public PendingReviewWrite comment(Project project, PullRequestNumber number, PendingOnDiff where, CommentBody body) {
         return written(project, number, () -> {
             if (!body.isBlank()) {

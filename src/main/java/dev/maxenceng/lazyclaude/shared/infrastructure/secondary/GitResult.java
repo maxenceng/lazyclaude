@@ -5,6 +5,8 @@ import java.nio.charset.StandardCharsets;
 /** What a finished {@code git} run printed, and how it ended. */
 public record GitResult(int exitValue, byte[] output, byte[] said) {
 
+    private static final String NOTHING_SAID = "";
+    private static final String SAID_LEAD = ": ";
     private static final int SUCCESS = 0;
 
     public boolean succeeded() {
@@ -22,7 +24,7 @@ public record GitResult(int exitValue, byte[] output, byte[] said) {
                 .map(String::strip)
                 .filter(line -> !line.isEmpty())
                 .reduce((first, last) -> last)
-                .orElse("");
+                .orElse(NOTHING_SAID);
     }
 
     /** What git said on its error stream, as {@code ": <first line>"}, or nothing when it said nothing. */
@@ -32,7 +34,7 @@ public record GitResult(int exitValue, byte[] output, byte[] said) {
                 .map(String::strip)
                 .filter(line -> !line.isEmpty())
                 .findFirst()
-                .map(": "::concat)
-                .orElse("");
+                .map(SAID_LEAD::concat)
+                .orElse(NOTHING_SAID);
     }
 }

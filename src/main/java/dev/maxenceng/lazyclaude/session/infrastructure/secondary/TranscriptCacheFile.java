@@ -49,7 +49,7 @@ public final class TranscriptCacheFile {
         try {
             json = MAPPER.writeValueAsBytes(new TranscriptCache(FORMAT_VERSION, List.copyOf(transcripts)));
         } catch (JacksonException e) {
-            throw new IOException("cannot serialise the cache: " + e.getOriginalMessage(), e);
+            throw new IOException("cannot serialise the cache: %s".formatted(e.getOriginalMessage()), e);
         }
         Files.createDirectories(file.getParent());
         Path temporary = file.resolveSibling(file.getFileName() + TEMPORARY_SUFFIX);

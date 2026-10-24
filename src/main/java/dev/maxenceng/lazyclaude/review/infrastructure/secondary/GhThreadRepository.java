@@ -31,6 +31,11 @@ public final class GhThreadRepository implements ThreadPort {
               }
             }
             """;
+    private static final String OWNER = "owner";
+    private static final String THIS_OWNER = "{owner}";
+    private static final String REPO = "repo";
+    private static final String THIS_REPO = "{repo}";
+    private static final String NUMBER = "number";
 
     private final GhCommand gh;
 
@@ -40,12 +45,13 @@ public final class GhThreadRepository implements ThreadPort {
 
     @Override
     public List<ReviewThread> threads(Project project, PullRequestNumber number) {
-        List<String> arguments = List.of(
-                "api", "graphql", "--paginate",
-                "-F", "owner={owner}",
-                "-F", "repo={repo}",
-                "-F", "number=%d".formatted(number.value()),
-                "-f", "query=" + QUERY);
+        List<String> arguments = new GraphqlCall()
+                .paginated()
+                .typed(OWNER, THIS_OWNER)
+                .typed(REPO, THIS_REPO)
+                .typed(NUMBER, number.value())
+                .query(QUERY)
+                .arguments();
         return ThreadRecords.threads(gh.output(project, arguments), GhCommand.sourceOf(arguments));
     }
 }

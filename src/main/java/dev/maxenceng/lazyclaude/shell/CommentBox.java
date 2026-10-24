@@ -12,6 +12,7 @@ import dev.tamboui.widgets.input.TextAreaState;
  */
 final class CommentBox {
 
+    private static final String NO_TEXT = "";
     private static final String NEWLINE = "\n";
 
     private final BoxTarget target;
@@ -19,6 +20,11 @@ final class CommentBox {
     private final TextAreaState text;
     private boolean saving;
     private Optional<Reason> notSaved = Optional.empty();
+
+    /** An empty box; {@code inlineAt} is the diff line the box is drawn under, or none for a box drawn as a popup. */
+    CommentBox(BoxTarget target, Optional<Integer> inlineAt) {
+        this(target, inlineAt, NO_TEXT);
+    }
 
     /** {@code inlineAt} is the diff line the box is drawn under, or none for a box drawn as a popup. */
     CommentBox(BoxTarget target, Optional<Integer> inlineAt, String initial) {

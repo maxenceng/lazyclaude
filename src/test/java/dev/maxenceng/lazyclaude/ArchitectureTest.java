@@ -33,6 +33,8 @@ import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 
+import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.error.domain.AssertionException;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 
 /*
@@ -362,6 +364,23 @@ class ArchitectureTest {
             .resideInAPackage(ROOT + ".error..")
             .allowEmptyShould(true);
 
+    // An adapter checks what a tool wrote before building from it; the domain is never asked to refuse it on the adapter's behalf (ADR 0043).
+    @ArchTest
+    static final ArchRule secondary_adapters_catch_no_domain_refusal = classes()
+            .that()
+            .resideInAPackage("..infrastructure.secondary..")
+            .should(catchNoDomainRefusal())
+            .allowEmptyShould(true);
+
+    // Assert guards the domain's inputs; an adapter reading a gap through it is relying on the domain to find the gap (ADR 0043).
+    @ArchTest
+    static final ArchRule secondary_adapters_assert_nothing = noClasses()
+            .that()
+            .resideInAPackage("..infrastructure.secondary..")
+            .should()
+            .callMethodWhere(target(owner(name(Assert.class.getName()))))
+            .allowEmptyShould(true);
+
     // A port is held by the domain service that needs it, not by an adapter or a use case.
     @ArchTest
     static final ArchRule ports_are_held_only_by_the_domain = fields()
@@ -514,6 +533,26 @@ class ArchitectureTest {
                                 call,
                                 "%s's constructor throws %s; check inputs through Assert and leave business rules to the manager"
                                         .formatted(type.getSimpleName(), call.getTargetOwner().getSimpleName()))));
+            }
+        };
+    }
+
+    // An adapter's own unavailable exception may be caught to fall back; the catch-all and an assertion are the domain refusing.
+    private static boolean isADomainRefusal(JavaClass caught) {
+        return caught.isEquivalentTo(DomainException.class) || caught.isAssignableTo(AssertionException.class);
+    }
+
+    private static ArchCondition<JavaClass> catchNoDomainRefusal() {
+        return new ArchCondition<>("catch neither DomainException itself nor an assertion's refusal") {
+            @Override
+            public void check(JavaClass adapter, ConditionEvents events) {
+                adapter.getCodeUnits().stream()
+                        .flatMap(unit -> unit.getTryCatchBlocks().stream())
+                        .filter(block -> block.getCaughtThrowables().stream().anyMatch(ArchitectureTest::isADomainRefusal))
+                        .forEach(block -> events.add(SimpleConditionEvent.violated(
+                                block,
+                                "%s catches a domain refusal at %s; check the record for what it lacks before building from it"
+                                        .formatted(adapter.getSimpleName(), block.getSourceCodeLocation()))));
             }
         };
     }

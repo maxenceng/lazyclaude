@@ -21,6 +21,10 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitResult;
  */
 public final class BranchChangesRepository implements BranchChangesPort {
 
+    private static final String DIFF = "diff";
+    private static final String NAMES_ONLY = "--name-only";
+    private static final String SINCE_FORK = "%s...%s";
+    private static final String END_OF_OPTIONS = "--";
     private static final String GIT = "git";
     private static final String MAIN = "main";
 
@@ -37,7 +41,7 @@ public final class BranchChangesRepository implements BranchChangesPort {
     /** @throws BranchChangesUnavailableException when git cannot be run */
     @Override
     public BranchChanges changesOf(Project project, TicketBranch branch) {
-        GitResult diffed = run(project.root(), List.of("diff", "--name-only", "%s...%s".formatted(MAIN, branch.value()), "--"));
+        GitResult diffed = run(project.root(), List.of(DIFF, NAMES_ONLY, SINCE_FORK.formatted(MAIN, branch.value()), END_OF_OPTIONS));
         if (!diffed.succeeded()) {
             return new UnreadChanges();
         }

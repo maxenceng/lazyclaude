@@ -26,6 +26,7 @@ import dev.tamboui.style.Style;
  */
 final class TicketText {
 
+    private static final String PAD = " ";
     private static final String FACT_SEPARATOR = " · ";
     private static final String KEY_GAP = "  ";
     private static final String RULE = "─";
@@ -118,6 +119,6 @@ final class TicketText {
     }
 
     private static String keyed(String key, String value, int keyWidth) {
-        return key + " ".repeat(keyWidth - key.length()) + KEY_GAP + value;
+        return key + PAD.repeat(keyWidth - key.length()) + KEY_GAP + value;
     }
 }

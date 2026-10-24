@@ -101,6 +101,12 @@ class ReviewQueryPendingTest {
     }
 
     @Test
+    void shouldRefuseARangeAcrossSidesSayingWhyInsteadOfFailing() {
+        assertThat(query.anchorOf(twoFileDiffView(), new DiffLineIndex(1), new DiffLineIndex(2)))
+                .isEqualTo(new RefusedAnchorView(new Reason("a range must stay on one side of the diff")));
+    }
+
+    @Test
     void shouldRefuseToAnchorACommentWhileTheDiffIsNotRead() {
         assertThat(query.anchorOf(loadingDiffView(), new DiffLineIndex(0), new DiffLineIndex(0)))
                 .isEqualTo(new RefusedAnchorView(new Reason("that line is no longer in the diff")));
