@@ -80,9 +80,9 @@ public record LiveSessionView(
     /** What the session's row says of where it lives, none when it lives in neither kitty nor tmux. */
     private static Optional<ResidenceName> nameOf(Residence residence) {
         return switch (residence) {
-            case InKitty window -> Optional.of(KITTY);
-            case InTmux pane -> Optional.of(TMUX);
-            case Nowhere nowhere -> Optional.empty();
+            case InKitty _ -> Optional.of(KITTY);
+            case InTmux _ -> Optional.of(TMUX);
+            case Nowhere _ -> Optional.empty();
         };
     }
 

@@ -65,7 +65,7 @@ final class PullRequestText {
     static List<DetailRow> rows(
             TicketView ticket, PullRequestsView pullRequests, Optional<PendingReviewView> pending, int keyWidth, int width) {
         return switch (pullRequests) {
-            case CheckingPullRequestsView checking -> List.of(dimRow(PR_KEY, CHECKING, keyWidth));
+            case CheckingPullRequestsView _ -> List.of(dimRow(PR_KEY, CHECKING, keyWidth));
             case UnavailablePullRequestsView unavailable ->
                 List.of(dimRow(PR_KEY, UNKNOWN.formatted(unavailable.reason().value()), keyWidth));
             case OpenPullRequestsView open ->

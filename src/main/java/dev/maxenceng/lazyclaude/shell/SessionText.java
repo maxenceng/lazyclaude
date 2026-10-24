@@ -86,21 +86,21 @@ final class SessionText {
 
     static String glyph(SessionState state) {
         return switch (state) {
-            case Busy busy -> BUSY_GLYPH;
-            case YourTurn yourTurn -> YOUR_TURN_GLYPH;
-            case WaitingForPermission permission -> PERMISSION_GLYPH;
-            case WaitingForInput input -> INPUT_GLYPH;
-            case Unknown unknown -> UNKNOWN_GLYPH;
+            case Busy _ -> BUSY_GLYPH;
+            case YourTurn _ -> YOUR_TURN_GLYPH;
+            case WaitingForPermission _ -> PERMISSION_GLYPH;
+            case WaitingForInput _ -> INPUT_GLYPH;
+            case Unknown _ -> UNKNOWN_GLYPH;
         };
     }
 
     static Color colour(SessionState state) {
         return switch (state) {
-            case Busy busy -> Color.GREEN;
-            case YourTurn yourTurn -> Color.CYAN;
-            case WaitingForPermission permission -> Color.RED;
-            case WaitingForInput input -> Color.YELLOW;
-            case Unknown unknown -> Color.GRAY;
+            case Busy _ -> Color.GREEN;
+            case YourTurn _ -> Color.CYAN;
+            case WaitingForPermission _ -> Color.RED;
+            case WaitingForInput _ -> Color.YELLOW;
+            case Unknown _ -> Color.GRAY;
         };
     }
 
@@ -187,7 +187,7 @@ final class SessionText {
         return switch (session.title()) {
             case AiTitle title -> title.value();
             case FirstPrompt prompt -> prompt.value();
-            case NoTitle none -> session.id().shortValue();
+            case NoTitle _ -> session.id().shortValue();
         };
     }
 
@@ -198,11 +198,11 @@ final class SessionText {
 
     static String label(SessionState state) {
         return switch (state) {
-            case Busy busy -> BUSY_LABEL;
-            case YourTurn yourTurn -> YOUR_TURN_LABEL;
-            case WaitingForPermission permission -> PERMISSION_LABEL;
+            case Busy _ -> BUSY_LABEL;
+            case YourTurn _ -> YOUR_TURN_LABEL;
+            case WaitingForPermission _ -> PERMISSION_LABEL;
             case WaitingForInput input -> waitingForInput(input);
-            case Unknown unknown -> UNKNOWN_LABEL;
+            case Unknown _ -> UNKNOWN_LABEL;
         };
     }
 
@@ -210,7 +210,7 @@ final class SessionText {
     static List<DetailRow> facts(LiveSessionView session) {
         Stream<DetailRow> version = switch (session.version()) {
             case Version known -> Stream.of(fact(VERSION, known.value()));
-            case NoVersion none -> Stream.empty();
+            case NoVersion _ -> Stream.empty();
         };
         return Stream.concat(
                         Stream.of(
@@ -289,7 +289,7 @@ final class SessionText {
     private static String toolCall(ToolCallEntry call) {
         return switch (call.argument()) {
             case ToolInput input -> TOOL_CALL_WITH_ARGUMENT.formatted(call.tool().value(), input.value());
-            case NoToolInput none -> TOOL_CALL.formatted(call.tool().value());
+            case NoToolInput _ -> TOOL_CALL.formatted(call.tool().value());
         };
     }
 
@@ -300,7 +300,7 @@ final class SessionText {
     private static String waitingForInput(WaitingForInput input) {
         return switch (input.reason()) {
             case WaitingReason reason -> INPUT_REASON_FORMAT.formatted(reason.value());
-            case NoWaitingReason none -> INPUT_LABEL;
+            case NoWaitingReason _ -> INPUT_LABEL;
         };
     }
 }

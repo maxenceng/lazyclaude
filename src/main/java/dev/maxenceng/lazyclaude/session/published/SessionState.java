@@ -8,11 +8,11 @@ public sealed interface SessionState permits Busy, YourTurn, WaitingForPermissio
     /** What this state asks of you, if anything: busy and unknown ask nothing. */
     default Optional<Marker> marker() {
         return switch (this) {
-            case WaitingForPermission permission -> Optional.of(Marker.WAITING_FOR_PERMISSION);
-            case WaitingForInput input -> Optional.of(Marker.WAITING_FOR_INPUT);
-            case YourTurn yourTurn -> Optional.of(Marker.YOUR_TURN);
-            case Busy busy -> Optional.empty();
-            case Unknown unknown -> Optional.empty();
+            case WaitingForPermission _ -> Optional.of(Marker.WAITING_FOR_PERMISSION);
+            case WaitingForInput _ -> Optional.of(Marker.WAITING_FOR_INPUT);
+            case YourTurn _ -> Optional.of(Marker.YOUR_TURN);
+            case Busy _ -> Optional.empty();
+            case Unknown _ -> Optional.empty();
         };
     }
 
@@ -21,9 +21,9 @@ public sealed interface SessionState permits Busy, YourTurn, WaitingForPermissio
         return switch (this) {
             case WaitingForPermission permission -> Optional.of(permission.reason());
             case WaitingForInput input -> Optional.of(input.reason());
-            case Busy busy -> Optional.empty();
-            case YourTurn yourTurn -> Optional.empty();
-            case Unknown unknown -> Optional.empty();
+            case Busy _ -> Optional.empty();
+            case YourTurn _ -> Optional.empty();
+            case Unknown _ -> Optional.empty();
         };
     }
 }

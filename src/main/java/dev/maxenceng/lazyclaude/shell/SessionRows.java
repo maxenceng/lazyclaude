@@ -45,7 +45,7 @@ final class SessionRows {
     List<SessionRow> visible() {
         return switch (sessions) {
             case AvailableSessionsView available -> rowsOf(available);
-            case UnavailableSessionsView unavailable -> List.of();
+            case UnavailableSessionsView _ -> List.of();
         };
     }
 

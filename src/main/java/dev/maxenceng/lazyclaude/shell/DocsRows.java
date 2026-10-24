@@ -34,7 +34,7 @@ final class DocsRows {
     List<DocsRow> visible() {
         return switch (docs) {
             case DocsTreeView tree -> list(tree.documents(), tree.folders(), 0).toList();
-            case UnavailableDocsView unavailable -> List.of();
+            case UnavailableDocsView _ -> List.of();
         };
     }
 

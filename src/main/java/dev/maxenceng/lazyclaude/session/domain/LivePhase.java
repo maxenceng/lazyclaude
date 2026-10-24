@@ -17,11 +17,11 @@ public record LivePhase(LiveSession session) implements HostedPhase {
     @Override
     public boolean isBusyOrWaiting() {
         return switch (session.state()) {
-            case Busy busy -> true;
-            case WaitingForPermission permission -> true;
-            case WaitingForInput input -> true;
-            case YourTurn yourTurn -> false;
-            case Unknown unknown -> false;
+            case Busy _ -> true;
+            case WaitingForPermission _ -> true;
+            case WaitingForInput _ -> true;
+            case YourTurn _ -> false;
+            case Unknown _ -> false;
         };
     }
 }

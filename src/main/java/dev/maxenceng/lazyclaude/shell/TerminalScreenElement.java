@@ -124,7 +124,7 @@ final class TerminalScreenElement implements Element {
 
     private static Color colour(CellColour colour) {
         return switch (colour) {
-            case DefaultColour none -> Color.RESET;
+            case DefaultColour _ -> Color.RESET;
             case IndexedColour indexed -> Color.indexed(indexed.index());
             case RgbColour rgb ->
                 Color.rgb(

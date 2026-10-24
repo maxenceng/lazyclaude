@@ -63,7 +63,7 @@ public record Ticket(
     /** The first `# ` line of the body outside a code fence, stripped; derived so it can never disagree with the body. */
     public TicketTitle title() {
         return switch (body) {
-            case NoBody noBody -> new NoTitle();
+            case NoBody _ -> new NoTitle();
             case Body present -> titleIn(present.value());
         };
     }

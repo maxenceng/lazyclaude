@@ -67,9 +67,9 @@ final class SessionRowsElement implements Element {
                         new MiddleText(NOTHING, plain, SessionText.olderLabel(older), plain.dim(), NOTHING), NOTHING, plain);
             case SectionHeaderRow header ->
                 frame.buffer().setString(area.x(), y, RowsElement.fit(header.label(), area.width()), Style.EMPTY.dim());
-            case NoSessionRow none -> dimLabel(frame, area, y, SessionText.noSessionLabel(), plain);
+            case NoSessionRow _ -> dimLabel(frame, area, y, SessionText.noSessionLabel(), plain);
             case NewSessionRow newSession -> dimLabel(frame, area, y, SessionText.newSessionLabel(newSession), plain);
-            case StartingSessionRow starting ->
+            case StartingSessionRow _ ->
                 line(frame, area, y, SessionText.startingGlyph(), plain.dim(),
                         new MiddleText(NOTHING, plain, SessionText.startingLabel(), plain.dim(), NOTHING), SessionText.paneLabel(), plain);
         }

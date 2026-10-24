@@ -97,7 +97,7 @@ public final class PtyHostRepository implements HostPort {
 
     private List<String> argv(LaunchCommand command) {
         return switch (command) {
-            case NewClaude plain -> claude;
+            case NewClaude _ -> claude;
             case ResumeClaude resume -> Stream.concat(claude.stream(), Stream.of(RESUME_FLAG, resume.session().value()))
                     .toList();
             case TicketClaude run -> Stream.concat(

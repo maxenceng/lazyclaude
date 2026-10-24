@@ -53,7 +53,7 @@ final class TranscriptPane {
                 offset = entriesRead.next();
                 notice = Optional.empty();
             }
-            case NoTranscriptView none -> {
+            case NoTranscriptView _ -> {
                 entries = List.of();
                 offset = TranscriptOffset.start();
                 notice = Optional.of(SessionText.noTranscriptNotice());

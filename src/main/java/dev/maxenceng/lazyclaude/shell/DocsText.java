@@ -21,8 +21,8 @@ final class DocsText {
         return switch (document) {
             case ReadDocumentView read ->
                 switch (read.text()) {
-                    case Content content -> List.of();
-                    case EmptyDocument empty -> List.of(new DetailRow(EMPTY_DOCUMENT, Style.EMPTY.dim()));
+                    case Content _ -> List.of();
+                    case EmptyDocument _ -> List.of(new DetailRow(EMPTY_DOCUMENT, Style.EMPTY.dim()));
                 };
             case UnreadableDocumentView unreadable ->
                 List.of(
@@ -36,9 +36,9 @@ final class DocsText {
             case ReadDocumentView read ->
                 switch (read.text()) {
                     case Content content -> Optional.of(content.value());
-                    case EmptyDocument empty -> Optional.empty();
+                    case EmptyDocument _ -> Optional.empty();
                 };
-            case UnreadableDocumentView unreadable -> Optional.empty();
+            case UnreadableDocumentView _ -> Optional.empty();
         };
     }
 }

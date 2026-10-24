@@ -984,7 +984,7 @@ public final class Shell extends ToolkitApp {
                 sized(List.of(started.id()), paneSize());
                 focusOn(Focus.DOCK);
             }
-            case NotStartedHost none -> {}
+            case NotStartedHost _ -> {}
         }
         return true;
     }
@@ -1214,7 +1214,7 @@ public final class Shell extends ToolkitApp {
             case PastSessionRow past when past.session().isUnlinked() -> resume(past.session());
             case PastSessionRow past -> selectedTicket().map(ticket -> resumeInTicket(past.session(), ticket)).orElse(false);
             case StartingSessionRow starting -> focusTab(starting.tab().id());
-            case NewSessionRow newSession -> selectedTicket().map(this::newSessionFor).orElse(false);
+            case NewSessionRow _ -> selectedTicket().map(this::newSessionFor).orElse(false);
             default -> false;
         };
     }
@@ -1419,13 +1419,13 @@ public final class Shell extends ToolkitApp {
                 .map(row -> switch (row) {
                     case LiveSessionRow live when live.session().isHosted() ->
                         new DetailElement(width -> SessionText.facts(live.session()), Optional.empty(), mainViewScroll);
-                    case LiveSessionRow live -> transcriptDetail();
-                    case PastSessionRow past -> transcriptDetail();
-                    case OlderSessionsRow older -> column();
-                    case SectionHeaderRow header -> column();
-                    case NoSessionRow none -> column();
-                    case NewSessionRow newSession -> column();
-                    case StartingSessionRow starting -> column();
+                    case LiveSessionRow _ -> transcriptDetail();
+                    case PastSessionRow _ -> transcriptDetail();
+                    case OlderSessionsRow _ -> column();
+                    case SectionHeaderRow _ -> column();
+                    case NoSessionRow _ -> column();
+                    case NewSessionRow _ -> column();
+                    case StartingSessionRow _ -> column();
                 })
                 .orElseGet(() -> column());
     }
@@ -1490,7 +1490,7 @@ public final class Shell extends ToolkitApp {
     private Element docsDetail() {
         return docs.selected()
                 .map(row -> switch (row) {
-                    case FolderRow folder -> column();
+                    case FolderRow _ -> column();
                     case DocumentRow document -> documentDetail(document.document());
                 })
                 .orElseGet(() -> column());
@@ -1502,7 +1502,7 @@ public final class Shell extends ToolkitApp {
 
     private Element boardDetail() {
         return switch (board.selected()) {
-            case HeaderRow header -> column();
+            case HeaderRow _ -> column();
             case TicketRow row -> ticketDetail(row.ticket());
             case UnreadableRow row ->
                 column(text(row.unreadable().file().value()).bold(), text(row.unreadable().reason().value()));
