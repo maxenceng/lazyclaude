@@ -40,7 +40,7 @@ final class DocsRows {
 
     /** Why there is no tree to show, when {@code docs/} could not be listed. */
     Optional<Reason> unavailable() {
-        return docs instanceof UnavailableDocsView(var reason) ? Optional.of(reason) : Optional.empty();
+        return docs instanceof UnavailableDocsView(Reason reason) ? Optional.of(reason) : Optional.empty();
     }
 
     boolean isEmpty() {

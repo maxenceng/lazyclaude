@@ -78,8 +78,8 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
 
     private WatchServiceState watchOver(WatchFallback fallback) {
         return switch (WatchServiceState.of(services)) {
-            case Watching(var service) -> register(service, fallback);
-            case NotWatching(var reason) -> giveUpWatching(reason, fallback);
+            case Watching(WatchService service) -> register(service, fallback);
+            case NotWatching(String reason) -> giveUpWatching(reason, fallback);
         };
     }
 
@@ -99,7 +99,7 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 boolean relevant = switch (state) {
-                    case Watching(var service) -> waitForEvents(service);
+                    case Watching(WatchService service) -> waitForEvents(service);
                     case NotWatching _ -> sleepThroughSweep();
                 };
                 if (relevant) {

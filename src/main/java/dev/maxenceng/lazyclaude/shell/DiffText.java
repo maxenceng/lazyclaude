@@ -12,6 +12,7 @@ import dev.maxenceng.lazyclaude.review.published.DeletedFile;
 import dev.maxenceng.lazyclaude.review.published.DiffLine;
 import dev.maxenceng.lazyclaude.review.published.DiffLineContent;
 import dev.maxenceng.lazyclaude.review.published.DiffLineNumber;
+import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.FileStatus;
 import dev.maxenceng.lazyclaude.review.published.ModifiedFile;
 import dev.maxenceng.lazyclaude.review.published.RemovedLine;
@@ -79,7 +80,7 @@ final class DiffText {
 
     /** A file's name as the Files panel and the rule name it: {@code old → new} for a renamed one. */
     static String label(DiffFileView file) {
-        return file.status() instanceof RenamedFile(var from)
+        return file.status() instanceof RenamedFile(DiffPath from)
                 ? RENAMED.formatted(from.value(), file.path().value())
                 : file.path().value();
     }

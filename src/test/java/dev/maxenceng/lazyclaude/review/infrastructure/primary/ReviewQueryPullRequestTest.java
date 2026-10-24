@@ -38,6 +38,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.review.domain.PullRequestDiffPort;
+import dev.maxenceng.lazyclaude.review.domain.ReviewThread;
 import dev.maxenceng.lazyclaude.review.domain.ThreadPort;
 
 @ExtendWith(MockitoExtension.class)
@@ -94,8 +95,8 @@ class ReviewQueryPullRequestTest {
 
     @Test
     void shouldViewTheThreadsByFileAndLineWithWhetherEachIsOpen() {
-        var late = threadAt(secondDiffPath(), rightOn(9));
-        var early = threadAt(diffPath(), rightOn(2));
+        ReviewThread late = threadAt(secondDiffPath(), rightOn(9));
+        ReviewThread early = threadAt(diffPath(), rightOn(2));
         when(threads.threads(project(), pullRequestNumber())).thenReturn(List.of(late, early));
 
         assertThat(query.threadsOf(OF_THE_PULL_REQUEST)).isEqualTo(readThreadsViewOf(viewOf(early), viewOf(late)));

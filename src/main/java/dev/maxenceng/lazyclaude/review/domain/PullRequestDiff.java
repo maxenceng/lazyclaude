@@ -128,7 +128,7 @@ public record PullRequestDiff(List<DiffFile> files) {
     }
 
     private static int indexOf(ThreadLine line) {
-        return line instanceof OnDiffLine(var index) ? index.value() : 0;
+        return line instanceof OnDiffLine(DiffLineIndex index) ? index.value() : 0;
     }
 
     private static ThreadLine lineOf(ReviewThread thread, Map<LineAnchor, DiffLineIndex> lineOfAnchor) {
@@ -136,7 +136,7 @@ public record PullRequestDiff(List<DiffFile> files) {
     }
 
     private static ThreadLine lineOf(DiffPath path, ThreadPosition position, Map<LineAnchor, DiffLineIndex> lineOfAnchor) {
-        if (!(position instanceof PlacedThread(var side, _, var last))) {
+        if (!(position instanceof PlacedThread(ThreadSide side, _, DiffLineNumber last))) {
             return new NoDiffLine();
         }
         return Optional.ofNullable(lineOfAnchor.get(LineAnchor.builder().path(path).side(side).number(last).build()))

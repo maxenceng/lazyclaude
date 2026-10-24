@@ -77,7 +77,7 @@ public record PendingReviewManager(PendingReviewPort reviews) {
 
     /** The pending {@code comments} with the diff lines they show under: every one on no line until the diff is read. */
     public PendingCommentsInDiff pendingInDiff(DiffReading diff, List<PendingComment> comments) {
-        if (diff instanceof ReadDiff(var read)) {
+        if (diff instanceof ReadDiff(PullRequestDiff read)) {
             return read.place(comments);
         }
         return new PendingCommentsInDiff(comments.stream()
@@ -87,7 +87,7 @@ public record PendingReviewManager(PendingReviewPort reviews) {
 
     /** The comment on the diff line at {@code first}, or on the range from it to {@code last}; there is no line to comment on until the diff is read. */
     public PendingOnDiff anchor(DiffReading diff, DiffLineIndex first, DiffLineIndex last) {
-        if (diff instanceof ReadDiff(var read)) {
+        if (diff instanceof ReadDiff(PullRequestDiff read)) {
             return read.commentOn(first, last);
         }
         throw new DiffLineMissingException();

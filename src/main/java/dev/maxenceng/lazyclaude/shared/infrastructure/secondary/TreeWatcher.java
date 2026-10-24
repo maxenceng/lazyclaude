@@ -109,15 +109,15 @@ public final class TreeWatcher implements AutoCloseable {
     @Override
     public void close() {
         Optional.ofNullable(worker).ifPresent(Thread::interrupt);
-        if (state instanceof Watching(var service)) {
+        if (state instanceof Watching(WatchService service)) {
             closeQuietly(service);
         }
     }
 
     private void register(TreeScope scope, Path from) {
         switch (state) {
-            case Watching(var service) -> registerUnder(service, scope, from);
-            case NotWatching(var reason) -> giveUp(scope, reason);
+            case Watching(WatchService service) -> registerUnder(service, scope, from);
+            case NotWatching(String reason) -> giveUp(scope, reason);
         }
     }
 
@@ -142,7 +142,7 @@ public final class TreeWatcher implements AutoCloseable {
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 boolean relevant = switch (state) {
-                    case Watching(var service) -> batch(service);
+                    case Watching(WatchService service) -> batch(service);
                     case NotWatching _ -> sleepThroughPoll();
                 };
                 if (!polled.isEmpty() && System.nanoTime() - nextPoll >= 0) {

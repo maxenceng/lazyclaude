@@ -6,8 +6,6 @@ package dev.maxenceng.lazyclaude.error.domain;
  */
 public abstract class DomainException extends RuntimeException {
 
-    private static final long serialVersionUID = 1L;
-
     private final DomainErrorStatus status;
 
     protected DomainException(DomainErrorStatus status, String message) {

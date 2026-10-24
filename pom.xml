@@ -141,10 +141,11 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>${compiler.version}</version>
+				<!-- A warning fails the build (ADR 0045); serial is off since no exception is ever serialised. -->
 				<configuration>
 					<showWarnings>true</showWarnings>
 					<compilerArgs>
-						<arg>-Xlint:all</arg>
+						<arg>-Xlint:all,-serial</arg>
 						<arg>-Werror</arg>
 					</compilerArgs>
 				</configuration>

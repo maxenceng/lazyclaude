@@ -7,8 +7,6 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
 public abstract sealed class KittyConfigException extends DomainException
         permits KittyConfigUnreadableException, KittyConfigUnwritableException {
 
-    private static final long serialVersionUID = 1L;
-
     KittyConfigException(String reason, Throwable cause) {
         super(DomainErrorStatus.UNAVAILABLE, reason, cause);
     }

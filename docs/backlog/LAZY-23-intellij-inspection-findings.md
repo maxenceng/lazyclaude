@@ -64,3 +64,6 @@ from the IDE (*Code → Inspect Code*, then export) or runs it with the IDE clos
 
 Refine read the IDE's export (*Code → Inspect Code*, production sources, 381 findings over 25 inspections). The headless run fails
 even with the IDE closed: IntelliJ 2026.2.1's `inspect.sh` throws "Tools are not initialized" in `GlobalInspectionContextBase`.
+
+Review settled two more on PR #41: the `serial` lint is off (`-Xlint:all,-serial`), as no exception is ever serialised and a
+`serialVersionUID` on each said nothing; and `var` is banned in main and test sources, failed by `make var-check` (ADR 0045).

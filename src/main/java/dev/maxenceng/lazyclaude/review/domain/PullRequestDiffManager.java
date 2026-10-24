@@ -41,7 +41,7 @@ public record PullRequestDiffManager(PullRequestDiffPort diffs, ThreadPort threa
         if (!(threads instanceof ReadThreads read)) {
             return new ThreadsInDiff(List.of());
         }
-        if (diff instanceof ReadDiff(var placed)) {
+        if (diff instanceof ReadDiff(PullRequestDiff placed)) {
             return placed.place(read);
         }
         return new ThreadsInDiff(read.byFileAndLine().stream().map(thread -> ThreadInDiff.builder().thread(thread).line(new NoDiffLine()).build()).toList());

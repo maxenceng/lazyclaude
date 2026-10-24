@@ -8,6 +8,8 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellWarning;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import dev.tamboui.style.Color;
@@ -24,8 +26,8 @@ class ShellWarningsTest {
 
     @Test
     void shouldLeaveEveryOtherRowAsItWasWhenAWarningIsShown() {
-        var without = Screen.of(shellWarning()).lines();
-        var with = Screen.of(shellWarning(warningView())).lines();
+        List<String> without = Screen.of(shellWarning()).lines();
+        List<String> with = Screen.of(shellWarning(warningView())).lines();
 
         assertThat(with.subList(1, with.size())).isEqualTo(without.subList(1, without.size()));
     }
@@ -76,7 +78,7 @@ class ShellWarningsTest {
 
     @Test
     void shouldNeverWrapALongWarningOntoTheRowBelow() {
-        var screen = Screen.of(shellWarning(warningViewOf("y".repeat(300), 1)));
+        Screen screen = Screen.of(shellWarning(warningViewOf("y".repeat(300), 1)));
 
         assertThat(screen.lines().get(1)).startsWith("╭");
         assertThat(screen.lines()).as("the status line stays one row").hasSize(24);

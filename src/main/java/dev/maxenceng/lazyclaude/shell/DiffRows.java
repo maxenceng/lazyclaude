@@ -76,7 +76,7 @@ final class DiffRows {
             PendingCommentsInDiffView pending,
             Optional<CommentBox> box,
             boolean showResolved) {
-        if (!(diff instanceof ReadDiffView(var files))) {
+        if (!(diff instanceof ReadDiffView(List<DiffFileView> files))) {
             return NONE;
         }
         List<DiffRow> lineRows = IntStream.range(0, files.size())

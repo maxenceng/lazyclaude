@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 public final class GitFixture {
 
@@ -46,7 +47,7 @@ public final class GitFixture {
 
     public static Path removedWorktreeOn(Path repository, Path at, String branch) throws Exception {
         Path linked = linkedWorktreeOn(repository, at, branch);
-        try (var paths = Files.walk(linked)) {
+        try (Stream<Path> paths = Files.walk(linked)) {
             for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
                 Files.delete(path);
             }
@@ -117,7 +118,7 @@ public final class GitFixture {
 
     public static void removeBacklog(Path repository) throws IOException {
         Path backlog = repository.resolve("docs").resolve("backlog");
-        try (var files = Files.list(backlog)) {
+        try (Stream<Path> files = Files.list(backlog)) {
             for (Path file : files.toList()) {
                 Files.delete(file);
             }

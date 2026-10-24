@@ -136,7 +136,7 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
         while (!Thread.currentThread().isInterrupted()) {
             boolean everything = false;
             switch (state) {
-                case Watching(var service) -> {
+                case Watching(WatchService service) -> {
                     try {
                         TranscriptChanges changes = drain(service);
                         pending = pending.changed(changes.files(), Instant.now());
@@ -226,8 +226,8 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
             return new NotWatching(NO_ROOT);
         }
         return switch (WatchServiceState.of(services)) {
-            case Watching(var service) -> register(service, fallback);
-            case NotWatching(var reason) -> giveUpWatching(reason, fallback);
+            case Watching(WatchService service) -> register(service, fallback);
+            case NotWatching(String reason) -> giveUpWatching(reason, fallback);
         };
     }
 

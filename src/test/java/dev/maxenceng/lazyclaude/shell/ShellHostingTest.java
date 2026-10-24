@@ -44,6 +44,8 @@ import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.PastedText;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
+import dev.tamboui.layout.Position;
+import dev.tamboui.tui.bindings.Bindings;
 import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.event.MouseEvent;
 
@@ -338,7 +340,7 @@ class ShellHostingTest {
     @Test
     void shouldHandTheWheelOverThePaneToClaudeAtTheMatchingCell() {
         Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
-        var origin = Screen.of(shell).dockContentOrigin();
+        Position origin = Screen.of(shell).dockContentOrigin();
 
         assertThat(shell.mouse(MouseEvent.scrollUp(origin.x() + 3, origin.y() + 2))).isTrue();
 
@@ -348,7 +350,7 @@ class ShellHostingTest {
     @Test
     void shouldHandAClickOverThePaneToClaudeEvenWhileThePanelsHaveFocus() {
         Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
-        var origin = Screen.of(shell).dockContentOrigin();
+        Position origin = Screen.of(shell).dockContentOrigin();
 
         shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
 
@@ -368,7 +370,7 @@ class ShellHostingTest {
     @Test
     void shouldLeaveAMouseEventUnhandledWhenThereIsNoTab() {
         Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
-        var origin = Screen.of(shell).dockContentOrigin();
+        Position origin = Screen.of(shell).dockContentOrigin();
 
         assertThat(shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x(), origin.y()))).isFalse();
     }
@@ -434,7 +436,7 @@ class ShellHostingTest {
     @Test
     void shouldLeaveTabAndShiftTabUnboundFromFocusSoTheyReachTheSession() {
         Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
-        var bindings = shell.config().bindings();
+        Bindings bindings = shell.config().bindings();
 
         assertThat(bindings.triggersFor("focusNext")).isEmpty();
         assertThat(bindings.triggersFor("focusPrevious")).isEmpty();

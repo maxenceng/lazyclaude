@@ -5,8 +5,6 @@ import java.io.IOException;
 /** No terminal backend could be opened, so the screen cannot start. */
 final class TerminalUnavailableException extends IllegalStateException {
 
-    private static final long serialVersionUID = 1L;
-
     TerminalUnavailableException(IOException cause) {
         super("cannot open the terminal: %s".formatted(cause.getMessage()), cause);
     }

@@ -6,8 +6,6 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
 /** The live sessions could not be read, or placed in their project; the message says why, for the person reading the screen. */
 public final class SessionsUnavailableException extends DomainException {
 
-    private static final long serialVersionUID = 1L;
-
     public SessionsUnavailableException(String reason) {
         super(DomainErrorStatus.UNAVAILABLE, reason);
     }

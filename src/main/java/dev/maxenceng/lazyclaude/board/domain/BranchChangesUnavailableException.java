@@ -6,8 +6,6 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
 /** Git could not be run to say what a ticket branch changes from {@code main}, which leaves no board to read. */
 public final class BranchChangesUnavailableException extends DomainException {
 
-    private static final long serialVersionUID = 1L;
-
     public BranchChangesUnavailableException(String reason, Throwable cause) {
         super(DomainErrorStatus.UNAVAILABLE, reason, cause);
     }

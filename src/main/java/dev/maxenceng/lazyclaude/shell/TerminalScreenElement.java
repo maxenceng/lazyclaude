@@ -5,6 +5,8 @@ import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.published.CellColour;
+import dev.maxenceng.lazyclaude.session.published.CellColumn;
+import dev.maxenceng.lazyclaude.session.published.CellRow;
 import dev.maxenceng.lazyclaude.session.published.CursorAt;
 import dev.maxenceng.lazyclaude.session.published.DefaultColour;
 import dev.maxenceng.lazyclaude.session.published.IndexedColour;
@@ -90,7 +92,7 @@ final class TerminalScreenElement implements Element {
 
     private void placeCursor(Frame frame, Rect area) {
         ScreenCursor cursor = screen.cursor();
-        if (cursor instanceof CursorAt(var column, var row)
+        if (cursor instanceof CursorAt(CellColumn column, CellRow row)
                 && column.value() < area.width()
                 && row.value() < area.height()) {
             frame.setCursorPosition(area.x() + column.value(), area.y() + row.value());

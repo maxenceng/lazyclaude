@@ -1048,7 +1048,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private void showSelectedTicketsSessions() {
-        Optional<LinkedTicketId> ticket = board.selected() instanceof TicketRow(var selected)
+        Optional<LinkedTicketId> ticket = board.selected() instanceof TicketRow(TicketView selected)
                 ? Optional.of(new LinkedTicketId(selected.id().value()))
                 : Optional.empty();
         sessions.showTicket(ticket);
@@ -1056,7 +1056,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Optional<TicketView> selectedTicket() {
-        return board.selected() instanceof TicketRow(var ticket) ? Optional.of(ticket) : Optional.empty();
+        return board.selected() instanceof TicketRow(TicketView ticket) ? Optional.of(ticket) : Optional.empty();
     }
 
     /** Asks {@code session} again which verb the shown ticket's {@code n new} row offers; a ticket with no verb left offers none. */
