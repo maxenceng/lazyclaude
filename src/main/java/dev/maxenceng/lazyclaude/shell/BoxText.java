@@ -96,16 +96,35 @@ final class BoxText {
         return inline(box, width, indent).size();
     }
 
-    /** The rows a popup holds for a box: {@code above} first, then a rule, then the box's text and what stands under it. */
-    static List<String> popupRows(CommentBox box, int inner, List<String> above) {
+    /**
+     * The rows a popup shows for a box within {@code room} rows: {@code above} first, then a rule, then the box's text and what stands under
+     * it, the top ones dropped when they do not all fit so the caret stays in view.
+     */
+    static List<String> popupRows(CommentBox box, int inner, List<String> above, int room) {
+        List<String> rows = allPopupRows(box, inner, above);
+        int top = popupTop(rows, caretAmong(box, inner, above.size()), room);
+        return rows.subList(top, Math.min(rows.size(), top + room));
+    }
+
+    /** The cursor within the rows {@link #popupRows} shows. */
+    static BoxCaret popupCaret(CommentBox box, int inner, List<String> above, int room) {
+        BoxCaret caret = caretAmong(box, inner, above.size());
+        return new BoxCaret(caret.row() - popupTop(allPopupRows(box, inner, above), caret, room), caret.column());
+    }
+
+    private static List<String> allPopupRows(CommentBox box, int inner, List<String> above) {
         return Stream.of(above.stream(), Stream.of(RULE.repeat(inner)), textRows(box, inner).stream(), status(box).stream())
                 .flatMap(rows -> rows)
                 .toList();
     }
 
-    /** The cursor within a popup's rows, which {@code above} lines and the rule come before the text of. */
-    static BoxCaret popupCaret(CommentBox box, int inner, int above) {
+    private static BoxCaret caretAmong(CommentBox box, int inner, int above) {
         BoxCaret within = caret(box, inner);
         return new BoxCaret(above + 1 + within.row(), within.column());
+    }
+
+    /** The first row shown: as many of the last rows as fit, but never past the caret. */
+    private static int popupTop(List<String> rows, BoxCaret caret, int room) {
+        return Math.clamp(rows.size() - room, 0, caret.row());
     }
 }

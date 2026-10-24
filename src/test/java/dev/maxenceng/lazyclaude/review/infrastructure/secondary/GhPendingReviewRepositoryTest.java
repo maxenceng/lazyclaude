@@ -211,6 +211,16 @@ class GhPendingReviewRepositoryTest {
     }
 
     @Test
+    void shouldBeUnavailableWhenThePendingReviewLacksItsCommit() {
+        String output = pendingPageJson(pendingReviewJson("PRR_1", "", "abc").replace("{\"oid\":\"abc\"}", "null"));
+
+        assertThatThrownBy(() -> readPendingPrinted(root, output))
+                .as("GitHub's schema lets a review's commit be null; that is a reason, not a crash")
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("names no commit");
+    }
+
+    @Test
     void shouldStartAPendingReviewWithNoEventAndAnswerItsId() throws IOException {
         GhPendingReviewRepository repository = pendingRepositoryOver(ghRecordingItsArguments(root, "PRR_1"));
 
@@ -233,7 +243,7 @@ class GhPendingReviewRepositoryTest {
     void shouldAddACommentOnOneLineAsAThreadOfThePendingReviewWithNoStartLine() throws IOException {
         GhPendingReviewRepository repository = pendingRepositoryOver(ghRecordingItsArguments(root, "{}"));
 
-        repository.addThread(projectAt(root), pendingReviewId(), onDiff(diffPath(), rightOn(3)), commentBody());
+        repository.comment(projectAt(root), pendingReviewId(), onDiff(diffPath(), rightOn(3)), commentBody());
 
         assertThat(argumentsRecordedIn(root))
                 .contains("review=PRR_1", "path=src/Board.java", "body=Does this need its own Element?", "line=3", "side=RIGHT")
@@ -245,7 +255,7 @@ class GhPendingReviewRepositoryTest {
     void shouldAddARangeWithItsFirstLineAsItsStartOnTheSameSide() throws IOException {
         GhPendingReviewRepository repository = pendingRepositoryOver(ghRecordingItsArguments(root, "{}"));
 
-        repository.addThread(projectAt(root), pendingReviewId(), onDiff(diffPath(), leftRange(12, 18)), commentBody());
+        repository.comment(projectAt(root), pendingReviewId(), onDiff(diffPath(), leftRange(12, 18)), commentBody());
 
         assertThat(argumentsRecordedIn(root)).contains("line=18", "side=LEFT", "startLine=12", "startSide=LEFT");
     }
@@ -254,7 +264,7 @@ class GhPendingReviewRepositoryTest {
     void shouldSendABodyThatLooksLikeAFileOrAFlagAsPlainText() throws IOException {
         GhPendingReviewRepository repository = pendingRepositoryOver(ghRecordingItsArguments(root, "{}"));
 
-        repository.addThread(projectAt(root), pendingReviewId(), onDiff(diffPath(), rightOn(3)), new CommentBody("@/etc/passwd"));
+        repository.comment(projectAt(root), pendingReviewId(), onDiff(diffPath(), rightOn(3)), new CommentBody("@/etc/passwd"));
 
         assertThat(argumentsRecordedIn(root)).contains("body=@/etc/passwd");
     }

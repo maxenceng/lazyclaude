@@ -25,3 +25,5 @@ the summary cannot be saved before the submit.
 
 - The summary is the one thing ADR 0009's "nothing unsent is lost" does not cover.
 - A summary alone can be submitted: the review is started for it if the pull request has none.
+- A submit GitHub refuses after the review was started for it leaves that review pending and empty; the next read adopts it as
+  `0 pending`.

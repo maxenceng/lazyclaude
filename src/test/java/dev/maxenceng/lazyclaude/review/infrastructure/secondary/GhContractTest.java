@@ -60,7 +60,7 @@ class GhContractTest {
         };
         try {
             PendingOnDiff firstLine = realDiff().commentOn(new DiffLineIndex(0), new DiffLineIndex(0));
-            pendingReviews().addThread(project, review, firstLine, new CommentBody("contract probe: a line comment"));
+            pendingReviews().comment(project, review, firstLine, new CommentBody("contract probe: a line comment"));
             pendingReviews().reply(project, review, realThreads().getFirst().id(), new CommentBody("contract probe: a reply"));
 
             PendingReview read = (PendingReview) realPullRequest().review();

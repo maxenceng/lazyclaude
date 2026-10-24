@@ -64,7 +64,7 @@ class PendingReviewApplicationServiceTest {
         when(reviews.pullRequest(project(), pullRequestNumber())).thenReturn(reviewedPullRequest());
         assertThat(service.comment(project(), pullRequestNumber(), onDiffLine(), commentBody()))
                 .isEqualTo(new WrittenReview(new ReadPendingReview(reviewedPullRequest())));
-        verify(reviews).addThread(project(), pendingReviewId(), onDiffLine(), commentBody());
+        verify(reviews).comment(project(), pendingReviewId(), onDiffLine(), commentBody());
     }
 
     @Test

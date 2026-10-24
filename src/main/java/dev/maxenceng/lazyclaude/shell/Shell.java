@@ -156,6 +156,7 @@ public final class Shell extends ToolkitApp {
     private static final String SESSIONS_UNAVAILABLE = "sessions unavailable: ";
 
     private static final int DEFAULT_PANE_WIDTH = 80;
+    private static final int POPUP_BORDERS = 2;
     private static final int DEFAULT_PANE_HEIGHT = 24;
 
     private static final char QUIT = 'q';
@@ -1056,7 +1057,8 @@ public final class Shell extends ToolkitApp {
     private boolean answerSubmitPrompt(ReviewPane pane, KeyEvent key) {
         submitPrompt = Optional.empty();
         if (key.isChar(YES) && !key.hasCtrl() && !key.hasAlt()) {
-            inReviewOrder(pane, () -> writing.submit(new PendingSubmitPayload(root, pane.number(), pane.summaryToSubmit())), answer -> {
+            PendingSubmitPayload submit = new PendingSubmitPayload(root, pane.number(), pane.summaryToSubmit());
+            inReviewOrder(pane, () -> writing.submit(submit), answer -> {
                 switch (answer) {
                     case WrittenReviewView _ -> submitted();
                     case RefusedWriteView refused -> refusal = Optional.of(NOT_SUBMITTED.formatted(refused.reason().value()));
@@ -1631,13 +1633,14 @@ public final class Shell extends ToolkitApp {
     private Element boxPopup(CommentBox open) {
         int inner = BoxPopupText.inner(mainViewArea.map(Rect::width).orElse(DEFAULT_PANE_WIDTH));
         List<String> above = BoxPopupText.above(open, inner);
+        int room = mainViewArea.map(area -> area.height() - POPUP_BORDERS).orElse(Integer.MAX_VALUE);
         return new PopupElement(
                 BoxPopupText.title(open),
-                BoxText.popupRows(open, inner, above),
+                BoxText.popupRows(open, inner, above, room),
                 Optional.empty(),
                 BoxText.HINT,
                 () -> mainViewArea,
-                open.saving() ? Optional.empty() : Optional.of(BoxText.popupCaret(open, inner, above.size())));
+                open.saving() ? Optional.empty() : Optional.of(BoxText.popupCaret(open, inner, above, room)));
     }
 
     private Element leftColumn() {
@@ -1658,7 +1661,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element reviewPanel(ReviewPane pane) {
-        return panel(REVIEW_PANEL_TITLE, new RowsElement(ReviewText.reviewLines(pane.pending(), pane.typedSummary()), -1, false))
+        return panel(REVIEW_PANEL_TITLE, new RowsElement(ReviewText.reviewLines(pane.pending(), pane.summaryToSubmit()), -1, false))
                 .rounded()
                 .length(REVIEW_PANEL_HEIGHT);
     }

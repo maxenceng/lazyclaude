@@ -116,13 +116,17 @@ final class ShellReviewFixture {
     }
 
     static Shell shellSubmitting(TicketView ticket, PendingReviewCommand writing, HostedSessionCommand hosting) {
+        return shellSubmitting(ticket, writing, hosting, Runnable::run);
+    }
+
+    static Shell shellSubmitting(TicketView ticket, PendingReviewCommand writing, HostedSessionCommand hosting, Executor background) {
         Shell shell = shellOnTheTicket(
                 ticket,
                 openPullRequestsViewOf(pullRequestView()),
                 reviewsAnswering(twoFileDiffView(), readThreadsViewOf(), openPendingViewOf(commentOnView(diffPath(), rightOn(3)))),
                 writing,
                 hosting,
-                Runnable::run);
+                background);
         shell.press(key('p'));
         return shell;
     }

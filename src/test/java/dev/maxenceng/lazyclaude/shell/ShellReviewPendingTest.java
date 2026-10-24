@@ -13,13 +13,19 @@ import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.leftRange;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.outdated;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.pendingOnBothFiles;
+import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.reviewsAnswering;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.shellReviewing;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.threadsOnTwoFiles;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.tamboui.style.Color;
 
 class ShellReviewPendingTest {
@@ -118,5 +124,24 @@ class ShellReviewPendingTest {
                 twoFileDiffView(), readThreadsViewOf(), openPendingViewOf(commentOnView(diffPath(), leftRange(2, 3)))));
 
         assertThat(screen.mainViewRows()).anySatisfy(row -> assertThat(row).contains("✎ L2–3 you"));
+    }
+
+    @Test
+    void shouldKeepTheCommentsSelectionOnARowWhenARereadLandingLastLeavesFewerPendingComments() {
+        ReviewQuery reviews = reviewsAnswering(twoFileDiffView(), readThreadsViewOf(openThreadView(diffPath(), rightOn(3))), pendingOnBothFiles());
+        HeldTasksFixture background = new HeldTasksFixture();
+        Shell shell = ShellReviewFixture.shellOnATicketWithAnOpenPullRequest(reviews, background);
+        shell.press(key('p'));
+        background.runNewestFirst();
+        shell.press(key('h'));
+        shell.press(alt('j'));
+        ShellFixture.pressed(shell, key('j'), 3);
+        when(reviews.pendingOf(any())).thenReturn(openPendingViewOf(commentOnView(diffPath(), rightOn(3))));
+        shell.press(key('R'));
+        background.runNewestFirst();
+
+        shell.press(key('c'));
+
+        assertThat(Screen.of(shell).text()).as("the selection falls back onto the thread, the last row left").contains("esc cancel");
     }
 }

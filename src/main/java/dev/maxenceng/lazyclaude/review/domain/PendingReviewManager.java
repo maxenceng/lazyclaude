@@ -36,7 +36,7 @@ public record PendingReviewManager(PendingReviewPort reviews) {
     public PendingReviewWrite comment(Project project, PullRequestNumber number, PendingOnDiff where, CommentBody body) {
         return written(project, number, () -> {
             if (!body.isBlank()) {
-                reviews.addThread(project, reviewToWriteTo(project, number), where, body);
+                reviews.comment(project, reviewToWriteTo(project, number), where, body);
             }
         });
     }

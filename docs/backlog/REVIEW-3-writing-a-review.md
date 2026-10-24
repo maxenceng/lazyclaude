@@ -1,6 +1,6 @@
 ---
 id: REVIEW-3
-status: in-progress
+status: in-review
 context: review
 type: feature
 tracker_id: 89

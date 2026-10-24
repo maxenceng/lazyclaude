@@ -202,4 +202,38 @@ class ShellReviewSubmitTest {
         assertThat(Screen.of(shell).reversedText()).anySatisfy(row -> assertThat(row).contains("PROJ-1"));
         verifyNoInteractions(hosting);
     }
+
+    @Test
+    void shouldKeepTheLastLineTypedAndTheCaretOnScreenWhenTheSummaryOutgrowsTheMainView() {
+        Shell shell = shellSubmitting(inReviewSlugTicketView(), mock(PendingReviewCommand.class), mock(HostedSessionCommand.class));
+        shell.press(key('S'));
+        Screen.of(shell);
+        typed(shell, "\n".repeat(30) + "the last line");
+
+        Screen screen = Screen.of(shell);
+
+        assertThat(screen.text()).contains("│ the last line");
+        assertThat(screen.cursor()).hasValueSatisfying(at -> assertThat(at.y()).isLessThan(screen.lines().size()));
+    }
+
+    @Test
+    void shouldSubmitTheSummaryAsItWasWhenYWasPressedThoughItIsTypedAgainBeforeTheSubmitRuns() {
+        PendingReviewCommand writing = writingThatWrites(writtenView(noPendingReviewView()));
+        HoldableTasksFixture background = new HoldableTasksFixture();
+        Shell shell = shellSubmitting(inReviewSlugTicketView(), writing, mock(HostedSessionCommand.class), background);
+        shell.press(key('S'));
+        typed(shell, "!");
+        shell.press(ctrl('s'));
+        background.startHolding();
+        shell.press(key('y'));
+        shell.press(key('S'));
+        typed(shell, "?");
+        shell.press(ctrl('s'));
+        shell.press(key('n'));
+
+        background.releaseInOrder();
+
+        verify(writing).submit(new PendingSubmitPayload(
+                project().root(), pullRequestNumber(), new Summary("Looks close. Two nits.\nThe second is about naming.!")));
+    }
 }

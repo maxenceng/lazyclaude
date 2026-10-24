@@ -98,7 +98,7 @@ words mean.
 | Diff line | A `+`, `-` or context line in a hunk; the only rows a cursor or a comment lands on. | `review` |
 | Thread | Comments already on the pull request; *resolved* or *outdated* ones are shown differently. `ReviewThread` in code, beside `java.lang.Thread`. | `review` |
 | Thread's line | The diff line a placed thread shows under: its last line, on the new side for `RIGHT` and the old side for `LEFT`. An outdated thread, or one whose line the diff does not hold, has none. Threads in diff order follow these lines; the ones with none come last. | `review` |
-| Summary | The pending review's body. | `review` |
+| Summary | What the review says as a whole: typed on the review screen, or an adopted pending review's body, and sent as its body by the submit (ADR 0042). | `review` |
 | Submit | Send the pending review as a *Comment* review — the only kind GitHub allows on your own pull request. | `review` |
 | Moved head | The pull request's head is no longer the commit the pending review was written on. Warned about, never blocking. | `review` |
 | Reply | A pending comment answering an existing thread, sent with the pending review rather than on its own. | `review` |

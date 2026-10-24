@@ -111,7 +111,7 @@ public final class GhPendingReviewRepository implements PendingReviewPort {
     }
 
     @Override
-    public void addThread(Project project, PendingReviewId review, PendingOnDiff where, CommentBody body) {
+    public void comment(Project project, PendingReviewId review, PendingOnDiff where, CommentBody body) {
         PlacedThread position = where.position();
         List<String> range = position.first().equals(position.last())
                 ? List.of()

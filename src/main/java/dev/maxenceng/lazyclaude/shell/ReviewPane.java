@@ -178,6 +178,7 @@ final class ReviewPane {
         if (read == pendingReads) {
             pending = view;
             rebuild();
+            selectedComment = clamp(selectedComment, entries().size());
         }
     }
 
@@ -270,11 +271,6 @@ final class ReviewPane {
             case PendingEntry pending -> pending.placed().line();
             case ThreadEntry thread -> thread.placed().line();
         };
-    }
-
-    /** The summary typed on this screen and not yet submitted, if one was. */
-    Optional<Summary> typedSummary() {
-        return typedSummary;
     }
 
     void typeSummary(Summary summary) {

@@ -88,7 +88,7 @@ class PendingReviewManagerTest {
 
         InOrder order = inOrder(reviews);
         order.verify(reviews).create(project(), pullRequestNodeId());
-        order.verify(reviews).addThread(project(), pendingReviewId(), onDiffLine(), commentBody());
+        order.verify(reviews).comment(project(), pendingReviewId(), onDiffLine(), commentBody());
         assertThat(written).isEqualTo(new WrittenReview(new ReadPendingReview(reviewedPullRequest())));
     }
 
@@ -98,7 +98,7 @@ class PendingReviewManagerTest {
 
         PendingReviewWrite written = manager.comment(project(), pullRequestNumber(), onDiffLine(), commentBody());
 
-        verify(reviews).addThread(project(), pendingReview().id(), onDiffLine(), commentBody());
+        verify(reviews).comment(project(), pendingReview().id(), onDiffLine(), commentBody());
         verify(reviews, never()).create(any(), any());
         assertThat(written).isEqualTo(new WrittenReview(new ReadPendingReview(reviewedPullRequest())));
     }
@@ -109,7 +109,7 @@ class PendingReviewManagerTest {
 
         PendingReviewWrite written = manager.comment(project(), pullRequestNumber(), onDiffLine(), blankCommentBody());
 
-        verify(reviews, never()).addThread(any(), any(), any(), any());
+        verify(reviews, never()).comment(any(), any(), any(), any());
         verify(reviews, never()).create(any(), any());
         assertThat(written).isEqualTo(new WrittenReview(new ReadPendingReview(reviewedPullRequest())));
     }
@@ -117,7 +117,7 @@ class PendingReviewManagerTest {
     @Test
     void shouldRefuseWithTheReasonWhenGitHubDoesNotTakeTheComment() {
         when(reviews.pullRequest(project(), pullRequestNumber())).thenReturn(reviewedPullRequest());
-        doThrow(pullRequestsUnavailable()).when(reviews).addThread(any(), any(), any(), any());
+        doThrow(pullRequestsUnavailable()).when(reviews).comment(any(), any(), any(), any());
 
         assertThat(manager.comment(project(), pullRequestNumber(), onDiffLine(), commentBody())).isEqualTo(refusedWrite());
     }
@@ -128,7 +128,7 @@ class PendingReviewManagerTest {
         when(reviews.create(project(), pullRequestNodeId())).thenThrow(pullRequestsUnavailable());
 
         assertThat(manager.comment(project(), pullRequestNumber(), onDiffLine(), commentBody())).isEqualTo(refusedWrite());
-        verify(reviews, never()).addThread(any(), any(), any(), any());
+        verify(reviews, never()).comment(any(), any(), any(), any());
     }
 
     @Test

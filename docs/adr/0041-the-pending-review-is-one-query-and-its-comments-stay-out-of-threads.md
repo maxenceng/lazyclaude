@@ -19,8 +19,8 @@ and count toward `◆n`. A pending comment has no side of its own: the side belo
   `commit.oid`, and the review threads with their comments' ids, states and bodies.** A pending comment is a comment with the state
   `PENDING`: the first of its thread starts a thread on the diff, any later one is a reply to it. Where a thread has no line, as
   after the head moved, the line it was written on stands.
-- **A write is answered with the pending review read again**, so that the screen shows what GitHub holds and a retry after a lost
-  answer finds what was already written.
+- **A write is answered with the pending review read again**, so that the screen shows what GitHub holds. A retry after a lost
+  answer to starting the review adopts the one already started; a comment or reply whose answer was lost is written twice.
 - **The thread read leaves out pending comments, and threads left with none.** Comments is the one place a pending comment is
   listed, and Files counts them as `✎n`, apart from `◆n`.
 

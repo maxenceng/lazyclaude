@@ -25,7 +25,7 @@ public interface PendingReviewPort {
     PendingReviewId create(Project project, PullRequestNodeId pullRequest);
 
     /** @throws PullRequestsUnavailableException when GitHub does not take the comment, with the reason */
-    void addThread(Project project, PendingReviewId review, PendingOnDiff where, CommentBody body);
+    void comment(Project project, PendingReviewId review, PendingOnDiff where, CommentBody body);
 
     /** @throws PullRequestsUnavailableException when GitHub does not take the reply, with the reason */
     void reply(Project project, PendingReviewId review, ThreadId thread, CommentBody body);

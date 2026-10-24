@@ -51,13 +51,13 @@ class PendingReviewCommandTest {
                 project().root(), pullRequestNumber(), diffPath(), rightOn(3), commentBody());
 
         assertThat(command.comment(payload)).isEqualTo(writtenView(openPendingView()));
-        verify(pending).addThread(project(), pendingReviewId(), onDiffLine(), commentBody());
+        verify(pending).comment(project(), pendingReviewId(), onDiffLine(), commentBody());
     }
 
     @Test
     void shouldViewWhyAWriteWasRefusedInsteadOfFailing() {
         when(pending.pullRequest(project(), pullRequestNumber())).thenReturn(reviewedPullRequest());
-        doThrow(pullRequestsUnavailable()).when(pending).addThread(any(), any(), any(), any());
+        doThrow(pullRequestsUnavailable()).when(pending).comment(any(), any(), any(), any());
         PendingCommentPayload payload = new PendingCommentPayload(
                 project().root(), pullRequestNumber(), diffPath(), rightOn(3), commentBody());
 
