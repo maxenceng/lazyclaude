@@ -39,8 +39,9 @@ created: 2026-10-10
       count. When the PR's head is no longer the commit the pending review was written on, it
       warns `written on <sha>, head is now <sha>`, and submitting still goes through.
 - [ ] `S` opens the summary in a popup box over the main view, holding the current summary.
-      `ctrl+s` saves it, then a confirm submits the pending review as `COMMENT`; `n` or `esc`
-      on the confirm leaves the summary saved and the review pending. Nothing is checked
+      `ctrl+s` goes straight to a confirm that submits the pending review as `COMMENT` with the
+      summary as its body; `n` or `esc` on the confirm keeps the summary typed and the review
+      pending, for as long as the review screen is open. Nothing is checked
       locally: a submit GitHub refuses shows `not submitted (<reason>)` and the review stays
       pending.
 - [ ] After a submit GitHub accepts, a dialog offers `/ticket respond <ID>` in a new dock tab
@@ -50,8 +51,8 @@ created: 2026-10-10
       lands on it, on `R`, and when the review screen is left — off the render thread, a late
       read dropped. No pending review shows nothing; a read that fails shows a dim
       `pending unknown (<reason>)`.
-- [ ] Leaving the review, quitting or a crash loses nothing saved, and quitting asks nothing
-      about the review. A box open with unsaved text when the review is left is discarded.
+- [ ] Leaving the review, quitting or a crash loses no comment saved, and quitting asks nothing
+      about the review. An unsubmitted summary is lost with the screen. A box open with unsaved text when the review is left is discarded.
 - [ ] `make contract` creates a pending review with a line comment and a reply on a pull
       request of this repository, reads it back through the pending-review read, asserts the
       thread read does not return its comments as threads, then deletes it.
@@ -139,3 +140,4 @@ Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-11](LAZ
 Refined 2026-10-18. Replying to a thread was added while refining; the draft did not name it.
 The ticket detail's `✎n pending` reads per selected ticket rather than riding the 60 s open-PR
 read, which cannot see pending reviews.
+The summary travels with the submit instead of being saved first, since GitHub refuses to edit a pending review with no body ([ADR 0042](../adr/0042-the-summary-travels-with-the-submit.md)).

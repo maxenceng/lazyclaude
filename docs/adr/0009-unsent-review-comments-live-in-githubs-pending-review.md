@@ -4,7 +4,7 @@ Date: 2026-10-10
 
 ## Status
 
-Accepted
+Accepted. Amended by ADR 0042: the summary travels with the submit and is not saved before it.
 
 ## Context
 
