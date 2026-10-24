@@ -1,18 +1,18 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.movedOpenPendingView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.commentOnView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.movedOpenPendingView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.noPendingReviewView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.openPendingViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.replyViewOn;
-import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
-import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.leftRange;
-import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.outdated;
-import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.unavailablePendingView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.openThreadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
+import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.leftRange;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.outdated;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.pendingOnBothFiles;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.shellReviewing;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.threadsOnTwoFiles;

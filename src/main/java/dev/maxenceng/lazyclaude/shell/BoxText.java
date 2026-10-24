@@ -3,8 +3,8 @@ package dev.maxenceng.lazyclaude.shell;
 import java.util.List;
 import java.util.stream.Stream;
 
-import dev.tamboui.style.Style;
 import dev.tamboui.style.Overflow;
+import dev.tamboui.style.Style;
 import dev.tamboui.widgets.input.TextAreaState;
 import dev.tamboui.widgets.input.TextAreaState.DisplayRow;
 
@@ -23,12 +23,12 @@ final class BoxText {
     private static final String SAVING = "saving…";
     private static final String NOT_SAVED = "not saved (%s)";
     private static final int FRAME = 4;
+    private static final int CORNERS = 2;
+    private static final int STATUS_INDENT = 2;
+    private static final int SIDE_AND_GAP = 2;
     private static final int MIN_INNER = 8;
 
     private BoxText() {}
-
-    /** Where the cursor is within the box's text: the row and the column of the wrapped text. */
-    record Caret(int row, int column) {}
 
     /** The room the text has inside a box drawn across {@code width} cells. */
     static int innerWidth(int width) {
@@ -44,11 +44,11 @@ final class BoxText {
     }
 
     /** The row and column the cursor is drawn at within the wrapped text. */
-    static Caret caret(CommentBox box, int inner) {
+    static BoxCaret caret(CommentBox box, int inner) {
         TextAreaState area = box.area();
         List<DisplayRow> rows = area.computeDisplayRows(inner, Overflow.WRAP_CHARACTER);
         int index = TextAreaState.findDisplayRowIndex(rows, area.cursorRow(), area.cursorCol());
-        return new Caret(index, Math.min(inner - 1, area.cursorCol() - rows.get(index).startCol()));
+        return new BoxCaret(index, Math.min(inner - 1, area.cursorCol() - rows.get(index).startCol()));
     }
 
     /** What stands under the box: {@code saving…} while a save is out, why the last one failed, else nothing. */
@@ -65,7 +65,7 @@ final class BoxText {
         Style border = Style.EMPTY.fg(PendingText.COLOUR);
         String lead = SPACE.repeat(indent);
         Stream<List<StatusSpan>> top = Stream.of(List.of(
-                new StatusSpan(lead, Style.EMPTY), new StatusSpan(TOP_LEFT + RULE.repeat(boxWidth - 2) + TOP_RIGHT, border)));
+                new StatusSpan(lead, Style.EMPTY), new StatusSpan(TOP_LEFT + RULE.repeat(boxWidth - CORNERS) + TOP_RIGHT, border)));
         Stream<List<StatusSpan>> text = textRows(box, inner).stream()
                 .map(row -> List.of(
                         new StatusSpan(lead, Style.EMPTY),
@@ -76,16 +76,16 @@ final class BoxText {
         Stream<List<StatusSpan>> bottom = Stream.of(List.of(
                 new StatusSpan(lead, Style.EMPTY),
                 new StatusSpan(
-                        BOTTOM_LEFT + hint + RULE.repeat(Math.max(0, boxWidth - 2 - hint.length())) + BOTTOM_RIGHT, border)));
+                        BOTTOM_LEFT + hint + RULE.repeat(Math.max(0, boxWidth - CORNERS - hint.length())) + BOTTOM_RIGHT, border)));
         Stream<List<StatusSpan>> status = status(box).stream()
-                .map(line -> List.of(new StatusSpan(lead + SPACE.repeat(2) + line, Style.EMPTY.dim())));
+                .map(line -> List.of(new StatusSpan(lead + SPACE.repeat(STATUS_INDENT) + line, Style.EMPTY.dim())));
         return Stream.of(top, text, bottom, status).flatMap(rows -> rows).toList();
     }
 
     /** The screen column and row, within the inline box, of its cursor. */
-    static Caret inlineCaret(CommentBox box, int width, int indent) {
-        Caret within = caret(box, innerWidth(Math.max(MIN_INNER + FRAME, width - indent)));
-        return new Caret(within.row() + 1, indent + 2 + within.column());
+    static BoxCaret inlineCaret(CommentBox box, int width, int indent) {
+        BoxCaret within = caret(box, innerWidth(Math.max(MIN_INNER + FRAME, width - indent)));
+        return new BoxCaret(within.row() + 1, indent + SIDE_AND_GAP + within.column());
     }
 
     private static String padded(String text, int inner) {
@@ -104,8 +104,8 @@ final class BoxText {
     }
 
     /** The cursor within a popup's rows, which {@code above} lines and the rule come before the text of. */
-    static Caret popupCaret(CommentBox box, int inner, int above) {
-        Caret within = caret(box, inner);
-        return new Caret(above + 1 + within.row(), within.column());
+    static BoxCaret popupCaret(CommentBox box, int inner, int above) {
+        BoxCaret within = caret(box, inner);
+        return new BoxCaret(above + 1 + within.row(), within.column());
     }
 }

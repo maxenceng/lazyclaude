@@ -33,7 +33,7 @@ final class PopupElement implements Element {
     private final Optional<Integer> bold;
     private final String hint;
     private final Supplier<Optional<Rect>> anchor;
-    private final Optional<BoxText.Caret> caret;
+    private final Optional<BoxCaret> caret;
 
     /** {@code bold} is the row the cursor is on, if there is a cursor. */
     PopupElement(String title, List<String> rows, Optional<Integer> bold, String hint, Supplier<Optional<Rect>> anchor) {
@@ -47,7 +47,7 @@ final class PopupElement implements Element {
             Optional<Integer> bold,
             String hint,
             Supplier<Optional<Rect>> anchor,
-            Optional<BoxText.Caret> caret) {
+            Optional<BoxCaret> caret) {
         this.caret = caret;
         this.title = title;
         this.rows = rows;

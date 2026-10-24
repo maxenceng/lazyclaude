@@ -8,12 +8,12 @@ import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onDiff
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pendingReviewId;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.reviewedPullRequest;
 import static dev.maxenceng.lazyclaude.review.published.CommentBodyFixture.commentBody;
+import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.pendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.threadId;
-import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
-import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.review.published.SummaryFixture.summary;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;

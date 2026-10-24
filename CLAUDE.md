@@ -12,7 +12,7 @@ of the claude-tools harness, without leaving one screen.
 It is for one developer working their own projects. The backlog's words win: ticket, status,
 board, session — not issue, card, or chat.
 
-Out of scope until an ADR says otherwise: editing anything (every view is read-only; edit
+Out of scope until an ADR says otherwise: editing anything (every view is read-only except the pending review on GitHub, the one write, by ADR 0009; edit
 files in your own editor or through a session), talking to
 the Claude API directly rather than through the `claude` CLI, and any tracker other than the
 markdown in `docs/backlog/`.

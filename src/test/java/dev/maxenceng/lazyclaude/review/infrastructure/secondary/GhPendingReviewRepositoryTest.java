@@ -10,8 +10,8 @@ import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.replyC
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.replyToThread;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.reviewedPullRequestWith;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.unreviewedPullRequest;
-import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghAnsweringPendingWithItsArguments;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.argumentsRecordedIn;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghAnsweringPendingWithItsArguments;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghFailing;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghHanging;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghRecordingItsArguments;
@@ -42,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

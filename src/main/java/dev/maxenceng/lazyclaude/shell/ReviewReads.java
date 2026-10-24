@@ -5,8 +5,8 @@ import java.util.concurrent.CompletionException;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailablePendingReviewView;

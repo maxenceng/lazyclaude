@@ -8,9 +8,14 @@ import java.util.stream.Stream;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CheckView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CheckingPullRequestsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.LoadingPendingReviewView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.NoPendingReviewView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPullRequestsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailablePendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailablePullRequestsView;
 import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
@@ -38,6 +43,8 @@ final class PullRequestText {
     private static final String UNKNOWN = "unknown (%s)";
     private static final String NUMBER = "#%d ";
     private static final String DRAFT_SUFFIX = " (draft PR)";
+    private static final String PENDING_COUNT = "✎%d pending";
+    private static final String PENDING_UNKNOWN = "pending unknown (%s)";
 
     private PullRequestText() {}
 
@@ -54,25 +61,40 @@ final class PullRequestText {
     }
 
     /** The rows of a ticket's detail about its pull request, with their keys padded to {@code keyWidth}, in {@code width} cells. */
-    static List<DetailRow> rows(TicketView ticket, PullRequestsView pullRequests, int keyWidth, int width) {
+    static List<DetailRow> rows(
+            TicketView ticket, PullRequestsView pullRequests, Optional<PendingReviewView> pending, int keyWidth, int width) {
         return switch (pullRequests) {
             case CheckingPullRequestsView checking -> List.of(dimRow(PR_KEY, CHECKING, keyWidth));
             case UnavailablePullRequestsView unavailable ->
                 List.of(dimRow(PR_KEY, UNKNOWN.formatted(unavailable.reason().value()), keyWidth));
             case OpenPullRequestsView open ->
                 pullRequestOf(ticket, open)
-                        .map(pullRequest -> openRows(pullRequest, keyWidth, width))
+                        .map(pullRequest -> openRows(pullRequest, pending, keyWidth, width))
                         .orElseGet(() -> List.of(dimRow(PR_KEY, NONE, keyWidth)));
         };
     }
 
-    private static List<DetailRow> openRows(PullRequestView pullRequest, int keyWidth, int width) {
+    private static List<DetailRow> openRows(PullRequestView pullRequest, Optional<PendingReviewView> pending, int keyWidth, int width) {
         List<CheckView> checks = pullRequest.checks();
         Stream<DetailRow> checkRows = IntStream.range(0, checks.size())
                 .mapToObj(index -> new DetailRow(
                         keyed(index == 0 ? CHECKS_KEY : NO_KEY, checkLine(checks.get(index)), keyWidth), Style.EMPTY));
-        return Stream.concat(Stream.of(new DetailRow(keyed(PR_KEY, heading(pullRequest, width - keyWidth - KEY_GAP.length()), keyWidth), Style.EMPTY)), checkRows)
-                .toList();
+        Stream<DetailRow> heading = Stream.of(
+                new DetailRow(keyed(PR_KEY, heading(pullRequest, width - keyWidth - KEY_GAP.length()), keyWidth), Style.EMPTY));
+        Stream<DetailRow> pendingRow = pending.flatMap(view -> pendingRow(view, keyWidth)).stream();
+        return Stream.of(heading, pendingRow, checkRows).flatMap(rows -> rows).toList();
+    }
+
+    /** How many comments the pending review holds, in its colour; why it is unknown, dim; nothing when there is none or it is not read. */
+    private static Optional<DetailRow> pendingRow(PendingReviewView pending, int keyWidth) {
+        return switch (pending) {
+            case OpenPendingReviewView open ->
+                Optional.of(new DetailRow(
+                        keyed(NO_KEY, PENDING_COUNT.formatted(open.comments().size()), keyWidth), Style.EMPTY.fg(PendingText.COLOUR)));
+            case UnavailablePendingReviewView unavailable ->
+                Optional.of(dimRow(NO_KEY, PENDING_UNKNOWN.formatted(unavailable.reason().value()), keyWidth));
+            case LoadingPendingReviewView _, NoPendingReviewView _ -> Optional.empty();
+        };
     }
 
     private static DetailRow dimRow(String key, String value, int keyWidth) {

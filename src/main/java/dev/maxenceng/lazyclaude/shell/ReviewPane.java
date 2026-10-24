@@ -21,9 +21,9 @@ import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
+import dev.maxenceng.lazyclaude.review.published.PullRequestTitle;
 import dev.maxenceng.lazyclaude.review.published.Reason;
 import dev.maxenceng.lazyclaude.review.published.ThreadLine;
-import dev.maxenceng.lazyclaude.review.published.PullRequestTitle;
 
 /**
  * What the review screen shows of one pull request: its diff and threads as last read, the cursor over the diff lines, and the Files

@@ -54,7 +54,7 @@ final class DiffElement implements Element {
     }
 
     private static void placeCursor(Frame frame, Rect area, CommentBox box, int numberWidth, int y) {
-        BoxText.Caret caret = BoxText.inlineCaret(box, area.width(), DiffText.gutterWidth(numberWidth));
+        BoxCaret caret = BoxText.inlineCaret(box, area.width(), DiffText.gutterWidth(numberWidth));
         if (y + caret.row() < area.height()) {
             frame.setCursorPosition(area.x() + caret.column(), area.y() + y + caret.row());
         }

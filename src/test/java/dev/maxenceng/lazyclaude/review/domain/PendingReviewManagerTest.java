@@ -6,26 +6,26 @@ import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.commen
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onDiff;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onDiffLine;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onNoDiffLine;
-import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.replyToThread;
-import static dev.maxenceng.lazyclaude.review.domain.PullRequestDiffManagerFixture.unavailableDiff;
-import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
-import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
-import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightRange;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pendingReview;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pendingReviewId;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pullRequestNodeId;
+import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.replyToThread;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.reviewedPullRequest;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.unreviewedPullRequest;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewManagerFixture.refusedWrite;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewManagerFixture.unavailablePendingReview;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDiffManagerFixture.unavailableDiff;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.pullRequestsUnavailable;
 import static dev.maxenceng.lazyclaude.review.published.CommentBodyFixture.blankCommentBody;
 import static dev.maxenceng.lazyclaude.review.published.CommentBodyFixture.commentBody;
 import static dev.maxenceng.lazyclaude.review.published.CommentBodyFixture.editedCommentBody;
+import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.pendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.threadId;
-import static dev.maxenceng.lazyclaude.review.published.SummaryFixture.summary;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
+import static dev.maxenceng.lazyclaude.review.published.SummaryFixture.summary;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightRange;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,12 +41,12 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
-import dev.maxenceng.lazyclaude.review.published.Reason;
-
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
+import dev.maxenceng.lazyclaude.review.published.Reason;
 
 @ExtendWith(MockitoExtension.class)
 class PendingReviewManagerTest {

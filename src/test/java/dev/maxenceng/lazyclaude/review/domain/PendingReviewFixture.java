@@ -14,8 +14,8 @@ import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.ri
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.review.domain.PendingReview.PendingReviewBuilder;
-import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
+import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.NoDiffLine;
 import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;

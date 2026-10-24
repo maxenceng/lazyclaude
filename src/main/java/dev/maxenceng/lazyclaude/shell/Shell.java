@@ -37,22 +37,22 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocumentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OnDiffAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingDeletePayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingEditPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReplyPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingSummaryPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedAnchorView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedWriteView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.WrittenReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedAnchorView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.WrittenReviewView;
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
@@ -263,6 +263,9 @@ public final class Shell extends ToolkitApp {
     private Optional<String> refusal = Optional.empty();
     private Optional<ShownWorktree> shownWorktree = Optional.empty();
     private boolean worktreeStale;
+    private Optional<ShownPending> shownPending = Optional.empty();
+    private boolean pendingStale;
+    private long pendingDetailReads;
     private final AtomicBoolean worktreeReading = new AtomicBoolean();
     private volatile MergedPullRequestsView latestMerged = new MergedPullRequestsView(List.of());
     private Optional<Rect> mainViewArea = Optional.empty();
@@ -949,6 +952,7 @@ public final class Shell extends ToolkitApp {
 
     /** Reads everything again, off the render thread, and shows only what changed; the pull requests are fetched on their own thread. */
     private boolean refresh() {
+        pendingStale = true;
         review.ifPresent(this::readReview);
         background.execute(() -> {
             reviews.refresh();
@@ -987,6 +991,7 @@ public final class Shell extends ToolkitApp {
 
     private boolean leaveReview() {
         review = Optional.empty();
+        pendingStale = true;
         lastLeft = Focus.BOARD;
         return focusOn(Focus.BOARD);
     }
@@ -1571,6 +1576,7 @@ public final class Shell extends ToolkitApp {
         syncWatched();
         syncTranscript();
         syncWorktree();
+        syncPending();
         Element screen = column(
                 new StatusLineElement(
                         StatusText.spans(sessions.markerCounts(), elsewhere.groups()),
@@ -1842,6 +1848,41 @@ public final class Shell extends ToolkitApp {
         };
     }
 
+    private Optional<PendingReviewView> pendingDetail(TicketView ticket) {
+        return shownPending.filter(shown -> shown.ticket().equals(idOf(ticket))).map(ShownPending::view);
+    }
+
+    /**
+     * Reads the selected ticket's pending review, off the render thread, when the selection lands on a ticket with an open pull request,
+     * on {@code R} and when the review is left. A read that lands after the selection moved on is dropped.
+     */
+    private void syncPending() {
+        Optional<TicketView> wanted = review.isEmpty() && mainViewOwner == Focus.BOARD
+                ? selectedTicket().filter(ticket -> PullRequestText.pullRequestOf(ticket, pullRequests).isPresent())
+                : Optional.empty();
+        wanted.ifPresent(ticket -> {
+            boolean shown = shownPending.filter(read -> read.ticket().equals(idOf(ticket))).isPresent();
+            if (!shown || pendingStale) {
+                pendingStale = false;
+                readPending(ticket);
+            }
+        });
+    }
+
+    private void readPending(TicketView ticket) {
+        long read = ++pendingDetailReads;
+        shownPending = Optional.of(new ShownPending(idOf(ticket), reviews.loadingPending()));
+        PullRequestPayload payload = new PullRequestPayload(
+                root, PullRequestText.pullRequestOf(ticket, pullRequests).orElseThrow().number());
+        CompletableFuture.supplyAsync(() -> reviews.pendingOf(payload), background)
+                .exceptionally(ReviewReads::unreadablePending)
+                .thenAccept(answer -> onRenderThread(() -> {
+                    if (read == pendingDetailReads) {
+                        shownPending = Optional.of(new ShownPending(idOf(ticket), answer));
+                    }
+                }));
+    }
+
     private Optional<WorktreeFacts> worktreeDetail(TicketView ticket) {
         return shownWorktree
                 .filter(shown -> shown.ticket().equals(idOf(ticket)))
@@ -1849,7 +1890,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element ticketDetail(TicketView ticket) {
-        return new DetailElement(width -> TicketText.head(ticket, pullRequests, worktreeDetail(ticket), width), TicketText.markdown(ticket), mainViewScroll);
+        return new DetailElement(width -> TicketText.head(ticket, pullRequests, pendingDetail(ticket), worktreeDetail(ticket), width), TicketText.markdown(ticket), mainViewScroll);
     }
 
     private List<String> keyBar() {

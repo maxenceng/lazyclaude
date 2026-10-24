@@ -16,6 +16,7 @@ import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.NoType;
 import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.board.published.TypeName;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.tamboui.style.Style;
 
@@ -45,11 +46,16 @@ final class TicketText {
      * The rows above a ticket's body: the facts line, the other frontmatter keys, the rows about its pull request in the same key
      * column, a rule across {@code width}, and "no body" when it has none.
      */
-    static List<DetailRow> head(TicketView ticket, PullRequestsView pullRequests, Optional<WorktreeFacts> worktree, int width) {
+    static List<DetailRow> head(
+            TicketView ticket,
+            PullRequestsView pullRequests,
+            Optional<PendingReviewView> pending,
+            Optional<WorktreeFacts> worktree,
+            int width) {
         return Stream.of(
                         Stream.of(new DetailRow(facts(ticket), Style.EMPTY.bold())),
                         keyRows(ticket, worktree, width).stream().map(key -> new DetailRow(key, Style.EMPTY)),
-                        PullRequestText.rows(ticket, pullRequests, keyWidth(ticket, worktree), width).stream(),
+                        PullRequestText.rows(ticket, pullRequests, pending, keyWidth(ticket, worktree), width).stream(),
                         Stream.of(new DetailRow(RULE.repeat(width), Style.EMPTY.dim())),
                         Included.when(ticket.body() instanceof NoBody, new DetailRow(NO_BODY, Style.EMPTY.dim())))
                 .flatMap(Function.identity())
