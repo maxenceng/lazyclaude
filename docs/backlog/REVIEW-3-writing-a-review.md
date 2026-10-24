@@ -1,6 +1,6 @@
 ---
 id: REVIEW-3
-status: in-review
+status: done
 context: review
 type: feature
 tracker_id: 89
@@ -146,3 +146,11 @@ Decided in review, 2026-10-24: a range mixing sides is refused rather than given
 at write time and a retry after a lost answer may write twice, both left as `// deferred:` on `PendingReviewManager.comment`.
 Review also moved every adapter off catching the domain's refusals ([ADR 0043](../adr/0043-an-adapter-checks-what-a-tool-wrote-before-building-from-it.md))
 and named every string and zero comparison ([ADR 0044](../adr/0044-a-string-is-named-and-a-count-is-not-compared-to-zero.md)).
+
+Closed after [#39](https://github.com/maxenceng/lazyclaude/pull/39). What the code will not show:
+
+- *Model decision* reads pending comments from the review's own `comments` with `replyTo`, and gives the port a set-summary
+  write. Neither landed. A pending comment is read as a `PENDING` comment of a review thread, the thread's first one starting it
+  and any later one replying ([ADR 0041](../adr/0041-the-pending-review-is-one-query-and-its-comments-stay-out-of-threads.md)).
+  The summary goes only with the submit ([ADR 0042](../adr/0042-the-summary-travels-with-the-submit.md)).
+- Every write is answered with the pending review read again, rather than patched locally, so the screen shows what GitHub holds.
