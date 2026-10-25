@@ -15,4 +15,8 @@ public final class TicketIdFixture {
     public static TicketId tenthTicketId() {
         return new TicketId("PROJ-10");
     }
+
+    public static TicketId ticketIdNumbered(int number) {
+        return new TicketId("PROJ-" + number);
+    }
 }

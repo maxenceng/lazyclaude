@@ -6,6 +6,7 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFi
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewIn;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewNumbered;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
@@ -362,6 +363,23 @@ final class ShellFixture {
 
     static Shell shellOnTicket(TicketView ticket, HostedSessionCommand hosting) {
         return shellOnTicket(ticket, emptySessionsView(), hosting, blankScreens());
+    }
+
+    static Shell shellZoomedOnColumns(TicketView... tickets) {
+        Shell shell = shellOn(tickets);
+        shell.press(key('z'));
+        return shell;
+    }
+
+    static Shell shellZoomedOnTheSecondDraft(BoardQuery boards) {
+        Shell shell = shellReading(boards, ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT), ticketViewNumbered(3, Status.DRAFT));
+        shell.press(key('z'));
+        shell.press(key('j'));
+        return shell;
+    }
+
+    static void boardReadAgainAs(BoardQuery boards, BoardView board) {
+        when(boards.boardReadAgainFor(readingBoardWithMerged())).thenReturn(Optional.of(board));
     }
 
     static KeyEvent escape() {

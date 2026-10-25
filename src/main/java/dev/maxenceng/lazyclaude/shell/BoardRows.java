@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.shell;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -10,12 +11,13 @@ import java.util.stream.Stream;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 
 /** The Board panel's rows and the two things the shell remembers about them: the selection and the folded groups. */
 final class BoardRows {
 
-    private static final String UNREADABLE_GROUP = "unreadable";
+    static final String UNREADABLE_GROUP = "unreadable";
     private static final int DOWN = 1;
     private static final int UP = -1;
 
@@ -63,6 +65,40 @@ final class BoardRows {
         board = next;
         List<RowKey> keys = visible().stream().map(Row::key).toList();
         selected = RowSelection.kept(Optional.of(was), index, keys).orElseGet(keys::getFirst);
+    }
+
+    /** Swaps in a freshly read board while the status columns are open: the cursor follows its ticket, else the row that took its place. */
+    void replaceInStatusColumns(BoardView next) {
+        Optional<TicketId> was = selectedTicketId();
+        Optional<StatusColumnsPlace> at = was.flatMap(statusColumns()::locate);
+        replace(next);
+        StatusColumns now = statusColumns();
+        was.flatMap(now::ticket).or(() -> at.flatMap(now::replacing)).or(now::first).ifPresent(this::moveTo);
+    }
+
+    StatusColumns statusColumns() {
+        return new StatusColumns(board);
+    }
+
+    /** Moves the selection, which is the cursor of the status columns, by {@code move}; onto the first ticket when it stands on none. */
+    void moveInStatusColumns(BiFunction<StatusColumns, TicketId, Optional<TicketView>> move) {
+        StatusColumns columns = statusColumns();
+        selectedTicketId().flatMap(id -> move.apply(columns, id)).or(columns::first).ifPresent(this::moveTo);
+    }
+
+    /** Puts the selection on a ticket the status columns can stand on, if it is not on one. */
+    void enterStatusColumns() {
+        StatusColumns columns = statusColumns();
+        selectedTicketId().flatMap(columns::ticket).or(columns::first).ifPresent(this::moveTo);
+    }
+
+    private Optional<TicketId> selectedTicketId() {
+        return selected() instanceof TicketRow(TicketView ticket) ? Optional.of(ticket.id()) : Optional.empty();
+    }
+
+    private void moveTo(TicketView ticket) {
+        folded = FoldedKeys.unfolded(folded, groupKey(ticket.status().label()));
+        selected = new TicketRow(ticket).key();
     }
 
     List<Row> visible() {

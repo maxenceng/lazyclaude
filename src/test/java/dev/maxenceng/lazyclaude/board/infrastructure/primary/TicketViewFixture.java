@@ -25,6 +25,9 @@ import dev.maxenceng.lazyclaude.board.published.NoContext;
 import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.NoType;
 import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.TicketBranch;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
+import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 
 public final class TicketViewFixture {
@@ -70,6 +73,22 @@ public final class TicketViewFixture {
 
     public static TicketView longTitledSlugTicketView() {
         return ticketViewBuilder().branch(slugTicketBranch()).title(longTitle()).build();
+    }
+
+    public static TicketView ticketViewNumbered(int number, Status status) {
+        return ticketViewBuilder()
+                .id(new TicketId("PROJ-" + number))
+                .branch(new TicketBranch("PROJ-" + number))
+                .title(new Title("Ticket number " + number))
+                .status(status)
+                .verbs(status.verbs())
+                .build();
+    }
+
+    public static TicketView[] ticketViewsIn(Status status, int count) {
+        return IntStream.rangeClosed(1, count)
+                .mapToObj(number -> ticketViewNumbered(number, status))
+                .toArray(TicketView[]::new);
     }
 
     public static TicketView doneTicketView() {

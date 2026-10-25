@@ -19,6 +19,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -28,6 +29,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
@@ -140,6 +142,7 @@ public final class Shell extends ToolkitApp {
     private static final char NEW_TICKET_SESSION = 'n';
     private static final char TOGGLE_MAIN_VIEW = 'm';
     private static final char SUSPEND = 'z';
+    private static final char ZOOM = 'z';
     private static final char NEXT_WAITING = 'w';
     private static final char YES = 'y';
     private static final char NO = 'n';
@@ -171,7 +174,11 @@ public final class Shell extends ToolkitApp {
     private static final String NEW_KEY = "N new";
     private static final String NEW_TICKET_KEY = "n new";
     private static final String MAIN_VIEW_KEY = "m main view";
-    private static final String SESSION_KEYS = "alt+h/l tab  alt+h/j/k/l focus  alt+m main view";
+    private static final String SESSION_KEYS = "alt+h/l tab  alt+h/j/k/l focus  alt+m main view  alt+z zoom";
+    private static final String ZOOM_KEY = "z zoom";
+    private static final String STATUS_COLUMNS_ZOOM_KEYS = "h/l column  j/k move  enter pick  z/esc back";
+    private static final String MAIN_VIEW_ZOOM_KEYS = "j/k scroll  ^d/^u half page  g/G top/bottom  z/esc back";
+    private static final String DOCK_ZOOM_KEYS = "alt+h/l tab  alt+h/j/k/l focus  alt+m main view  alt+z back";
 
     private final BoardRows board;
     private final DocsRows docs;
@@ -230,6 +237,8 @@ public final class Shell extends ToolkitApp {
     private Focus lastLeft = Focus.BOARD;
     private Focus lastRight = Focus.MAIN;
     private Focus mainViewOwner = Focus.BOARD;
+    /** {@code NONE}, or the shape of the pane that has focus: {@code focusOn} ends it whenever focus moves. */
+    private Zoom zoom = Zoom.NONE;
     private Optional<WarningView> warning = Optional.empty();
     private boolean quitRequested;
 
@@ -466,7 +475,11 @@ public final class Shell extends ToolkitApp {
         if (next != null) {
             worktree.markStale();
             RowKey before = board.selected().key();
-            board.replace(next);
+            if (zoom == Zoom.STATUS_COLUMNS) {
+                board.replaceInStatusColumns(next);
+            } else {
+                board.replace(next);
+            }
             if (!board.selected().key().equals(before) && mainViewOwner == Focus.BOARD) {
                 mainViewScroll.reset();
             }
@@ -604,6 +617,72 @@ public final class Shell extends ToolkitApp {
         if (review.map(pane -> reviewKeys.press(pane, key)).orElse(false)) {
             return true;
         }
+        return pressZoom(key).orElseGet(() -> pressUnzoomed(key));
+    }
+
+    /** The keys of the zoom: {@code z} and {@code alt+z}, {@code esc} to leave, the cursor of the status columns, and {@code w}, which leaves. */
+    private Optional<Boolean> pressZoom(KeyEvent key) {
+        boolean plain = !key.hasCtrl() && !key.hasAlt();
+        if (key.hasAlt() && !key.hasCtrl() && key.isChar(ZOOM)) {
+            return Optional.of(toggleZoom());
+        }
+        if (!plain) {
+            return Optional.empty();
+        }
+        if (key.isChar(ZOOM) && (zoom != Zoom.NONE || focus == Focus.BOARD || focus == Focus.MAIN)) {
+            return Optional.of(toggleZoom());
+        }
+        if (zoom != Zoom.NONE && (key.isKey(KeyCode.ESCAPE) || key.isChar(NEXT_WAITING))) {
+            return Optional.of(leaveZoom());
+        }
+        return zoom == Zoom.STATUS_COLUMNS ? pressInStatusColumns(key) : Optional.empty();
+    }
+
+    private Optional<Boolean> pressInStatusColumns(KeyEvent key) {
+        if (key.isKey(KeyCode.ENTER)) {
+            return Optional.of(selectedTicket().isPresent() && leaveZoom() ? fold() : leaveZoom());
+        }
+        return statusColumnsMove(key).map(move -> select(() -> board.moveInStatusColumns(move)));
+    }
+
+    private static Optional<BiFunction<StatusColumns, TicketId, Optional<TicketView>>> statusColumnsMove(KeyEvent key) {
+        if (key.isChar(DOWN)) {
+            return Optional.of(StatusColumns::down);
+        }
+        if (key.isChar(UP)) {
+            return Optional.of(StatusColumns::up);
+        }
+        if (key.isChar(LEFT)) {
+            return Optional.of(StatusColumns::left);
+        }
+        return key.isChar(RIGHT) ? Optional.of(StatusColumns::right) : Optional.empty();
+    }
+
+    /** Zooms whatever has focus that has a zoom to show, or leaves the zoom. */
+    private boolean toggleZoom() {
+        if (zoom != Zoom.NONE) {
+            return leaveZoom();
+        }
+        zoom = switch (focus) {
+            case BOARD -> Zoom.STATUS_COLUMNS;
+            case MAIN -> Zoom.MAIN_VIEW;
+            case DOCK -> Zoom.DOCK;
+            default -> Zoom.NONE;
+        };
+        if (zoom == Zoom.STATUS_COLUMNS) {
+            select(board::enterStatusColumns);
+        }
+        return zoom != Zoom.NONE;
+    }
+
+    /** Ends the zoom, and says whether there was one. */
+    private boolean leaveZoom() {
+        boolean wasZoomed = zoom != Zoom.NONE;
+        zoom = Zoom.NONE;
+        return wasZoomed;
+    }
+
+    private boolean pressUnzoomed(KeyEvent key) {
         if (key.hasCtrl()) {
             return key.isCtrlC() ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
         }
@@ -700,7 +779,14 @@ public final class Shell extends ToolkitApp {
         if (key.isChar(TOGGLE_MAIN_VIEW)) {
             return toggleMainView();
         }
-        return key.isChar(DOWN) || key.isChar(SUSPEND) || key.isChar(NEXT_WAITING);
+        if (key.isChar(ZOOM)) {
+            return toggleZoom();
+        }
+        if (key.isChar(NEXT_WAITING)) {
+            leaveZoom();
+            return true;
+        }
+        return key.isChar(DOWN);
     }
 
     private void sendToSelectedTab(TerminalInput input) {
@@ -714,9 +800,10 @@ public final class Shell extends ToolkitApp {
         }
     }
 
-    /** A mouse event over the pane reaches the selected tab's session at the matching cell, whatever has focus. */
+    /** A mouse event over the pane reaches the selected tab's session at the matching cell, whatever has focus, while the pane is drawn. */
     boolean mouse(MouseEvent event) {
         return dock.selectedTab()
+                .filter(_ -> zoom == Zoom.NONE || zoom == Zoom.DOCK)
                 .flatMap(tab -> paneArea.flatMap(area -> TerminalInputs.mouse(event, area))
                         .map(input -> {
                             hosting.send(new HostedInputPayload(tab.id(), input));
@@ -957,6 +1044,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean toggleMainView() {
+        leaveZoom();
         mainViewHidden = !mainViewHidden;
         if (mainViewHidden && focus == Focus.MAIN) {
             focusOn(Focus.DOCK);
@@ -1085,6 +1173,7 @@ public final class Shell extends ToolkitApp {
         if (ticket.verbs().isEmpty()) {
             return opened(hosting.startUnlinked(new NewHostedPayload(root, paneSize())));
         }
+        leaveZoom();
         picker = Optional.of(new VerbPicker(ticket, choiceFor(ticket), !mergedRead));
         return true;
     }
@@ -1166,7 +1255,7 @@ public final class Shell extends ToolkitApp {
         if (key.isChar(TOGGLE_MAIN_VIEW)) {
             return toggleMainView();
         }
-        return false;
+        return key.isChar(NEXT_WAITING) && leaveZoom();
     }
 
     private boolean fold() {
@@ -1245,6 +1334,9 @@ public final class Shell extends ToolkitApp {
 
     private boolean focusOn(Focus requested) {
         Focus target = requested == Focus.MAIN && mainViewHidden ? Focus.DOCK : requested;
+        if (target != focus) {
+            zoom = Zoom.NONE;
+        }
         focus = target;
         if (target.column() == Column.LEFT) {
             lastLeft = target;
@@ -1278,9 +1370,7 @@ public final class Shell extends ToolkitApp {
                                 .map(SessionText::quitPrompt)
                                 .or(() -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree())))
                                 .or(reviewKeys::prompt)),
-                row(
-                        leftColumn(),
-                        (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill(),
+                zoomed(),
                 new KeyBarElement(keyBar()));
         Element withPicker = picker.<Element>map(open -> stack(
                         screen,
@@ -1315,6 +1405,26 @@ public final class Shell extends ToolkitApp {
                                 RemoteControlPromptText.hint(prompt),
                                 () -> mainViewArea)))
                 .orElse(withBox);
+    }
+
+    private Element zoomed() {
+        return switch (zoom) {
+            case NONE ->
+                row(leftColumn(), (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill();
+            case STATUS_COLUMNS ->
+                column(StatusColumnsPanels.of(board.statusColumns(), selectedTicket().map(TicketView::id), this::statusColumnsLine), dockStrip())
+                        .fill();
+            case MAIN_VIEW -> column(mainView(), dockStrip()).fill();
+            case DOCK -> dock();
+        };
+    }
+
+    private Element dockStrip() {
+        return new DockStripElement(DockText.strip(dock.tabs(), dock.selectedIndex()));
+    }
+
+    private RowLine statusColumnsLine(TicketView ticket) {
+        return boardLine(new TicketRow(ticket));
     }
 
     private Element leftColumn() {
@@ -1525,10 +1635,21 @@ public final class Shell extends ToolkitApp {
                 .map(List::of)
                 .or(() -> remoteControlPrompt.map(prompt -> List.of(RemoteControlPromptText.keys(prompt))))
                 .or(() -> picker.map(_ -> List.of(VerbPickerText.keys())))
+                .or(() -> Optional.of(zoomKeys()).filter(_ -> inSession() && zoom == Zoom.DOCK))
                 .or(() -> Optional.of(SESSION_KEYS).filter(_ -> inSession()).map(List::of))
                 .or(() -> respondPrompt.map(_ -> RESPOND_KEYS))
+                .or(() -> Optional.of(zoomKeys()).filter(_ -> zoom != Zoom.NONE))
                 .or(() -> review.map(pane -> reviewKeys.keys(pane, focus, List.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY))))
                 .orElseGet(this::boardKeys);
+    }
+
+    private List<String> zoomKeys() {
+        return List.of(
+                switch (zoom) {
+                    case STATUS_COLUMNS -> STATUS_COLUMNS_ZOOM_KEYS;
+                    case MAIN_VIEW -> MAIN_VIEW_ZOOM_KEYS;
+                    case DOCK, NONE -> DOCK_ZOOM_KEYS;
+                });
     }
 
     private List<String> boardKeys() {
@@ -1546,7 +1667,8 @@ public final class Shell extends ToolkitApp {
                                 (focus == Focus.BOARD || focus == Focus.SESSIONS) && selectedTicket().isPresent(),
                                 NEW_TICKET_KEY),
                         Included.when(reviewablePullRequest().isPresent(), REVIEW_KEY),
-                        Stream.of(NEW_KEY, REFRESH_KEY, MAIN_VIEW_KEY))
+                        Stream.of(NEW_KEY, REFRESH_KEY, MAIN_VIEW_KEY),
+                        Included.when(focus == Focus.BOARD || focus == Focus.MAIN, ZOOM_KEY))
                 .flatMap(Function.identity())
                 .toList();
     }
