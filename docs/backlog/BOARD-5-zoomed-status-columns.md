@@ -1,6 +1,6 @@
 ---
 id: BOARD-5
-status: in-review
+status: done
 context: board
 type: feature
 tracker_id: 76
