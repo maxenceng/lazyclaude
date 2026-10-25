@@ -1,6 +1,6 @@
 ---
 id: LAZY-23
-status: in-review
+status: done
 context: cross-context
 type: chore
 tracker_id: 92
@@ -67,3 +67,10 @@ even with the IDE closed: IntelliJ 2026.2.1's `inspect.sh` throws "Tools are not
 
 Review settled two more on PR #41: the `serial` lint is off (`-Xlint:all,-serial`), as no exception is ever serialised and a
 `serialVersionUID` on each said nothing; and `var` is banned in main and test sources, failed by `make var-check` (ADR 0045).
+
+Three criteria were left unticked at merge, deliberately. The one-off `Files.readString` was reverted in review:
+`ProcessEnvironmentRepository` reads `/proc/<pid>/environ`, which can hold any bytes, and strict decoding refused the whole file
+over one that was not UTF-8. It decodes leniently through `new String(readAllBytes, UTF_8)`, a test pins that, and a comment says
+why. Every other one-off was fixed. The 19 `DeconstructionCanBeUsed` sites and the comment typos were fixed (fe21ea3, 78ad656) but
+not re-counted: only the IDE reports either, and no gate keeps them from coming back. A fresh *Inspect Code* is the only way to see
+them again.
