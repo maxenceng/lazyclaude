@@ -34,9 +34,14 @@ final class RowsElement implements Element {
         if (Areas.noRoomIn(height) || Areas.noRoomIn(area.width())) {
             return;
         }
-        int first = Math.clamp(selected - height + 1, 0, Math.max(0, lines.size() - height));
+        int first = firstShown(selected, height, lines.size());
         IntStream.range(0, Math.min(height, lines.size() - first))
                 .forEach(row -> renderRow(frame, area, row, first + row));
+    }
+
+    /** The index of the first line drawn when {@code height} lines are shown of {@code size}: just far enough on to show the selected one. */
+    static int firstShown(int selected, int height, int size) {
+        return Math.clamp(selected - height + 1, 0, Math.max(0, size - height));
     }
 
     private void renderRow(Frame frame, Rect area, int row, int index) {

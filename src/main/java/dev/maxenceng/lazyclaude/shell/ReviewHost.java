@@ -6,12 +6,12 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
- * What the review's keys ask of the shell they are pressed in: which panel has focus, leaving the review, a refusal for the key bar, what
+ * What the review's keys ask of the shell they are pressed in: which panel has focus, stepping back out of the zoom or the review, a refusal for the key bar, what
  * follows an accepted submit, running on the render thread, and whether a review is still the one open.
  */
 record ReviewHost(
         Supplier<Focus> focus,
-        BooleanSupplier leave,
+        BooleanSupplier back,
         Consumer<String> refuse,
         Runnable submitted,
         Consumer<Runnable> onRenderThread,

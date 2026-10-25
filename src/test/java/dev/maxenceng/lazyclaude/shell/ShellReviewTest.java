@@ -65,6 +65,31 @@ class ShellReviewTest {
     }
 
     @Test
+    void shouldLeaveOnlyTheZoomOnEscapeInAZoomedDiffAndTheReviewOnTheNextEscape() {
+        Shell shell = shellReviewing(twoFileDiffView(), loadingThreadsView());
+        shell.press(key('z'));
+        assertThat(Screen.of(shell).text()).doesNotContain("╭Files");
+
+        shell.press(namedKey(KeyCode.ESCAPE));
+        assertThat(Screen.of(shell).text()).as("esc steps back out of the zoom before it leaves the review").contains("╭Files", "╭Comments");
+        assertThat(shell.focus()).isEqualTo(Focus.MAIN);
+
+        shell.press(namedKey(KeyCode.ESCAPE));
+        assertThat(Screen.of(shell).text()).contains("╭Board").doesNotContain("╭Files");
+    }
+
+    @Test
+    void shouldKeepTheReviewsKeysInTheKeyBarOfAZoomedDiffAndAddZBack() {
+        Shell shell = shellReviewing(twoFileDiffView(), loadingThreadsView());
+
+        shell.press(key('z'));
+
+        assertThat(Screen.of(shell).lines().getLast())
+                .contains("c comment  v range  enter edit", "z back")
+                .doesNotContain("h/l panel", "j/k scroll");
+    }
+
+    @Test
     void shouldListPReviewInTheKeyBarOnATicketWhoseTicketBranchHeadsAnOpenPullRequest() {
         Screen screen = Screen.of(shellOnATicketWithAnOpenPullRequest(reviewsAnswering(twoFileDiffView(), loadingThreadsView()), Runnable::run));
 
