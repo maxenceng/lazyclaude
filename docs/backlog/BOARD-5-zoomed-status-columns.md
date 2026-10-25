@@ -44,8 +44,8 @@ the status groups in lifecycle order and the unreadable files. `context: board` 
 since LAZY-10 charted it as BOARD-5 and the status columns are most of the work; the main view
 and dock zooms ride along in the same ticket by choice.
 
-- **Shell.** One zoom state with four shapes: none, the Board's status columns, the main view,
-  the dock. The status columns need their own name — `Column` already means the screen's left
+- **Shell.** One zoom state, whose shape is the pane that has focus: the Board's status columns,
+  the main view, the dock (ADR 0046; a `Zoom` enum of four shapes restated `Focus`, PR review). The status columns need their own name — `Column` already means the screen's left
   and right halves.
 - **Session.** Nothing new: a zoomed dock reuses the hosted session resize `m` already drives,
   so how sessions are hosted does not change.

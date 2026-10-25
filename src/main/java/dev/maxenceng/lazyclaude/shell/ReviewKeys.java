@@ -81,8 +81,8 @@ final class ReviewKeys {
         return submitPrompt.map(_ -> SUBMIT_PROMPT);
     }
 
-    /** The keys the key bar offers in {@code pane}: the box's or the confirm's alone, else those of the focused panel and then {@code always}. */
-    List<String> keys(ReviewPane pane, Focus focus, List<String> always) {
+    /** The keys the key bar offers in {@code pane}: the box's or the confirm's alone, else {@code before}, those of the focused panel and {@code after}. */
+    List<String> keys(ReviewPane pane, Focus focus, List<String> before, List<String> after) {
         if (submitPrompt.isPresent()) {
             return SUBMIT_KEYS;
         }
@@ -94,7 +94,7 @@ final class ReviewKeys {
             case COMMENTS -> COMMENTS_KEYS;
             default -> FILES_KEYS;
         };
-        return Stream.concat(panel.stream(), always.stream()).toList();
+        return Stream.of(before, panel, after).flatMap(List::stream).toList();
     }
 
     /** The keys of the open review; {@code false} for one it leaves to the rest of the keys. */
@@ -104,7 +104,7 @@ final class ReviewKeys {
 
     private boolean pressOutsideBox(ReviewPane pane, KeyEvent key) {
         if (key.isKey(KeyCode.ESCAPE)) {
-            return pane.clearRange() || host.leave().getAsBoolean();
+            return pane.clearRange() || host.back().getAsBoolean();
         }
         if (key.hasAlt()) {
             return false;

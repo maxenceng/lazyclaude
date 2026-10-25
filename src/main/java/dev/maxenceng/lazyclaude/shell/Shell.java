@@ -177,6 +177,7 @@ public final class Shell extends ToolkitApp {
     private static final String SESSION_KEYS = "alt+h/l tab  alt+h/j/k/l focus  alt+m main view  alt+z zoom";
     private static final String ZOOM_KEY = "z zoom";
     private static final String STATUS_COLUMNS_ZOOM_KEYS = "h/l column  j/k move  enter pick  z/esc back";
+    private static final String REVIEW_ZOOM_KEY = "z back";
     private static final String MAIN_VIEW_ZOOM_KEYS = "j/k scroll  ^d/^u half page  g/G top/bottom  z/esc back";
     private static final String DOCK_ZOOM_KEYS = "alt+h/l tab  alt+h/j/k/l focus  alt+m main view  alt+z back";
 
@@ -237,8 +238,8 @@ public final class Shell extends ToolkitApp {
     private Focus lastLeft = Focus.BOARD;
     private Focus lastRight = Focus.MAIN;
     private Focus mainViewOwner = Focus.BOARD;
-    /** {@code NONE}, or the shape of the pane that has focus: {@code focusOn} ends it whenever focus moves. */
-    private Zoom zoom = Zoom.NONE;
+    /** Whether the focused pane fills the screen, its shape given by the focus: {@code focusOn} ends it whenever focus moves. */
+    private boolean zoomed;
     private Optional<WarningView> warning = Optional.empty();
     private boolean quitRequested;
 
@@ -308,7 +309,7 @@ public final class Shell extends ToolkitApp {
         this.root = board.root().value();
         this.reviewKeys = new ReviewKeys(writing, root, background, new ReviewHost(
                 this::focus,
-                this::leaveReview,
+                this::backFromReview,
                 reason -> refusal = Optional.of(reason),
                 this::submitted,
                 this::onRenderThread,
@@ -475,7 +476,7 @@ public final class Shell extends ToolkitApp {
         if (next != null) {
             worktree.markStale();
             RowKey before = board.selected().key();
-            if (zoom == Zoom.STATUS_COLUMNS) {
+            if (inStatusColumns()) {
                 board.replaceInStatusColumns(next);
             } else {
                 board.replace(next);
@@ -629,13 +630,13 @@ public final class Shell extends ToolkitApp {
         if (!plain) {
             return Optional.empty();
         }
-        if (key.isChar(ZOOM) && (zoom != Zoom.NONE || focus == Focus.BOARD || focus == Focus.MAIN)) {
+        if (key.isChar(ZOOM) && (zoomed || focus == Focus.BOARD || focus == Focus.MAIN)) {
             return Optional.of(toggleZoom());
         }
-        if (zoom != Zoom.NONE && (key.isKey(KeyCode.ESCAPE) || key.isChar(NEXT_WAITING))) {
+        if (zoomed && (key.isKey(KeyCode.ESCAPE) || key.isChar(NEXT_WAITING))) {
             return Optional.of(leaveZoom());
         }
-        return zoom == Zoom.STATUS_COLUMNS ? pressInStatusColumns(key) : Optional.empty();
+        return inStatusColumns() ? pressInStatusColumns(key) : Optional.empty();
     }
 
     private Optional<Boolean> pressInStatusColumns(KeyEvent key) {
@@ -660,26 +661,30 @@ public final class Shell extends ToolkitApp {
 
     /** Zooms whatever has focus that has a zoom to show, or leaves the zoom. */
     private boolean toggleZoom() {
-        if (zoom != Zoom.NONE) {
+        if (zoomed) {
             return leaveZoom();
         }
-        zoom = switch (focus) {
-            case BOARD -> Zoom.STATUS_COLUMNS;
-            case MAIN -> Zoom.MAIN_VIEW;
-            case DOCK -> Zoom.DOCK;
-            default -> Zoom.NONE;
-        };
-        if (zoom == Zoom.STATUS_COLUMNS) {
+        zoomed = focus == Focus.BOARD || focus == Focus.MAIN || focus == Focus.DOCK;
+        if (inStatusColumns()) {
             select(board::enterStatusColumns);
         }
-        return zoom != Zoom.NONE;
+        return zoomed;
     }
 
     /** Ends the zoom, and says whether there was one. */
     private boolean leaveZoom() {
-        boolean wasZoomed = zoom != Zoom.NONE;
-        zoom = Zoom.NONE;
+        boolean wasZoomed = zoomed;
+        zoomed = false;
         return wasZoomed;
+    }
+
+    /** {@code esc} in a review: out of the zoom first, out of the review once there is none. */
+    private boolean backFromReview() {
+        return leaveZoom() || leaveReview();
+    }
+
+    private boolean inStatusColumns() {
+        return zoomed && focus == Focus.BOARD;
     }
 
     private boolean pressUnzoomed(KeyEvent key) {
@@ -803,7 +808,7 @@ public final class Shell extends ToolkitApp {
     /** A mouse event over the pane reaches the selected tab's session at the matching cell, whatever has focus, while the pane is drawn. */
     boolean mouse(MouseEvent event) {
         return dock.selectedTab()
-                .filter(_ -> zoom == Zoom.NONE || zoom == Zoom.DOCK)
+                .filter(_ -> !zoomed || focus == Focus.DOCK)
                 .flatMap(tab -> paneArea.flatMap(area -> TerminalInputs.mouse(event, area))
                         .map(input -> {
                             hosting.send(new HostedInputPayload(tab.id(), input));
@@ -1335,7 +1340,7 @@ public final class Shell extends ToolkitApp {
     private boolean focusOn(Focus requested) {
         Focus target = requested == Focus.MAIN && mainViewHidden ? Focus.DOCK : requested;
         if (target != focus) {
-            zoom = Zoom.NONE;
+            zoomed = false;
         }
         focus = target;
         if (target.column() == Column.LEFT) {
@@ -1370,7 +1375,7 @@ public final class Shell extends ToolkitApp {
                                 .map(SessionText::quitPrompt)
                                 .or(() -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree())))
                                 .or(reviewKeys::prompt)),
-                zoomed(),
+                panes(),
                 new KeyBarElement(keyBar()));
         Element withPicker = picker.<Element>map(open -> stack(
                         screen,
@@ -1407,15 +1412,17 @@ public final class Shell extends ToolkitApp {
                 .orElse(withBox);
     }
 
-    private Element zoomed() {
-        return switch (zoom) {
-            case NONE ->
-                row(leftColumn(), (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill();
-            case STATUS_COLUMNS ->
+    /** The panels, or the focused pane zoomed: the Board as its status columns, the main view, or the dock. */
+    private Element panes() {
+        if (!zoomed) {
+            return row(leftColumn(), (mainViewHidden ? column(dock()) : column(mainView(), dock())).fill()).fill();
+        }
+        return switch (focus) {
+            case BOARD ->
                 column(StatusColumnsPanels.of(board.statusColumns(), selectedTicket().map(TicketView::id), this::statusColumnsLine), dockStrip())
                         .fill();
-            case MAIN_VIEW -> column(mainView(), dockStrip()).fill();
-            case DOCK -> dock();
+            case MAIN -> column(mainView(), dockStrip()).fill();
+            default -> dock();
         };
     }
 
@@ -1635,20 +1642,27 @@ public final class Shell extends ToolkitApp {
                 .map(List::of)
                 .or(() -> remoteControlPrompt.map(prompt -> List.of(RemoteControlPromptText.keys(prompt))))
                 .or(() -> picker.map(_ -> List.of(VerbPickerText.keys())))
-                .or(() -> Optional.of(zoomKeys()).filter(_ -> inSession() && zoom == Zoom.DOCK))
+                .or(() -> Optional.of(zoomKeys()).filter(_ -> inSession() && zoomed))
                 .or(() -> Optional.of(SESSION_KEYS).filter(_ -> inSession()).map(List::of))
                 .or(() -> respondPrompt.map(_ -> RESPOND_KEYS))
-                .or(() -> Optional.of(zoomKeys()).filter(_ -> zoom != Zoom.NONE))
-                .or(() -> review.map(pane -> reviewKeys.keys(pane, focus, List.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY))))
+                .or(() -> review.map(this::reviewKeyBar))
+                .or(() -> Optional.of(zoomKeys()).filter(_ -> zoomed))
                 .orElseGet(this::boardKeys);
+    }
+
+    /** A zoomed diff puts its way back first, where the clipped key bar still shows it; the panel and focus keys would leave the zoom. */
+    private List<String> reviewKeyBar(ReviewPane pane) {
+        return zoomed
+                ? reviewKeys.keys(pane, focus, List.of(REVIEW_ZOOM_KEY), List.of())
+                : reviewKeys.keys(pane, focus, List.of(), List.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY));
     }
 
     private List<String> zoomKeys() {
         return List.of(
-                switch (zoom) {
-                    case STATUS_COLUMNS -> STATUS_COLUMNS_ZOOM_KEYS;
-                    case MAIN_VIEW -> MAIN_VIEW_ZOOM_KEYS;
-                    case DOCK, NONE -> DOCK_ZOOM_KEYS;
+                switch (focus) {
+                    case BOARD -> STATUS_COLUMNS_ZOOM_KEYS;
+                    case MAIN -> MAIN_VIEW_ZOOM_KEYS;
+                    default -> DOCK_ZOOM_KEYS;
                 });
     }
 

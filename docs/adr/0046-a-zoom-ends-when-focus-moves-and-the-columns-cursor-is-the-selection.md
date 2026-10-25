@@ -20,7 +20,12 @@ moves focus has to say what becomes of the zoom, and the status columns need a c
 - **The cursor of the status columns is the Board's selection**, not a second one. It moves through `BoardRows` onto a ticket by id,
   unfolding that ticket's group if the Board had folded it, so the main view and the Sessions panel follow with no extra state, and
   `z` or `esc` leave with the selection where the cursor is.
-- **A zoom is a shell state with four shapes** (`Zoom`), not a context concern: `board` is unchanged.
+- **A zoom is one bit of shell state, its shape the focused pane**: the Board zooms to its status columns, the main view and the dock
+  to themselves. Because the zoom ends whenever focus moves, a type naming the shapes would only restate `Focus`. It is not a context
+  concern: `board` is unchanged.
+- **In a review, `esc` steps back one level at a time**: the zoomed diff first, then the review. The review's keys still take every
+  other key while zoomed, and the key bar keeps them with `z back` first. Rejected: no zoom during a review, which loses the wide diff
+  that a review is the main reason to zoom for.
 
 ## Consequences
 
