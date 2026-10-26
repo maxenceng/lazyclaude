@@ -54,6 +54,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionComm
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
+import dev.maxenceng.lazyclaude.session.published.ReservedChords;
 
 final class ShellReviewFixture {
 
@@ -111,6 +112,7 @@ final class ShellReviewFixture {
                 mock(DocsQuery.class),
                 reviews,
                 writing,
+                ReservedChords.defaults(),
                 background);
         return ShellFixture.pressed(shell, key('j'), ticket.status().ordinal() + 1);
     }

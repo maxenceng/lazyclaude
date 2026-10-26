@@ -24,6 +24,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.WrittenReviewView;
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 import dev.maxenceng.lazyclaude.review.published.Summary;
+import dev.maxenceng.lazyclaude.session.published.FixedChord;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 
@@ -46,8 +47,6 @@ final class ReviewKeys {
     private static final char UP = 'k';
     private static final char NEXT_FILE = 'J';
     private static final char PREVIOUS_FILE = 'K';
-    private static final char HALF_PAGE_DOWN = 'd';
-    private static final char HALF_PAGE_UP = 'u';
 
     private static final String NOT_DELETED = "not deleted (%s)";
     private static final String NOT_SUBMITTED = "not submitted (%s)";
@@ -110,7 +109,7 @@ final class ReviewKeys {
             return false;
         }
         if (key.hasCtrl()) {
-            return !key.isCtrlC() && host.focus().get() == Focus.MAIN && page(pane, key);
+            return !TerminalInputs.isFixed(key, FixedChord.QUIT) && host.focus().get() == Focus.MAIN && page(pane, key);
         }
         if (key.isChar(OPEN_REVIEW)) {
             return true;
@@ -192,7 +191,7 @@ final class ReviewKeys {
 
     /** The box takes every key: {@code ctrl+s} saves, {@code esc} throws it away, the rest edit its text; only {@code ctrl+c} still quits. */
     private boolean pressInBox(ReviewPane pane, CommentBox box, KeyEvent key) {
-        if (key.isCtrlC()) {
+        if (TerminalInputs.isFixed(key, FixedChord.QUIT)) {
             return false;
         }
         if (box.saving()) {
@@ -257,11 +256,11 @@ final class ReviewKeys {
     }
 
     private static boolean page(ReviewPane pane, KeyEvent key) {
-        if (key.isChar(HALF_PAGE_DOWN)) {
+        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_DOWN)) {
             pane.halfPageDown();
             return true;
         }
-        if (key.isChar(HALF_PAGE_UP)) {
+        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_UP)) {
             pane.halfPageUp();
             return true;
         }

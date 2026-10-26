@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.session.published;
 
+import java.util.Locale;
+
 /** A key that types no character of its own. */
 public enum NamedKey {
     ENTER,
@@ -27,5 +29,13 @@ public enum NamedKey {
     F9,
     F10,
     F11,
-    F12
+    F12;
+
+    private static final String UNDERSCORE = "_";
+    private static final String NOTHING = "";
+
+    /** How a chord spells the key: {@code pageup}, {@code f5}, as Claude Code's {@code keybindings.json} does. */
+    public String spelling() {
+        return name().replace(UNDERSCORE, NOTHING).toLowerCase(Locale.ROOT);
+    }
 }

@@ -43,7 +43,7 @@ public final class DesktopNotificationFixture {
     public static DesktopNotificationManager managerHavingSeen(
             DesktopNotificationPort notifications, WarningPort warnings, LiveSession... sessions) {
         DesktopNotificationManager manager = new DesktopNotificationManager(notifications, warnings);
-        manager.seen(project(), liveSessionsOf(List.of(sessions)));
+        manager.seen(project(), liveSessionsOf(List.of(sessions)), true);
         return manager;
     }
 }

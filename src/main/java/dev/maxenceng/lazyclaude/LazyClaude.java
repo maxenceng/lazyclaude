@@ -36,7 +36,10 @@ import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestDif
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestsRepository;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhThreadRepository;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.PullRequestWatchRepository;
+import dev.maxenceng.lazyclaude.session.application.ConfigurationApplicationService;
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationQuery;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
@@ -45,6 +48,8 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeAgentsRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeKeybindingsRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigurationRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.KittyConfigRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LiveSessionRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.NotifySendRepository;
@@ -59,6 +64,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptRepos
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.WorktreeRepository;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
+import dev.maxenceng.lazyclaude.session.published.ReservedChords;
 import dev.maxenceng.lazyclaude.shared.application.WarningApplicationService;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.StoppedThreadPayload;
@@ -98,6 +104,20 @@ public final class LazyClaude {
 
     static void main() throws Exception {
         WarningRepository warningRepository = new WarningRepository();
+        Path home = Path.of(System.getProperty(USER_HOME));
+        int exit = configured(
+                new ConfigurationQuery(new ConfigurationApplicationService(
+                        new ConfigurationRepository(home, System.getenv()),
+                        new ClaudeKeybindingsRepository(home),
+                        warningRepository)),
+                System.err,
+                configuration -> open(configuration, warningRepository));
+        if (exit != 0) {
+            System.exit(exit);
+        }
+    }
+
+    private static void open(ConfigurationView configuration, WarningRepository warningRepository) throws Exception {
         BoardQuery board = new BoardQuery(new BoardApplicationService(
                 new ProjectLocatorRepository(),
                 new BacklogRepository(),
@@ -111,7 +131,7 @@ public final class LazyClaude {
                 warnOfStoppedThreads(Thread.currentThread(), new WarningCommand(warningService), System.err));
         DocsQuery docs = new DocsQuery(
                 new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(), warningRepository));
-        SessionApplicationService sessionService = sessionService(warningRepository);
+        SessionApplicationService sessionService = sessionService(warningRepository, configuration.desktopNotifications());
         SessionQuery sessions = new SessionQuery(sessionService);
         HostedSessionCommand hosting = new HostedSessionCommand(sessionService);
         WatchedSessionCommand watching = new WatchedSessionCommand(sessionService);
@@ -134,7 +154,7 @@ public final class LazyClaude {
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, writing, hosting, watching, outside, removing, warnings));
+                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, writing, configuration.reservedChords(), hosting, watching, outside, removing, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -155,7 +175,23 @@ public final class LazyClaude {
         };
     }
 
-    private static SessionApplicationService sessionService(WarningPort warnings) {
+    /**
+     * Opens the application on what the user configured, read before anything else so that a file that cannot be used stops
+     * start-up before a frame is drawn: the reason is printed and the exit code is non-zero.
+     */
+    static int configured(ConfigurationQuery configuring, PrintStream err, ConfigurationOpener application) throws Exception {
+        ConfigurationView configuration;
+        try {
+            configuration = configuring.configuration();
+        } catch (DomainException e) {
+            err.println(PREFIX + e.getMessage());
+            return 1;
+        }
+        application.open(configuration);
+        return 0;
+    }
+
+    private static SessionApplicationService sessionService(WarningPort warnings, boolean desktopNotifications) {
         Path home = Path.of(System.getProperty(USER_HOME));
         Path registry = home.resolve(REGISTRY);
         TranscriptRepository transcripts = new TranscriptRepository(
@@ -180,6 +216,7 @@ public final class LazyClaude {
                 new TerminalJumpRepository(KITTEN, TMUX, JUMP_PATIENCE),
                 new KittyConfigRepository(home, System.getenv()),
                 new TranscriptReadRepository(home.resolve(TRANSCRIPTS)),
+                desktopNotifications,
                 Clock.systemDefaultZone());
     }
 
@@ -234,13 +271,14 @@ public final class LazyClaude {
             SessionQuery sessions,
             ReviewQuery reviews,
             PendingReviewCommand writing,
+            ReservedChords chords,
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
             OutsideSessionCommand outside,
             TicketWorktreeCommand removing,
             WarningQuery warnings)
             throws Exception {
-        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, writing, hosting, watching, outside, removing, warnings)::run, hosting);
+        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, writing, chords, hosting, watching, outside, removing, warnings)::run, hosting);
     }
 
     /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
@@ -267,12 +305,13 @@ public final class LazyClaude {
             SessionQuery sessions,
             ReviewQuery reviews,
             PendingReviewCommand writing,
+            ReservedChords chords,
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
             OutsideSessionCommand outside,
             TicketWorktreeCommand removing,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, watching, outside, removing, sessions, board, docs, reviews, writing);
+        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, watching, outside, removing, sessions, board, docs, reviews, writing, chords);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         board.subscribe(new BoardWatchPayload(view.root().value()), shell::boardChanged);
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);

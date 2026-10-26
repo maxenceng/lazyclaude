@@ -77,6 +77,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionPay
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeView;
+import dev.maxenceng.lazyclaude.session.published.FixedChord;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
@@ -86,6 +87,8 @@ import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.PaneWidth;
 import dev.maxenceng.lazyclaude.session.published.PastedText;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.ReservedAction;
+import dev.maxenceng.lazyclaude.session.published.ReservedChords;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.session.published.TranscriptOffset;
@@ -155,8 +158,6 @@ public final class Shell extends ToolkitApp {
     private static final char RIGHT = 'l';
     private static final char TOP = 'g';
     private static final char BOTTOM = 'G';
-    private static final char HALF_PAGE_DOWN = 'd';
-    private static final char HALF_PAGE_UP = 'u';
 
     private static final String MOVE_KEYS = "j/k move";
     private static final String SCROLL_KEYS = "j/k scroll  ^d/^u half page  g/G top/bottom";
@@ -164,7 +165,7 @@ public final class Shell extends ToolkitApp {
     private static final String FOLD_KEY = "enter fold";
     private static final String SESSIONS_KEY = "enter sessions";
     private static final String EXPAND_KEY = "enter expand";
-    private static final String FOCUS_KEYS = "alt+h/j/k/l focus";
+    private static final String FOCUS_KEYS = "%s focus";
     private static final String QUIT_KEY = "q quit";
     private static final String REFRESH_KEY = "R refresh";
     private static final String JUMP_KEY = "o jump";
@@ -174,12 +175,12 @@ public final class Shell extends ToolkitApp {
     private static final String NEW_KEY = "N new";
     private static final String NEW_TICKET_KEY = "n new";
     private static final String MAIN_VIEW_KEY = "m main view";
-    private static final String SESSION_KEYS = "alt+h/l tab  alt+h/j/k/l focus  alt+m main view  alt+z zoom";
+    private static final String SESSION_KEYS = "%s tab  %s focus  %s main view  %s zoom";
     private static final String ZOOM_KEY = "z zoom";
     private static final String STATUS_COLUMNS_ZOOM_KEYS = "h/l column  j/k move  enter pick  z/esc back";
     private static final String REVIEW_ZOOM_KEY = "z back";
     private static final String MAIN_VIEW_ZOOM_KEYS = "j/k scroll  ^d/^u half page  g/G top/bottom  z/esc back";
-    private static final String DOCK_ZOOM_KEYS = "alt+h/l tab  alt+h/j/k/l focus  alt+m main view  alt+z back";
+    private static final String DOCK_ZOOM_KEYS = "%s tab  %s focus  %s main view  %s back";
 
     private final BoardRows board;
     private final DocsRows docs;
@@ -218,6 +219,8 @@ public final class Shell extends ToolkitApp {
     private volatile Set<String> mergedHeads = Set.of();
     private final AtomicReference<Set<String>> pendingMergedHeads = new AtomicReference<>();
     private final Executor background;
+    private final ReservedChords chords;
+    private final ChordKeys chordKeys;
     private Optional<ReviewPane> review = Optional.empty();
     private Optional<VerbPicker> picker = Optional.empty();
     private Optional<Rect> sessionsArea = Optional.empty();
@@ -256,7 +259,8 @@ public final class Shell extends ToolkitApp {
             BoardQuery boards,
             DocsQuery docsQuery,
             ReviewQuery reviews,
-            PendingReviewCommand writing) {
+            PendingReviewCommand writing,
+            ReservedChords chords) {
         this(
                 board,
                 docs,
@@ -271,6 +275,7 @@ public final class Shell extends ToolkitApp {
                 docsQuery,
                 reviews,
                 writing,
+                chords,
                 Executors.newVirtualThreadPerTaskExecutor());
     }
 
@@ -289,8 +294,11 @@ public final class Shell extends ToolkitApp {
             DocsQuery docsQuery,
             ReviewQuery reviews,
             PendingReviewCommand writing,
+            ReservedChords chords,
             Executor background) {
         this.background = background;
+        this.chords = chords;
+        this.chordKeys = new ChordKeys(chords);
         this.board = new BoardRows(board);
         this.lastRead = board;
         this.linkedTicketIds = BoardRows.ticketIdsOf(board);
@@ -618,15 +626,32 @@ public final class Shell extends ToolkitApp {
         if (review.map(pane -> reviewKeys.press(pane, key)).orElse(false)) {
             return true;
         }
-        return pressZoom(key).orElseGet(() -> pressUnzoomed(key));
+        return reservedBy(key)
+                .map(this::pressReserved)
+                .or(() -> pressZoom(key))
+                .orElseGet(() -> pressUnzoomed(key));
     }
 
-    /** The keys of the zoom: {@code z} and {@code alt+z}, {@code esc} to leave, the cursor of the status columns, and {@code w}, which leaves. */
+    private Optional<ReservedAction> reservedBy(KeyEvent key) {
+        return TerminalInputs.key(key).flatMap(chords::actionOf);
+    }
+
+    /** What a reserved chord does outside a hosted session; rebinding {@code nextWaiting} keeps it leaving the zoom. */
+    private boolean pressReserved(ReservedAction action) {
+        return switch (action) {
+            case FOCUS_LEFT -> focusOn(lastLeft);
+            case FOCUS_RIGHT -> focusOn(lastRight);
+            case FOCUS_DOWN -> focusOn(focus.below());
+            case FOCUS_UP -> goUp(focus.above());
+            case HIDE_MAIN_VIEW -> toggleMainView();
+            case ZOOM -> toggleZoom();
+            case NEXT_WAITING -> leaveZoom();
+        };
+    }
+
+    /** The keys of the zoom: {@code z}, {@code esc} to leave, the cursor of the status columns, and {@code w}, which leaves. */
     private Optional<Boolean> pressZoom(KeyEvent key) {
         boolean plain = !key.hasCtrl() && !key.hasAlt();
-        if (key.hasAlt() && !key.hasCtrl() && key.isChar(ZOOM)) {
-            return Optional.of(toggleZoom());
-        }
         if (!plain) {
             return Optional.empty();
         }
@@ -689,10 +714,10 @@ public final class Shell extends ToolkitApp {
 
     private boolean pressUnzoomed(KeyEvent key) {
         if (key.hasCtrl()) {
-            return key.isCtrlC() ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
+            return TerminalInputs.isFixed(key, FixedChord.QUIT) ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
         }
         if (key.hasAlt()) {
-            return pressWithAlt(key);
+            return false;
         }
         if (key.isKey(KeyCode.ENTER)) {
             return fold();
@@ -760,7 +785,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean pressInSession(KeyEvent key) {
-        if (key.hasAlt() && !key.hasCtrl() && pressReservedChord(key)) {
+        if (reservedBy(key).map(this::pressReservedInSession).orElse(false)) {
             return true;
         }
         if (key.hasCtrl() && key.isChar(SUSPEND)) {
@@ -770,28 +795,22 @@ public final class Shell extends ToolkitApp {
         return true;
     }
 
-    private boolean pressReservedChord(KeyEvent key) {
-        if (key.isChar(LEFT)) {
-            return dock.selectPrevious() || focusOn(lastLeft);
-        }
-        if (key.isChar(RIGHT)) {
-            dock.selectNext();
-            return true;
-        }
-        if (key.isChar(UP)) {
-            return goUp(Focus.MAIN);
-        }
-        if (key.isChar(TOGGLE_MAIN_VIEW)) {
-            return toggleMainView();
-        }
-        if (key.isChar(ZOOM)) {
-            return toggleZoom();
-        }
-        if (key.isChar(NEXT_WAITING)) {
-            leaveZoom();
-            return true;
-        }
-        return key.isChar(DOWN);
+    private boolean pressReservedInSession(ReservedAction action) {
+        return switch (action) {
+            case FOCUS_LEFT -> dock.selectPrevious() || focusOn(lastLeft);
+            case FOCUS_RIGHT -> {
+                dock.selectNext();
+                yield true;
+            }
+            case FOCUS_UP -> goUp(Focus.MAIN);
+            case HIDE_MAIN_VIEW -> toggleMainView();
+            case ZOOM -> toggleZoom();
+            case NEXT_WAITING -> {
+                leaveZoom();
+                yield true;
+            }
+            case FOCUS_DOWN -> true;
+        };
     }
 
     private void sendToSelectedTab(TerminalInput input) {
@@ -1104,11 +1123,11 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean pressWithCtrl(KeyEvent key) {
-        if (key.isChar(HALF_PAGE_DOWN)) {
+        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_DOWN)) {
             mainViewScroll.halfPageDown();
             return true;
         }
-        if (key.isChar(HALF_PAGE_UP)) {
+        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_UP)) {
             mainViewScroll.halfPageUp();
             return true;
         }
@@ -1242,25 +1261,6 @@ public final class Shell extends ToolkitApp {
             mainViewScroll.reset();
         }
         return true;
-    }
-
-    private boolean pressWithAlt(KeyEvent key) {
-        if (key.isChar(LEFT)) {
-            return focusOn(lastLeft);
-        }
-        if (key.isChar(RIGHT)) {
-            return focusOn(lastRight);
-        }
-        if (key.isChar(DOWN)) {
-            return focusOn(focus.below());
-        }
-        if (key.isChar(UP)) {
-            return goUp(focus.above());
-        }
-        if (key.isChar(TOGGLE_MAIN_VIEW)) {
-            return toggleMainView();
-        }
-        return key.isChar(NEXT_WAITING) && leaveZoom();
     }
 
     private boolean fold() {
@@ -1643,7 +1643,7 @@ public final class Shell extends ToolkitApp {
                 .or(() -> remoteControlPrompt.map(prompt -> List.of(RemoteControlPromptText.keys(prompt))))
                 .or(() -> picker.map(_ -> List.of(VerbPickerText.keys())))
                 .or(() -> Optional.of(zoomKeys()).filter(_ -> inSession() && zoomed))
-                .or(() -> Optional.of(SESSION_KEYS).filter(_ -> inSession()).map(List::of))
+                .or(() -> Optional.of(sessionKeys(SESSION_KEYS)).filter(_ -> inSession()).map(List::of))
                 .or(() -> respondPrompt.map(_ -> RESPOND_KEYS))
                 .or(() -> review.map(this::reviewKeyBar))
                 .or(() -> Optional.of(zoomKeys()).filter(_ -> zoomed))
@@ -1654,7 +1654,15 @@ public final class Shell extends ToolkitApp {
     private List<String> reviewKeyBar(ReviewPane pane) {
         return zoomed
                 ? reviewKeys.keys(pane, focus, List.of(REVIEW_ZOOM_KEY), List.of())
-                : reviewKeys.keys(pane, focus, List.of(), List.of(PANEL_KEYS, FOCUS_KEYS, QUIT_KEY));
+                : reviewKeys.keys(pane, focus, List.of(), List.of(PANEL_KEYS, focusKeys(), QUIT_KEY));
+    }
+
+    private String focusKeys() {
+        return FOCUS_KEYS.formatted(chordKeys.focus());
+    }
+
+    private String sessionKeys(String format) {
+        return format.formatted(chordKeys.tab(), chordKeys.focus(), chordKeys.hideMainView(), chordKeys.zoom());
     }
 
     private List<String> zoomKeys() {
@@ -1662,7 +1670,7 @@ public final class Shell extends ToolkitApp {
                 switch (focus) {
                     case BOARD -> STATUS_COLUMNS_ZOOM_KEYS;
                     case MAIN -> MAIN_VIEW_ZOOM_KEYS;
-                    default -> DOCK_ZOOM_KEYS;
+                    default -> sessionKeys(DOCK_ZOOM_KEYS);
                 });
     }
 
@@ -1676,7 +1684,7 @@ public final class Shell extends ToolkitApp {
                         Included.when(focus == Focus.SESSIONS && sessions.olderSelected(), EXPAND_KEY),
                         Included.when(removableTicket().isPresent(), REMOVE_WORKTREE_KEY),
                         Included.when(jumpTarget().isPresent(), JUMP_KEY),
-                        Stream.of(FOCUS_KEYS, QUIT_KEY),
+                        Stream.of(focusKeys(), QUIT_KEY),
                         Included.when(
                                 (focus == Focus.BOARD || focus == Focus.SESSIONS) && selectedTicket().isPresent(),
                                 NEW_TICKET_KEY),

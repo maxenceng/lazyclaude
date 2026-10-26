@@ -21,7 +21,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
  * permission and waiting for input has its notification replaced in place; one that leaves waiting, or dies, has it closed, and
  * so has one that becomes watched. The first read only records, so a session already waiting when lazyclaude starts is not
  * announced again, and a read that changes no state does nothing, however often the same states are handed over. A failure of
- * the desktop is named once, and the sessions go on.
+ * the desktop is named once, and the sessions go on. With {@code desktop} off it never calls its port: markers and the status
+ * line, which do not come through here, still show a waiting session.
  */
 public final class DesktopNotificationManager {
 
@@ -41,9 +42,9 @@ public final class DesktopNotificationManager {
         this.warnings = warnings;
     }
 
-    /** Takes the machine's live sessions as just read; sessions that could not be read change nothing. */
-    public synchronized void seen(Project project, Sessions sessions) {
-        if (!(sessions instanceof AvailableSessions available)) {
+    /** Takes the machine's live sessions as just read; sessions that could not be read change nothing, nor does any read while {@code desktop} is off. */
+    public synchronized void seen(Project project, Sessions sessions, boolean desktop) {
+        if (!desktop || !(sessions instanceof AvailableSessions available)) {
             return;
         }
         List<PlacedSession> now = available.everyone(project);

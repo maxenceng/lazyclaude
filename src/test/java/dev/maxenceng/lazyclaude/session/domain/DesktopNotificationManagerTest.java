@@ -50,18 +50,29 @@ class DesktopNotificationManagerTest {
     @Test
     void shouldFireNothingOnTheFirstReadEvenForASessionAlreadyWaiting() {
         new DesktopNotificationManager(notifications, warnings)
-                .seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+                .seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void shouldNeverCallItsPortWhenDesktopNotificationsAreOff() {
+        DesktopNotificationManager manager = new DesktopNotificationManager(notifications, warnings);
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))), false);
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), false);
+        manager.watching(new WatchedSession(sessionId()));
+        manager.seen(project(), liveSessionsOf(List.of()), false);
+
+        verifyNoInteractions(notifications, warnings);
     }
 
     @Test
     void shouldFireWhenASessionEntersWaitingAfterTheFirstRead() {
         when(notifications.show(inputNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = new DesktopNotificationManager(notifications, warnings);
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))), true);
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verify(notifications).show(inputNotification());
     }
@@ -71,7 +82,7 @@ class DesktopNotificationManagerTest {
         when(notifications.show(permissionNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))), true);
 
         verify(notifications).show(permissionNotification());
     }
@@ -79,9 +90,9 @@ class DesktopNotificationManagerTest {
     @Test
     void shouldFireNothingForYourTurnBusyOrUnknown() {
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(waitingForInput()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new YourTurn()))));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Unknown()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new YourTurn()))), true);
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))), true);
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Unknown()))), true);
 
         verify(notifications, never()).show(any());
     }
@@ -90,9 +101,9 @@ class DesktopNotificationManagerTest {
     void shouldDoNothingWhenAReadChangesNoState() {
         when(notifications.show(inputNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verifyNoMoreInteractions(notifications);
     }
@@ -102,7 +113,7 @@ class DesktopNotificationManagerTest {
         when(notifications.show(inputNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings);
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verify(notifications).show(inputNotification());
     }
@@ -112,7 +123,7 @@ class DesktopNotificationManagerTest {
         when(notifications.show(otherProjectNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings);
 
-        manager.seen(project(), elsewhereOf(List.of(otherProjectGroup(List.of(sessionWith(waitingForInput()))))));
+        manager.seen(project(), elsewhereOf(List.of(otherProjectGroup(List.of(sessionWith(waitingForInput()))))), true);
 
         verify(notifications).show(otherProjectNotification());
     }
@@ -122,9 +133,9 @@ class DesktopNotificationManagerTest {
         when(notifications.show(permissionNotification())).thenReturn(notificationId());
         when(notifications.replace(notificationId(), inputNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))), true);
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verify(notifications).replace(notificationId(), inputNotification());
         verify(notifications, times(1)).show(any());
@@ -135,10 +146,10 @@ class DesktopNotificationManagerTest {
         when(notifications.show(permissionNotification())).thenReturn(notificationId());
         when(notifications.replace(notificationId(), inputNotification())).thenReturn(secondNotificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))), true);
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))), true);
 
         verify(notifications).close(secondNotificationId());
     }
@@ -147,9 +158,9 @@ class DesktopNotificationManagerTest {
     void shouldCloseTheNotificationWhenTheSessionIsAnswered() {
         when(notifications.show(inputNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))), true);
 
         verify(notifications).close(notificationId());
     }
@@ -158,9 +169,9 @@ class DesktopNotificationManagerTest {
     void shouldCloseTheNotificationWhenTheSessionDies() {
         when(notifications.show(inputNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
-        manager.seen(project(), liveSessionsOf(List.of()));
+        manager.seen(project(), liveSessionsOf(List.of()), true);
 
         verify(notifications).close(notificationId());
     }
@@ -169,7 +180,7 @@ class DesktopNotificationManagerTest {
     void shouldCloseNothingForASessionThatNeverWasNotified() {
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
 
-        manager.seen(project(), liveSessionsOf(List.of()));
+        manager.seen(project(), liveSessionsOf(List.of()), true);
 
         verifyNoInteractions(notifications);
     }
@@ -179,7 +190,7 @@ class DesktopNotificationManagerTest {
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
         manager.watching(new WatchedSession(sessionId()));
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verifyNoInteractions(notifications);
     }
@@ -188,7 +199,7 @@ class DesktopNotificationManagerTest {
     void shouldCloseTheNotificationOfASessionThatBecomesWatched() {
         when(notifications.show(inputNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         manager.watching(new WatchedSession(sessionId()));
 
@@ -199,10 +210,10 @@ class DesktopNotificationManagerTest {
     void shouldFireNothingForAWatchedSessionThatStopsBeingWatchedWhileStillWaiting() {
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
         manager.watching(new WatchedSession(sessionId()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         manager.watching(new NoWatchedSession());
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verifyNoInteractions(notifications);
     }
@@ -211,9 +222,9 @@ class DesktopNotificationManagerTest {
     void shouldReplaceNothingForAWatchedSessionWhosePromptChanges() {
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
         manager.watching(new WatchedSession(sessionId()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))), true);
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verifyNoInteractions(notifications);
     }
@@ -223,8 +234,8 @@ class DesktopNotificationManagerTest {
         when(notifications.show(inputNotification())).thenReturn(notificationId());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
 
-        manager.seen(project(), unavailableSessions());
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), unavailableSessions(), true);
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verify(notifications).show(inputNotification());
     }
@@ -234,9 +245,9 @@ class DesktopNotificationManagerTest {
         when(notifications.show(any())).thenThrow(new DesktopNotificationUnavailableException("notify-send is not installed"));
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))), true);
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         assertThat(raisedTexts(warnings)).containsExactly("notifications: notify-send is not installed.");
     }
@@ -246,9 +257,9 @@ class DesktopNotificationManagerTest {
         when(notifications.show(any())).thenReturn(notificationId());
         doThrow(new DesktopNotificationUnavailableException("the bus is gone")).when(notifications).replace(any(), any());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForPermission()))), true);
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         assertThat(raisedTexts(warnings)).containsExactly("notifications: the bus is gone.");
     }
@@ -258,10 +269,10 @@ class DesktopNotificationManagerTest {
         when(notifications.show(any())).thenReturn(notificationId());
         doThrow(new DesktopNotificationUnavailableException("gdbus is not installed")).when(notifications).close(any());
         DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))));
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))), true);
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Busy()))), true);
 
         assertThat(raisedTexts(warnings)).containsExactly("notifications: gdbus is not installed.");
         verify(notifications, times(1)).close(any());
