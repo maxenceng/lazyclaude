@@ -363,6 +363,27 @@ class SessionApplicationServiceTest {
     }
 
     @Test
+    void shouldHandTheListenerTheSameWaitingSessionsWhetherDesktopNotificationsAreOnOrOff() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedWaitingFor(inputNeeded())));
+        when(locator.locate(any())).thenReturn(project());
+        List<Sessions> withNotifications = new ArrayList<>();
+        List<Sessions> withoutNotifications = new ArrayList<>();
+        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications)
+                .subscribe(project(), noTickets(), withNotifications::add);
+        sessionApplicationServiceWithoutDesktopNotifications(sessions, past, locator, watch, transcriptWatch, warnings, notifications)
+                .subscribe(project(), noTickets(), withoutNotifications::add);
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch, times(2)).watch(changed.capture(), any());
+
+        changed.getAllValues().forEach(Runnable::run);
+
+        assertThat(withoutNotifications)
+                .as("markers and the status line read these sessions, not the notifications")
+                .isNotEmpty()
+                .isEqualTo(withNotifications);
+    }
+
+    @Test
     void shouldNotNotifyWhenDesktopNotificationsAreOff() {
         when(sessions.liveSessions(any()))
                 .thenReturn(List.of(reportedWith(ReportedStatus.BUSY)))
