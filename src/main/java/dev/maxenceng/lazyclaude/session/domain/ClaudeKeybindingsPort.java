@@ -13,4 +13,7 @@ public interface ClaudeKeybindingsPort {
      * @throws ClaudeKeybindingsUnreadableException when the file exists and cannot be read
      */
     List<Chord> bindings();
+
+    /** The first keystroke of every binding Claude Code makes by default, in any context. */
+    List<Chord> defaults();
 }

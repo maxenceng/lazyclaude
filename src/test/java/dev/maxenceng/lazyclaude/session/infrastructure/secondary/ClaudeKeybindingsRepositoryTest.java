@@ -37,6 +37,14 @@ class ClaudeKeybindingsRepositoryTest {
     }
 
     @Test
+    void shouldReadEveryDefaultOfClaudeCodeAsAChord() {
+        assertThat(repository.defaults())
+                .as("meta is read as alt, so Claude Code's meta+up is alt+up")
+                .contains(chord('c', Modifier.CTRL), chord('o', Modifier.ALT), namedChord(NamedKey.UP, Modifier.ALT))
+                .doesNotContain(altH(), altZ());
+    }
+
+    @Test
     void shouldSayNothingWhenThereIsNoFile() {
         assertThat(repository.bindings()).isEmpty();
     }

@@ -28,6 +28,7 @@ import dev.maxenceng.lazyclaude.session.published.DuplicateChordException;
 import dev.maxenceng.lazyclaude.session.published.InvalidChordException;
 import dev.maxenceng.lazyclaude.session.published.ReservedAction;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
+import dev.maxenceng.lazyclaude.session.published.TakenChordException;
 
 /**
  * Reads the text of {@code config.yml} node by node, so that every refusal can name the line it is on. SnakeYAML Engine's YAML 1.2
@@ -57,6 +58,7 @@ final class ConfigurationNodes {
     private static final String NOT_A_BOOLEAN = "'%s' is not a valid value for %s: use true or false";
     private static final String NEEDS_A_BOOLEAN = "%s needs true or false";
     private static final String ALREADY_BOUND = "%s is already bound to %s";
+    private static final String TAKEN = "%s is lazyclaude's %s";
     private static final String ON_LINE = " on line %d";
     private static final String BY_DEFAULT = " by default";
 
@@ -137,6 +139,8 @@ final class ConfigurationNodes {
             return ReservedChords.defaults().rebinding(chords);
         } catch (DuplicateChordException duplicate) {
             throw duplicated(duplicate, lines);
+        } catch (TakenChordException taken) {
+            throw refused(lines.get(taken.action()), TAKEN.formatted(taken.fixed().chord().text(), taken.fixed().purpose()));
         }
     }
 

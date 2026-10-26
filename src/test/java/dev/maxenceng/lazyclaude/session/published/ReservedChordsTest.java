@@ -8,6 +8,7 @@ import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altM;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altW;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altZ;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlAltH;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlC;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.pressed;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -51,6 +52,15 @@ class ReservedChordsTest {
                     assertThat(refused.chord()).isEqualTo(altJ());
                     assertThat(List.of(refused.first(), refused.second()))
                             .containsExactlyInAnyOrder(ReservedAction.FOCUS_LEFT, ReservedAction.FOCUS_DOWN);
+                });
+    }
+
+    @Test
+    void shouldRefuseAnActionOnAFixedChordNamingBoth() {
+        assertThatThrownBy(() -> ReservedChords.defaults().rebinding(Map.of(ReservedAction.ZOOM, ctrlC())))
+                .isInstanceOfSatisfying(TakenChordException.class, refused -> {
+                    assertThat(refused.action()).isEqualTo(ReservedAction.ZOOM);
+                    assertThat(refused.fixed()).isEqualTo(FixedChord.QUIT);
                 });
     }
 

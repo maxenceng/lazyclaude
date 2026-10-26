@@ -3,10 +3,13 @@ package dev.maxenceng.lazyclaude.session.domain;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.bindingsClashingTwice;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.defaultConfiguration;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.rebindingFocusLeft;
+import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.rebindingZoomOntoClaudesDefault;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.refusal;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.unreadableKeybindings;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altH;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altW;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlC;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlO;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.raisedTexts;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -75,6 +78,34 @@ class ConfigurationManagerTest {
         manager.configuration();
 
         assertThat(raisedTexts(warnings)).hasSize(1).allSatisfy(text -> assertThat(text).doesNotContain("focusLeft").contains("alt+w"));
+    }
+
+    @Test
+    void shouldWarnOfAReservedChordRestingOnOneOfClaudesDefaults() {
+        when(configurations.configuration()).thenReturn(rebindingZoomOntoClaudesDefault());
+        when(keybindings.defaults()).thenReturn(List.of(ctrlC(), ctrlO()));
+        when(keybindings.bindings()).thenReturn(List.of());
+
+        manager.configuration();
+
+        assertThat(raisedTexts(warnings))
+                .hasSize(1)
+                .allSatisfy(text -> assertThat(text).contains("ctrl+o (zoom)", "by default").doesNotContain("ctrl+c"));
+    }
+
+    @Test
+    void shouldStillWarnOfClaudesDefaultsWhenTheUsersBindingsCannotBeRead() {
+        when(configurations.configuration()).thenReturn(rebindingZoomOntoClaudesDefault());
+        when(keybindings.defaults()).thenReturn(List.of(ctrlO()));
+        when(keybindings.bindings()).thenThrow(unreadableKeybindings());
+
+        manager.configuration();
+
+        assertThat(raisedTexts(warnings))
+                .as("the defaults are known without reading the user's file")
+                .hasSize(2)
+                .anySatisfy(text -> assertThat(text).contains("ctrl+o (zoom)"))
+                .anySatisfy(text -> assertThat(text).contains("skipped"));
     }
 
     @Test

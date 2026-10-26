@@ -35,10 +35,10 @@ New behaviour in `session`, no new aggregate. LAZY-20 gives `session` the config
 
 ## Design direction
 
-Key bar, rebinding only `focusLeft` to `ctrl+alt+h`:
+Key bar, rebinding only `focusLeft` to `ctrl+y`:
 
 ```
-ctrl+alt+h/alt+j/alt+k/alt+l focus   alt+m main view   alt+z zoom
+ctrl+y/alt+j/alt+k/alt+l focus   alt+m main view   alt+z zoom
 ```
 
 Defaults keep today's text (`alt+h/j/k/l`). A refused file, before any frame:
@@ -49,7 +49,7 @@ lazyclaude: ~/.config/lazyclaude/config.yml:3: unknown key 'focusLeftt'
 
 ## Glossary impact
 
-*Reserved chord* moves from `session (expected)` to `session`. Nothing else.
+*Reserved chord* moves from `session (expected)` to `session`. *Fixed chord* is added to `session` (decided in review).
 
 ## Notes
 
@@ -58,3 +58,4 @@ Charted on the [LAZY-1](LAZY-1-v1-terminal-ide.md) map. Decided in [LAZY-20](LAZ
 Refined 2026-10-26. `alt+w` only leaves the zoom today; going to the next waiting session is owned by no ticket (SESSION-7 left it out) and is not this one's.
 Claude Code's `keybindings.json` shape — contexts, `null` unbinding, `meta`/`opt`/`option` for `alt`, space-separated sequences — is from code.claude.com/docs/en/keybindings; no such file exists on the development machine.
 `Chord`, `ReservedChords` and `ReservedAction` sit in `session.published`, not `session.domain`: the shell matches keys with `Chord` and draws the key bar from it, and a domain copy would have meant a `ChordView` and a second matcher in the shell (ADR 0012, ADR 0029).
+Decided in review (PR #45), 2026-10-26: a chord the terminal never delivers under TamboUI 0.5.0 is refused at its line — `ctrl`+`alt` or `shift` on a character, `ctrl+h/i/j/m/[`, `ctrl` on a character without a control byte, a modifier on enter/escape/backspace/tab, `alt+[` — until the kitty keyboard protocol (TamboUI #446); the Design direction's example moved from `ctrl+alt+h` to `ctrl+y` for it. A reserved chord on a *fixed chord* (`ctrl+c`, `ctrl+d`, `ctrl+u`) is refused; one on a Claude Code default binding warns, from a list `make contract` compares with the documentation. `ctrl+z` is neither: lazyclaude only keeps it from `claude`, so taking it loses nothing.

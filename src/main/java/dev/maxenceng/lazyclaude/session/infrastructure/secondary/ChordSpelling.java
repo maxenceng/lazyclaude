@@ -48,13 +48,13 @@ final class ChordSpelling {
 
     private ChordSpelling() {}
 
-    /** @throws InvalidChordException when {@code text} is not one chord of ctrl, alt and shift and a key */
+    /** @throws InvalidChordException when {@code text} is not one chord of ctrl, alt and shift and a key the terminal delivers */
     static Chord configured(String text) {
         String stripped = text.strip();
         if (WHITESPACE.splitAsStream(stripped).count() > 1) {
             throw new InvalidChordException(SEVERAL_KEYSTROKES.formatted(stripped));
         }
-        return chordOf(stripped, CONFIGURED, CONFIGURED_KEYS);
+        return ChordDelivery.delivered(chordOf(stripped, CONFIGURED, CONFIGURED_KEYS));
     }
 
     /** The chord a Claude Code binding starts with, none when no chord of this configuration could be it. */

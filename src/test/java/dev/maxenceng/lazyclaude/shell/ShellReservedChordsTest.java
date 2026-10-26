@@ -2,7 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.chord;
-import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlAltH;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlY;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.rebinding;
 import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.typed;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
@@ -137,16 +137,16 @@ class ShellReservedChordsTest {
 
     @Test
     void shouldShowTheBoundChordsInTheKeyBarOutsideASession() {
-        Shell shell = shellOnBoardWithChords(rebinding(ReservedAction.FOCUS_LEFT, ctrlAltH()));
+        Shell shell = shellOnBoardWithChords(rebinding(ReservedAction.FOCUS_LEFT, ctrlY()));
 
-        assertThat(keyBar(shell)).contains("ctrl+alt+h/alt+j/alt+k/alt+l focus").doesNotContain("alt+h/j/k/l");
+        assertThat(keyBar(shell)).contains("ctrl+y/alt+j/alt+k/alt+l focus").doesNotContain("alt+h/j/k/l");
     }
 
     @Test
     void shouldShowTheBoundChordsInTheKeyBarOfASession() {
-        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.FOCUS_LEFT, ctrlAltH()), hosting);
+        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.FOCUS_LEFT, ctrlY()), hosting);
 
-        assertThat(keyBar(shell)).contains("ctrl+alt+h/alt+l tab  ctrl+alt+h/alt+j/alt+k/alt+l focus");
+        assertThat(keyBar(shell)).contains("ctrl+y/alt+l tab  ctrl+y/alt+j/alt+k/alt+l focus");
     }
 
     @Test

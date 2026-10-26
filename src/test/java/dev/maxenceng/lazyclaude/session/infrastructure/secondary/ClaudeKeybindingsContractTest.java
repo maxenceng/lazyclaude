@@ -5,6 +5,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeKe
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.nio.file.Path;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,13 @@ class ClaudeKeybindingsContractTest {
         assertThat(defaultBindingsInTheDocumentation())
                 .as("at least the Ctrl bindings of the documentation are read as chords")
                 .isNotEmpty();
+    }
+
+    @Test
+    void shouldListTheDefaultBindingsTheDocumentationLists() throws IOException, InterruptedException {
+        assertThat(new ClaudeKeybindingsRepository(Path.of("")).defaults())
+                .as("a default Claude Code added or dropped would be warned about wrongly until the list follows it")
+                .containsExactlyInAnyOrderElementsOf(defaultBindingsInTheDocumentation().stream().distinct().toList());
     }
 
     @Test

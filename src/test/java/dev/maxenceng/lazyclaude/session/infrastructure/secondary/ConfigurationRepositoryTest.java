@@ -48,7 +48,7 @@ class ConfigurationRepositoryTest {
 
     @Test
     void shouldRebindOneActionAndLeaveTheRestAtTheirDefault() throws IOException {
-        configYml(configHome, "keybinding:", "  focusLeft: ctrl+alt+h");
+        configYml(configHome, "keybinding:", "  focusLeft: ctrl+y");
 
         assertThat(repository.configuration()).isEqualTo(rebindingFocusLeft());
     }
@@ -161,10 +161,29 @@ class ConfigurationRepositoryTest {
 
     @Test
     void shouldRefuseTwoActionsOnOneChordAtTheSecondWithTheFirstsLine() throws IOException {
-        configYml(configHome, "keybinding:", "  focusLeft: ctrl+alt+x", "  zoom: alt+z", "  focusDown: ctrl+alt+x");
+        configYml(configHome, "keybinding:", "  focusLeft: ctrl+y", "  zoom: alt+z", "  focusDown: ctrl+y");
 
         assertThatThrownBy(repository::configuration)
-                .hasMessage("~/.config/lazyclaude/config.yml:4: ctrl+alt+x is already bound to focusLeft on line 2");
+                .hasMessage("~/.config/lazyclaude/config.yml:4: ctrl+y is already bound to focusLeft on line 2");
+    }
+
+    @Test
+    void shouldRefuseAChordTheTerminalNeverDeliversAtItsLine() throws IOException {
+        configYml(configHome, "keybinding:", "  zoom: alt+z", "  focusLeft: ctrl+alt+h");
+
+        assertThatThrownBy(repository::configuration)
+                .isInstanceOf(ConfigurationRefusedException.class)
+                .hasMessage("~/.config/lazyclaude/config.yml:3: 'ctrl+alt+h' never reaches lazyclaude:"
+                        + " the terminal cannot report ctrl and alt together on a character");
+    }
+
+    @Test
+    void shouldRefuseOneOfLazyclaudesFixedChordsAtTheLineThatAsksForIt() throws IOException {
+        configYml(configHome, "keybinding:", "  zoom: alt+z", "  hideMainView: ctrl+c");
+
+        assertThatThrownBy(repository::configuration)
+                .isInstanceOf(ConfigurationRefusedException.class)
+                .hasMessage("~/.config/lazyclaude/config.yml:3: ctrl+c is lazyclaude's quit");
     }
 
     @Test

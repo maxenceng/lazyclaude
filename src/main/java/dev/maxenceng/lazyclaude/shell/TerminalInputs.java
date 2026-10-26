@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.published.CellColumn;
 import dev.maxenceng.lazyclaude.session.published.CellRow;
+import dev.maxenceng.lazyclaude.session.published.FixedChord;
 import dev.maxenceng.lazyclaude.session.published.KeyInput;
 import dev.maxenceng.lazyclaude.session.published.Modifier;
 import dev.maxenceng.lazyclaude.session.published.Modifiers;
@@ -37,6 +38,11 @@ final class TerminalInputs {
                 .input(input)
                 .modifiers(modifiers(event.modifiers()))
                 .build());
+    }
+
+    /** Whether {@code event} is the fixed chord {@code fixed}. */
+    static boolean isFixed(KeyEvent event, FixedChord fixed) {
+        return key(event).filter(fixed::isPressedBy).isPresent();
     }
 
     /** The mouse event as a cell of {@code pane}, counted from its top left, or nothing when it happened outside the pane. */

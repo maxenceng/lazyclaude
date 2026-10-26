@@ -38,6 +38,18 @@ public final class ChordFixture {
         return chord('h', Modifier.CTRL, Modifier.ALT);
     }
 
+    public static Chord ctrlY() {
+        return chord('y', Modifier.CTRL);
+    }
+
+    public static Chord ctrlC() {
+        return chord('c', Modifier.CTRL);
+    }
+
+    public static Chord ctrlO() {
+        return chord('o', Modifier.CTRL);
+    }
+
     public static Chord chord(char key, Modifier... modifiers) {
         return Chord.builder().modifiers(Modifiers.of(modifiers)).key(new TypedCharacter(key)).build();
     }

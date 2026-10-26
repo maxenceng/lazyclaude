@@ -82,6 +82,7 @@ words mean.
 | Waiting | The session is blocked on you: *waiting for permission* (a permission prompt) or *waiting for input* (any other question). The only state that notifies. | `session` |
 | Unknown (state) | The session reports a `status` lazyclaude does not know, or none, as a newer Claude Code may. Still listed, with a grey `·`; never notified. | `session` |
 | Reserved chord | A chord lazyclaude takes before `claude` sees it, inside every hosted session: the seven focus, hide, zoom and next-waiting chords, `alt+h/j/k/l/m/z/w` unless `config.yml` rebinds them. | `session` |
+| Fixed chord | A chord lazyclaude keeps for itself and `config.yml` cannot move — `ctrl+c` quit, `ctrl+d`/`ctrl+u` half page — so no reserved chord may be rebound onto one. | `session` |
 
 ## review
 

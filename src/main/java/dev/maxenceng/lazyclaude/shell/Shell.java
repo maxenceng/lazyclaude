@@ -77,6 +77,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionPay
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeView;
+import dev.maxenceng.lazyclaude.session.published.FixedChord;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
@@ -157,8 +158,6 @@ public final class Shell extends ToolkitApp {
     private static final char RIGHT = 'l';
     private static final char TOP = 'g';
     private static final char BOTTOM = 'G';
-    private static final char HALF_PAGE_DOWN = 'd';
-    private static final char HALF_PAGE_UP = 'u';
 
     private static final String MOVE_KEYS = "j/k move";
     private static final String SCROLL_KEYS = "j/k scroll  ^d/^u half page  g/G top/bottom";
@@ -715,7 +714,7 @@ public final class Shell extends ToolkitApp {
 
     private boolean pressUnzoomed(KeyEvent key) {
         if (key.hasCtrl()) {
-            return key.isCtrlC() ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
+            return TerminalInputs.isFixed(key, FixedChord.QUIT) ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
         }
         if (key.hasAlt()) {
             return false;
@@ -1124,11 +1123,11 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean pressWithCtrl(KeyEvent key) {
-        if (key.isChar(HALF_PAGE_DOWN)) {
+        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_DOWN)) {
             mainViewScroll.halfPageDown();
             return true;
         }
-        if (key.isChar(HALF_PAGE_UP)) {
+        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_UP)) {
             mainViewScroll.halfPageUp();
             return true;
         }

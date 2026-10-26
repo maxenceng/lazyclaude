@@ -53,10 +53,10 @@ class ChordKeysTest {
         ChordKeys keys = new ChordKeys(rebinding(Map.of(
                 ReservedAction.FOCUS_LEFT, chord('a', Modifier.CTRL),
                 ReservedAction.FOCUS_DOWN, chord('b', Modifier.CTRL),
-                ReservedAction.FOCUS_UP, chord('c', Modifier.CTRL),
-                ReservedAction.FOCUS_RIGHT, chord('d', Modifier.CTRL))));
+                ReservedAction.FOCUS_UP, chord('e', Modifier.CTRL),
+                ReservedAction.FOCUS_RIGHT, chord('f', Modifier.CTRL))));
 
-        assertThat(keys.focus()).isEqualTo("ctrl+a/b/c/d");
+        assertThat(keys.focus()).isEqualTo("ctrl+a/b/e/f");
     }
 
     @Test

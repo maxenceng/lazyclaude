@@ -13,7 +13,7 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 
 /**
  * The chord of each of the seven reserved actions, an action left out keeping its default. A chord is taken before {@code claude} sees it inside a hosted session, so
- * two actions cannot share one: the second could never be pressed.
+ * two actions cannot share one: the second could never be pressed. Nor can one take a {@link FixedChord}, which would stop working.
  */
 public record ReservedChords(Map<ReservedAction, Chord> bound) {
 
@@ -21,6 +21,7 @@ public record ReservedChords(Map<ReservedAction, Chord> bound) {
         Assert.notNull("bound chords", bound);
         Map<ReservedAction, Chord> kept = merged(defaultChords(), bound);
         refuseDuplicates(kept);
+        refuseTaken(kept);
         bound = kept;
     }
 
@@ -72,6 +73,17 @@ public record ReservedChords(Map<ReservedAction, Chord> bound) {
                 .findFirst()
                 .ifPresent(duplicate -> {
                     throw duplicate;
+                });
+    }
+
+    private static void refuseTaken(Map<ReservedAction, Chord> chords) {
+        Arrays.stream(ReservedAction.values())
+                .flatMap(action -> Arrays.stream(FixedChord.values())
+                        .filter(fixed -> fixed.chord().equals(chords.get(action)))
+                        .map(fixed -> new TakenChordException(action, fixed)))
+                .findFirst()
+                .ifPresent(taken -> {
+                    throw taken;
                 });
     }
 }

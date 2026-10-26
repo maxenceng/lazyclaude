@@ -2,7 +2,8 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altH;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altZ;
-import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlAltH;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlO;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlY;
 
 import java.util.List;
 import java.util.Map;
@@ -21,7 +22,14 @@ public final class ConfigurationFixture {
 
     public static Configuration rebindingFocusLeft() {
         return Configuration.builder()
-                .reservedChords(ReservedChords.defaults().rebinding(Map.of(ReservedAction.FOCUS_LEFT, ctrlAltH())))
+                .reservedChords(ReservedChords.defaults().rebinding(Map.of(ReservedAction.FOCUS_LEFT, ctrlY())))
+                .desktopNotifications(true)
+                .build();
+    }
+
+    public static Configuration rebindingZoomOntoClaudesDefault() {
+        return Configuration.builder()
+                .reservedChords(ReservedChords.defaults().rebinding(Map.of(ReservedAction.ZOOM, ctrlO())))
                 .desktopNotifications(true)
                 .build();
     }
