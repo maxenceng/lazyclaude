@@ -1,6 +1,6 @@
 ---
 id: SESSION-9
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 86
@@ -11,16 +11,16 @@ created: 2026-10-10
 
 ## Acceptance criteria
 
-- [ ] With no `config.yml` (under `$XDG_CONFIG_HOME/lazyclaude/`, or `~/.config/lazyclaude/` when unset), the seven reserved chords are ADR 0008's defaults and desktop notifications are on.
-- [ ] A file naming one entry rebinds that action alone: the new chord acts inside a hosted session and outside one, and the old chord now reaches `claude`.
-- [ ] The key bar shows the bound chords — the compact `alt+h/j/k/l` form while the four focus chords share their modifiers and are each one character, every chord in full joined by `/` otherwise.
-- [ ] `notifications.desktop: false` stops `notify-send`; markers and the status line still show waiting sessions.
-- [ ] An unknown key, an invalid value, a chord with no modifier or with `shift` alone, a modifier other than `ctrl`/`alt`/`shift` (`meta`, `cmd`, …), or a multi-keystroke sequence stops startup: `lazyclaude: <file>:<line>: <reason>` on stderr, exit code 1, no frame drawn.
-- [ ] Two actions on one chord stop startup the same way, reported at the second occurrence with the first one's line in the reason.
-- [ ] A `~/.claude/keybindings.json` binding, in any context, whose first keystroke is a reserved chord — Claude Code's `meta`/`opt`/`option` read as `alt`, case ignored — raises one status-line warning listing every clash, and startup continues. A `null` binding is not a clash.
-- [ ] A missing `keybindings.json` warns nothing; an unreadable one raises a warning that the clash check was skipped, and startup continues.
-- [ ] `make contract` fetches Claude Code's keybindings documentation and fails when a default binding uses a reserved chord.
-- [ ] `nextWaiting` rebinds `alt+w` as it behaves today: leaving the zoom.
+- [x] With no `config.yml` (under `$XDG_CONFIG_HOME/lazyclaude/`, or `~/.config/lazyclaude/` when unset), the seven reserved chords are ADR 0008's defaults and desktop notifications are on.
+- [x] A file naming one entry rebinds that action alone: the new chord acts inside a hosted session and outside one, and the old chord now reaches `claude`.
+- [x] The key bar shows the bound chords — the compact `alt+h/j/k/l` form while the four focus chords share their modifiers and are each one character, every chord in full joined by `/` otherwise.
+- [x] `notifications.desktop: false` stops `notify-send`; markers and the status line still show waiting sessions.
+- [x] An unknown key, an invalid value, a chord with no modifier or with `shift` alone, a modifier other than `ctrl`/`alt`/`shift` (`meta`, `cmd`, …), or a multi-keystroke sequence stops startup: `lazyclaude: <file>:<line>: <reason>` on stderr, exit code 1, no frame drawn.
+- [x] Two actions on one chord stop startup the same way, reported at the second occurrence with the first one's line in the reason.
+- [x] A `~/.claude/keybindings.json` binding, in any context, whose first keystroke is a reserved chord — Claude Code's `meta`/`opt`/`option` read as `alt`, case ignored — raises one status-line warning listing every clash, and startup continues. A `null` binding is not a clash.
+- [x] A missing `keybindings.json` warns nothing; an unreadable one raises a warning that the clash check was skipped, and startup continues.
+- [x] `make contract` fetches Claude Code's keybindings documentation and fails when a default binding uses a reserved chord.
+- [x] `nextWaiting` rebinds `alt+w` as it behaves today: leaving the zoom.
 
 ## Model decision
 
