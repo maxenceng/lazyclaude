@@ -1,0 +1,47 @@
+package dev.maxenceng.lazyclaude.session.domain;
+
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altH;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altZ;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlAltH;
+
+import java.util.List;
+import java.util.Map;
+
+import dev.maxenceng.lazyclaude.session.published.Chord;
+import dev.maxenceng.lazyclaude.session.published.ReservedAction;
+import dev.maxenceng.lazyclaude.session.published.ReservedChords;
+
+public final class ConfigurationFixture {
+
+    private ConfigurationFixture() {}
+
+    public static Configuration defaultConfiguration() {
+        return Configuration.defaults();
+    }
+
+    public static Configuration rebindingFocusLeft() {
+        return Configuration.builder()
+                .reservedChords(ReservedChords.defaults().rebinding(Map.of(ReservedAction.FOCUS_LEFT, ctrlAltH())))
+                .desktopNotifications(true)
+                .build();
+    }
+
+    public static Configuration withoutDesktopNotifications() {
+        return Configuration.builder()
+                .reservedChords(ReservedChords.defaults())
+                .desktopNotifications(false)
+                .build();
+    }
+
+    public static ConfigurationRefusedException refusal() {
+        return new ConfigurationRefusedException("~/.config/lazyclaude/config.yml:3: unknown key 'focusLeftt'");
+    }
+
+    public static List<Chord> bindingsClashingTwice() {
+        return List.of(altH(), altZ());
+    }
+
+    public static ClaudeKeybindingsUnreadableException unreadableKeybindings() {
+        return new ClaudeKeybindingsUnreadableException("access denied to /home/max/.claude/keybindings.json", null);
+    }
+}

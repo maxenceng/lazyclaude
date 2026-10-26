@@ -46,5 +46,6 @@ have been waiting for hours.
   waiting at start-up never is.
 - A notification the user leaves up while the session keeps waiting stays until the session is answered, dies or is
   watched.
-- Notifications are always on. A switch for them is a later decision.
+- Notifications are on unless `notifications.desktop: false` in `config.yml` turns them off. The manager then never calls its
+  port; markers and the status line, which do not come through it, still show a waiting session.
 - The notification ids live in memory: a restarted lazyclaude no longer knows the ones the last run left open.

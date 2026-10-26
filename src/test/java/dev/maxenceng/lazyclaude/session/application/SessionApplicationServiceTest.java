@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.application;
 
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
+import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationServiceWithoutDesktopNotifications;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.boardTickets;
@@ -359,6 +360,23 @@ class SessionApplicationServiceTest {
         changed.getValue().run();
 
         verify(notifications).show(inputNotification());
+    }
+
+    @Test
+    void shouldNotNotifyWhenDesktopNotificationsAreOff() {
+        when(sessions.liveSessions(any()))
+                .thenReturn(List.of(reportedWith(ReportedStatus.BUSY)))
+                .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
+        when(locator.locate(any())).thenReturn(project());
+        sessionApplicationServiceWithoutDesktopNotifications(sessions, past, locator, watch, transcriptWatch, warnings, notifications)
+                .subscribe(project(), noTickets(), received -> {});
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).watch(changed.capture(), any());
+
+        changed.getValue().run();
+        changed.getValue().run();
+
+        verifyNoInteractions(notifications);
     }
 
     @Test

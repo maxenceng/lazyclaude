@@ -58,7 +58,7 @@ public final class SessionApplicationServiceFixture {
             HostPort hosts,
             WorktreePort worktrees) {
         return sessionApplicationService(
-                sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees, mock(DesktopNotificationPort.class));
+                sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees, mock(DesktopNotificationPort.class), true);
     }
 
     public static SessionApplicationService sessionApplicationService(
@@ -70,7 +70,19 @@ public final class SessionApplicationServiceFixture {
             WarningPort warnings,
             DesktopNotificationPort notifications) {
         return sessionApplicationService(
-                sessions, past, locator, watch, transcriptWatch, warnings, mock(HostPort.class), mock(WorktreePort.class), notifications);
+                sessions, past, locator, watch, transcriptWatch, warnings, mock(HostPort.class), mock(WorktreePort.class), notifications, true);
+    }
+
+    public static SessionApplicationService sessionApplicationServiceWithoutDesktopNotifications(
+            LiveSessionPort sessions,
+            PastSessionPort past,
+            ProjectLocatorPort locator,
+            SessionWatchPort watch,
+            TranscriptWatchPort transcriptWatch,
+            WarningPort warnings,
+            DesktopNotificationPort notifications) {
+        return sessionApplicationService(
+                sessions, past, locator, watch, transcriptWatch, warnings, mock(HostPort.class), mock(WorktreePort.class), notifications, false);
     }
 
     public static SessionApplicationService outsideSessionApplicationService(
@@ -95,6 +107,7 @@ public final class SessionApplicationServiceFixture {
                 jumps,
                 kittyConfig,
                 mock(TranscriptReadPort.class),
+                true,
                 clock());
     }
 
@@ -127,6 +140,7 @@ public final class SessionApplicationServiceFixture {
                 mock(TerminalJumpPort.class),
                 mock(KittyConfigPort.class),
                 transcripts,
+                true,
                 clock());
     }
 
@@ -139,7 +153,8 @@ public final class SessionApplicationServiceFixture {
             WarningPort warnings,
             HostPort hosts,
             WorktreePort worktrees,
-            DesktopNotificationPort notifications) {
+            DesktopNotificationPort notifications,
+            boolean desktopNotifications) {
         return new SessionApplicationService(
                 sessions,
                 past,
@@ -154,6 +169,7 @@ public final class SessionApplicationServiceFixture {
                 mock(TerminalJumpPort.class),
                 mock(KittyConfigPort.class),
                 mock(TranscriptReadPort.class),
+                desktopNotifications,
                 clock());
     }
 }

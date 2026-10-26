@@ -212,6 +212,15 @@ class ArchitectureTest {
             .should(notReachTheShellFromOutsideIt())
             .allowEmptyShould(true);
 
+    // A type's name carries its context: a bare Config, Value or Entry prefix leaves the reader to guess which file or which value.
+    @ArchTest
+    static final ArchRule type_names_carry_their_context = noClasses()
+            .that()
+            .resideInAPackage(ROOT + "..")
+            .should()
+            .haveNameMatching(".*\\.(Config|Value|Entry)([A-Z][^.]*)?")
+            .allowEmptyShould(true);
+
     // One type per file keeps each concept findable by name; a builder is part of the type it builds.
     @ArchTest
     static final ArchRule no_nested_types_but_builders = classes()

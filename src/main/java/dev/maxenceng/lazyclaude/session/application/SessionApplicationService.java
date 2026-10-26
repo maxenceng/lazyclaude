@@ -61,6 +61,7 @@ public final class SessionApplicationService {
     private final HostedSessionManager hosted;
     private final WorktreeManager worktreeing;
     private final DesktopNotificationManager notifying;
+    private final boolean desktopNotifications;
     private final JumpManager jumping;
     private final KittyConfigManager kittyConfiguring;
     private final TranscriptManager transcribing;
@@ -81,6 +82,7 @@ public final class SessionApplicationService {
             TerminalJumpPort jumps,
             KittyConfigPort kittyConfig,
             TranscriptReadPort transcripts,
+            boolean desktopNotifications,
             Clock clock) {
         this.hosted = new HostedSessionManager(hosts, warnings, worktrees);
         this.worktreeing = new WorktreeManager(worktrees);
@@ -88,6 +90,7 @@ public final class SessionApplicationService {
         this.kittyConfiguring = new KittyConfigManager(kittyConfig, warnings);
         this.transcribing = new TranscriptManager(transcripts);
         this.notifying = new DesktopNotificationManager(notifications, warnings);
+        this.desktopNotifications = desktopNotifications;
         this.manager = new SessionManager(sessions, pastSessions, locator, watch, transcriptWatch, warnings, environments, clock);
     }
 
@@ -98,7 +101,7 @@ public final class SessionApplicationService {
     public void subscribe(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
         Consumer<Sessions> hosting = sessions -> {
             lastPushed.remember(sessions);
-            notifying.seen(project, sessions);
+            notifying.seen(project, sessions, desktopNotifications);
             listener.accept(sessions.hosting(hosted.open()));
         };
         manager.watch(project, tickets, hosting);
