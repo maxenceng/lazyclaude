@@ -9,16 +9,16 @@ public final class SessionFactsFixture {
     private SessionFactsFixture() {}
 
     public static ReadFacts readFacts() {
-        return ReadFacts.builder().title(aiTitle()).opening(firstPrompt()).build();
+        return new ReadFacts(aiTitle(), firstPrompt());
     }
 
     public static ReadFacts titledFacts(SessionTitle title) {
         OpeningPrompt opening = title instanceof FirstPrompt prompt ? prompt : new NoFirstPrompt();
-        return ReadFacts.builder().title(title).opening(opening).build();
+        return new ReadFacts(title, opening);
     }
 
     public static ReadFacts untitledFacts() {
-        return ReadFacts.builder().title(new NoTitle()).opening(new NoFirstPrompt()).build();
+        return new ReadFacts(new NoTitle(), new NoFirstPrompt());
     }
 
     public static UnreadableFacts unreadableFacts() {

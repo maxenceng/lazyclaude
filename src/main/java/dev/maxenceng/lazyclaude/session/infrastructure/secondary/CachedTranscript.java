@@ -15,14 +15,10 @@ import dev.maxenceng.lazyclaude.session.domain.NotLocated;
 import dev.maxenceng.lazyclaude.session.domain.PastSession;
 import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
 import dev.maxenceng.lazyclaude.session.domain.StartedAt;
-import dev.maxenceng.lazyclaude.session.published.FirstPrompt;
-import dev.maxenceng.lazyclaude.session.published.NoFirstPrompt;
-import dev.maxenceng.lazyclaude.session.published.OpeningPrompt;
 import dev.maxenceng.lazyclaude.session.published.ReadFacts;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionFacts;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.session.published.SessionTitle;
 import dev.maxenceng.lazyclaude.session.published.UnreadableFacts;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
@@ -104,10 +100,7 @@ record CachedTranscript(
     }
 
     private SessionFacts facts() {
-        return ReadFacts.builder()
-                .title(SessionTitle.of(said(aiTitle), said(firstPrompt)))
-                .opening(said(firstPrompt).<OpeningPrompt>map(FirstPrompt::new).orElseGet(NoFirstPrompt::new))
-                .build();
+        return ReadFacts.of(said(aiTitle), said(firstPrompt));
     }
 
     /** A title or a prompt written blank says nothing, the same as none. */

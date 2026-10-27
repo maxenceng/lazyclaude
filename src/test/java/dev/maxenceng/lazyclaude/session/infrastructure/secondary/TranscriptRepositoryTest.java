@@ -132,7 +132,7 @@ class TranscriptRepositoryTest {
         TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         assertThat(repository.pastSessions())
-                .containsExactly(pastSessionOf(sessionId(), ReadFacts.builder().title(new AiTitle("Refine PROJ-1")).opening(new FirstPrompt("Refine the ticket")).build(), cwd(), later(), started(), locatedInProject()));
+                .containsExactly(pastSessionOf(sessionId(), new ReadFacts(new AiTitle("Refine PROJ-1"), new FirstPrompt("Refine the ticket")), cwd(), later(), started(), locatedInProject()));
     }
 
     @Test
@@ -223,10 +223,7 @@ class TranscriptRepositoryTest {
         assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
                 .satisfies(session -> assertThat(session.session().facts())
-                        .isEqualTo(ReadFacts.builder()
-                                .title(new AiTitle("Refine PROJ-1"))
-                                .opening(new FirstPrompt("/ticket start PROJ-1"))
-                                .build()));
+                        .isEqualTo(new ReadFacts(new AiTitle("Refine PROJ-1"), new FirstPrompt("/ticket start PROJ-1"))));
     }
 
     @Test
@@ -236,7 +233,7 @@ class TranscriptRepositoryTest {
         assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
                 .satisfies(session -> assertThat(session.session().facts())
-                        .isEqualTo(ReadFacts.builder().title(new NoTitle()).opening(new NoFirstPrompt()).build()));
+                        .isEqualTo(new ReadFacts(new NoTitle(), new NoFirstPrompt())));
     }
 
     @Test
@@ -522,7 +519,7 @@ class TranscriptRepositoryTest {
 
         assertThat(repositoryOver(projects, cacheFile).pastSessions())
                 .as("the first frame is drawn from the cache before any transcript is touched")
-                .containsExactly(pastSessionOf(sessionId(), ReadFacts.builder().title(new FirstPrompt("Refine")).opening(new FirstPrompt("Refine")).build(), cwd(), later(), started(), locatedInProject()));
+                .containsExactly(pastSessionOf(sessionId(), new ReadFacts(new FirstPrompt("Refine"), new FirstPrompt("Refine")), cwd(), later(), started(), locatedInProject()));
     }
 
     @Test

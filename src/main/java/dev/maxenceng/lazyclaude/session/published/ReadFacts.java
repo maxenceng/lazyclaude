@@ -1,8 +1,13 @@
 package dev.maxenceng.lazyclaude.session.published;
 
+import java.util.Optional;
+
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** A readable transcript's title and what it opened with, either of which it may lack. */
+/**
+ * A readable transcript's title and what it opened with, either of which it may lack. The title falls back to the opening
+ * prompt, so the two are drawn together through {@link #of} rather than handed in apart.
+ */
 public record ReadFacts(SessionTitle title, OpeningPrompt opening) implements SessionFacts {
 
     public ReadFacts {
@@ -10,28 +15,10 @@ public record ReadFacts(SessionTitle title, OpeningPrompt opening) implements Se
         Assert.notNull("opening prompt", opening);
     }
 
-    public static ReadFactsBuilder builder() {
-        return new ReadFactsBuilder();
-    }
-
-    public static final class ReadFactsBuilder {
-        private SessionTitle title;
-        private OpeningPrompt opening;
-
-        private ReadFactsBuilder() {}
-
-        public ReadFactsBuilder title(SessionTitle title) {
-            this.title = title;
-            return this;
-        }
-
-        public ReadFactsBuilder opening(OpeningPrompt opening) {
-            this.opening = opening;
-            return this;
-        }
-
-        public ReadFacts build() {
-            return new ReadFacts(title, opening);
-        }
+    /** The facts of a transcript that holds {@code aiTitle} and {@code firstPrompt}, each of which it may lack. */
+    public static ReadFacts of(Optional<String> aiTitle, Optional<String> firstPrompt) {
+        return new ReadFacts(
+                SessionTitle.of(aiTitle, firstPrompt),
+                firstPrompt.<OpeningPrompt>map(FirstPrompt::new).orElseGet(NoFirstPrompt::new));
     }
 }
