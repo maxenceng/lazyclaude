@@ -5,7 +5,7 @@ Date: 2026-10-17
 ## Status
 
 Accepted. Builds on ADR 0021 (the sweep that reads the machine's sessions), ADR 0022 (warnings) and ADR 0027 (the
-application service composes managers).
+application service composes managers). Amended by ADR 0047: hosted sessions only. Extended by ADR 0058: the sidecar fires it for the desktop frontend too.
 
 ## Context
 

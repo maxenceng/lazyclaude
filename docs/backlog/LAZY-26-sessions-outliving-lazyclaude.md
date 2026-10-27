@@ -1,6 +1,6 @@
 ---
 id: LAZY-26
-status: todo
+status: done
 context: cross-context
 type: decision
 created: 2026-10-26
@@ -26,4 +26,17 @@ grilling
 
 ## Resolution
 
-_Not resolved yet._
+Grilled 2026-10-27; recorded in [ADR 0048](../adr/0048-a-hosted-session-ends-with-its-frontend-and-the-launch-log-marks-the-ones-it-cut-off.md).
+
+- **(a)**: quitting ends the hosted sessions. The sidecar is a child of its frontend (in-process for the TUI, spawned
+  by Tauri), exits when its input closes and ends every `claude` it hosts: no attach, detach, discovery or second client.
+  The daemon (b) and the detach-to-a-holder hybrid are rejected; reversing this is a fresh ticket.
+- **Interrupted session**: the launch log records an end only when `claude` exits by itself, so an entry with no live
+  process and no end was cut off by a quit, a crash or a kill. Listed first among past sessions with a marker, resumed
+  one at a time with `enter`; no automatic or one-key resume.
+- **It stays interrupted until resumed**, which clears the entry's end, or until its transcript goes and the entry
+  leaves the log.
+- **Closing the desktop window is `q`**: asks first when a session is busy or waiting; no tray.
+
+Folded into [SESSION-12](SESSION-12-the-launch-log.md)'s acceptance criteria rather than a new ticket, since it is the
+same log.

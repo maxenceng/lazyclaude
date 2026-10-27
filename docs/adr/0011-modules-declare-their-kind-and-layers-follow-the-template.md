@@ -4,7 +4,8 @@ Date: 2026-10-10
 
 ## Status
 
-Accepted. Extends ADR 0010. The primary-adapter naming and what `published` holds are amended by ADR 0012.
+Accepted. Extends ADR 0010. The primary-adapter naming and what `published` holds are amended by ADR 0012. ADR 0050
+adds `sidecar`, a second module of kind `SHELL`.
 
 ## Context
 

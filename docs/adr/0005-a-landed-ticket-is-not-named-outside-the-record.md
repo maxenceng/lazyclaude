@@ -4,7 +4,8 @@ Date: 2026-10-09
 
 ## Status
 
-Accepted.
+Accepted. Superseded by ADR 0053 once the backlog moves to GitHub Issues: no issue is named outside the record,
+open or closed.
 
 ## Context
 

@@ -4,7 +4,7 @@ Date: 2026-10-15
 
 ## Status
 
-Accepted. Amends the status source decided in LAZY-9 and amended in LAZY-17.
+Accepted. Amends the status source decided in LAZY-9 and amended in LAZY-17. Superseded by ADR 0052 once the backlog moves to GitHub Issues: status becomes the issue's alone, with no branch or root copy.
 
 ## Context
 

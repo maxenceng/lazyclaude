@@ -4,7 +4,7 @@ Date: 2026-10-11
 
 ## Status
 
-Accepted. Extends ADR 0015 and ADR 0023.
+Accepted. Extends ADR 0015 and ADR 0023. Amended by ADR 0047: a link is known at launch, and the branch rule goes.
 
 ## Context
 

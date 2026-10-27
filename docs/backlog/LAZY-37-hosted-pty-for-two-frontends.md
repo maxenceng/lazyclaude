@@ -1,6 +1,6 @@
 ---
 id: LAZY-37
-status: todo
+status: done
 context: cross-context
 type: decision
 created: 2026-10-26
@@ -21,4 +21,19 @@ grilling
 
 ## Resolution
 
-_Not resolved yet._
+Grilled 2026-10-27; recorded in [ADR 0049](../adr/0049-a-hosted-pty-carries-bytes-and-each-frontend-emulates-its-own.md).
+
+- **One frontend per session**: a `claude` is driven only by the frontend whose backend started it; no fan-out.
+- **Emulation belongs to the frontend**: the TUI's adapter in `session.infrastructure.primary` owns jediterm, the input
+  encoding and the replies to terminal queries; the desktop uses xterm.js. Rejected: a backend shadow emulator, and a
+  cell grid sent to the desktop.
+- **`HostPort` is a pty only**: spawn (output and exit listeners), exists, write, resize, end; `PtyBytes` both ways,
+  output pushed per read. `screenOf`/`onScreenChange` move to the TUI adapter; `TerminalKey`, `PastedText`,
+  `TerminalMouse`, `TerminalScreen` move from `published` to `infrastructure.primary`.
+- **Lifetime stays in the backend's domain**: frontends ask and are told; `HostedSessionManager` keeps the resume
+  refusal, directory check and exit warnings.
+- **Resize** goes emulator first, then pty; the backend keeps no size.
+- **Repaint** of an empty emulator: shrink the pty a row and restore it, so `claude` redraws on SIGWINCH; to be
+  checked before the desktop phase, with "no reload in the packaged build" as fallback.
+
+Graduated into [SESSION-13](SESSION-13-the-pty-port-carries-bytes.md).
