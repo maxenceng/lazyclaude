@@ -15,16 +15,15 @@ import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUn
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.verbChoicePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryHosting;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryHostingTheRegistered;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.newestSessionView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.oldestSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.liveViewsOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionViewBuilder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionViewNumbered;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewBuilder;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
 import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketIds;
@@ -89,12 +88,13 @@ class SessionQueryTest {
     }
 
     @Test
-    void shouldViewEachSessionWithItsAgeNewestFirst() {
+    void shouldViewOnlyTheSessionsLazyclaudeHostsWithTheirAge() {
         when(sessions.liveSessions(any())).thenReturn(List.of(oldestReportedSession(), reportedSession(), newestReportedSession()));
         when(locator.locate(any())).thenReturn(project());
 
-        assertThat(sessionQuery(sessions, locator, watch, warnings).sessionsFor(OF_THE_PROJECT))
-                .isEqualTo(sessionsViewOf(List.of(newestSessionView(), sessionView(), oldestSessionView())));
+        assertThat(liveViewsOf(sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT)))
+                .as("the claudes started in another terminal are not lazyclaude's to list")
+                .containsExactly(sessionView());
     }
 
     @Test
@@ -137,8 +137,10 @@ class SessionQueryTest {
         when(locator.locate(any())).thenReturn(project());
         when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
 
-        assertThat(sessionQuery(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT))
-                .isEqualTo(sessionsViewOf(List.of(sessionView()), List.of(pastSessionView())));
+        SessionsView view = sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT);
+
+        assertThat(liveViewsOf(view)).containsExactly(sessionView());
+        assertThat(((AvailableSessionsView) view).past()).containsExactly(pastSessionView());
     }
 
     @Test
@@ -147,8 +149,8 @@ class SessionQueryTest {
         when(locator.locate(any())).thenReturn(project());
         when(past.linkFacts()).thenReturn(Map.of(sessionView().id(), ran(ticketRun("start", "proj-1"))));
 
-        assertThat(sessionQuery(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(WITH_TICKETS))
-                .isEqualTo(sessionsViewOf(List.of(sessionViewBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+        assertThat(liveViewsOf(sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(WITH_TICKETS)))
+                .containsExactly(sessionViewBuilder().links(List.of(strong("PROJ-1", "start"))).build());
     }
 
     @Test
@@ -167,8 +169,8 @@ class SessionQueryTest {
         when(locator.locate(any())).thenReturn(project());
         when(past.linkFacts()).thenReturn(Map.of(sessionView().id(), ran(ticketRun("start", "PROJ-1"))));
 
-        assertThat(sessionQuery(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT))
-                .isEqualTo(sessionsViewOf(List.of(sessionView())));
+        assertThat(liveViewsOf(sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT)))
+                .containsExactly(sessionView());
     }
 
     @Test

@@ -71,12 +71,6 @@ public final class SessionQuery {
         sessions.onTicketDoneEnded(listener::accept);
     }
 
-    /** What the session's transcript gained since {@code payload}'s offset; never a failure. Reads a file, so not on the render thread. */
-    public TranscriptView transcriptOf(TranscriptPayload payload) {
-        return TranscriptView.from(
-                sessions.transcriptOf(payload.session(), payload.workingDirectory(), payload.offset()));
-    }
-
     /** What a hosted session shows right now, blank for one that is gone. */
     public TerminalScreen screenOf(HostedSessionId id) {
         return sessions.screenOf(id);

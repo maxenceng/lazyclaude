@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.application;
 
+import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingTheRegisteredSession;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationServiceWithoutDesktopNotifications;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
@@ -33,6 +34,7 @@ import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -103,13 +105,27 @@ class SessionApplicationServiceTest {
     private DesktopNotificationPort notifications;
 
     @Test
-    void shouldReadTheLiveSessionsOfTheProject() {
+    void shouldReadTheLiveSessionsOfTheProjectThatLazyclaudeHosts() {
+        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
+        when(locator.locate(workingDirectoryOf(reportedSession())))
+                .thenReturn(project());
+        SessionApplicationService service = hostingTheRegisteredSession(
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts), hosts);
+
+        assertThat(((AvailableSessions) service.sessionsFor(project(), noTickets())).live()).containsExactly(liveSession());
+    }
+
+    @Test
+    void shouldNotListAClaudeRunningInAnotherTerminalOfTheProject() {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
         when(locator.locate(workingDirectoryOf(reportedSession())))
                 .thenReturn(project());
 
-        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts).sessionsFor(project(), noTickets()))
-                .isEqualTo(liveSessionsOf(List.of(liveSession())));
+        assertThat(((AvailableSessions) sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts)
+                        .sessionsFor(project(), noTickets()))
+                .live())
+                .as("lazyclaude lists only the sessions whose pid it hosts")
+                .isEmpty();
     }
 
     @Test
@@ -158,8 +174,11 @@ class SessionApplicationServiceTest {
         when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
         when(past.linkFacts()).thenReturn(Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
 
-        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts).sessionsFor(project(), boardTickets()))
-                .isEqualTo(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+        SessionApplicationService service = hostingTheRegisteredSession(
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts), hosts);
+
+        assertThat(((AvailableSessions) service.sessionsFor(project(), boardTickets())).live())
+                .containsExactly(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build());
     }
 
     @Test
@@ -320,13 +339,14 @@ class SessionApplicationServiceTest {
         when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
         when(past.linkFacts()).thenReturn(Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
         List<Sessions> received = new ArrayList<>();
-        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        SessionApplicationService service = hostingTheRegisteredSession(
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts), hosts);
         service.subscribe(project(), noTickets(), received::add);
 
         service.knowTickets(project(), boardTickets());
 
-        assertThat(received)
-                .containsExactly(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+        assertThat(received).singleElement().satisfies(linked -> assertThat(((AvailableSessions) linked).live())
+                .containsExactly(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build()));
     }
 
     @Test
@@ -335,13 +355,14 @@ class SessionApplicationServiceTest {
         when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
         when(past.linkFacts()).thenReturn(Map.of(liveSession().id(), ran(ticketRun("start", "PROJ-1"))));
         List<Sessions> received = new ArrayList<>();
-        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        SessionApplicationService service = hostingTheRegisteredSession(
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts), hosts);
         service.subscribe(project(), noTickets(), received::add);
 
         service.refresh(project(), boardTickets());
 
-        assertThat(received)
-                .containsExactly(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build())));
+        assertThat(received).singleElement().satisfies(linked -> assertThat(((AvailableSessions) linked).live())
+                .containsExactly(liveSessionBuilder().links(List.of(strong("PROJ-1", "start"))).build()));
     }
 
     @Test
@@ -351,7 +372,8 @@ class SessionApplicationServiceTest {
                 .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
         when(locator.locate(any())).thenReturn(project());
         when(notifications.show(inputNotification())).thenReturn(notificationId());
-        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications)
+        hostingTheRegisteredSession(
+                        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts)
                 .subscribe(project(), noTickets(), received -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(changed.capture(), any());
@@ -363,24 +385,46 @@ class SessionApplicationServiceTest {
     }
 
     @Test
+    void shouldNotNotifyAClaudeRunningInAnotherTerminalOfTheProjectEnteringWaiting() {
+        when(sessions.liveSessions(any()))
+                .thenReturn(List.of(reportedWith(ReportedStatus.BUSY)))
+                .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
+        when(locator.locate(any())).thenReturn(project());
+        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications)
+                .subscribe(project(), noTickets(), received -> {});
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).watch(changed.capture(), any());
+
+        changed.getValue().run();
+        changed.getValue().run();
+
+        verify(notifications, never()).show(any());
+    }
+
+    @Test
     void shouldHandTheListenerTheSameWaitingSessionsWhetherDesktopNotificationsAreOnOrOff() {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedWaitingFor(inputNeeded())));
         when(locator.locate(any())).thenReturn(project());
         List<Sessions> withNotifications = new ArrayList<>();
         List<Sessions> withoutNotifications = new ArrayList<>();
-        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications)
+        hostingTheRegisteredSession(
+                        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts)
                 .subscribe(project(), noTickets(), withNotifications::add);
-        sessionApplicationServiceWithoutDesktopNotifications(sessions, past, locator, watch, transcriptWatch, warnings, notifications)
+        hostingTheRegisteredSession(
+                        sessionApplicationServiceWithoutDesktopNotifications(
+                                sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications),
+                        hosts)
                 .subscribe(project(), noTickets(), withoutNotifications::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch, times(2)).watch(changed.capture(), any());
 
         changed.getAllValues().forEach(Runnable::run);
 
-        assertThat(withoutNotifications)
+        assertThat(withoutNotifications.stream().map(pushed -> ((AvailableSessions) pushed).live()).toList())
                 .as("markers and the status line read these sessions, not the notifications")
                 .isNotEmpty()
-                .isEqualTo(withNotifications);
+                .allSatisfy(live -> assertThat(live).isNotEmpty())
+                .isEqualTo(withNotifications.stream().map(pushed -> ((AvailableSessions) pushed).live()).toList());
     }
 
     @Test
@@ -389,7 +433,10 @@ class SessionApplicationServiceTest {
                 .thenReturn(List.of(reportedWith(ReportedStatus.BUSY)))
                 .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
         when(locator.locate(any())).thenReturn(project());
-        sessionApplicationServiceWithoutDesktopNotifications(sessions, past, locator, watch, transcriptWatch, warnings, notifications)
+        hostingTheRegisteredSession(
+                        sessionApplicationServiceWithoutDesktopNotifications(
+                                sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications),
+                        hosts)
                 .subscribe(project(), noTickets(), received -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(changed.capture(), any());
@@ -404,7 +451,8 @@ class SessionApplicationServiceTest {
     void shouldNotNotifyAgainWhenARefreshHandsOverTheSameStates() {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedWaitingFor(inputNeeded())));
         when(locator.locate(any())).thenReturn(project());
-        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications);
+        SessionApplicationService service = hostingTheRegisteredSession(
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts);
         service.subscribe(project(), noTickets(), received -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(changed.capture(), any());
@@ -423,7 +471,8 @@ class SessionApplicationServiceTest {
                 .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
         when(locator.locate(any())).thenReturn(project());
         when(notifications.show(any())).thenReturn(notificationId());
-        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications);
+        SessionApplicationService service = hostingTheRegisteredSession(
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts);
         service.subscribe(project(), noTickets(), received -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(changed.capture(), any());

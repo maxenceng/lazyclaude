@@ -1,7 +1,8 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
-import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.aiTitle;
+import static dev.maxenceng.lazyclaude.session.published.SessionFactsFixture.readFacts;
+import static dev.maxenceng.lazyclaude.session.published.SessionFactsFixture.titledFacts;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 
@@ -27,7 +28,7 @@ public final class PastSessionFixture {
     public static PastSession.PastSessionBuilder pastSessionBuilder() {
         return PastSession.builder()
                 .id(pastSessionId(1))
-                .title(aiTitle())
+                .facts(readFacts())
                 .directory(projectRootDirectory())
                 .lastActivity(new LastActivity(now().minus(Duration.ofMinutes(10))))
                 .startedAt(new StartedAt(now().minus(Duration.ofMinutes(80))));
@@ -40,7 +41,7 @@ public final class PastSessionFixture {
     public static PastSession pastSessionActiveMinutesAgo(int number, int minutes) {
         return pastSessionBuilder()
                 .id(pastSessionId(number))
-                .title(new AiTitle("Past session %d".formatted(number)))
+                .facts(titledFacts(new AiTitle("Past session %d".formatted(number))))
                 .lastActivity(new LastActivity(now().minus(Duration.ofMinutes(minutes))))
                 .build();
     }
@@ -52,7 +53,7 @@ public final class PastSessionFixture {
     }
 
     public static PastSession pastSessionTitled(SessionTitle title) {
-        return pastSessionBuilder().title(title).build();
+        return pastSessionBuilder().facts(titledFacts(title)).build();
     }
 
     public static PastSession pastSessionIn(WorkingDirectory directory) {

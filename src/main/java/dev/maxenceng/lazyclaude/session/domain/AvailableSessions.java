@@ -2,7 +2,6 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
@@ -10,20 +9,17 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
-import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
-import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * The sessions of one project that could be read: the live ones, the live ones elsewhere grouped by place, then the past ones, the hosted ones in tab order, with the clock their ages are read
+ * The sessions of one project that could be read: the live ones, then the past ones, the hosted ones in tab order, with the clock their ages are read
  * from. That a session is one or the other, never both, and the order, are the manager's.
  */
 public record AvailableSessions(
         List<LiveSession> live,
-        List<ElsewhereGroup> elsewhere,
         List<PastSession> past,
         List<OpenHostedSession> hosted,
         SessionClock clock)
@@ -31,7 +27,6 @@ public record AvailableSessions(
 
     public AvailableSessions {
         Assert.notNull("live sessions", live);
-        Assert.notNull("elsewhere", elsewhere);
         Assert.notNull("past sessions", past);
         Assert.notNull("hosted tabs", hosted);
         Assert.notNull("clock", clock);
@@ -39,10 +34,12 @@ public record AvailableSessions(
 
     @Override
     public AvailableSessions hosting(HostedSessions open) {
-        List<LiveSession> owned = live.stream().map(session -> ownedAmong(open, session)).toList();
+        List<LiveSession> owned = live.stream()
+                .filter(session -> open.pids().contains(session.pid()))
+                .map(session -> linkedByLaunch(open, session))
+                .toList();
         return builder()
                 .live(owned)
-                .elsewhere(elsewhere.stream().map(group -> group.ownedAmong(open.pids())).toList())
                 .past(past)
                 .hosted(open.sessions().stream()
                         .map(session -> OpenHostedSession.builder()
@@ -54,25 +51,16 @@ public record AvailableSessions(
                 .build();
     }
 
-    private static LiveSession ownedAmong(HostedSessions open, LiveSession session) {
-        LiveSession owned = session.ownedAmong(open.pids());
+    private static LiveSession linkedByLaunch(HostedSessions open, LiveSession session) {
         return open.withPid(session.pid())
                 .flatMap(HostedSession::startingLink)
-                .map(owned::linkedBy)
-                .orElse(owned);
-    }
-
-    @Override
-    public Optional<LiveSession> liveSession(SessionId id) {
-        return Stream.concat(live.stream(), elsewhere.stream().flatMap(group -> group.sessions().stream()))
-                .filter(session -> session.id().equals(id))
-                .findFirst();
+                .map(session::linkedBy)
+                .orElse(session);
     }
 
     /** The names of the live sessions whose directory is {@code worktree} or below it, hosted ones that are still starting included. */
     public List<SessionName> namesIn(WorkingDirectory worktree) {
-        Stream<SessionName> registered = Stream.concat(
-                        live.stream(), elsewhere.stream().flatMap(group -> group.sessions().stream()))
+        Stream<SessionName> registered = live.stream()
                 .filter(session -> session.runsIn(worktree))
                 .map(LiveSession::name);
         Stream<SessionName> starting = hosted.stream()
@@ -92,20 +80,6 @@ public record AvailableSessions(
                                 .filter(link -> link instanceof StrongLink strong && strong.verb().equals(ran))
                                 .isPresent())
                 || hosted.stream().anyMatch(open -> open.session().runs(ticket, verb));
-    }
-
-    /** Every live session on the machine with the place it belongs to: the project's own first, then those elsewhere. */
-    public List<PlacedSession> everyone(Project project) {
-        ProjectPlace here = new ProjectPlace(project);
-        return Stream.concat(
-                        live.stream().map(session -> placed(here, session)),
-                        elsewhere.stream()
-                                .flatMap(group -> group.sessions().stream().map(session -> placed(group.place(), session))))
-                .toList();
-    }
-
-    private static PlacedSession placed(SessionPlace place, LiveSession session) {
-        return PlacedSession.builder().place(place).session(session).build();
     }
 
     public SessionAge ageOf(LiveSession session) {
@@ -134,7 +108,6 @@ public record AvailableSessions(
 
     public static final class AvailableSessionsBuilder {
         private List<LiveSession> live;
-        private List<ElsewhereGroup> elsewhere = List.of();
         private List<PastSession> past;
         private List<OpenHostedSession> hosted = List.of();
         private SessionClock clock;
@@ -143,11 +116,6 @@ public record AvailableSessions(
 
         public AvailableSessionsBuilder live(List<LiveSession> live) {
             this.live = live;
-            return this;
-        }
-
-        public AvailableSessionsBuilder elsewhere(List<ElsewhereGroup> elsewhere) {
-            this.elsewhere = elsewhere;
             return this;
         }
 
@@ -167,7 +135,7 @@ public record AvailableSessions(
         }
 
         public AvailableSessions build() {
-            return new AvailableSessions(live, elsewhere, past, hosted, clock);
+            return new AvailableSessions(live, past, hosted, clock);
         }
     }
 }

@@ -14,13 +14,4 @@ public record NotLocated() implements ProjectLocation {
         return directory.path().startsWith(project.root())
                 || Project.owningTicketWorktree(directory).filter(project::equals).isPresent();
     }
-
-    @Override
-    public SessionPlace placeOf(Project project, WorkingDirectory directory) {
-        return holds(project, directory)
-                ? new ProjectPlace(project)
-                : Project.owningTicketWorktree(directory)
-                        .<SessionPlace>map(ProjectPlace::new)
-                        .orElseGet(() -> new OutsideGitPlace(directory));
-    }
 }

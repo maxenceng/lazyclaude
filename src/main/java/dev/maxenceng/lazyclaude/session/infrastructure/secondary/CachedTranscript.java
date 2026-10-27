@@ -15,8 +15,15 @@ import dev.maxenceng.lazyclaude.session.domain.NotLocated;
 import dev.maxenceng.lazyclaude.session.domain.PastSession;
 import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
 import dev.maxenceng.lazyclaude.session.domain.StartedAt;
+import dev.maxenceng.lazyclaude.session.published.FirstPrompt;
+import dev.maxenceng.lazyclaude.session.published.NoFirstPrompt;
+import dev.maxenceng.lazyclaude.session.published.OpeningPrompt;
+import dev.maxenceng.lazyclaude.session.published.ReadFacts;
+import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.SessionFacts;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
+import dev.maxenceng.lazyclaude.session.published.UnreadableFacts;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -64,15 +71,18 @@ record CachedTranscript(
         return size == otherSize && modified == otherModified && fileKey.equals(otherFileKey);
     }
 
-    /** Empty when the transcript says too little to be a session: no session id, no {@code cwd}, no entry with a timestamp, or a {@code cwd} that is no path. */
-    Optional<LocatedPastSession> toLocated() {
+    /**
+     * Empty when the transcript says too little to be a session: no session id, no {@code cwd}, no entry with a timestamp, or a
+     * {@code cwd} that is no path. {@code unreadable} is why the transcript cannot be read now, which replaces its facts.
+     */
+    Optional<LocatedPastSession> toLocated(Optional<Reason> unreadable) {
         if (sessionId.isBlank() || cwd == null || startedAt == null || lastActivity == null) {
             return Optional.empty();
         }
         try {
             PastSession session = PastSession.builder()
                     .id(new SessionId(sessionId))
-                    .title(title())
+                    .facts(unreadable.<SessionFacts>map(UnreadableFacts::new).orElseGet(this::facts))
                     .directory(new WorkingDirectory(Path.of(cwd)))
                     .lastActivity(new LastActivity(Instant.ofEpochMilli(lastActivity)))
                     .startedAt(new StartedAt(Instant.ofEpochMilli(startedAt)))
@@ -93,8 +103,11 @@ record CachedTranscript(
                 .build();
     }
 
-    private SessionTitle title() {
-        return SessionTitle.of(said(aiTitle), said(firstPrompt));
+    private SessionFacts facts() {
+        return ReadFacts.builder()
+                .title(SessionTitle.of(said(aiTitle), said(firstPrompt)))
+                .opening(said(firstPrompt).<OpeningPrompt>map(FirstPrompt::new).orElseGet(NoFirstPrompt::new))
+                .build();
     }
 
     /** A title or a prompt written blank says nothing, the same as none. */

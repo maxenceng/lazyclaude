@@ -1,33 +1,29 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.otherProjectGroup;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openLive;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openStarting;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.strong;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.hostedLiveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
-import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inKitty;
-import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inTmux;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSession;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.elsewhereOf;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessionsHosting;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.elsewhereGroupViewOf;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedLiveSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.liveHostedSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionViewBuilder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionIdOf;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewBuilder;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTicketHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsViewHosting;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
-import static dev.maxenceng.lazyclaude.session.published.ResidenceNameFixture.kittyName;
-import static dev.maxenceng.lazyclaude.session.published.ResidenceNameFixture.tmuxName;
+import static dev.maxenceng.lazyclaude.session.published.SessionFactsFixture.unreadableFacts;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -142,42 +138,10 @@ class AvailableSessionsViewTest {
     @Test
     void shouldViewARegisteredHostedSessionWithTheLiveSessionItIs() {
         AvailableSessionsView view = AvailableSessionsView.from(
-                availableSessionsHosting(List.of(hostedLiveSession()), List.of(openLive(hostedLiveSession()))));
+                availableSessionsHosting(List.of(liveSession()), List.of(openLive(liveSession()))));
 
-        assertThat(view.hosted()).containsExactly(liveHostedSessionView(hostedLiveSessionView(), true));
-        assertThat(view.live()).singleElement().satisfies(live -> assertThat(live.isHosted()).isTrue());
-    }
-
-    @Test
-    void shouldViewAnOutsideLiveSessionAsNotHosted() {
-        AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(List.of(liveSession()), List.of()));
-
-        assertThat(view.live()).singleElement().satisfies(live -> assertThat(live.isHosted()).isFalse());
-    }
-
-    @Test
-    void shouldNameKittyAsWhereASessionLivesWhenItRunsInAKittyWindow() {
-        AvailableSessionsView view = AvailableSessionsView.from(
-                availableSessionsHosting(List.of(liveSessionBuilder().residence(inKitty()).build()), List.of()));
-
-        assertThat(view.live()).singleElement().satisfies(live -> assertThat(live.residenceName()).contains(kittyName()));
-    }
-
-    @Test
-    void shouldNameTmuxAsWhereASessionLivesWhenItRunsInATmuxPane() {
-        AvailableSessionsView view = AvailableSessionsView.from(
-                elsewhereOf(List.of(otherProjectGroup(List.of(liveSessionBuilder().residence(inTmux()).build())))));
-
-        assertThat(view.elsewhere().getFirst().sessions())
-                .singleElement()
-                .satisfies(live -> assertThat(live.residenceName()).contains(tmuxName()));
-    }
-
-    @Test
-    void shouldNameNoResidenceForASessionThatLivesNowhere() {
-        AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(List.of(liveSession()), List.of()));
-
-        assertThat(view.live()).singleElement().satisfies(live -> assertThat(live.residenceName()).isEmpty());
+        assertThat(view.hosted()).containsExactly(liveHostedSessionView(sessionView(), true));
+        assertThat(view.live()).containsExactly(sessionView());
     }
 
     @Test
@@ -187,11 +151,19 @@ class AvailableSessionsViewTest {
         assertThat(view).isEqualTo(unavailableSessionsViewHosting(List.of(startingHostedSessionView())));
     }
 
-    @Test
-    void shouldCarryEveryGroupElsewhereWithItsPlaceNameAndSessions() {
-        AvailableSessionsView view = (AvailableSessionsView) SessionsView.from(elsewhereOf(List.of(otherProjectGroup(List.of(liveSession())))));
 
-        assertThat(view.elsewhere())
-                .containsExactly(elsewhereGroupViewOf(List.of(sessionViewBuilder().build())));
+    @Test
+    void shouldViewAPastSessionWithTheTitleAndOpeningPromptItsTranscriptSays() {
+        AvailableSessionsView view = AvailableSessionsView.from(pastSessionsOf(List.of(pastSession())));
+
+        assertThat(view.past()).containsExactly(pastSessionView());
+    }
+
+    @Test
+    void shouldViewAPastSessionWhoseTranscriptCannotBeReadWithTheReason() {
+        AvailableSessionsView view =
+                AvailableSessionsView.from(pastSessionsOf(List.of(pastSessionBuilder().facts(unreadableFacts()).build())));
+
+        assertThat(view.past()).containsExactly(pastSessionViewBuilder().facts(unreadableFacts()).build());
     }
 }

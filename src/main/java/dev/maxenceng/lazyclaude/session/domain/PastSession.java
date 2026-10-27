@@ -3,15 +3,15 @@ package dev.maxenceng.lazyclaude.session.domain;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.SessionFacts;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.session.published.SessionTitle;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
-/** A session with no live process, only a transcript: what that transcript says of it, and the tickets it links the session to. */
+/** A session with no live process, only a transcript: what that transcript says of it or why it cannot be read, and the tickets it links the session to. */
 public record PastSession(
         SessionId id,
-        SessionTitle title,
+        SessionFacts facts,
         WorkingDirectory directory,
         LastActivity lastActivity,
         StartedAt startedAt,
@@ -19,7 +19,7 @@ public record PastSession(
 
     public PastSession {
         Assert.notNull("id", id);
-        Assert.notNull("title", title);
+        Assert.notNull("facts", facts);
         Assert.notNull("directory", directory);
         Assert.notNull("last activity", lastActivity);
         Assert.notNull("started at", startedAt);
@@ -27,7 +27,7 @@ public record PastSession(
     }
 
     public PastSession linkedTo(List<TicketLink> links) {
-        return new PastSession(id, title, directory, lastActivity, startedAt, links);
+        return new PastSession(id, facts, directory, lastActivity, startedAt, links);
     }
 
     public static PastSessionBuilder builder() {
@@ -36,7 +36,7 @@ public record PastSession(
 
     public static final class PastSessionBuilder {
         private SessionId id;
-        private SessionTitle title;
+        private SessionFacts facts;
         private WorkingDirectory directory;
         private LastActivity lastActivity;
         private StartedAt startedAt;
@@ -49,8 +49,8 @@ public record PastSession(
             return this;
         }
 
-        public PastSessionBuilder title(SessionTitle title) {
-            this.title = title;
+        public PastSessionBuilder facts(SessionFacts facts) {
+            this.facts = facts;
             return this;
         }
 
@@ -75,7 +75,7 @@ public record PastSession(
         }
 
         public PastSession build() {
-            return new PastSession(id, title, directory, lastActivity, startedAt, links);
+            return new PastSession(id, facts, directory, lastActivity, startedAt, links);
         }
     }
 }

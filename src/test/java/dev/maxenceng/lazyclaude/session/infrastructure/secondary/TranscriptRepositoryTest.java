@@ -61,8 +61,11 @@ import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.FirstPrompt;
+import dev.maxenceng.lazyclaude.session.published.NoFirstPrompt;
 import dev.maxenceng.lazyclaude.session.published.NoTitle;
+import dev.maxenceng.lazyclaude.session.published.ReadFacts;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.UnreadableFacts;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -129,7 +132,7 @@ class TranscriptRepositoryTest {
         TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         assertThat(repository.pastSessions())
-                .containsExactly(pastSessionOf(sessionId(), new AiTitle("Refine PROJ-1"), cwd(), later(), started(), locatedInProject()));
+                .containsExactly(pastSessionOf(sessionId(), ReadFacts.builder().title(new AiTitle("Refine PROJ-1")).opening(new FirstPrompt("Refine the ticket")).build(), cwd(), later(), started(), locatedInProject()));
     }
 
     @Test
@@ -150,7 +153,7 @@ class TranscriptRepositoryTest {
                 assistantLine(cwd(), later()),
                 aiTitleLine("Last title"));
 
-        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions()).singleElement().satisfies(session -> assertThat(session.session().title()).isEqualTo(new AiTitle("Last title")));
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions()).singleElement().satisfies(session -> assertThat(session.session().facts().title()).isEqualTo(new AiTitle("Last title")));
     }
 
     @Test
@@ -160,7 +163,7 @@ class TranscriptRepositoryTest {
         assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .as("a blank title says nothing, so the session is still listed")
                 .singleElement()
-                .satisfies(session -> assertThat(session.session().title()).isEqualTo(new FirstPrompt("Refine")));
+                .satisfies(session -> assertThat(session.session().facts().title()).isEqualTo(new FirstPrompt("Refine")));
     }
 
     @Test
@@ -174,7 +177,7 @@ class TranscriptRepositoryTest {
 
         assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
-                .satisfies(session -> assertThat(session.session().title()).isEqualTo(new FirstPrompt("Fix the status line")));
+                .satisfies(session -> assertThat(session.session().facts().title()).isEqualTo(new FirstPrompt("Fix the status line")));
     }
 
     @Test
@@ -188,7 +191,7 @@ class TranscriptRepositoryTest {
 
         assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
-                .satisfies(session -> assertThat(session.session().title())
+                .satisfies(session -> assertThat(session.session().facts().title())
                         .as("a tool result is not what the session was asked")
                         .isEqualTo(new FirstPrompt("Review this change")));
     }
@@ -204,7 +207,36 @@ class TranscriptRepositoryTest {
 
         assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
-                .satisfies(session -> assertThat(session.session().title()).isEqualTo(new FirstPrompt("The real prompt")));
+                .satisfies(session -> assertThat(session.session().facts().title()).isEqualTo(new FirstPrompt("The real prompt")));
+    }
+
+    @Test
+    void shouldKeepWhatTheSessionWasFirstAskedBesideItsAiTitle() throws IOException {
+        writeTranscript(
+                projects,
+                folder(),
+                sessionId(),
+                userLine(cwd(), started(), "/ticket start PROJ-1"),
+                assistantLine(cwd(), later()),
+                aiTitleLine("Refine PROJ-1"));
+
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
+                .singleElement()
+                .satisfies(session -> assertThat(session.session().facts())
+                        .isEqualTo(ReadFacts.builder()
+                                .title(new AiTitle("Refine PROJ-1"))
+                                .opening(new FirstPrompt("/ticket start PROJ-1"))
+                                .build()));
+    }
+
+    @Test
+    void shouldHoldNoOpeningPromptForATranscriptThatHoldsNone() throws IOException {
+        writeTranscript(projects, folder(), sessionId(), assistantLine(cwd(), started()));
+
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
+                .singleElement()
+                .satisfies(session -> assertThat(session.session().facts())
+                        .isEqualTo(ReadFacts.builder().title(new NoTitle()).opening(new NoFirstPrompt()).build()));
     }
 
     @Test
@@ -213,7 +245,7 @@ class TranscriptRepositoryTest {
 
         assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
-                .satisfies(session -> assertThat(session.session().title()).isEqualTo(new NoTitle()));
+                .satisfies(session -> assertThat(session.session().facts().title()).isEqualTo(new NoTitle()));
     }
 
     @Test
@@ -312,7 +344,7 @@ class TranscriptRepositoryTest {
         repository.rescan(List.of(file), locator, unwritable);
 
         assertThat(repository.pastSessions()).singleElement().satisfies(session -> {
-            assertThat(session.session().title())
+            assertThat(session.session().facts().title())
                     .as("the title sits before the offset, so it is not read again")
                     .isEqualTo(new AiTitle("AAAA"));
             assertThat(session.session().lastActivity().value()).isEqualTo(Instant.parse(later()));
@@ -350,7 +382,7 @@ class TranscriptRepositoryTest {
         assertThat(repository.pastSessions())
                 .singleElement()
                 .satisfies(session -> {
-                    assertThat(session.session().title()).isEqualTo(new FirstPrompt("Short"));
+                    assertThat(session.session().facts().title()).isEqualTo(new FirstPrompt("Short"));
                     assertThat(session.session().lastActivity().value()).isEqualTo(Instant.parse(started()));
                 });
     }
@@ -367,7 +399,7 @@ class TranscriptRepositoryTest {
 
         assertThat(repository.pastSessions())
                 .singleElement()
-                .satisfies(session -> assertThat(session.session().title())
+                .satisfies(session -> assertThat(session.session().facts().title())
                         .as("a new file under the old name is not a continuation of the old one")
                         .isEqualTo(new FirstPrompt("BBBB")));
     }
@@ -384,7 +416,7 @@ class TranscriptRepositoryTest {
 
         assertThat(repository.pastSessions())
                 .singleElement()
-                .satisfies(session -> assertThat(session.session().title()).isEqualTo(new FirstPrompt("AAAA")));
+                .satisfies(session -> assertThat(session.session().facts().title()).isEqualTo(new FirstPrompt("AAAA")));
     }
 
     @Test
@@ -445,6 +477,28 @@ class TranscriptRepositoryTest {
     }
 
     @Test
+    void shouldKeepTheRowOfAKnownTranscriptItCanNoLongerReadWithWhyAndItsFactsOnceItReadsAgain() throws IOException {
+        Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
+        append(file, assistantLine(cwd(), later()));
+        Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("---------"));
+        repository.rescan(List.of(file), locator, unwritable);
+
+        assertThat(repository.pastSessions())
+                .as("a session already listed stays listed, so it can still be resumed, with why its facts are missing")
+                .singleElement()
+                .satisfies(located -> assertThat(located.session().facts())
+                        .isEqualTo(new UnreadableFacts(new Reason("access denied to " + file))));
+
+        Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
+        repository.rescan(List.of(file), locator, unwritable);
+
+        assertThat(repository.pastSessions())
+                .singleElement()
+                .satisfies(located -> assertThat(located.session().facts()).isInstanceOf(ReadFacts.class));
+    }
+
+    @Test
     void shouldAskAgainOnTheNextChangeWhenItsProjectCouldNotBeLocated() throws IOException {
         when(locator.locate(any())).thenThrow(new ProjectUnavailableException("git failed", new InterruptedException())).thenReturn(locatedInProject());
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
@@ -468,7 +522,7 @@ class TranscriptRepositoryTest {
 
         assertThat(repositoryOver(projects, cacheFile).pastSessions())
                 .as("the first frame is drawn from the cache before any transcript is touched")
-                .containsExactly(pastSessionOf(sessionId(), new FirstPrompt("Refine"), cwd(), later(), started(), locatedInProject()));
+                .containsExactly(pastSessionOf(sessionId(), ReadFacts.builder().title(new FirstPrompt("Refine")).opening(new FirstPrompt("Refine")).build(), cwd(), later(), started(), locatedInProject()));
     }
 
     @Test

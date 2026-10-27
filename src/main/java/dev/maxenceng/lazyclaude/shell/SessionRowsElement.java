@@ -55,7 +55,7 @@ final class SessionRowsElement implements Element {
                 SessionState state = live.session().state();
                 line(frame, area, y, SessionText.glyph(state), plain.fg(SessionText.colour(state)),
                         middle(live.link(), live.session().name().value(), plain, plain, verbWidth),
-                        SessionText.rowLabel(live.session()), plain);
+                        SessionText.paneLabel(), plain);
             }
             case PastSessionRow past -> {
                 Style title = SessionText.titleIsStandIn(past.session()) ? plain.dim() : plain;

@@ -111,7 +111,7 @@ class ShellTicketSessionsTest {
                 List.of(linkedPastSessionView(1, strongLink("PROJ-1", "start")))));
 
         assertThat(Screen.of(shell).boardPanelLines())
-                .anySatisfy(line -> assertThat(line).matches("• refine\\s+refiner\\s+2h"))
+                .anySatisfy(line -> assertThat(line).matches("• refine\\s+refiner\\s+pane"))
                 .anySatisfy(line -> assertThat(line).matches("○ start\\s+Past 1\\s+10m"));
     }
 
@@ -119,7 +119,7 @@ class ShellTicketSessionsTest {
     void shouldKeepTheTextOfAnUnlinkedRowWithNoVerb() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(List.of(linkedNamedSessionView(1, "loose-one", new Busy()))));
 
-        assertThat(Screen.of(shell).boardPanelLines()).anySatisfy(line -> assertThat(line).matches("∼ loose-one\\s+2h"));
+        assertThat(Screen.of(shell).boardPanelLines()).anySatisfy(line -> assertThat(line).matches("∼ loose-one\\s+pane"));
     }
 
     @Test

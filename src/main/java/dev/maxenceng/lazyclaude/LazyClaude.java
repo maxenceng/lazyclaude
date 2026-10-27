@@ -41,7 +41,6 @@ import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
@@ -50,16 +49,12 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCom
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeAgentsRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeKeybindingsRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigurationRepository;
-import dev.maxenceng.lazyclaude.session.infrastructure.secondary.KittyConfigRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LiveSessionRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.NotifySendRepository;
-import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ProcessEnvironmentRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRepository;
-import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TerminalJumpRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptCacheFile;
-import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptReadRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.WorktreeRepository;
@@ -94,9 +89,6 @@ public final class LazyClaude {
     private static final List<String> NOTIFY_SEND = List.of("notify-send");
     private static final List<String> GDBUS = List.of("gdbus");
     private static final Duration NOTIFY_PATIENCE = Duration.ofSeconds(5);
-    private static final List<String> KITTEN = List.of("kitten");
-    private static final List<String> TMUX = List.of("tmux");
-    private static final Duration JUMP_PATIENCE = Duration.ofSeconds(5);
     private static final String GH = "gh";
     private static final Duration GH_PATIENCE = Duration.ofSeconds(30);
 
@@ -135,7 +127,6 @@ public final class LazyClaude {
         SessionQuery sessions = new SessionQuery(sessionService);
         HostedSessionCommand hosting = new HostedSessionCommand(sessionService);
         WatchedSessionCommand watching = new WatchedSessionCommand(sessionService);
-        OutsideSessionCommand outside = new OutsideSessionCommand(sessionService);
         TicketWorktreeCommand removing = new TicketWorktreeCommand(sessionService);
         PendingReviewApplicationService pendingReview =
                 new PendingReviewApplicationService(new GhPendingReviewRepository(GH, GH_PATIENCE));
@@ -154,7 +145,7 @@ public final class LazyClaude {
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, writing, configuration.reservedChords(), hosting, watching, outside, removing, warnings));
+                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, writing, configuration.reservedChords(), hosting, watching, removing, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -212,10 +203,6 @@ public final class LazyClaude {
                 new PtyHostRepository(CLAUDE, System.getenv()),
                 new WorktreeRepository(),
                 new NotifySendRepository(NOTIFY_SEND, GDBUS, NOTIFY_PATIENCE),
-                new ProcessEnvironmentRepository(PROC, System.getenv()),
-                new TerminalJumpRepository(KITTEN, TMUX, JUMP_PATIENCE),
-                new KittyConfigRepository(home, System.getenv()),
-                new TranscriptReadRepository(home.resolve(TRANSCRIPTS)),
                 desktopNotifications,
                 Clock.systemDefaultZone());
     }
@@ -274,11 +261,10 @@ public final class LazyClaude {
             ReservedChords chords,
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
-            OutsideSessionCommand outside,
             TicketWorktreeCommand removing,
             WarningQuery warnings)
             throws Exception {
-        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, writing, chords, hosting, watching, outside, removing, warnings)::run, hosting);
+        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, writing, chords, hosting, watching, removing, warnings)::run, hosting);
     }
 
     /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
@@ -308,10 +294,9 @@ public final class LazyClaude {
             ReservedChords chords,
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
-            OutsideSessionCommand outside,
             TicketWorktreeCommand removing,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, watching, outside, removing, sessions, board, docs, reviews, writing, chords);
+        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, watching, removing, sessions, board, docs, reviews, writing, chords);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         board.subscribe(new BoardWatchPayload(view.root().value()), shell::boardChanged);
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);

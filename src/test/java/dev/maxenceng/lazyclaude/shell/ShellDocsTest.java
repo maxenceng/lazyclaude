@@ -194,15 +194,6 @@ class ShellDocsTest {
     }
 
     @Test
-    void shouldShowNothingInTheMainViewOnceElsewhereHasFocusAndHoldsNoSession() {
-        Shell shell = shellOnDocs(docsView());
-
-        shell.press(alt('j'));
-
-        assertThat(Screen.of(shell).mainViewRows()).allSatisfy(row -> assertThat(row).isBlank());
-    }
-
-    @Test
     void shouldGiveDocsTheRemainingHeightWhileItHasFocus() {
         Shell shell = shellOnDocs(docsView());
 

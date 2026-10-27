@@ -263,7 +263,10 @@ class ShellTest {
 
     @Test
     void shouldTitleTheOtherPanelsAndLeaveThemEmpty() {
-        assertThat(Screen.of(shellOn()).text()).contains("Board", "Sessions", "Docs", "Elsewhere", "dock", "main view");
+        assertThat(Screen.of(shellOn()).text())
+                .contains("Board", "Sessions", "Docs", "dock", "main view")
+                .as("the left column is the Board, Sessions and Docs, and a session in another terminal has no panel")
+                .doesNotContain("Elsewhere");
     }
 
     @Test
@@ -318,9 +321,7 @@ class ShellTest {
         shell.press(alt('j'));
         assertThat(shell.focus()).isEqualTo(Focus.DOCS);
         shell.press(alt('j'));
-        assertThat(shell.focus()).isEqualTo(Focus.ELSEWHERE);
-        shell.press(alt('j'));
-        assertThat(shell.focus()).as("focus does not wrap").isEqualTo(Focus.ELSEWHERE);
+        assertThat(shell.focus()).as("focus does not wrap").isEqualTo(Focus.DOCS);
     }
 
     @Test

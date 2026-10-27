@@ -1,9 +1,5 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
-import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.anotherProjectGroup;
-import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.otherProjectGroup;
-import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.outsideGitGroup;
-import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.secondOutsideGitGroup;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.boardTickets;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.onBranches;
@@ -15,9 +11,7 @@ import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.newestSession;
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.newestSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.oldestSession;
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.oldestSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.sessionIn;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.sessionWith;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedIn;
@@ -29,14 +23,8 @@ import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSes
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionActiveMinutesAgo;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionIn;
-import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inKitty;
-import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.inTmux;
-import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.kittyEnvironment;
-import static dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentFixture.tmuxEnvironment;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.newestReportedSession;
-import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.newestReportedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.oldestReportedSession;
-import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.oldestReportedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedIn;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSessionBuilder;
@@ -46,38 +34,27 @@ import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.sdk
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.sessionWithoutEntrypoint;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.advancingClock;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsOf;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.elsewhereOf;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.emptyEnvironmentPort;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsWithElsewhere;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionManager;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.workingDirectoryOf;
-import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.fourthProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.cacheUnwritable;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.registryUnreadable;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.registryUnwatchable;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.transcriptsUnlistable;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.transcriptsUnwatchable;
-import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.fourthSessionId;
-import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.fourthSessionName;
-import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.permissionPrompt;
-import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.anotherProject;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.otherProject;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.raisedTexts;
-import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.anotherProjectDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.otherProjectDirectory;
-import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.otherProjectSubdirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.otherProjectWorktreeDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.outsideGitDirectory;
-import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.secondOutsideGitDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -135,9 +112,6 @@ class SessionManagerTest {
     private WarningPort warnings;
 
     @Mock
-    private ProcessEnvironmentPort environment;
-
-    @Mock
     private Consumer<Sessions> listener;
 
     @Test
@@ -153,7 +127,7 @@ class SessionManagerTest {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
         when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
 
-        AvailableSessions read = (AvailableSessions) new SessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, emptyEnvironmentPort(), advancingClock()).sessionsFor(project(), noTickets());
+        AvailableSessions read = (AvailableSessions) new SessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings, advancingClock()).sessionsFor(project(), noTickets());
 
         assertThat(read.ageOf(liveSession()))
                 .as("rows of one read drawn at different instants would disagree on how long ago they started")
@@ -170,109 +144,23 @@ class SessionManagerTest {
     }
 
     @Test
-    void shouldListASessionOfAnotherProjectElsewhereUnderThatProject() {
+    void shouldNotListASessionOfAnotherProject() {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(otherProjectDirectory())));
         when(locator.locate(otherProjectDirectory())).thenReturn(otherProject());
 
         assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
-                .isEqualTo(elsewhereOf(List.of(otherProjectGroup(List.of(sessionIn(otherProjectDirectory()))))));
+                .as("a claude in another project shows nowhere")
+                .isEqualTo(liveSessionsOf(List.of()));
     }
 
     @Test
-    void shouldListASessionWhoseDirectoryBelongsToNoProjectUnderAGroupOfItsOwn() {
+    void shouldNotListASessionWhoseDirectoryBelongsToNoProject() {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(outsideGitDirectory()), reportedSession()));
         when(locator.locate(outsideGitDirectory())).thenThrow(new ProjectNotFoundException("not inside a git repository"));
         when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
 
         assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
-                .isEqualTo(liveSessionsWithElsewhere(
-                        List.of(liveSession()), List.of(outsideGitGroup(List.of(sessionIn(outsideGitDirectory()))))));
-    }
-
-    @Test
-    void shouldGroupSessionsOfOneProjectUnderOneGroupWhateverTheirDirectory() {
-        when(sessions.liveSessions(any()))
-                .thenReturn(List.of(
-                        reportedIn(otherProjectDirectory()),
-                        newestReportedSessionBuilder().directory(otherProjectSubdirectory()).build()));
-        when(locator.locate(otherProjectDirectory())).thenReturn(otherProject());
-        when(locator.locate(otherProjectSubdirectory())).thenReturn(otherProject());
-
-        assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
-                .isEqualTo(elsewhereOf(List.of(otherProjectGroup(List.of(
-                        newestSessionBuilder().directory(otherProjectSubdirectory()).build(),
-                        sessionIn(otherProjectDirectory()))))));
-    }
-
-    @Test
-    void shouldGroupSessionsOutsideGitByTheirOwnDirectory() {
-        when(sessions.liveSessions(any()))
-                .thenReturn(List.of(
-                        reportedIn(outsideGitDirectory()),
-                        newestReportedSessionBuilder().directory(secondOutsideGitDirectory()).build()));
-        when(locator.locate(any())).thenThrow(new ProjectNotFoundException("not inside a git repository"));
-
-        assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
-                .isEqualTo(elsewhereOf(List.of(
-                        secondOutsideGitGroup(List.of(newestSessionBuilder().directory(secondOutsideGitDirectory()).build())),
-                        outsideGitGroup(List.of(sessionIn(outsideGitDirectory()))))));
-    }
-
-    @Test
-    void shouldOrderTheProjectsElsewhereByStrongestMarkerThenName() {
-        when(sessions.liveSessions(any()))
-                .thenReturn(List.of(
-                        reportedIn(otherProjectDirectory()),
-                        newestReportedSessionBuilder()
-                                .directory(anotherProjectDirectory())
-                                .status(ReportedStatus.WAITING)
-                                .waitingFor(permissionPrompt())
-                                .build(),
-                        oldestReportedSessionBuilder().directory(secondOutsideGitDirectory()).build()));
-        when(locator.locate(otherProjectDirectory())).thenReturn(otherProject());
-        when(locator.locate(anotherProjectDirectory())).thenReturn(anotherProject());
-        when(locator.locate(secondOutsideGitDirectory())).thenThrow(new ProjectNotFoundException("not inside a git repository"));
-
-        assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
-                .isEqualTo(elsewhereOf(List.of(
-                        anotherProjectGroup(List.of(newestSessionBuilder()
-                                .directory(anotherProjectDirectory())
-                                .state(waitingForPermission())
-                                .build())),
-                        secondOutsideGitGroup(List.of(oldestSessionBuilder().directory(secondOutsideGitDirectory()).build())),
-                        otherProjectGroup(List.of(sessionIn(otherProjectDirectory()))))));
-    }
-
-    @Test
-    void shouldOrderTheSessionsOfAGroupByMarkerThenName() {
-        when(sessions.liveSessions(any()))
-                .thenReturn(List.of(
-                        reportedIn(otherProjectDirectory()),
-                        newestReportedSessionBuilder().directory(otherProjectDirectory()).build(),
-                        oldestReportedSessionBuilder().directory(otherProjectDirectory()).build(),
-                        reportedSessionBuilder()
-                                .id(fourthSessionId())
-                                .pid(fourthProcessId())
-                                .name(fourthSessionName())
-                                .directory(otherProjectDirectory())
-                                .status(ReportedStatus.WAITING)
-                                .waitingFor(inputNeeded())
-                                .build()));
-        when(locator.locate(otherProjectDirectory())).thenReturn(otherProject());
-
-        assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
-                .as("what asks most of you comes first, busy sessions last, ties by name")
-                .isEqualTo(elsewhereOf(List.of(otherProjectGroup(List.of(
-                        liveSessionBuilder()
-                                .id(fourthSessionId())
-                                .pid(fourthProcessId())
-                                .name(fourthSessionName())
-                                .directory(otherProjectDirectory())
-                                .state(waitingForInput())
-                                .build(),
-                        oldestSessionBuilder().directory(otherProjectDirectory()).build(),
-                        newestSessionBuilder().directory(otherProjectDirectory()).build(),
-                        sessionIn(otherProjectDirectory()))))));
+                .isEqualTo(liveSessionsOf(List.of(liveSession())));
     }
 
     @Test
@@ -391,7 +279,7 @@ class SessionManagerTest {
     }
 
     @Test
-    void shouldListTheProjectsSessionsWhenASessionElsewhereReportsAStatusItDoesNotKnow() {
+    void shouldListTheProjectsSessionsWhenASessionOfAnotherProjectReportsAStatusItDoesNotKnow() {
         when(sessions.liveSessions(any()))
                 .thenReturn(List.of(
                         reportedSessionBuilder()
@@ -404,9 +292,7 @@ class SessionManagerTest {
 
         assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
                 .as("a session of another project has no say in whether this project's sessions can be shown")
-                .isEqualTo(liveSessionsWithElsewhere(
-                        List.of(liveSession()),
-                        List.of(otherProjectGroup(List.of(sessionIn(otherProjectDirectory(), new Unknown()))))));
+                .isEqualTo(liveSessionsOf(List.of(liveSession())));
     }
 
     @Test
@@ -663,12 +549,12 @@ class SessionManagerTest {
     }
 
     @Test
-    void shouldGroupALiveSessionOfAnotherProjectsRemovedWorktreeUnderThatProject() {
+    void shouldNotListALiveSessionOfAnotherProjectsRemovedWorktree() {
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(otherProjectWorktreeDirectory())));
         when(locator.locate(otherProjectWorktreeDirectory())).thenThrow(new ProjectNotFoundException("not a directory"));
 
         assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets()))
-                .isEqualTo(elsewhereOf(List.of(otherProjectGroup(List.of(sessionIn(otherProjectWorktreeDirectory()))))));
+                .isEqualTo(liveSessionsOf(List.of()));
     }
 
     @Test
@@ -869,39 +755,4 @@ class SessionManagerTest {
         verify(transcriptWatch).rescanNow();
     }
 
-    @Test
-    void shouldReadWhereAProjectsLiveSessionLivesFromItsProcessEnvironment() {
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
-        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
-        when(environment.of(reportedSession().pid())).thenReturn(kittyEnvironment());
-
-        assertThat(sessionManager(sessions, locator, watch, warnings, environment).sessionsFor(project(), noTickets()))
-                .isEqualTo(liveSessionsOf(List.of(liveSessionBuilder().residence(inKitty()).build())));
-    }
-
-    @Test
-    void shouldReadWhereASessionElsewhereLivesFromItsProcessEnvironment() {
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(otherProjectDirectory())));
-        when(locator.locate(otherProjectDirectory())).thenReturn(otherProject());
-        when(environment.of(reportedIn(otherProjectDirectory()).pid())).thenReturn(tmuxEnvironment());
-
-        assertThat(sessionManager(sessions, locator, watch, warnings, environment).sessionsFor(project(), noTickets()))
-                .isEqualTo(liveSessionsWithElsewhere(
-                        List.of(), List.of(otherProjectGroup(List.of(liveSessionBuilder().directory(otherProjectDirectory()).residence(inTmux()).build())))));
-    }
-
-    @Test
-    void shouldPlaceASessionNowhereAndWarnOnceWhenItsEnvironmentCannotBeRead() {
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
-        when(locator.locate(workingDirectoryOf(reportedSession()))).thenReturn(project());
-        when(environment.of(reportedSession().pid())).thenThrow(new EnvironmentUnreadableException("cannot read /proc/17234/environ: access denied"));
-        SessionManager manager = sessionManager(sessions, locator, watch, warnings, environment);
-
-        manager.sessionsFor(project(), noTickets());
-        Sessions second = manager.sessionsFor(project(), noTickets());
-
-        assertThat(second).isEqualTo(liveSessionsOf(List.of(liveSession())));
-        assertThat(raisedTexts(warnings))
-                .containsExactly("sessions: cannot read /proc/17234/environ: access denied; where sessions live is unknown.");
-    }
 }

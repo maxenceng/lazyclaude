@@ -51,7 +51,6 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
@@ -105,7 +104,6 @@ final class ShellReviewFixture {
                 pullRequests,
                 hosting,
                 mock(WatchedSessionCommand.class),
-                mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 mock(BoardQuery.class),

@@ -1,6 +1,6 @@
 ---
 id: SESSION-10
-status: todo
+status: in-progress
 context: session
 type: feature
 tracker_id: 93

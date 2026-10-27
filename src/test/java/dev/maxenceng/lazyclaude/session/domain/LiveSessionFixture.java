@@ -64,18 +64,6 @@ public final class LiveSessionFixture {
         return oldestSessionBuilder().build();
     }
 
-    public static LiveSession hostedLiveSession() {
-        return liveSessionBuilder().hosting(Hosting.HOSTED).build();
-    }
-
-    public static LiveSession sessionLivingIn(Residence residence) {
-        return liveSessionBuilder().residence(residence).build();
-    }
-
-    public static LiveSession hostedSessionLivingIn(Residence residence) {
-        return liveSessionBuilder().hosting(Hosting.HOSTED).residence(residence).build();
-    }
-
     public static LiveSession sessionIn(WorkingDirectory directory) {
         return liveSessionBuilder().directory(directory).build();
     }

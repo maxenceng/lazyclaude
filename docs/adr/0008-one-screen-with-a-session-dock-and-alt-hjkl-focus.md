@@ -4,7 +4,7 @@ Date: 2026-10-10
 
 ## Status
 
-Accepted
+Accepted. The left column is now three panels (Board, Sessions, Docs): ADR 0047 removes the Elsewhere panel.
 
 ## Context
 

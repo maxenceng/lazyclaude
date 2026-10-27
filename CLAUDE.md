@@ -58,8 +58,8 @@ an ADR.
 2. The domain is plain Java — no TamboUI, no JLine, nothing outside `java.*` and other domains.
 3. Only `shell` and `infrastructure.primary` touch the terminal (TamboUI, JLine).
 4. Side effects — `ProcessBuilder`/`Process`, `java.nio.file.Files`, `java.net.http` — live in
-   `infrastructure.secondary`, behind a port the domain declares. Running `claude`, `git` or
-   `tmux`, and reading the backlog, are all side effects.
+   `infrastructure.secondary`, behind a port the domain declares. Running `claude` or `git`,
+   and reading the backlog, are all side effects.
 5. Contexts reach each other only through the other's `published` package.
 6. Nothing depends on `shell`; it composes contexts, never the reverse.
 7. The shell reaches a context only through its `infrastructure.primary` and `published`.

@@ -15,15 +15,12 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
 import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -43,18 +40,12 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewComma
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.JumpPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoTranscriptView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemoteControlConfigView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptPayload;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
@@ -82,7 +73,6 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
-                mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), Runnable::run);
@@ -96,7 +86,6 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
-                mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 boards, mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), Runnable::run);
@@ -111,7 +100,6 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
-                mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 screens,
                 boards,
@@ -138,7 +126,6 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
-                mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 boards,
@@ -160,7 +147,6 @@ final class ShellFixture {
                 pullRequests,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
-                mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), Runnable::run);
@@ -176,7 +162,6 @@ final class ShellFixture {
                 pullRequests,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
-                mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), Runnable::run);
@@ -196,43 +181,12 @@ final class ShellFixture {
         return mock(SessionQuery.class, ShellFixture::blankScreenOrFirstVerb);
     }
 
-    static SessionQuery screensReadingTranscripts(TranscriptView first, TranscriptView... later) {
-        SessionQuery screens = blankScreens();
-        when(screens.transcriptOf(any())).thenReturn(first, later);
-        return screens;
+    static Shell shellWithSessionsFocused(SessionsView sessions, SessionQuery screens, Executor background, int panels) {
+        return pressed(shellWith(sessions, screens, background), alt('j'), panels);
     }
 
-    static SessionQuery screensReadingByOffset(Map<Long, TranscriptView> byOffset) {
-        SessionQuery screens = blankScreens();
-        when(screens.transcriptOf(any()))
-                .thenAnswer(asked -> byOffset.get(asked.<TranscriptPayload>getArgument(0).offset().value()));
-        return screens;
-    }
 
-    static OutsideSessionCommand outsideOffering(RemoteControlConfigView config) {
-        OutsideSessionCommand outside = mock(OutsideSessionCommand.class);
-        when(outside.jump(any())).thenReturn(Optional.of(config));
-        return outside;
-    }
-
-    static Shell shellWithSessionsFocused(
-            SessionsView sessions, SessionQuery screens, OutsideSessionCommand outside, Executor background, int panels) {
-        return pressed(shellWith(sessions, screens, outside, background), alt('j'), panels);
-    }
-
-    static Shell shellOnSessionsReading(SessionsView sessions, SessionQuery screens) {
-        return shellWithSessionsFocused(sessions, screens, mock(OutsideSessionCommand.class), Runnable::run, 1);
-    }
-
-    static Shell shellOnSessionsOutside(SessionsView sessions, OutsideSessionCommand outside) {
-        return shellWithSessionsFocused(sessions, blankScreens(), outside, Runnable::run, 1);
-    }
-
-    static Shell shellOnElsewhereOutside(SessionsView sessions, OutsideSessionCommand outside) {
-        return shellWithSessionsFocused(sessions, blankScreens(), outside, Runnable::run, 3);
-    }
-
-    private static Shell shellWith(SessionsView sessions, SessionQuery screens, OutsideSessionCommand outside, Executor background) {
+    private static Shell shellWith(SessionsView sessions, SessionQuery screens, Executor background) {
         return new Shell(
                 boardViewOf(ticketView()),
                 emptyDocsView(),
@@ -240,7 +194,6 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
-                outside,
                 mock(TicketWorktreeCommand.class),
                 screens,
                 mock(BoardQuery.class),
@@ -250,21 +203,6 @@ final class ShellFixture {
                 background);
     }
 
-    static List<TranscriptPayload> transcriptsAsked(SessionQuery screens, int times) {
-        ArgumentCaptor<TranscriptPayload> asked = ArgumentCaptor.forClass(TranscriptPayload.class);
-        verify(screens, times(times)).transcriptOf(asked.capture());
-        return asked.getAllValues();
-    }
-
-    static Path projectRootPath() {
-        return projectRoot().value();
-    }
-
-    static JumpPayload jumpedWith(OutsideSessionCommand outside) {
-        ArgumentCaptor<JumpPayload> payload = ArgumentCaptor.forClass(JumpPayload.class);
-        verify(outside).jump(payload.capture());
-        return payload.getValue();
-    }
 
     static SessionQuery screensShowing(WorktreeView worktree) {
         return mock(SessionQuery.class, invocation -> invocation.getMethod().getReturnType() == WorktreeView.class
@@ -284,7 +222,6 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
                 mock(WatchedSessionCommand.class),
-                mock(OutsideSessionCommand.class),
                 removing,
                 screens,
                 boards,
@@ -331,9 +268,6 @@ final class ShellFixture {
     }
 
     private static Object blankScreenOrFirstVerb(InvocationOnMock invocation) {
-        if (invocation.getMethod().getReturnType() == TranscriptView.class) {
-            return new NoTranscriptView();
-        }
         if (invocation.getMethod().getReturnType() != VerbChoiceView.class) {
             return blankScreenOrNothing(invocation);
         }
@@ -350,7 +284,6 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 hosting,
                 mock(WatchedSessionCommand.class),
-                mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 screens,
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), Runnable::run);
@@ -434,7 +367,6 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 hosting,
                 watching,
-                mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 screens,
                 mock(BoardQuery.class),
@@ -496,7 +428,6 @@ final class ShellFixture {
                 checkingPullRequestsView(),
                 hosting,
                 mock(WatchedSessionCommand.class),
-                mock(OutsideSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 screens,
                 mock(BoardQuery.class),
@@ -532,10 +463,6 @@ final class ShellFixture {
 
     static Shell shellOnSessions(SessionsView sessions) {
         return pressed(newShell(boardViewOf(ticketView()), emptyDocsView(), sessions), alt('j'), 1);
-    }
-
-    static Shell shellOnElsewhere(SessionsView sessions) {
-        return pressed(newShell(boardViewOf(ticketView()), emptyDocsView(), sessions), alt('j'), 3);
     }
 
     static Shell shellOnTicketSessions(SessionsView sessions) {

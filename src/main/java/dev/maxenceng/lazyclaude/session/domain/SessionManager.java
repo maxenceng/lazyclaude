@@ -11,7 +11,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.session.published.Busy;
-import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
@@ -32,11 +31,11 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * Builds the sessions of a project from every live session on the machine and every past one. It owns the rules: an
+ * Builds the sessions of a project from the live sessions on the machine that are in it and every past one. It owns the rules: an
  * {@code sdk-cli} session is not listed, a session belongs to the project its {@code cwd} is located
  * in (or, when git cannot place it, the one its path lies in), rows run newest first, and a session's
  * state is drawn from its reported status only once it is known to be the project's, so a status no
- * one here knows, on a session elsewhere, changes nothing. Each fallback is warned about once, however
+ * one here knows, in another project, changes nothing. Each fallback is warned about once, however
  * often its source reports it. A live id hides the past session of the same id, a past session belongs to
  * the project its {@code cwd} was located in (or, when that directory is gone, to the one its path lies in), and
  * past rows run newest activity first. A session is linked to tickets by its transcript, live or past, against the ticket ids it is
@@ -48,7 +47,6 @@ public final class SessionManager {
     private static final String SWEEP_WARNING = "sessions: %s; checking every %d s instead.";
     private static final String AGENTS_WARNING = "sessions: %s; asking claude agents --json every %d s instead.";
 
-    private static final String ENVIRONMENT_WARNING = "sessions: %s; where sessions live is unknown.";
     private static final String TRANSCRIPT_WARNING = "past sessions: %s; checking every %d s instead.";
     private static final String CACHE_WARNING = "past sessions: %s; they are read in full on every start.";
     private static final String ROOT_WARNING = "past sessions: %s; only those already read show.";
@@ -57,34 +55,19 @@ public final class SessionManager {
             .reversed()
             .thenComparing(session -> session.id().value());
 
-    private static final int NO_MARKER = -1;
-
     private static final Comparator<ReportedSession> NEWEST_FIRST = Comparator.comparing(ReportedSession::startedAt)
             .reversed()
             .thenComparing(session -> session.id().value());
-
-    private static final Comparator<LiveSession> STRONGEST_FIRST = Comparator.comparing(
-                    (LiveSession session) -> session.state().marker().map(Marker::ordinal).orElse(NO_MARKER))
-            .reversed()
-            .thenComparing(session -> session.name().value())
-            .thenComparing(session -> session.id().value());
-
-    private static final Comparator<ElsewhereGroup> STRONGEST_PLACE_FIRST = Comparator.comparing(
-                    (ElsewhereGroup group) -> group.strongestMarker().map(Marker::ordinal).orElse(NO_MARKER))
-            .reversed()
-            .thenComparing(group -> group.place().name().value());
 
     private final LiveSessionPort sessions;
     private final PastSessionPort pastSessions;
     private final ProjectLocatorPort locator;
     private final SessionWatchPort watch;
     private final TranscriptWatchPort transcriptWatch;
-    private final ProcessEnvironmentPort environments;
     private final WarningPort warnings;
     private final SessionClock clock;
     private final WarnOnce sweeping = new WarnOnce();
     private final WarnOnce askingAgents = new WarnOnce();
-    private final WarnOnce readingEnvironments = new WarnOnce();
     private final WarnOnce pollingTranscripts = new WarnOnce();
     private final WarnOnce cacheUnwritable = new WarnOnce();
     private final WarnOnce rootUnlistable = new WarnOnce();
@@ -98,7 +81,6 @@ public final class SessionManager {
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
-            ProcessEnvironmentPort environments,
             Clock clock) {
         this.sessions = sessions;
         this.pastSessions = pastSessions;
@@ -106,7 +88,6 @@ public final class SessionManager {
         this.watch = watch;
         this.transcriptWatch = transcriptWatch;
         this.warnings = warnings;
-        this.environments = environments;
         this.clock = new SessionClock(clock);
     }
 
@@ -182,7 +163,6 @@ public final class SessionManager {
                 .live(running.live().stream()
                         .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))
                         .toList())
-                .elsewhere(running.elsewhere())
                 .past(pastSessionsOf(project, running.ids()).stream()
                         .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))
                         .toList())
@@ -196,16 +176,10 @@ public final class SessionManager {
 
     private RunningSessions runningIn(Project project) {
         List<ReportedSession> reported = sessions.liveSessions(this::warnOfAgents);
-        List<PlacedSession> placed = placedIn(project, reported);
-        ProjectPlace here = new ProjectPlace(project);
         return RunningSessions.builder()
                 .project(project)
                 .ids(reported.stream().map(ReportedSession::id).toList())
-                .live(placed.stream()
-                        .filter(session -> session.place().equals(here))
-                        .map(PlacedSession::session)
-                        .toList())
-                .elsewhere(elsewhereOf(placed, here))
+                .live(inProject(project, reported).stream().map(SessionManager::live).toList())
                 .build();
     }
 
@@ -254,7 +228,7 @@ public final class SessionManager {
                 .toList();
     }
 
-    private List<PlacedSession> placedIn(Project project, List<ReportedSession> reported) {
+    private List<ReportedSession> inProject(Project project, List<ReportedSession> reported) {
         List<ReportedSession> candidates = reported.stream()
                 .filter(session -> !session.isSdkCli())
                 .toList();
@@ -264,30 +238,12 @@ public final class SessionManager {
                 .distinct()
                 .collect(Collectors.toMap(Function.identity(), this::locationOfReported));
         return candidates.stream()
+                .filter(session -> located.get(session.directory()).holds(project, session.directory()))
                 .sorted(NEWEST_FIRST)
-                .map(session -> PlacedSession.builder()
-                        .place(located.get(session.directory()).placeOf(project, session.directory()))
-                        .session(live(session))
-                        .build())
                 .toList();
     }
 
-    private static List<ElsewhereGroup> elsewhereOf(List<PlacedSession> placed, ProjectPlace here) {
-        return placed.stream()
-                .filter(session -> !session.place().equals(here))
-                .collect(Collectors.groupingBy(
-                        PlacedSession::place, Collectors.mapping(PlacedSession::session, Collectors.toList())))
-                .entrySet()
-                .stream()
-                .map(group -> ElsewhereGroup.builder()
-                        .place(group.getKey())
-                        .sessions(group.getValue().stream().sorted(STRONGEST_FIRST).toList())
-                        .build())
-                .sorted(STRONGEST_PLACE_FIRST)
-                .toList();
-    }
-
-    private LiveSession live(ReportedSession session) {
+    private static LiveSession live(ReportedSession session) {
         return LiveSession.builder()
                 .id(session.id())
                 .pid(session.pid())
@@ -296,18 +252,7 @@ public final class SessionManager {
                 .startedAt(session.startedAt())
                 .version(session.version())
                 .state(stateOf(session.status(), session.waitingFor()))
-                .residence(residenceOf(session))
                 .build();
-    }
-
-    /** Where the session lives, from its own environment; a session whose environment cannot be read lives nowhere known. */
-    private Residence residenceOf(ReportedSession session) {
-        try {
-            return environments.of(session.pid()).residence();
-        } catch (EnvironmentUnreadableException unreadable) {
-            readingEnvironments.raise(warnings, new Warning(ENVIRONMENT_WARNING.formatted(unreadable.getMessage())));
-            return new Nowhere();
-        }
     }
 
     /** A waiting session blocked on a permission prompt asks for permission; any other reason asks for input. */
