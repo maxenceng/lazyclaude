@@ -4,7 +4,7 @@ Date: 2026-10-11
 
 ## Status
 
-Accepted. Extends ADR 0021, which covers the live sessions.
+Accepted. Extends ADR 0021, which covers the live sessions. Amended by ADR 0047: the launch log lists past sessions, and transcripts are read only for its ids.
 
 ## Context
 

@@ -4,7 +4,7 @@ Date: 2026-10-17
 
 ## Status
 
-Accepted. Builds on ADR 0035.
+Superseded by ADR 0047. Builds on ADR 0035.
 
 ## Context
 

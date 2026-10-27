@@ -4,7 +4,7 @@ Date: 2026-10-12
 
 ## Status
 
-Accepted. Builds on ADR 0007 and ADR 0008.
+Accepted. Builds on ADR 0007 and ADR 0008. Its host port, encoding boundary and library rule are superseded by ADR 0049.
 
 ## Context
 

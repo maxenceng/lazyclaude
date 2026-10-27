@@ -4,7 +4,7 @@ Date: 2026-10-17
 
 ## Status
 
-Accepted. Builds on ADR 0021 (the sweep that reads the live sessions) and ADR 0027 (the application service composes managers).
+Superseded by ADR 0047. Builds on ADR 0021 (the sweep that reads the live sessions) and ADR 0027 (the application service composes managers).
 
 ## Context
 

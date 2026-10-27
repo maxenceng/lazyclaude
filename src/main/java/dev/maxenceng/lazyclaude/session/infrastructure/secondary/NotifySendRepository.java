@@ -21,6 +21,7 @@ import dev.maxenceng.lazyclaude.session.domain.NotificationId;
  * {@code notify-send} cannot close one, so that goes over D-Bus through {@code gdbus}. A notification the user already
  * dismissed is closed all the same. The title and body follow {@code --}, so a reason that starts with a dash is not an option.
  */
+// deferred: Linux only — notify-send and D-Bus exist nowhere else — closes when another platform is taken on.
 public final class NotifySendRepository implements DesktopNotificationPort {
 
     // A reader blocks until the process exits, so each gets its own virtual thread rather than a slot of the shared pool.

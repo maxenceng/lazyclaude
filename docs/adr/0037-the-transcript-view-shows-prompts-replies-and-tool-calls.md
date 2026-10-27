@@ -4,7 +4,7 @@ Date: 2026-10-17
 
 ## Status
 
-Accepted. Builds on ADR 0023 (transcripts and their watch).
+Superseded by ADR 0047. Builds on ADR 0023 (transcripts and their watch).
 
 ## Context
 

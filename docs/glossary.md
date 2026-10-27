@@ -33,12 +33,28 @@ words mean.
 | Dock strip | The dock folded to one line of its tabs and markers, under the status columns or the zoomed main view. | `shell` |
 | Ticket detail | What the main view shows for a ticket: its facts line, its other frontmatter keys, a rule, then its body rendered as markdown. It scrolls as one unit. | `shell` |
 | Review panel | The review screen's third left panel, under Files and Comments: the summary's first line, the pending count, and the moved-head warning. | `shell`, read from `review` |
+| Second click | A press on the row that was already selected, in the pane that already had focus: it does what `enter` does there. A first click only focuses and selects; there is no timed double-click. | `shell` |
+| Mouse setting | `mouse` in `config.yml`: `false` turns mouse capture off, for a terminal that answers in X10 and would type a click as keys. Off by default when `TERM` is `linux`. | `session` (the setting), `shell` (the capture) |
+
+## sidecar
+
+| Term | Meaning | Where it lives |
+|---|---|---|
+| Backend | The contexts' application layer and everything beneath it, whichever frontend drives it. | `sidecar`, `shell` (expected) |
+| Frontend | What drives a backend and draws it: the TUI, which calls it in-process, or the desktop frontend, which drives a sidecar. Each emulates its own terminal (ADR 0049). | `shell`, `sidecar` (expected) |
+| Sidecar | The backend run as a child process of the desktop frontend, `lazyclaude --sidecar`, in the project's directory. It ends when its stdin closes, and its hosted sessions end with it (ADR 0048). | `sidecar` (expected) |
+| Protocol | The JSON-RPC 2.0 messages, one per line, that a frontend and its sidecar exchange: one method per `*Query`/`*Command` operation, `*/changed` and `pty/*` notifications, `ready` first (ADR 0050). | `sidecar` (expected) |
+| Desktop frontend | The Tauri window, React over xterm.js, that drives a sidecar: the Board, the hosted session pane, Docs and Review, the TUI's screens and keys with the mouse. Not the *desktop notification*, which either frontend may fire. | `frontend/` (expected) |
+| Relay | The desktop frontend's Rust half: it spawns the sidecar, carries its lines both ways in batches and keeps `ready` for a reloaded page. It knows none of the protocol's methods. | `frontend/src-tauri/` (expected) |
+| Bundle | The desktop frontend as installed, a deb or an AppImage: the relay with the runtime, the jar and pty4j's natives beside it, built by `make bundle` (ADR 0059). Not `make package`'s jar. | `frontend/` (expected) |
+| Runtime | The jlink image of Temurin 25 the bundle starts the sidecar on. | `frontend/` (expected) |
 
 ## board
 
 | Term | Meaning | Where it lives |
 |---|---|---|
 | Ticket | One `docs/backlog/*.md` file: frontmatter plus body. | `board` |
+| GitHub issue | What stores a ticket once the backlog moves to GitHub Issues: its number is the ticket's id, its `status:`, `context:` and `type:` labels and its open or closed state carry what the frontmatter did, its body the ticket's sections (ADR 0052). The only meaning *issue* has here. | `board` (expected) |
 | Title | The first `# ` line of a ticket's body outside a code fence, stripped; a ticket without one is shown under its id. | `board` |
 | Board | A project's tickets grouped by status, as the Board panel shows them. | `board` |
 | Unreadable ticket | A backlog file with an `id` whose frontmatter or status is refused, or whose `id` another file already claims; listed with its reason, never dropped silently. | `board` |
@@ -46,6 +62,7 @@ words mean.
 | Branch copy | The ticket's file as its ticket branch has it: the file in a worktree checked out on the ticket branch, the root checkout included, or in the ticket worktree whatever branch it is on, uncommitted edits shown; else `git show <branch>:<file>` while the branch's pull request is not merged. | `board` |
 | Root copy | The ticket's file in the root checkout, as the backlog read finds it. | `board` |
 | Status | A ticket's `status`, read from its branch copy whenever there is one, and from the root checkout otherwise: no ticket branch, or a ticket branch whose pull request is merged and no worktree. A root copy reading `done` wins over any branch copy. There is no separate root status. | `board` |
+| Capture | `c` on the Board: a title typed into a popup becomes a GitHub issue with no labels, read as an unassigned `draft`. lazyclaude's one ticket write; every other goes through a `/ticket` verb in a session (ADR 0054). | `board` (expected) |
 | Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` |
 
 ## session
@@ -56,14 +73,16 @@ words mean.
 | Registry | Claude Code's `~/.claude/sessions/<pid>.json` records, one per running process; internal and undocumented, so never trusted without the liveness check. | `session` |
 | Sweep | Re-reading the live sessions on a timer (every 2 s), always, watch or not: a session whose process died never rewrites its record, so only the sweep notices. Without a watch, the sweep is all there is. | `session` |
 | Hosted session | A live session lazyclaude spawned: the real `claude` on a pty, drawn in a dock tab. Started by `N` or by resuming an unlinked past session; its tab closes when `claude` exits, and it dies with lazyclaude. | `session` |
+| Pty bytes | What crosses a hosted session's pty, both ways: output as `claude` wrote it, input already encoded by the frontend's own emulator. `session`'s backend never emulates. | `session` |
 | Outside session | A live session started anywhere else. lazyclaude shows it read-only and can jump to its terminal window. Its row is labelled `tmux` when its process carries `TMUX_PANE`, else `kitty` when it carries `KITTY_WINDOW_ID`, else its age; a session lazyclaude hosts is never outside, under Elsewhere either. | `session` |
 | Transcript view | The main view's read-only, tailing render of the transcript of the outside or past session selected in the Sessions panel: your prompts behind `›`, Claude's replies, and one dim `⏺ <Tool>  <argument>` line per tool call; tool results and thinking are not shown. It follows new entries while scrolled to the bottom and holds its place when scrolled up. A session with no transcript yet says so, and fills in once it appears. | `session` (the read), `shell` (the view) |
 | Jump | `o` on an outside session in the Sessions or Elsewhere panel: brings its kitty window or tmux pane forward. In tmux only when lazyclaude runs in the same tmux server. A jump that cannot be made warns on the status line why. When kitty refuses because remote control is off and lazyclaude runs in kitty, a popup offers the `kitty.conf` lines. | `session` (the jump), `shell` (the key and popup) |
 | Elsewhere | Every live session outside this project, grouped by place; places and the sessions in them run strongest marker first, then by name. The Elsewhere panel lists them under always-expanded headers the cursor skips; `enter` does nothing. | `session` (the groups), `shell` (the panel) |
 | Place | Where a live session belongs: its project, ticket worktrees included, removed ones by their `../<repo>.worktrees/` path, or, when its `cwd` is outside git, that directory. Named by the project's or the directory's name; Elsewhere and the status line group by it. | `session` |
-| Watched session | The session whose dock tab is selected while the dock and the terminal both have focus. It is never notified, and becoming watched closes its notification. The terminal counts as focused until it reports a focus-out. | `session` (the rule), `shell` (what is watched) |
-| Desktop notification | The `notify-send` notification a session's transition into waiting fires, titled `<project> · <session name>` with the registry's waiting text as body. Replaced in place when the session moves between waiting for permission and waiting for input; closed, over D-Bus, when it stops waiting or becomes watched. | `session` |
+| Watched session | The session whose dock tab is selected while the dock and the terminal both have focus. It is never notified, and becoming watched closes its notification. The terminal counts as focused until it reports a focus-out. In the desktop frontend, the selected session pane's session while that pane and the window both have focus. | `session` (the rule), `shell` and the desktop frontend (what is watched) |
+| Desktop notification | The `notify-send` notification a session's transition into waiting fires, under either frontend, titled `<project> · <session name>` with the registry's waiting text as body. Replaced in place when the session moves between waiting for permission and waiting for input; closed, over D-Bus, when it stops waiting or becomes watched. | `session` |
 | Past session | A session with no live process, only a transcript. It can be resumed, which makes it hosted. A hosted session whose `claude` exited is past. | `session` |
+| Interrupted session | A past session lazyclaude cut off rather than one whose `claude` exited by itself: its launch-log entry has no end, after a quit, a crash or a kill. Listed first among past sessions, with a marker, until resumed. | `session` |
 | Transcript | Claude Code's `~/.claude/projects/<folder>/<sessionId>.jsonl`, one per session; internal format, append-only by observation. A `subagents/` file is not one. | `session` |
 | Last activity | The timestamp of a transcript's last entry. It orders past sessions. | `session` |
 | Linked session | A session attributed to a ticket, by the first link rule that matches: `/ticket` args, or branch. A third rule, `pr-link`, waits for `review` to publish head branches. | `session` |
@@ -81,7 +100,7 @@ words mean.
 | Preselected verb | The allowed verb the verb picker opens on, from status, past sessions and the pull request's state. | `session` |
 | Waiting | The session is blocked on you: *waiting for permission* (a permission prompt) or *waiting for input* (any other question). The only state that notifies. | `session` |
 | Unknown (state) | The session reports a `status` lazyclaude does not know, or none, as a newer Claude Code may. Still listed, with a grey `·`; never notified. | `session` |
-| Reserved chord | A chord lazyclaude takes before `claude` sees it, inside every hosted session: the seven focus, hide, zoom and next-waiting chords, `alt+h/j/k/l/m/z/w` unless `config.yml` rebinds them. | `session` |
+| Reserved chord | A chord lazyclaude takes before `claude` sees it, inside every hosted session: the seven focus, hide, zoom and next-waiting chords, `alt+h/j/k/l/m/z/w` unless `config.yml` rebinds them. The same file binds them in the desktop frontend. | `session` |
 | Fixed chord | A chord lazyclaude keeps for itself and `config.yml` cannot move — `ctrl+c` quit, `ctrl+d`/`ctrl+u` half page — so no reserved chord may be rebound onto one. | `session` |
 
 ## review
@@ -113,6 +132,7 @@ words mean.
 |---|---|---|
 | Document | One markdown file under the project's `docs/`, outside `docs/backlog/`, shown read-only. | `docs` |
 | Docs tree | The project's documents grouped by folder, as the Docs panel shows them: the files directly under `docs/` first, then one header per folder with the count of documents beneath it, each level sorted by name. | `docs` |
+| Site | The project's docs built into HTML by Zensical from `docs/`, `docs/backlog/` left out. lazyclaude never reads it: the Docs panel reads the markdown sources. *Expected.* | `docs` |
 | Polling | Checking the docs, the transcripts, or the backlog, the worktrees' backlogs and the refs the board is read from, on a timer (every 5 s) in place of the watch, only when the watch cannot be set up or kept; each tree that cannot be watched is polled and warned of by itself. Not a sweep: none has polling while its watch holds. | `docs`, `session`, `board` |
 
 ## Words we deliberately avoid
@@ -120,7 +140,7 @@ words mean.
 | Avoid | Use instead | Why |
 |---|---|---|
 | Helper, Util, Processor | A name describing what it does | These names hide missing concepts. *Manager* is reserved for a context's domain service (ADR 0011). |
-| Issue, card, task | Ticket | The backlog's own word; `/ticket` and the files already use it. |
+| Issue, card, task | Ticket | The backlog's own word; `/ticket` and the files already use it. *Issue* names only the GitHub issue that stores a ticket. |
 | Chat, conversation | Session | What Claude Code calls it, and what `claude --resume` resumes. |
 | Idle (of a session) | Your turn | Claude Code's registry word; lazyclaude's states are its own. |
 | Project (for `~/.claude/projects/*`) | Transcript folder | Those folders are keyed by `cwd`, so one project has one per worktree. |

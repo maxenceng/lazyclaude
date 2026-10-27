@@ -4,7 +4,7 @@ Date: 2026-10-10
 
 ## Status
 
-Accepted. Extends ADR 0016 for sessions.
+Accepted. Extends ADR 0016 for sessions. Amended by ADR 0047: only hosted pids are read, with no liveness check and no `claude agents` fallback.
 
 ## Context
 
