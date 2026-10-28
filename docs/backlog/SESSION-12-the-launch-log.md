@@ -1,6 +1,6 @@
 ---
 id: SESSION-12
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 95
@@ -61,3 +61,7 @@ into *Linked session*.
 Charted on the [LAZY-24](LAZY-24-desktop-evolution.md) map. Decided in [LAZY-25](LAZY-25-what-session-keeps.md),
 recorded in ADR 0047. Blocked by [SESSION-11](SESSION-11-session-id-known-at-launch.md). Marking what quitting ended as
 interrupted was decided in [LAZY-26](LAZY-26-sessions-outliving-lazyclaude.md), recorded in ADR 0048.
+
+The file shape (JSON Lines, one file per project named by its root) is ADR 0062. Review settled two gaps in ADR 0063:
+the session a `/clear` starts is never logged, and one lazyclaude per project is assumed, unchecked. Sessions started
+before this landed were never logged, so they never show as past sessions; resume them from `claude --resume`.
