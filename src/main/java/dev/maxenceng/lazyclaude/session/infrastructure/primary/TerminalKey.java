@@ -1,6 +1,8 @@
-package dev.maxenceng.lazyclaude.session.published;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.KeyInput;
+import dev.maxenceng.lazyclaude.session.published.Modifiers;
 
 /** One key press with the modifiers held. */
 public record TerminalKey(KeyInput input, Modifiers modifiers) implements TerminalInput {

@@ -41,6 +41,7 @@ import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedTerminals;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
@@ -123,6 +124,7 @@ public final class LazyClaude {
         SessionApplicationService sessionService = sessionService(warningRepository, configuration.desktopNotifications());
         SessionQuery sessions = new SessionQuery(sessionService);
         HostedSessionCommand hosting = new HostedSessionCommand(sessionService);
+        HostedTerminals terminals = new HostedTerminals(sessionService);
         WatchedSessionCommand watching = new WatchedSessionCommand(sessionService);
         TicketWorktreeCommand removing = new TicketWorktreeCommand(sessionService);
         PendingReviewApplicationService pendingReview =
@@ -142,7 +144,7 @@ public final class LazyClaude {
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, writing, configuration.reservedChords(), hosting, watching, removing, warnings));
+                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, writing, configuration.reservedChords(), hosting, terminals, watching, removing, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -263,11 +265,12 @@ public final class LazyClaude {
             PendingReviewCommand writing,
             ReservedChords chords,
             HostedSessionCommand hosting,
+            HostedTerminals terminals,
             WatchedSessionCommand watching,
             TicketWorktreeCommand removing,
             WarningQuery warnings)
             throws Exception {
-        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, writing, chords, hosting, watching, removing, warnings)::run, hosting);
+        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, writing, chords, hosting, terminals, watching, removing, warnings)::run, hosting);
     }
 
     /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
@@ -296,14 +299,15 @@ public final class LazyClaude {
             PendingReviewCommand writing,
             ReservedChords chords,
             HostedSessionCommand hosting,
+            HostedTerminals terminals,
             WatchedSessionCommand watching,
             TicketWorktreeCommand removing,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, watching, removing, sessions, board, docs, reviews, writing, chords);
+        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, terminals, watching, removing, sessions, board, docs, reviews, writing, chords);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         board.subscribe(new BoardWatchPayload(view.root().value()), shell::boardChanged);
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);
-        sessions.onScreenChange(shell::screensChanged);
+        terminals.onScreenChange(shell::screensChanged);
         sessions.onTicketDoneEnded(shell::ticketDoneEnded);
         reviews.subscribe(
                 new ReviewPayload(view.root().value()), shell::pullRequestsChanged, shell::mergedPullRequestsChanged);

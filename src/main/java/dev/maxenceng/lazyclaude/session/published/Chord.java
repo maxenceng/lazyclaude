@@ -25,11 +25,11 @@ public record Chord(Modifiers modifiers, KeyInput key) {
     }
 
     /**
-     * Whether {@code pressed} is this key with exactly these modifiers. The pressed key keeps its case: a terminal reports
+     * Whether {@code pressed}, held with {@code held}, is this key with exactly these modifiers. The pressed key keeps its case: a terminal reports
      * {@code alt+shift+h} as {@code alt} and {@code H}, which is not this chord's {@code alt+h} and belongs to {@code claude}.
      */
-    public boolean isPressedBy(TerminalKey pressed) {
-        return modifiers.equals(canonical(pressed.modifiers())) && key.equals(pressed.input());
+    public boolean isPressedBy(KeyInput pressed, Modifiers held) {
+        return modifiers.equals(canonical(held)) && key.equals(pressed);
     }
 
     /** The chord as the configuration spells it: {@code ctrl+alt+h}. */

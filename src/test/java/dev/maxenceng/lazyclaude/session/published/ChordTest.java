@@ -3,8 +3,9 @@ package dev.maxenceng.lazyclaude.session.published;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altH;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.chord;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlAltH;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.held;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.namedChord;
-import static dev.maxenceng.lazyclaude.session.published.ChordFixture.pressed;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.typedKey;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -49,11 +50,11 @@ class ChordTest {
 
     @Test
     void shouldBePressedByTheSameKeyWithTheSameModifiersOnly() {
-        assertThat(altH().isPressedBy(pressed('h', Modifier.ALT))).isTrue();
-        assertThat(altH().isPressedBy(pressed('h', Modifier.CTRL, Modifier.ALT))).isFalse();
-        assertThat(altH().isPressedBy(pressed('h', Modifier.ALT, Modifier.SHIFT))).isFalse();
-        assertThat(altH().isPressedBy(pressed('j', Modifier.ALT))).isFalse();
-        assertThat(altH().isPressedBy(pressed('H', Modifier.ALT)))
+        assertThat(altH().isPressedBy(typedKey('h'), held(Modifier.ALT))).isTrue();
+        assertThat(altH().isPressedBy(typedKey('h'), held(Modifier.CTRL, Modifier.ALT))).isFalse();
+        assertThat(altH().isPressedBy(typedKey('h'), held(Modifier.ALT, Modifier.SHIFT))).isFalse();
+        assertThat(altH().isPressedBy(typedKey('j'), held(Modifier.ALT))).isFalse();
+        assertThat(altH().isPressedBy(typedKey('H'), held(Modifier.ALT)))
                 .as("a terminal reports alt+shift+h as alt and H, which is claude's")
                 .isFalse();
     }

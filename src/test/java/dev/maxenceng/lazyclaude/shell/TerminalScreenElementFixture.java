@@ -2,8 +2,8 @@ package dev.maxenceng.lazyclaude.shell;
 
 import java.util.function.Consumer;
 
-import dev.maxenceng.lazyclaude.session.published.PastedText;
-import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastedText;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalScreen;
 
 final class TerminalScreenElementFixture {
 

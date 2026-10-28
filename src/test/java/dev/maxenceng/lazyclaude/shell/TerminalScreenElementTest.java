@@ -1,9 +1,9 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.run;
-import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSaying;
-import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSayingWithCursorAt;
-import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.styled;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalScreenFixture.run;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalScreenFixture.screenSaying;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalScreenFixture.screenSayingWithCursorAt;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalScreenFixture.styled;
 import static dev.maxenceng.lazyclaude.shell.TerminalScreenElementFixture.elementOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -14,13 +14,13 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastedText;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalScreen;
 import dev.maxenceng.lazyclaude.session.published.DefaultColour;
 import dev.maxenceng.lazyclaude.session.published.IndexedColour;
 import dev.maxenceng.lazyclaude.session.published.NoCursor;
-import dev.maxenceng.lazyclaude.session.published.PastedText;
 import dev.maxenceng.lazyclaude.session.published.RgbColour;
 import dev.maxenceng.lazyclaude.session.published.ScreenRow;
-import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.session.published.TextAttribute;
 import dev.tamboui.layout.Position;
 import dev.tamboui.layout.Rect;

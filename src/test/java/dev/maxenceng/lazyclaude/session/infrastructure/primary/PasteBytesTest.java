@@ -1,7 +1,7 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.SentBytesFixture.sentAsUtf8;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.pasted;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SentBytesFixture.sentAsUtf8;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.pasted;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;

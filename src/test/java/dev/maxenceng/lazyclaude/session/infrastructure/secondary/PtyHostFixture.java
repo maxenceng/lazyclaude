@@ -5,23 +5,17 @@ import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSiz
 
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Predicate;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.ExitCode;
 import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.NewClaude;
 import dev.maxenceng.lazyclaude.session.domain.ResumeClaude;
-import dev.maxenceng.lazyclaude.session.published.ScreenRow;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class PtyHostFixture {
@@ -77,37 +71,5 @@ public final class PtyHostFixture {
 
     public static ExitCode awaited(CompletableFuture<ExitCode> exit) throws Exception {
         return exit.get(PATIENCE.toSeconds(), TimeUnit.SECONDS);
-    }
-
-    public static String text(TerminalScreen screen) {
-        return String.join(
-                "\n",
-                screen.rows().stream()
-                        .map(ScreenRow::runs)
-                        .map(runs -> String.join(
-                                "", runs.stream().map(run -> run.text().value()).toList()))
-                        .map(String::stripTrailing)
-                        .toList());
-    }
-
-    public static TerminalScreen screenWhere(
-            PtyHostRepository host, SessionId id, Predicate<TerminalScreen> expected) throws Exception {
-        Instant until = Instant.now().plus(PATIENCE);
-        AtomicBoolean timedOut = new AtomicBoolean();
-        TerminalScreen screen = host.screenOf(id);
-        while (!expected.test(screen) && !timedOut.get()) {
-            Thread.sleep(POLL.toMillis());
-            screen = host.screenOf(id);
-            timedOut.set(Instant.now().isAfter(until));
-        }
-        if (timedOut.get()) {
-            throw new TimeoutException("the screen never held what was expected; it showed:\n" + text(screen));
-        }
-        return screen;
-    }
-
-    public static TerminalScreen screenContaining(PtyHostRepository host, SessionId id, String fragment)
-            throws Exception {
-        return screenWhere(host, id, screen -> text(screen).contains(fragment));
     }
 }

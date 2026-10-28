@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.util.List;
 import java.util.Map;
@@ -24,7 +24,6 @@ import dev.maxenceng.lazyclaude.session.published.RunText;
 import dev.maxenceng.lazyclaude.session.published.ScreenCursor;
 import dev.maxenceng.lazyclaude.session.published.ScreenRow;
 import dev.maxenceng.lazyclaude.session.published.StyledRun;
-import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.session.published.TextAttribute;
 
 /** Copies the emulator's cell grid into a {@link TerminalScreen}, so that nothing of jediterm leaves this package. */

@@ -6,10 +6,8 @@ import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeUnavailableException;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Reason;
-import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 
-/** What the shell asks of {@code session}: a project's live and past sessions as a view, and a view again whenever they may have changed. It only reads: the hosted sessions' screens included. */
+/** What the shell asks of {@code session}: a project's live and past sessions as a view, and a view again whenever they may have changed. It only reads. */
 public final class SessionQuery {
 
     private final SessionApplicationService sessions;
@@ -69,15 +67,5 @@ public final class SessionQuery {
     /** Hands {@code listener} the ticket whose {@code /ticket done} session ended, however it ended, on whichever thread ended it. */
     public void onTicketDoneEnded(Consumer<LinkedTicketId> listener) {
         sessions.onTicketDoneEnded(listener::accept);
-    }
-
-    /** What a hosted session shows right now, blank for one that is gone. */
-    public TerminalScreen screenOf(SessionId id) {
-        return sessions.screenOf(id);
-    }
-
-    /** Tells {@code listener} whenever a hosted session drew something, on a thread of the host's own. */
-    public void onScreenChange(Runnable listener) {
-        sessions.onScreenChange(listener);
     }
 }

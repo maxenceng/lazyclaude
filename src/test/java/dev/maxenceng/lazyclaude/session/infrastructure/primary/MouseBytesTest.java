@@ -1,9 +1,9 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.SentBytesFixture.sent;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.leftPressAt;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.mouse;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.wheelUpAt;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SentBytesFixture.sent;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.leftPressAt;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.mouse;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.wheelUpAt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,6 @@ import dev.maxenceng.lazyclaude.session.published.Modifier;
 import dev.maxenceng.lazyclaude.session.published.Modifiers;
 import dev.maxenceng.lazyclaude.session.published.MouseAction;
 import dev.maxenceng.lazyclaude.session.published.PointerButton;
-import dev.maxenceng.lazyclaude.session.published.TerminalMouse;
 
 class MouseBytesTest {
 

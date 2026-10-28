@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.nio.charset.StandardCharsets;
 
@@ -6,7 +6,6 @@ import dev.maxenceng.lazyclaude.session.published.Modifier;
 import dev.maxenceng.lazyclaude.session.published.Modifiers;
 import dev.maxenceng.lazyclaude.session.published.NamedKey;
 import dev.maxenceng.lazyclaude.session.published.PressedKey;
-import dev.maxenceng.lazyclaude.session.published.TerminalKey;
 import dev.maxenceng.lazyclaude.session.published.TypedCharacter;
 
 /**

@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.nio.charset.StandardCharsets;
 
@@ -7,7 +7,6 @@ import com.jediterm.terminal.emulator.mouse.MouseMode;
 import dev.maxenceng.lazyclaude.session.published.Modifier;
 import dev.maxenceng.lazyclaude.session.published.MouseAction;
 import dev.maxenceng.lazyclaude.session.published.PointerButton;
-import dev.maxenceng.lazyclaude.session.published.TerminalMouse;
 
 /**
  * A mouse event as the SGR bytes a terminal sends ({@code ESC [ < button ; column ; row M}), only as many kinds of event as

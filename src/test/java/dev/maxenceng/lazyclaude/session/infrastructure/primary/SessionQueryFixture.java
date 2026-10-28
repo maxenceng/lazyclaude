@@ -35,17 +35,6 @@ public final class SessionQueryFixture {
         return new SessionQuery(sessionApplicationService(sessions, past, log, watch, transcriptWatch, warnings, mock(HostPort.class)));
     }
 
-    public static SessionQuery sessionQueryHosting(HostPort hosts) {
-        return new SessionQuery(sessionApplicationService(
-                mock(LiveSessionPort.class),
-                quietPastSessions(),
-                emptyLaunchLogPort(),
-                mock(SessionWatchPort.class),
-                mock(TranscriptWatchPort.class),
-                mock(WarningPort.class),
-                hosts));
-    }
-
     public static HostedSessionCommand hostedSessionCommand(HostPort hosts, WarningPort warnings) {
         return hostedSessionCommand(hosts, warnings, mock(WorktreePort.class));
     }

@@ -19,6 +19,8 @@ import dev.maxenceng.lazyclaude.session.domain.LastPushedSessions;
 import dev.maxenceng.lazyclaude.session.domain.LaunchLogPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
+import dev.maxenceng.lazyclaude.session.domain.PtyListener;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.TicketDoneEndedListener;
@@ -34,8 +36,6 @@ import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.session.published.TerminalInput;
-import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
@@ -158,20 +158,16 @@ public final class SessionApplicationService {
         return hosted.resume(project, session, recorded, size);
     }
 
-    public void send(SessionId id, TerminalInput input) {
-        hosted.send(id, input);
+    public void write(SessionId id, PtyBytes bytes) {
+        hosted.write(id, bytes);
     }
 
     public void resize(SessionId id, PaneSize size) {
         hosted.resize(id, size);
     }
 
-    public TerminalScreen screenOf(SessionId id) {
-        return hosted.screenOf(id);
-    }
-
-    public void onScreenChange(Runnable listener) {
-        hosted.onScreenChange(listener);
+    public void onPty(PtyListener listener) {
+        hosted.onPty(listener);
     }
 
     public void endAll() {

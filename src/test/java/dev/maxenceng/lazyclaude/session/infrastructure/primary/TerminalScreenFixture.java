@@ -1,6 +1,16 @@
-package dev.maxenceng.lazyclaude.session.published;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.util.List;
+
+import dev.maxenceng.lazyclaude.session.published.CellColour;
+import dev.maxenceng.lazyclaude.session.published.CellColumn;
+import dev.maxenceng.lazyclaude.session.published.CellRow;
+import dev.maxenceng.lazyclaude.session.published.CursorAt;
+import dev.maxenceng.lazyclaude.session.published.RunStyle;
+import dev.maxenceng.lazyclaude.session.published.RunText;
+import dev.maxenceng.lazyclaude.session.published.ScreenRow;
+import dev.maxenceng.lazyclaude.session.published.StyledRun;
+import dev.maxenceng.lazyclaude.session.published.TextAttribute;
 
 public final class TerminalScreenFixture {
 

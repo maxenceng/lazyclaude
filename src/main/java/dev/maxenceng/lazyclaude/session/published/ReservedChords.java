@@ -38,10 +38,10 @@ public record ReservedChords(Map<ReservedAction, Chord> bound) {
         return bound.get(action);
     }
 
-    /** The action {@code pressed} is the chord of, none when it is free to reach {@code claude}. */
-    public Optional<ReservedAction> actionOf(TerminalKey pressed) {
+    /** The action {@code pressed}, held with {@code held}, is the chord of, none when it is free to reach {@code claude}. */
+    public Optional<ReservedAction> actionOf(KeyInput pressed, Modifiers held) {
         return Arrays.stream(ReservedAction.values())
-                .filter(action -> of(action).isPressedBy(pressed))
+                .filter(action -> of(action).isPressedBy(pressed, held))
                 .findFirst();
     }
 

@@ -1,6 +1,11 @@
-package dev.maxenceng.lazyclaude.session.published;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.CellColumn;
+import dev.maxenceng.lazyclaude.session.published.CellRow;
+import dev.maxenceng.lazyclaude.session.published.Modifiers;
+import dev.maxenceng.lazyclaude.session.published.MouseAction;
+import dev.maxenceng.lazyclaude.session.published.PointerButton;
 
 /** A mouse event over the pane, at the cell it happened on, counted from the pane's top left. */
 public record TerminalMouse(

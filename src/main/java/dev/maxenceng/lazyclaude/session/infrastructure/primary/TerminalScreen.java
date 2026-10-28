@@ -1,8 +1,11 @@
-package dev.maxenceng.lazyclaude.session.published;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.NoCursor;
+import dev.maxenceng.lazyclaude.session.published.ScreenCursor;
+import dev.maxenceng.lazyclaude.session.published.ScreenRow;
 
 /** What a hosted session's terminal shows right now, cell for cell: its rows of styled runs and its cursor. */
 public record TerminalScreen(List<ScreenRow> rows, ScreenCursor cursor) {

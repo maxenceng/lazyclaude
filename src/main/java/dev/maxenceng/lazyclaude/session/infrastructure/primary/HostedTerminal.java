@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import com.jediterm.terminal.TerminalDisplay;
 import com.jediterm.terminal.model.JediTerminal;

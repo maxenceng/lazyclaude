@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import com.jediterm.terminal.CursorShape;
 import com.jediterm.terminal.TerminalDisplay;

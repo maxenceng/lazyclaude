@@ -1,4 +1,13 @@
-package dev.maxenceng.lazyclaude.session.published;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
+
+import dev.maxenceng.lazyclaude.session.published.CellColumn;
+import dev.maxenceng.lazyclaude.session.published.CellRow;
+import dev.maxenceng.lazyclaude.session.published.Modifiers;
+import dev.maxenceng.lazyclaude.session.published.MouseAction;
+import dev.maxenceng.lazyclaude.session.published.NamedKey;
+import dev.maxenceng.lazyclaude.session.published.PointerButton;
+import dev.maxenceng.lazyclaude.session.published.PressedKey;
+import dev.maxenceng.lazyclaude.session.published.TypedCharacter;
 
 public final class TerminalInputFixture {
 

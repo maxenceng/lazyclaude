@@ -5,35 +5,28 @@ import java.util.function.Consumer;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.session.published.TerminalInput;
-import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
-/** Where {@code claude} runs on a pty of lazyclaude's own, and how it is fed and read back. */
+/** Where {@code claude} runs on a pty of lazyclaude's own, and the bytes that cross it; the host never emulates. */
 public interface HostPort {
 
     /**
-     * Runs {@code launch} on a pty and tells {@code onExit} the code when the process ends, on a thread of the host's own.
+     * Runs {@code launch} on a pty. {@code onOutput} gets each read of the child's output, and {@code onExit} the code when the
+     * process ends, both on one thread of the host's own, so the exit always comes after the last output.
      *
      * @throws HostUnavailableException when nothing could be started, with the reason
      */
-    ProcessId spawn(HostLaunch launch, Consumer<ExitCode> onExit);
+    ProcessId spawn(HostLaunch launch, Consumer<PtyBytes> onOutput, Consumer<ExitCode> onExit);
 
     /** Whether {@code directory} exists, so a process can be started in it. */
     boolean exists(WorkingDirectory directory);
 
-    /** Hands the session a key, a paste or a mouse event, as the bytes a terminal would send; nothing for a session that is gone. */
-    void send(SessionId id, TerminalInput input);
+    /** Writes {@code bytes} to the session's pty unchanged; nothing for a session that is gone. */
+    void write(SessionId id, PtyBytes bytes);
 
-    /** Gives the session's pty and emulator a new size. */
+    /** Gives the session's pty a new size. */
     void resize(SessionId id, PaneSize size);
-
-    /** What the session shows right now; blank for a session that is gone. */
-    TerminalScreen screenOf(SessionId id);
 
     /** Ends the session's process. */
     void end(SessionId id);
-
-    /** Tells {@code listener} which session drew something, on a thread of the host's own. */
-    void onScreenChange(Consumer<SessionId> listener);
 }

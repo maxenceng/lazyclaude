@@ -137,6 +137,7 @@ class ShellTicketStartTest {
                 emptySessionsView(),
                 dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView(),
                 hosting,
+                ShellFixture.blankTerminals(),
                 mock(dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand.class),
                 mock(dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand.class),
                 blankScreens(),

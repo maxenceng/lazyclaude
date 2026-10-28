@@ -58,11 +58,12 @@ public final class ChordFixture {
         return Chord.builder().modifiers(Modifiers.of(modifiers)).key(new PressedKey(key)).build();
     }
 
-    public static TerminalKey pressed(char key, Modifier... modifiers) {
-        return TerminalKey.builder()
-                .input(new TypedCharacter(key))
-                .modifiers(Modifiers.of(modifiers))
-                .build();
+    public static TypedCharacter typedKey(char key) {
+        return new TypedCharacter(key);
+    }
+
+    public static Modifiers held(Modifier... modifiers) {
+        return Modifiers.of(modifiers);
     }
 
     public static ReservedChords rebinding(Map<ReservedAction, Chord> changes) {

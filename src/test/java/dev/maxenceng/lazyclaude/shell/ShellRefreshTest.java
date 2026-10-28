@@ -8,9 +8,10 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFi
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.secondTitle;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.docsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.typed;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.typed;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankTerminals;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.oneTabInDockWithReviews;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoardWithMerged;
@@ -36,6 +37,7 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedTerminals;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
@@ -145,11 +147,12 @@ class ShellRefreshTest {
     @Test
     void shouldSendRToTheSessionAndRefreshNothingWhileATabHasFocus() {
         HostedSessionCommand hosting = mock(HostedSessionCommand.class);
-        Shell shell = oneTabInDockWithReviews(hosting, screens, reviews);
+        HostedTerminals terminals = blankTerminals();
+        Shell shell = oneTabInDockWithReviews(hosting, terminals, screens, reviews);
 
         shell.press(key('R'));
 
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), typed('R', Modifiers.none())));
+        verify(terminals).send(new HostedInputPayload(hostedSessionIdOf(1), typed('R', Modifiers.none())));
         verifyNoInteractions(reviews);
         verify(screens, never()).refresh(any());
     }

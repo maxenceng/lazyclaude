@@ -4,6 +4,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalKey;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalMouse;
 import dev.maxenceng.lazyclaude.session.published.CellColumn;
 import dev.maxenceng.lazyclaude.session.published.CellRow;
 import dev.maxenceng.lazyclaude.session.published.FixedChord;
@@ -14,8 +16,6 @@ import dev.maxenceng.lazyclaude.session.published.MouseAction;
 import dev.maxenceng.lazyclaude.session.published.NamedKey;
 import dev.maxenceng.lazyclaude.session.published.PointerButton;
 import dev.maxenceng.lazyclaude.session.published.PressedKey;
-import dev.maxenceng.lazyclaude.session.published.TerminalKey;
-import dev.maxenceng.lazyclaude.session.published.TerminalMouse;
 import dev.maxenceng.lazyclaude.session.published.TypedCharacter;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.tui.event.KeyCode;
@@ -42,7 +42,7 @@ final class TerminalInputs {
 
     /** Whether {@code event} is the fixed chord {@code fixed}. */
     static boolean isFixed(KeyEvent event, FixedChord fixed) {
-        return key(event).filter(fixed::isPressedBy).isPresent();
+        return key(event).filter(key -> fixed.isPressedBy(key.input(), key.modifiers())).isPresent();
     }
 
     /** The mouse event as a cell of {@code pane}, counted from its top left, or nothing when it happened outside the pane. */

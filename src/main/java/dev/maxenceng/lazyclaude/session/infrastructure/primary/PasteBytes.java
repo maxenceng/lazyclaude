@@ -1,8 +1,7 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.nio.charset.StandardCharsets;
 
-import dev.maxenceng.lazyclaude.session.published.PastedText;
 
 /** A paste as the bytes a terminal sends: bracketed when the child turned bracketed paste on, so its newlines are text and do not submit the prompt. */
 final class PasteBytes {

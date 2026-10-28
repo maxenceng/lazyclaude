@@ -16,7 +16,6 @@ import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.rep
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.recordUnreadable;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.verbChoicePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryHosting;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryHostingTheRegistered;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.liveViewsOf;
@@ -29,21 +28,18 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketIds;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
-import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSaying;
 import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.ticketLink;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,7 +49,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
-import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LaunchLogPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
@@ -196,27 +191,6 @@ class SessionQueryTest {
 
         assertThat(liveViewsOf(query.sessionsFor(OF_THE_PROJECT)))
                 .containsExactly(sessionViewBuilder().id(id).build());
-    }
-
-    @Test
-    void shouldAnswerWithTheScreenTheHostHolds() {
-        HostPort hosts = mock(HostPort.class);
-        when(hosts.screenOf(sessionId())).thenReturn(screenSaying("hello"));
-
-        assertThat(sessionQueryHosting(hosts).screenOf(sessionId())).isEqualTo(screenSaying("hello"));
-    }
-
-    @Test
-    void shouldTellAListenerWhenAHostedSessionDrew() {
-        HostPort hosts = mock(HostPort.class);
-        Runnable listener = mock(Runnable.class);
-        ArgumentCaptor<Consumer<SessionId>> drew = ArgumentCaptor.captor();
-        sessionQueryHosting(hosts).onScreenChange(listener);
-        verify(hosts).onScreenChange(drew.capture());
-
-        drew.getValue().accept(sessionId());
-
-        verify(listener).run();
     }
 
     @Test

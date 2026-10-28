@@ -103,6 +103,7 @@ final class ShellReviewFixture {
                 emptySessionsView(),
                 pullRequests,
                 hosting,
+                ShellFixture.blankTerminals(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),

@@ -1,11 +1,12 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.typed;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.chord;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlY;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.rebinding;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.typed;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankTerminals;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.keyBar;
@@ -23,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedTerminals;
 import dev.maxenceng.lazyclaude.session.published.Modifier;
 import dev.maxenceng.lazyclaude.session.published.Modifiers;
 import dev.maxenceng.lazyclaude.session.published.ReservedAction;
@@ -33,6 +35,8 @@ class ShellReservedChordsTest {
 
     @Mock
     private HostedSessionCommand hosting;
+
+    private final HostedTerminals terminals = blankTerminals();
 
     @Test
     void shouldFocusTheMainViewOnTheReboundChordOutsideASessionAndNoLongerOnTheOldOne() {
@@ -93,46 +97,46 @@ class ShellReservedChordsTest {
 
     @Test
     void shouldTakeTheReboundChordInsideASessionAndHandTheOldOneToClaude() {
-        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.ZOOM, chord('g', Modifier.CTRL)), hosting);
+        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.ZOOM, chord('g', Modifier.CTRL)), hosting, terminals);
 
         shell.press(ctrl('g'));
         assertThat(Screen.of(shell).text()).as("the dock fills the screen").doesNotContain("Sessions");
-        verify(hosting, never()).send(any());
+        verify(terminals, never()).send(any());
 
         shell.press(alt('z'));
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), typed('z', Modifiers.of(Modifier.ALT))));
+        verify(terminals).send(new HostedInputPayload(hostedSessionIdOf(1), typed('z', Modifiers.of(Modifier.ALT))));
     }
 
     @Test
     void shouldMoveFocusOnTheReboundChordInsideASessionWithoutHandingItToClaude() {
-        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.FOCUS_UP, chord('k', Modifier.CTRL)), hosting);
+        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.FOCUS_UP, chord('k', Modifier.CTRL)), hosting, terminals);
 
         shell.press(ctrl('k'));
 
         assertThat(keyBar(shell)).contains("j/k scroll");
-        verify(hosting, never()).send(any());
+        verify(terminals, never()).send(any());
     }
 
     @Test
     void shouldLeaveTheZoomOnTheReboundNextWaitingChordInsideASessionAndHandTheOldOneToClaude() {
-        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.NEXT_WAITING, chord('w', Modifier.CTRL)), hosting);
+        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.NEXT_WAITING, chord('w', Modifier.CTRL)), hosting, terminals);
         shell.press(alt('z'));
 
         shell.press(ctrl('w'));
         assertThat(Screen.of(shell).text()).contains("Sessions");
-        verify(hosting, never()).send(any());
+        verify(terminals, never()).send(any());
 
         shell.press(alt('w'));
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), typed('w', Modifiers.of(Modifier.ALT))));
+        verify(terminals).send(new HostedInputPayload(hostedSessionIdOf(1), typed('w', Modifiers.of(Modifier.ALT))));
     }
 
     @Test
     void shouldHandAnUppercaseKeyWithTheReservedModifiersToClaude() {
-        Shell shell = oneTabInDockWithChords(ReservedChords.defaults(), hosting);
+        Shell shell = oneTabInDockWithChords(ReservedChords.defaults(), hosting, terminals);
 
         shell.press(alt('H'));
 
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), typed('H', Modifiers.of(Modifier.ALT))));
+        verify(terminals).send(new HostedInputPayload(hostedSessionIdOf(1), typed('H', Modifiers.of(Modifier.ALT))));
     }
 
     @Test
@@ -144,14 +148,14 @@ class ShellReservedChordsTest {
 
     @Test
     void shouldShowTheBoundChordsInTheKeyBarOfASession() {
-        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.FOCUS_LEFT, ctrlY()), hosting);
+        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.FOCUS_LEFT, ctrlY()), hosting, terminals);
 
         assertThat(keyBar(shell)).contains("ctrl+y/alt+l tab  ctrl+y/alt+j/alt+k/alt+l focus");
     }
 
     @Test
     void shouldShowTheBoundZoomChordInTheKeyBarOfTheDockZoom() {
-        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.ZOOM, chord('g', Modifier.CTRL)), hosting);
+        Shell shell = oneTabInDockWithChords(rebinding(ReservedAction.ZOOM, chord('g', Modifier.CTRL)), hosting, terminals);
         shell.press(ctrl('g'));
 
         assertThat(keyBar(shell)).contains("alt+h/l tab  alt+h/j/k/l focus  alt+m main view  ctrl+g back");
@@ -159,7 +163,7 @@ class ShellReservedChordsTest {
 
     @Test
     void shouldKeepTheCompactKeyBarWhileTheDefaultsStand() {
-        Shell shell = oneTabInDockWithChords(ReservedChords.defaults(), hosting);
+        Shell shell = oneTabInDockWithChords(ReservedChords.defaults(), hosting, terminals);
 
         assertThat(keyBar(shell)).contains("alt+h/l tab  alt+h/j/k/l focus  alt+m main view  alt+z zoom");
     }

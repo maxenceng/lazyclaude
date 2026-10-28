@@ -1,10 +1,10 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.leftPressAt;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.mouse;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.pressed;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.typed;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.wheelUpAt;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.leftPressAt;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.mouse;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.pressed;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.typed;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.wheelUpAt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
