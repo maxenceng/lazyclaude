@@ -13,25 +13,16 @@ import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
 import dev.maxenceng.lazyclaude.session.domain.HeldWorktree;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.HostedSessionManager;
-import dev.maxenceng.lazyclaude.session.domain.JumpManager;
-import dev.maxenceng.lazyclaude.session.domain.KittyConfigManager;
-import dev.maxenceng.lazyclaude.session.domain.KittyConfigPort;
 import dev.maxenceng.lazyclaude.session.domain.KnownTickets;
 import dev.maxenceng.lazyclaude.session.domain.LastPushedSessions;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
-import dev.maxenceng.lazyclaude.session.domain.ProcessEnvironmentPort;
-import dev.maxenceng.lazyclaude.session.domain.RemoteControlConfig;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.Sessions;
-import dev.maxenceng.lazyclaude.session.domain.TerminalJumpPort;
 import dev.maxenceng.lazyclaude.session.domain.TicketDoneEndedListener;
 import dev.maxenceng.lazyclaude.session.domain.TicketStart;
 import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
-import dev.maxenceng.lazyclaude.session.domain.TranscriptManager;
-import dev.maxenceng.lazyclaude.session.domain.TranscriptRead;
-import dev.maxenceng.lazyclaude.session.domain.TranscriptReadPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
 import dev.maxenceng.lazyclaude.session.domain.Watched;
@@ -45,7 +36,6 @@ import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
-import dev.maxenceng.lazyclaude.session.published.TranscriptOffset;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
@@ -53,7 +43,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * Reads a project's live, past and hosted sessions, linked to the tickets it is handed, and keeps a listener handed them
- * again as they change, notifying the desktop of the machine's sessions that enter waiting; and starts, feeds and ends the hosted ones.
+ * again as they change, notifying the desktop of the project's sessions that enter waiting; and starts, feeds and ends the hosted ones.
  */
 public final class SessionApplicationService {
 
@@ -62,9 +52,6 @@ public final class SessionApplicationService {
     private final WorktreeManager worktreeing;
     private final DesktopNotificationManager notifying;
     private final boolean desktopNotifications;
-    private final JumpManager jumping;
-    private final KittyConfigManager kittyConfiguring;
-    private final TranscriptManager transcribing;
     private final LastPushedSessions lastPushed = new LastPushedSessions();
     private final AtomicReference<Consumer<Sessions>> delivering = new AtomicReference<>(sessions -> {});
 
@@ -78,20 +65,13 @@ public final class SessionApplicationService {
             HostPort hosts,
             WorktreePort worktrees,
             DesktopNotificationPort notifications,
-            ProcessEnvironmentPort environments,
-            TerminalJumpPort jumps,
-            KittyConfigPort kittyConfig,
-            TranscriptReadPort transcripts,
             boolean desktopNotifications,
             Clock clock) {
         this.hosted = new HostedSessionManager(hosts, warnings, worktrees);
         this.worktreeing = new WorktreeManager(worktrees);
-        this.jumping = new JumpManager(jumps, environments, kittyConfig, warnings);
-        this.kittyConfiguring = new KittyConfigManager(kittyConfig, warnings);
-        this.transcribing = new TranscriptManager(transcripts);
         this.notifying = new DesktopNotificationManager(notifications, warnings);
         this.desktopNotifications = desktopNotifications;
-        this.manager = new SessionManager(sessions, pastSessions, locator, watch, transcriptWatch, warnings, environments, clock);
+        this.manager = new SessionManager(sessions, pastSessions, locator, watch, transcriptWatch, warnings, clock);
     }
 
     public Sessions sessionsFor(Project project, KnownTickets tickets) {
@@ -101,8 +81,9 @@ public final class SessionApplicationService {
     public void subscribe(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
         Consumer<Sessions> hosting = sessions -> {
             lastPushed.remember(sessions);
-            notifying.seen(project, sessions, desktopNotifications);
-            listener.accept(sessions.hosting(hosted.open()));
+            Sessions hostedOnly = sessions.hosting(hosted.open());
+            notifying.seen(project, hostedOnly, desktopNotifications);
+            listener.accept(hostedOnly);
         };
         manager.watch(project, tickets, hosting);
         hosted.onChange(() -> manager.refresh(project, hosting));
@@ -123,28 +104,6 @@ public final class SessionApplicationService {
     public void refresh(Project project, KnownTickets tickets) {
         manager.know(project, tickets, delivering.get());
         manager.rescanTranscripts();
-    }
-
-    /**
-     * Brings an outside session's window forward, and answers what {@code kitty.conf} needs when kitty refused for remote control
-     * and lazyclaude runs in kitty. The session is looked up among the sessions as last pushed with the hosted ones laid over, as
-     * {@link #verbChoiceFor} does, so the render thread's rows and this agree on which sessions are lazyclaude's own; a session no
-     * longer live is no jump. It runs a process, so not on the render thread.
-     */
-    public Optional<RemoteControlConfig> jump(Project project, KnownTickets tickets, SessionId session) {
-        return sessionsAsPushed(project, tickets)
-                .liveSession(session)
-                .flatMap(jumping::jump);
-    }
-
-    /** Appends the remote control lines to {@code kitty.conf}, as the user said yes to the offer; the outcome is a warning. */
-    public void addKittyRemoteControl() {
-        kittyConfiguring.add();
-    }
-
-    /** What a session's transcript shows from {@code from}: its entries, none yet, or why they cannot be read. */
-    public TranscriptRead transcriptOf(SessionId session, WorkingDirectory directory, TranscriptOffset from) {
-        return transcribing.read(session, directory, from);
     }
 
     public HostStart startUnlinked(Project project, PaneSize size) {
@@ -179,10 +138,8 @@ public final class SessionApplicationService {
 
     /**
      * The ticket worktree and what stands in it, none when the ticket has no worktree. The sessions are the watcher's last push with
-     * the hosted ones as they are now, as {@link #verbChoiceFor} reads them, so an outside session that started in the worktree
-     * within the last tick is not yet counted. It runs {@code git}, so not on the render thread.
+     * the hosted ones as they are now, as {@link #verbChoiceFor} reads them. It runs {@code git}, so not on the render thread.
      */
-    // deferred: an outside session that started in the worktree one watcher tick ago is not counted — close it when a removal is seen to take a session's directory.
     public Optional<HeldWorktree> worktreeOf(Project project, KnownTickets tickets, TicketWorktree worktree, MergedHead merged) {
         return worktreeing.held(worktree, merged, sessionsAsPushed(project, tickets));
     }

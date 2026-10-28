@@ -17,7 +17,10 @@ public final class ConfigurationFixture {
     private ConfigurationFixture() {}
 
     public static Configuration defaultConfiguration() {
-        return Configuration.defaults();
+        return Configuration.builder()
+                .reservedChords(ReservedChords.defaults())
+                .desktopNotifications(true)
+                .build();
     }
 
     public static Configuration rebindingFocusLeft() {

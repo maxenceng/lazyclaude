@@ -3,12 +3,9 @@ package dev.maxenceng.lazyclaude.session.domain;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.managerHavingSeen;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
-import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.otherProjectNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.permissionNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.secondNotificationId;
-import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.otherProjectGroup;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.sessionWith;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.elsewhereOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
@@ -116,16 +113,6 @@ class DesktopNotificationManagerTest {
         manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verify(notifications).show(inputNotification());
-    }
-
-    @Test
-    void shouldNameTheProjectOfASessionElsewhereInTheTitle() {
-        when(notifications.show(otherProjectNotification())).thenReturn(notificationId());
-        DesktopNotificationManager manager = managerHavingSeen(notifications, warnings);
-
-        manager.seen(project(), elsewhereOf(List.of(otherProjectGroup(List.of(sessionWith(waitingForInput()))))), true);
-
-        verify(notifications).show(otherProjectNotification());
     }
 
     @Test

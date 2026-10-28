@@ -15,9 +15,4 @@ public record LocatedInProject(Project project) implements ProjectLocation {
     public boolean holds(Project other, WorkingDirectory directory) {
         return project.equals(other);
     }
-
-    @Override
-    public SessionPlace placeOf(Project other, WorkingDirectory directory) {
-        return new ProjectPlace(project);
-    }
 }

@@ -57,12 +57,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
 import dev.maxenceng.lazyclaude.session.domain.NotLocated;
+import dev.maxenceng.lazyclaude.session.domain.PastSession;
 import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.FirstPrompt;
+import dev.maxenceng.lazyclaude.session.published.NoFirstPrompt;
 import dev.maxenceng.lazyclaude.session.published.NoTitle;
+import dev.maxenceng.lazyclaude.session.published.ReadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.UnreadableTranscript;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -129,7 +133,7 @@ class TranscriptRepositoryTest {
         TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
 
         assertThat(repository.pastSessions())
-                .containsExactly(pastSessionOf(sessionId(), new AiTitle("Refine PROJ-1"), cwd(), later(), started(), locatedInProject()));
+                .containsExactly(pastSessionOf(sessionId(), new AiTitle("Refine PROJ-1"), new FirstPrompt("Refine the ticket"), cwd(), later(), started(), locatedInProject()));
     }
 
     @Test
@@ -205,6 +209,34 @@ class TranscriptRepositoryTest {
         assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
                 .singleElement()
                 .satisfies(session -> assertThat(session.session().title()).isEqualTo(new FirstPrompt("The real prompt")));
+    }
+
+    @Test
+    void shouldKeepWhatTheSessionWasFirstAskedBesideItsAiTitle() throws IOException {
+        writeTranscript(
+                projects,
+                folder(),
+                sessionId(),
+                userLine(cwd(), started(), "/ticket start PROJ-1"),
+                assistantLine(cwd(), later()),
+                aiTitleLine("Refine PROJ-1"));
+
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
+                .singleElement()
+                .satisfies(session -> assertThat(session.session())
+                        .extracting(PastSession::title, PastSession::opening)
+                        .containsExactly(new AiTitle("Refine PROJ-1"), new FirstPrompt("/ticket start PROJ-1")));
+    }
+
+    @Test
+    void shouldHoldNoOpeningPromptForATranscriptThatHoldsNone() throws IOException {
+        writeTranscript(projects, folder(), sessionId(), assistantLine(cwd(), started()));
+
+        assertThat(scanned(projects, cacheFile, locator, unwritable, unlistable).pastSessions())
+                .singleElement()
+                .satisfies(session -> assertThat(session.session())
+                        .extracting(PastSession::title, PastSession::opening)
+                        .containsExactly(new NoTitle(), new NoFirstPrompt()));
     }
 
     @Test
@@ -445,6 +477,32 @@ class TranscriptRepositoryTest {
     }
 
     @Test
+    void shouldKeepTheRowAndFactsOfAKnownTranscriptItCanNoLongerReadWithWhyUntilItReadsAgain() throws IOException {
+        Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
+        TranscriptRepository repository = scanned(projects, cacheFile, locator, unwritable, unlistable);
+        append(file, assistantLine(cwd(), later()));
+        Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("---------"));
+        repository.rescan(List.of(file), locator, unwritable);
+
+        assertThat(repository.pastSessions())
+                .as("a session already listed stays listed with what the last read said, so it can still be resumed, and says why it cannot be read now")
+                .singleElement()
+                .satisfies(located -> assertThat(located.session())
+                        .extracting(PastSession::title, PastSession::opening, PastSession::reading)
+                        .containsExactly(
+                                new FirstPrompt("Refine"),
+                                new FirstPrompt("Refine"),
+                                new UnreadableTranscript(new Reason("access denied to " + file))));
+
+        Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
+        repository.rescan(List.of(file), locator, unwritable);
+
+        assertThat(repository.pastSessions())
+                .singleElement()
+                .satisfies(located -> assertThat(located.session().reading()).isEqualTo(new ReadableTranscript()));
+    }
+
+    @Test
     void shouldAskAgainOnTheNextChangeWhenItsProjectCouldNotBeLocated() throws IOException {
         when(locator.locate(any())).thenThrow(new ProjectUnavailableException("git failed", new InterruptedException())).thenReturn(locatedInProject());
         Path file = writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), "Refine"));
@@ -468,7 +526,7 @@ class TranscriptRepositoryTest {
 
         assertThat(repositoryOver(projects, cacheFile).pastSessions())
                 .as("the first frame is drawn from the cache before any transcript is touched")
-                .containsExactly(pastSessionOf(sessionId(), new FirstPrompt("Refine"), cwd(), later(), started(), locatedInProject()));
+                .containsExactly(pastSessionOf(sessionId(), new FirstPrompt("Refine"), new FirstPrompt("Refine"), cwd(), later(), started(), locatedInProject()));
     }
 
     @Test

@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,21 +41,17 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.AddRemoteControlView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.FailedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HeldWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.JumpPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.OutsideSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RefusedRemovalView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemoteControlConfigView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemovedWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
@@ -66,9 +61,6 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptPayload;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.TranscriptView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadableTranscriptView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
@@ -86,12 +78,10 @@ import dev.maxenceng.lazyclaude.session.published.PaneHeight;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.PaneWidth;
 import dev.maxenceng.lazyclaude.session.published.PastedText;
-import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.ReservedAction;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
-import dev.maxenceng.lazyclaude.session.published.TranscriptOffset;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
@@ -117,7 +107,6 @@ import dev.tamboui.tui.event.MouseEvent;
 public final class Shell extends ToolkitApp {
 
     private static final int LEFT_COLUMN_PERCENT = 35;
-    private static final int SMALL_PANEL_HEIGHT = 3;
     private static final int SHRUNK_PANEL_HEIGHT = 5;
 
     private static final String RESPOND_TITLE = "Respond";
@@ -126,14 +115,12 @@ public final class Shell extends ToolkitApp {
     private static final String BOARD_TITLE = "Board";
     private static final String SESSIONS_TITLE = "Sessions";
     private static final String DOCS_TITLE = "Docs";
-    private static final String ELSEWHERE_TITLE = "Elsewhere";
     private static final String MAIN_VIEW_TITLE = "main view";
     private static final String DOCK_TITLE = "dock";
     private static final String NO_HOSTED_SESSION = "no hosted session";
     private static final String NO_DOCS = "no docs";
     private static final String DOCS_UNAVAILABLE = "docs unavailable";
     private static final String NO_LIVE_SESSION = "no live session";
-    private static final String NO_SESSION_ELSEWHERE = "nothing elsewhere";
     private static final String SESSIONS_UNAVAILABLE = "sessions unavailable: ";
 
     private static final int DEFAULT_PANE_WIDTH = 80;
@@ -149,7 +136,6 @@ public final class Shell extends ToolkitApp {
     private static final char NEXT_WAITING = 'w';
     private static final char YES = 'y';
     private static final char NO = 'n';
-    private static final char JUMP = 'o';
     private static final char OPEN_REVIEW = 'p';
     private static final char REMOVE_WORKTREE = 'd';
     private static final char LEFT = 'h';
@@ -165,10 +151,10 @@ public final class Shell extends ToolkitApp {
     private static final String FOLD_KEY = "enter fold";
     private static final String SESSIONS_KEY = "enter sessions";
     private static final String EXPAND_KEY = "enter expand";
+    private static final String RESUME_KEY = "enter resume";
     private static final String FOCUS_KEYS = "%s focus";
     private static final String QUIT_KEY = "q quit";
     private static final String REFRESH_KEY = "R refresh";
-    private static final String JUMP_KEY = "o jump";
     private static final String REVIEW_KEY = "p review";
     private static final List<String> RESPOND_KEYS = List.of("y start  esc back");
     private static final String REMOVE_WORKTREE_KEY = "d remove worktree";
@@ -185,19 +171,14 @@ public final class Shell extends ToolkitApp {
     private final BoardRows board;
     private final DocsRows docs;
     private final SessionRows sessions;
-    private final ElsewhereRows elsewhere;
     private final AtomicReference<DocsView> pendingDocs = new AtomicReference<>();
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
     private final AtomicReference<PullRequestsView> pendingPullRequests = new AtomicReference<>();
     private final AtomicReference<BoardView> pendingBoard = new AtomicReference<>();
     private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
-    private final TranscriptPane transcript = new TranscriptPane();
-    private final AtomicBoolean transcriptReading = new AtomicBoolean();
-    private boolean transcriptStale;
     private final HostedSessionCommand hosting;
     private final WatchedSessionCommand watching;
-    private final OutsideSessionCommand outside;
     private final TicketWorktreeCommand removing;
     private final TerminalFocus terminalFocus = new TerminalFocus(this::terminalFocusChanged);
     private WatchedPayload lastWatched = new NoWatchedSessionPayload();
@@ -227,7 +208,6 @@ public final class Shell extends ToolkitApp {
     private boolean mergedRead;
     private Optional<Rect> paneArea = Optional.empty();
     private Optional<Long> quitPrompt = Optional.empty();
-    private Optional<RemoteControlConfigView> remoteControlPrompt = Optional.empty();
     private Optional<RemovalPrompt> removalPrompt = Optional.empty();
     private Optional<TicketView> respondPrompt = Optional.empty();
     private Optional<String> refusal = Optional.empty();
@@ -235,7 +215,7 @@ public final class Shell extends ToolkitApp {
     private final PendingDetail pendingDetail;
     private volatile MergedPullRequestsView latestMerged = new MergedPullRequestsView(List.of());
     private Optional<Rect> mainViewArea = Optional.empty();
-    private CompletableFuture<Void> outsideCommands = CompletableFuture.completedFuture(null);
+    private CompletableFuture<Void> ordered = CompletableFuture.completedFuture(null);
     private boolean mainViewHidden;
     private Focus focus = Focus.BOARD;
     private Focus lastLeft = Focus.BOARD;
@@ -253,7 +233,6 @@ public final class Shell extends ToolkitApp {
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
-            OutsideSessionCommand outside,
             TicketWorktreeCommand removing,
             SessionQuery screens,
             BoardQuery boards,
@@ -268,7 +247,6 @@ public final class Shell extends ToolkitApp {
                 pullRequests,
                 hosting,
                 watching,
-                outside,
                 removing,
                 screens,
                 boards,
@@ -287,7 +265,6 @@ public final class Shell extends ToolkitApp {
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
             WatchedSessionCommand watching,
-            OutsideSessionCommand outside,
             TicketWorktreeCommand removing,
             SessionQuery screens,
             BoardQuery boards,
@@ -304,11 +281,9 @@ public final class Shell extends ToolkitApp {
         this.linkedTicketIds = BoardRows.ticketIdsOf(board);
         this.docs = new DocsRows(docs);
         this.sessions = new SessionRows(sessions);
-        this.elsewhere = new ElsewhereRows(sessions);
         this.pullRequests = pullRequests;
         this.hosting = hosting;
         this.watching = watching;
-        this.outside = outside;
         this.removing = removing;
         this.screens = screens;
         this.boards = boards;
@@ -374,10 +349,6 @@ public final class Shell extends ToolkitApp {
         if (sessions.replace(next) && mainViewOwner == Focus.SESSIONS) {
             mainViewScroll.reset();
         }
-        if (elsewhere.replace(next) && mainViewOwner == Focus.ELSEWHERE) {
-            mainViewScroll.reset();
-        }
-        transcriptStale = true;
         worktree.markStale();
         refreshOffer();
         TabClosing closing = dock.replace(sessions.hosted());
@@ -615,7 +586,6 @@ public final class Shell extends ToolkitApp {
                 .or(() -> removalPrompt.map(asked -> answerRemovalPrompt(asked, key)))
                 .or(() -> reviewKeys.answerSubmitPrompt(key))
                 .or(() -> respondPrompt.map(asked -> answerRespondPrompt(asked, key)))
-                .or(() -> remoteControlPrompt.map(asked -> answerRemoteControlPrompt(asked, key)))
                 .or(() -> picker.map(open -> pressInPicker(open, key)));
     }
 
@@ -728,9 +698,6 @@ public final class Shell extends ToolkitApp {
         if (key.isChar(REFRESH)) {
             return refresh();
         }
-        if (key.isChar(JUMP)) {
-            return jump();
-        }
         if (key.isChar(REMOVE_WORKTREE)) {
             return removableTicket().map(this::checkRemoval).orElse(false);
         }
@@ -769,12 +736,6 @@ public final class Shell extends ToolkitApp {
         }
         if (focus == Focus.SESSIONS && key.isChar(UP)) {
             return selectSession(sessions::up);
-        }
-        if (focus == Focus.ELSEWHERE && key.isChar(DOWN)) {
-            return selectElsewhere(elsewhere::down);
-        }
-        if (focus == Focus.ELSEWHERE && key.isChar(UP)) {
-            return selectElsewhere(elsewhere::up);
         }
         return focus == Focus.MAIN && scrollMainView(key);
     }
@@ -856,48 +817,9 @@ public final class Shell extends ToolkitApp {
         return true;
     }
 
-    /** The session {@code o} would bring forward: the selected one of the Sessions or Elsewhere panel, when it is jumpable. */
-    private Optional<LiveSessionView> jumpTarget() {
-        return switch (focus) {
-            case SESSIONS ->
-                sessions.selected()
-                        .filter(LiveSessionRow.class::isInstance)
-                        .map(row -> ((LiveSessionRow) row).session())
-                        .filter(LiveSessionView::isJumpable);
-            case ELSEWHERE -> elsewhere.selected().map(ElsewhereSessionRow::session).filter(LiveSessionView::isJumpable);
-            default -> Optional.empty();
-        };
-    }
-
-    private boolean jump() {
-        return jumpTarget()
-                .map(target -> {
-                    JumpPayload payload = new JumpPayload(new SessionPayload(root, linkedTicketIds), target.id());
-                    inOrder(() -> outside.jump(payload).ifPresent(this::offered));
-                    return true;
-                })
-                .orElse(false);
-    }
-
-    private void offered(RemoteControlConfigView offer) {
-        onRenderThread(() -> remoteControlPrompt = Optional.of(offer));
-    }
-
-    /** Commands to {@code session} that touch processes or files run off the render thread, each after the one before it. */
+    /** Commands that touch processes or files run off the render thread, each after the one before it. */
     private void inOrder(Runnable command) {
-        outsideCommands = outsideCommands.exceptionally(failed -> null).thenRunAsync(command, background);
-    }
-
-    private boolean answerRemoteControlPrompt(RemoteControlConfigView prompt, KeyEvent key) {
-        boolean plain = !key.hasCtrl() && !key.hasAlt();
-        boolean cancelled = key.isKey(KeyCode.ESCAPE) || prompt instanceof AddRemoteControlView && plain && key.isChar(NO);
-        if (cancelled) {
-            remoteControlPrompt = Optional.empty();
-        } else if (prompt instanceof AddRemoteControlView && plain && key.isChar(YES)) {
-            remoteControlPrompt = Optional.empty();
-            inOrder(outside::addRemoteControl);
-        }
-        return true;
+        ordered = ordered.exceptionally(failed -> null).thenRunAsync(command, background);
     }
 
     /**
@@ -1245,15 +1167,6 @@ public final class Shell extends ToolkitApp {
         return true;
     }
 
-    private boolean selectElsewhere(Runnable move) {
-        Optional<RowKey> before = elsewhere.selectedKey();
-        move.run();
-        if (!elsewhere.selectedKey().equals(before)) {
-            mainViewScroll.reset();
-        }
-        return true;
-    }
-
     private boolean selectSession(Runnable move) {
         Optional<RowKey> before = sessions.selectedKey();
         move.run();
@@ -1293,7 +1206,7 @@ public final class Shell extends ToolkitApp {
      */
     private boolean enterSession(SessionRow row) {
         return switch (row) {
-            case LiveSessionRow live when live.session().isHosted() -> focusTabOf(live.session());
+            case LiveSessionRow live -> focusTabOf(live.session());
             case PastSessionRow past when past.session().isUnlinked() -> resume(past.session());
             case PastSessionRow past -> selectedTicket().map(ticket -> resumeInTicket(past.session(), ticket)).orElse(false);
             case StartingSessionRow starting -> focusTab(starting.tab().id());
@@ -1364,12 +1277,11 @@ public final class Shell extends ToolkitApp {
         applyPendingMergedHeads();
         applyPendingWarning();
         syncWatched();
-        syncTranscript();
         syncWorktree();
         syncPending();
         Element screen = column(
                 new StatusLineElement(
-                        StatusText.spans(sessions.markerCounts(), elsewhere.groups()),
+                        StatusText.spans(sessions.markerCounts()),
                         warning,
                         quitPrompt
                                 .map(SessionText::quitPrompt)
@@ -1400,16 +1312,7 @@ public final class Shell extends ToolkitApp {
                 .filter(open -> open.inlineAt().isEmpty())
                 .<Element>map(open -> stack(withRespond, ReviewPanels.boxPopup(open, () -> mainViewArea)))
                 .orElse(withRespond);
-        return remoteControlPrompt
-                .<Element>map(prompt -> stack(
-                        withBox,
-                        new PopupElement(
-                                RemoteControlPromptText.title(prompt),
-                                RemoteControlPromptText.rows(prompt),
-                                Optional.empty(),
-                                RemoteControlPromptText.hint(prompt),
-                                () -> mainViewArea)))
-                .orElse(withBox);
+        return withBox;
     }
 
     /** The panels, or the focused pane zoomed: the Board as its status columns, the main view, or the dock. */
@@ -1437,7 +1340,7 @@ public final class Shell extends ToolkitApp {
     private Element leftColumn() {
         return review.<Element>map(pane -> column(ReviewPanels.files(pane, focus), ReviewPanels.comments(pane, focus), ReviewPanels.review(pane))
                         .percent(LEFT_COLUMN_PERCENT))
-                .orElseGet(() -> column(boardPanel(), sessionsPanel(), docsPanel(), elsewherePanel()).percent(LEFT_COLUMN_PERCENT));
+                .orElseGet(() -> column(boardPanel(), sessionsPanel(), docsPanel()).percent(LEFT_COLUMN_PERCENT));
     }
 
     private Element boardPanel() {
@@ -1480,17 +1383,6 @@ public final class Shell extends ToolkitApp {
         return mainViewOwner == owner ? panel.fill() : panel.length(SHRUNK_PANEL_HEIGHT);
     }
 
-    private Element elsewherePanel() {
-        Element body = elsewhere.isEmpty()
-                ? text(NO_SESSION_ELSEWHERE).dim()
-                : new RowsElement(
-                        elsewhere.visible().stream().map(ElsewhereRow::line).toList(),
-                        elsewhere.selectedIndex(),
-                        focus == Focus.ELSEWHERE);
-        Panel panel = framed(ELSEWHERE_TITLE, Focus.ELSEWHERE, body);
-        return mainViewOwner == Focus.ELSEWHERE ? panel.fill() : panel.length(SMALL_PANEL_HEIGHT);
-    }
-
     private Element mainView() {
         return review.map(pane -> ReviewPanels.diff(pane, focus, area -> mainViewArea = Optional.of(area)))
                 .orElseGet(() -> framed(MAIN_VIEW_TITLE, Focus.MAIN, new PaneProbe(detail(), area -> mainViewArea = Optional.of(area))).fill());
@@ -1515,7 +1407,6 @@ public final class Shell extends ToolkitApp {
         return switch (mainViewOwner) {
             case BOARD -> boardDetail();
             case SESSIONS -> sessionsDetail();
-            case ELSEWHERE -> elsewhereDetail();
             default -> docsDetail();
         };
     }
@@ -1523,10 +1414,10 @@ public final class Shell extends ToolkitApp {
     private Element sessionsDetail() {
         return sessions.selected()
                 .map(row -> switch (row) {
-                    case LiveSessionRow live when live.session().isHosted() ->
+                    case LiveSessionRow live ->
                         new DetailElement(width -> SessionText.facts(live.session()), Optional.empty(), mainViewScroll);
-                    case LiveSessionRow _ -> transcriptDetail();
-                    case PastSessionRow _ -> transcriptDetail();
+                    case PastSessionRow past ->
+                        new DetailElement(width -> SessionText.card(past.session()), Optional.empty(), mainViewScroll);
                     case OlderSessionsRow _ -> column();
                     case SectionHeaderRow _ -> column();
                     case NoSessionRow _ -> column();
@@ -1536,46 +1427,6 @@ public final class Shell extends ToolkitApp {
                 .orElseGet(Toolkit::column);
     }
 
-    private Element transcriptDetail() {
-        return DetailElement.tailing(transcript::rows, mainViewScroll);
-    }
-
-    /**
-     * Reads the shown session's transcript from where the last read ended, off the render thread, once the sessions were pushed again
-     * or another session was selected; one read at a time, and its entries land on the render thread.
-     */
-    private void syncTranscript() {
-        Optional<TranscriptSubject> wanted = mainViewOwner == Focus.SESSIONS ? sessions.selectedTranscript() : Optional.empty();
-        wanted.ifPresent(subject -> {
-            if (transcript.isNotShowing(subject.id())) {
-                transcript.show(subject.id());
-                transcriptStale = true;
-            }
-            if (transcriptStale && transcriptReading.compareAndSet(false, true)) {
-                transcriptStale = false;
-                readTranscript(subject, transcript.offset());
-            }
-        });
-    }
-
-    /** A read that fails unexpectedly is shown as unreadable, so the next read is not held back by one that never landed. */
-    private void readTranscript(TranscriptSubject subject, TranscriptOffset from) {
-        CompletableFuture.supplyAsync(
-                        () -> screens.transcriptOf(new TranscriptPayload(subject.id(), subject.directory(), from)), background)
-                .exceptionally(Shell::unreadableTranscript)
-                .thenAccept(read -> onRenderThread(() -> {
-                    transcript.apply(subject.id(), from, read);
-                    transcriptReading.set(false);
-                }));
-    }
-
-    private static TranscriptView unreadableTranscript(Throwable failed) {
-        Throwable cause = failed instanceof CompletionException wrapped && wrapped.getCause() != null ? wrapped.getCause() : failed;
-        return new UnreadableTranscriptView(new Reason(Optional.ofNullable(cause.getMessage())
-                .filter(message -> !message.isBlank())
-                .orElseGet(() -> cause.getClass().getSimpleName())));
-    }
-
     private void onRenderThread(Runnable task) {
         ToolkitRunner running = runner();
         if (running == null) {
@@ -1583,14 +1434,6 @@ public final class Shell extends ToolkitApp {
         } else {
             running.runOnRenderThread(task);
         }
-    }
-
-    private Element elsewhereDetail() {
-        return elsewhere
-                .selected()
-                .<Element>map(row -> new DetailElement(
-                        width -> SessionText.elsewhereFacts(row.place(), row.session()), Optional.empty(), mainViewScroll))
-                .orElseGet(Toolkit::column);
     }
 
     private Element docsDetail() {
@@ -1640,7 +1483,6 @@ public final class Shell extends ToolkitApp {
     private List<String> keyBar() {
         return refusal
                 .map(List::of)
-                .or(() -> remoteControlPrompt.map(prompt -> List.of(RemoteControlPromptText.keys(prompt))))
                 .or(() -> picker.map(_ -> List.of(VerbPickerText.keys())))
                 .or(() -> Optional.of(zoomKeys()).filter(_ -> inSession() && zoomed))
                 .or(() -> Optional.of(sessionKeys(SESSION_KEYS)).filter(_ -> inSession()).map(List::of))
@@ -1682,8 +1524,8 @@ public final class Shell extends ToolkitApp {
                         Included.when(foldable(), FOLD_KEY),
                         Included.when(focus == Focus.BOARD && board.selected() instanceof TicketRow, SESSIONS_KEY),
                         Included.when(focus == Focus.SESSIONS && sessions.olderSelected(), EXPAND_KEY),
+                        Included.when(focus == Focus.SESSIONS && sessions.pastSelected(), RESUME_KEY),
                         Included.when(removableTicket().isPresent(), REMOVE_WORKTREE_KEY),
-                        Included.when(jumpTarget().isPresent(), JUMP_KEY),
                         Stream.of(focusKeys(), QUIT_KEY),
                         Included.when(
                                 (focus == Focus.BOARD || focus == Focus.SESSIONS) && selectedTicket().isPresent(),

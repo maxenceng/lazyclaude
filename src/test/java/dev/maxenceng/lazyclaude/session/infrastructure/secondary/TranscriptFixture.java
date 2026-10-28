@@ -7,25 +7,20 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
-import java.util.List;
 
 import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
 import dev.maxenceng.lazyclaude.session.domain.LastActivity;
 import dev.maxenceng.lazyclaude.session.domain.LocatedPastSession;
 import dev.maxenceng.lazyclaude.session.domain.PastSession;
 import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
-import dev.maxenceng.lazyclaude.session.domain.ReadEntries;
 import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.StartedAt;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
-import dev.maxenceng.lazyclaude.session.domain.TranscriptRead;
+import dev.maxenceng.lazyclaude.session.published.OpeningPrompt;
+import dev.maxenceng.lazyclaude.session.published.ReadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.session.published.SessionIdFixture;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
-import dev.maxenceng.lazyclaude.session.published.TranscriptEntry;
-import dev.maxenceng.lazyclaude.session.published.TranscriptOffset;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
-import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture;
 
 public final class TranscriptFixture {
 
@@ -102,20 +97,8 @@ public final class TranscriptFixture {
                 .formatted(timestamp, cwd);
     }
 
-    public static String assistantTextLine(String text) {
-        return "{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":%s}]}}\n"
-                .formatted(quoted(text));
-    }
 
-    public static String thinkingLine(String thought) {
-        return "{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":%s}]}}\n"
-                .formatted(quoted(thought));
-    }
 
-    public static String toolUseLine(String tool, String input) {
-        return "{\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"name\":%s,\"input\":%s}]}}\n"
-                .formatted(quoted(tool), input);
-    }
 
     public static String commandLine(String cwd, String timestamp, String branch, String command, String args) {
         return "{\"type\":\"user\",\"timestamp\":\"%s\",\"cwd\":\"%s\",\"gitBranch\":\"%s\",\"message\":{\"role\":\"user\",\"content\":%s}}\n"
@@ -190,11 +173,19 @@ public final class TranscriptFixture {
     }
 
     public static LocatedPastSession pastSessionOf(
-            String sessionId, SessionTitle title, String cwd, String lastActivity, String startedAt, ProjectLocation location) {
+            String sessionId,
+            SessionTitle title,
+            OpeningPrompt opening,
+            String cwd,
+            String lastActivity,
+            String startedAt,
+            ProjectLocation location) {
         return LocatedPastSession.builder()
                 .session(PastSession.builder()
                         .id(new SessionId(sessionId))
                         .title(title)
+                        .opening(opening)
+                        .reading(new ReadableTranscript())
                         .directory(new WorkingDirectory(Path.of(cwd)))
                         .lastActivity(new LastActivity(Instant.parse(lastActivity)))
                         .startedAt(new StartedAt(Instant.parse(startedAt)))
@@ -211,17 +202,6 @@ public final class TranscriptFixture {
 
     public static String textOf(byte[] line) {
         return new String(line, StandardCharsets.UTF_8);
-    }
-
-    public static TranscriptRead readFrom(TranscriptReadRepository repository, TranscriptOffset offset) {
-        return repository.read(
-                SessionIdFixture.sessionId(),
-                WorkingDirectoryFixture.workingDirectoryAt(CWD),
-                offset);
-    }
-
-    public static List<TranscriptEntry> entriesFrom(TranscriptReadRepository repository, TranscriptOffset offset) {
-        return ((ReadEntries) readFrom(repository, offset)).entries();
     }
 
     static Instant lastActivityOf(TranscriptRepository repository) {

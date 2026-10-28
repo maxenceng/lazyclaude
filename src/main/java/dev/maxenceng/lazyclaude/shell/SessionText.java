@@ -4,7 +4,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
@@ -13,22 +12,17 @@ import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.FirstPrompt;
 import dev.maxenceng.lazyclaude.session.published.Marker;
+import dev.maxenceng.lazyclaude.session.published.NoFirstPrompt;
 import dev.maxenceng.lazyclaude.session.published.NoTitle;
-import dev.maxenceng.lazyclaude.session.published.NoToolInput;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
-import dev.maxenceng.lazyclaude.session.published.PlaceName;
-import dev.maxenceng.lazyclaude.session.published.PromptEntry;
-import dev.maxenceng.lazyclaude.session.published.Reason;
-import dev.maxenceng.lazyclaude.session.published.ReplyEntry;
-import dev.maxenceng.lazyclaude.session.published.ResidenceName;
+import dev.maxenceng.lazyclaude.session.published.ReadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
-import dev.maxenceng.lazyclaude.session.published.ToolCallEntry;
-import dev.maxenceng.lazyclaude.session.published.ToolInput;
-import dev.maxenceng.lazyclaude.session.published.TranscriptEntry;
+import dev.maxenceng.lazyclaude.session.published.TranscriptReading;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
+import dev.maxenceng.lazyclaude.session.published.UnreadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.Version;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
@@ -68,17 +62,13 @@ final class SessionText {
     private static final String STARTED_FORMAT = "%s (%s ago)";
     private static final String FACT_FORMAT = "%-9s%s";
     private static final String CWD = "cwd";
-    private static final String PROJECT = "project";
-    private static final String WAITING_FACT = "waiting";
     private static final String PID = "pid";
     private static final String STARTED_FACT = "started";
     private static final String VERSION = "version";
-    private static final String PROMPT_MARK = "› ";
-    private static final String PROMPT_INDENT = "  ";
-    private static final String TOOL_CALL = "⏺ %s";
-    private static final String TOOL_CALL_WITH_ARGUMENT = "⏺ %s  %s";
-    private static final String NO_TRANSCRIPT = "no transcript yet";
-    private static final String UNREADABLE_TRANSCRIPT = "transcript unreadable: %s";
+    private static final String PROMPT_FORMAT = "› %s";
+    private static final String UNREADABLE_FORMAT = "transcript unreadable: %s";
+    private static final String TICKET_FORMAT = "%s  %s";
+    private static final String ACTIVITY_FORMAT = "started %s · last active %s ago";
     private static final DetailRow BLANK_ROW = new DetailRow("", Style.EMPTY);
     private static final DateTimeFormatter STARTED = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -133,17 +123,9 @@ final class SessionText {
         return BRANCH_SUFFIX;
     }
 
-    /** What a hosted session's row says where a session started elsewhere says its age. */
+    /** What a hosted session's row says at its right edge. */
     static String paneLabel() {
         return PANE_LABEL;
-    }
-
-    /** What a live session's row says at its right edge: {@code pane} when hosted, where an outside session lives, else its age. */
-    static String rowLabel(LiveSessionView session) {
-        if (session.isHosted()) {
-            return PANE_LABEL;
-        }
-        return session.residenceName().map(ResidenceName::value).orElseGet(() -> session.age().label());
     }
 
     static String quitPrompt(long busyOrWaiting) {
@@ -229,68 +211,55 @@ final class SessionText {
     }
 
     /**
-     * The rows of the main view for a session elsewhere: its name and state, then the project or directory it belongs to, why it waits
-     * when it does, and the facts of any live session.
+     * The rows of the main view for a past session: its title, what it was first asked behind {@code ›} when the title is not that
+     * prompt itself, and why the transcript cannot be read now when it cannot; then each ticket it is linked to, its directory,
+     * and when it ran.
      */
-    static List<DetailRow> elsewhereFacts(PlaceName place, LiveSessionView session) {
-        List<DetailRow> facts = facts(session);
+    static List<DetailRow> card(PastSessionView session) {
         return Stream.of(
-                        facts.stream().limit(1),
-                        Stream.of(fact(PROJECT, place.value())),
-                        session.state()
-                                .waitingFor()
-                                .filter(WaitingReason.class::isInstance)
-                                .map(reason -> fact(WAITING_FACT, ((WaitingReason) reason).value()))
-                                .stream(),
-                        facts.stream().skip(1))
+                        cardHead(session),
+                        Stream.of(BLANK_ROW),
+                        session.links().stream().map(SessionText::ticketLine),
+                        Stream.of(
+                                new DetailRow(session.directory().toString(), Style.EMPTY),
+                                new DetailRow(
+                                        ACTIVITY_FORMAT.formatted(
+                                                STARTED.format(session.startedAt()), session.age().label()),
+                                        Style.EMPTY)))
                 .flatMap(Function.identity())
                 .toList();
     }
 
-    static String noTranscriptNotice() {
-        return NO_TRANSCRIPT;
+    private static Stream<DetailRow> cardHead(PastSessionView session) {
+        Style heading = titleIsStandIn(session) ? Style.EMPTY.bold().dim() : Style.EMPTY.bold();
+        DetailRow title = new DetailRow(title(session), heading);
+        return Stream.of(Stream.of(title), openingLine(session), readingLine(session.reading()))
+                .flatMap(Function.identity());
     }
 
-    static String unreadableTranscriptNotice(Reason reason) {
-        return UNREADABLE_TRANSCRIPT.formatted(reason.value());
-    }
-
-    static List<DetailRow> transcriptNotice(String notice) {
-        return List.of(new DetailRow(notice, Style.EMPTY.dim()));
-    }
-
-    /**
-     * The rows of the main view for a transcript: a prompt behind {@code ›}, a reply plain, both wrapped to {@code width}, and a tool call as
-     * one dim line. A blank row sets each prompt and reply off from what precedes it; a tool call sticks to what it follows.
-     */
-    static List<DetailRow> transcript(List<TranscriptEntry> entries, int width) {
-        return IntStream.range(0, entries.size())
-                .boxed()
-                .flatMap(index -> Stream.concat(separator(index, entries.get(index)), rows(entries.get(index), width)))
-                .toList();
-    }
-
-    private static Stream<DetailRow> separator(int index, TranscriptEntry entry) {
-        return index > 0 && !(entry instanceof ToolCallEntry) ? Stream.of(BLANK_ROW) : Stream.empty();
-    }
-
-    private static Stream<DetailRow> rows(TranscriptEntry entry, int width) {
-        return switch (entry) {
-            case PromptEntry prompt -> {
-                List<String> lines = Wrapping.lines(prompt.text().value(), width - PROMPT_MARK.length());
-                yield IntStream.range(0, lines.size())
-                        .mapToObj(index -> new DetailRow((index == 0 ? PROMPT_MARK : PROMPT_INDENT) + lines.get(index), Style.EMPTY));
-            }
-            case ReplyEntry reply -> Wrapping.lines(reply.text().value(), width).stream().map(line -> new DetailRow(line, Style.EMPTY));
-            case ToolCallEntry call -> Stream.of(new DetailRow(toolCall(call), Style.EMPTY.dim()));
+    /** The opening prompt is shown only under a title Claude Code wrote; a title that is the prompt already says it. */
+    private static Stream<DetailRow> openingLine(PastSessionView session) {
+        return switch (session.opening()) {
+            case FirstPrompt prompt when session.title() instanceof AiTitle ->
+                Stream.of(new DetailRow(PROMPT_FORMAT.formatted(prompt.value()), Style.EMPTY));
+            case FirstPrompt _, NoFirstPrompt _ -> Stream.empty();
         };
     }
 
-    private static String toolCall(ToolCallEntry call) {
-        return switch (call.argument()) {
-            case ToolInput input -> TOOL_CALL_WITH_ARGUMENT.formatted(call.tool().value(), input.value());
-            case NoToolInput _ -> TOOL_CALL.formatted(call.tool().value());
+    private static Stream<DetailRow> readingLine(TranscriptReading reading) {
+        return switch (reading) {
+            case ReadableTranscript _ -> Stream.empty();
+            case UnreadableTranscript unreadable ->
+                Stream.of(new DetailRow(UNREADABLE_FORMAT.formatted(unreadable.reason().value()), Style.EMPTY.dim()));
         };
+    }
+
+    private static DetailRow ticketLine(TicketLink link) {
+        String how = switch (link) {
+            case StrongLink strong -> strong.verb().value();
+            case WeakLink _ -> BRANCH_SUFFIX;
+        };
+        return new DetailRow(TICKET_FORMAT.formatted(link.ticket().value(), how), Style.EMPTY);
     }
 
     private static DetailRow fact(String name, String value) {

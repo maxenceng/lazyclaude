@@ -1,6 +1,6 @@
 ---
 id: SESSION-10
-status: todo
+status: in-review
 context: session
 type: feature
 tracker_id: 93
@@ -30,8 +30,10 @@ A cut in `session` and the shell, no new aggregate (ADR 0047).
 
 - Domain: `Residence` (`InKitty`, `InTmux`, `Nowhere`), `JumpManager`, `TerminalJumpPort`, `KittyConfig*`,
   `RemoteControlConfig` and its shapes, `ProcessEnvironmentPort`, `ElsewhereGroup` and the machine-wide grouping all go.
-  `SessionManager` keeps only the live sessions whose pid lazyclaude hosts; how their state is read changes in
-  SESSION-11, how past sessions are found in SESSION-12.
+  Only the live sessions whose pid lazyclaude hosts count. Until SESSION-11 reads only those pids' records, the filter is
+  `AvailableSessions.hosting`, applied by `SessionApplicationService` to the listing, the notifications, the worktree
+  check and the verb preselection, and `SessionManager` still locates every live session it is handed. How their state is
+  read changes in SESSION-11, how past sessions are found in SESSION-12.
 - The transcript entries (`TranscriptEntry` and its prompt/reply/tool-call shapes, `TranscriptManager`,
   `TranscriptReadPort`) go with the transcript view; the facts a past row already carries are what the card shows.
 - Secondary: `TerminalJumpRepository`, `KittyConfigRepository`, `ProcessEnvironmentRepository`,

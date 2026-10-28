@@ -5,15 +5,12 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFi
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.everyStateSessionViews;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedLiveSessionView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionViewBuilder;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionViewWith;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.kittySessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.newestSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.oldestSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewBuilder;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewWith;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.tmuxSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
@@ -37,23 +34,13 @@ import dev.tamboui.style.Color;
 class ShellSessionsTest {
 
     @Test
-    void shouldListEachSessionAsGlyphNameAndAgeFlushRight() {
+    void shouldListEachSessionAsGlyphNameAndPaneLabelFlushRight() {
         Shell shell = shellOnSessions(sessionsViewOf(List.of(newestSessionView(), sessionView(), oldestSessionView())));
 
         assertThat(Screen.of(shell).boardPanelLines())
-                .anySatisfy(line -> assertThat(line).matches("∼ lazyclaude-3f\\s+12m"))
-                .anySatisfy(line -> assertThat(line).matches("∼ lazyclaude-b6\\s+2h"))
-                .anySatisfy(line -> assertThat(line).matches("• claude-tools-a1\\s+1d"));
-    }
-
-    @Test
-    void shouldLabelAnOutsideSessionWithWhereItLivesInPlaceOfItsAge() {
-        Shell shell = shellOnSessions(sessionsViewOf(List.of(kittySessionView(), tmuxSessionView(), sessionView())));
-
-        assertThat(Screen.of(shell).boardPanelLines())
-                .anySatisfy(line -> assertThat(line).matches("∼ fix-status\\s+kitty"))
-                .anySatisfy(line -> assertThat(line).matches("\\? lint-pass\\s+tmux"))
-                .anySatisfy(line -> assertThat(line).matches("∼ lazyclaude-b6\\s+2h"));
+                .anySatisfy(line -> assertThat(line).matches("∼ lazyclaude-3f\\s+pane"))
+                .anySatisfy(line -> assertThat(line).matches("∼ lazyclaude-b6\\s+pane"))
+                .anySatisfy(line -> assertThat(line).matches("• claude-tools-a1\\s+pane"));
     }
 
     @Test
@@ -156,7 +143,7 @@ class ShellSessionsTest {
 
     @Test
     void shouldShowTheFactsOfASessionLazyclaudeHostsInTheMainView() {
-        Shell shell = shellOnSessions(sessionsViewOf(List.of(hostedLiveSessionView())));
+        Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionView())));
 
         assertThat(Screen.of(shell).mainViewRows())
                 .containsSubsequence(
@@ -169,35 +156,35 @@ class ShellSessionsTest {
 
     @Test
     void shouldSayWaitingForPermissionOnAPermissionPrompt() {
-        Shell shell = shellOnSessions(sessionsViewOf(List.of(hostedSessionViewWith(waitingForPermission()))));
+        Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionViewWith(waitingForPermission()))));
 
         assertThat(Screen.of(shell).mainViewRows()).contains("lazyclaude-b6  ! waiting for permission");
     }
 
     @Test
     void shouldSayWhyAWaitingSessionWaitsWhenItIsNotAPermissionPrompt() {
-        Shell shell = shellOnSessions(sessionsViewOf(List.of(hostedSessionViewWith(waitingForInput()))));
+        Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionViewWith(waitingForInput()))));
 
         assertThat(Screen.of(shell).mainViewRows()).contains("lazyclaude-b6  ? waiting for input: input needed");
     }
 
     @Test
     void shouldSayLazyclaudeDoesNotKnowTheStatusOfASessionInAnUnknownState() {
-        Shell shell = shellOnSessions(sessionsViewOf(List.of(hostedSessionViewWith(new Unknown()))));
+        Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionViewWith(new Unknown()))));
 
         assertThat(Screen.of(shell).mainViewRows()).contains("lazyclaude-b6  · status unknown to lazyclaude");
     }
 
     @Test
     void shouldSayYourTurnForASessionThatFinished() {
-        Shell shell = shellOnSessions(sessionsViewOf(List.of(hostedSessionViewWith(new YourTurn()))));
+        Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionViewWith(new YourTurn()))));
 
         assertThat(Screen.of(shell).mainViewRows()).contains("lazyclaude-b6  • your turn");
     }
 
     @Test
     void shouldLeaveOutTheVersionASourceDoesNotGive() {
-        Shell shell = shellOnSessions(sessionsViewOf(List.of(hostedSessionViewBuilder().version(new NoVersion()).build())));
+        Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionViewBuilder().version(new NoVersion()).build())));
 
         assertThat(Screen.of(shell).mainViewRows()).noneMatch(row -> row.startsWith("version"));
     }
@@ -220,10 +207,10 @@ class ShellSessionsTest {
 
     @Test
     void shouldFollowTheSessionIdThroughAStateChange() {
-        Shell shell = shellOnSessions(sessionsViewOf(List.of(newestSessionView(), hostedLiveSessionView())));
+        Shell shell = shellOnSessions(sessionsViewOf(List.of(newestSessionView(), sessionView())));
         shell.press(key('j'));
 
-        shell.sessionsChanged(sessionsViewOf(List.of(newestSessionView(), hostedSessionViewWith(waitingForPermission()))));
+        shell.sessionsChanged(sessionsViewOf(List.of(newestSessionView(), sessionViewWith(waitingForPermission()))));
 
         assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("lazyclaude-b6");
         assertThat(Screen.of(shell).mainViewRows()).contains("lazyclaude-b6  ! waiting for permission");
@@ -278,9 +265,9 @@ class ShellSessionsTest {
 
     @Test
     void shouldKeepShowingTheFactsAfterARefreshOfTheSameSession() {
-        Shell shell = shellFocusedOnMainViewOfSessions(sessionsViewOf(List.of(hostedLiveSessionView())));
+        Shell shell = shellFocusedOnMainViewOfSessions(sessionsViewOf(List.of(sessionView())));
 
-        shell.sessionsChanged(sessionsViewOf(List.of(hostedLiveSessionView())));
+        shell.sessionsChanged(sessionsViewOf(List.of(sessionView())));
 
         assertThat(Screen.of(shell).mainViewRows()).contains("pid      17234");
     }

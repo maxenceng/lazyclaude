@@ -20,7 +20,4 @@ public final class SessionNameFixture {
         return new SessionName("claude-tools-a1");
     }
 
-    public static SessionName fourthSessionName() {
-        return new SessionName("next-suggestions-9c");
-    }
 }

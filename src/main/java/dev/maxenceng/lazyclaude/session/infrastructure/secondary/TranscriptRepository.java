@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
@@ -34,7 +35,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * kept in the cache: a transcript is read again only when its size, modification time or file key differ from the cache's,
  * and one that grew is read from the offset the cache holds. That relies on transcripts being append-only, which is
  * observed, not documented; a file that shrank or whose key changed is read in full. A {@code subagents/} transcript sits
- * a level deeper and is never met. It also answers the link facts of every transcript it knows, by session id. A transcript that cannot be read is dropped and read in full the next time it changes.
+ * a level deeper and is never met. It also answers the link facts of every transcript it knows, by session id. A transcript read before that cannot be read now keeps its row, with why in place of its facts, until it reads again or is gone; one never read is not listed until it reads, and one that vanished is dropped. Why is held in memory, never in the cache.
  */
 public final class TranscriptRepository implements PastSessionPort {
 
@@ -45,6 +46,7 @@ public final class TranscriptRepository implements PastSessionPort {
     private final Path transcriptsRoot;
     private final TranscriptCacheFile cache;
     private final Map<String, CachedTranscript> known = new ConcurrentHashMap<>();
+    private final Map<String, Reason> unreadable = new ConcurrentHashMap<>();
     private final Object loading = new Object();
     private volatile boolean loaded;
 
@@ -57,7 +59,7 @@ public final class TranscriptRepository implements PastSessionPort {
     public List<LocatedPastSession> pastSessions() {
         ensureLoaded();
         return known.values().stream()
-                .map(CachedTranscript::toLocated)
+                .map(transcript -> transcript.toLocated(Optional.ofNullable(unreadable.get(transcript.path()))))
                 .flatMap(Optional::stream)
                 .toList();
     }
@@ -74,6 +76,7 @@ public final class TranscriptRepository implements PastSessionPort {
     synchronized void rescanAll(TranscriptLocator locator, CacheFallback unwritable, RootFallback unlistable) {
         ensureLoaded();
         TranscriptListing listing = listTranscripts(unlistable);
+        unreadable.keySet().removeIf(path -> listing.isGone(Path.of(path)));
         boolean forgot = known.keySet().removeIf(path -> listing.isGone(Path.of(path)));
         boolean refreshed = listing.present().stream().map(file -> refresh(file, locator)).reduce(false, Boolean::logicalOr);
         persist(forgot || refreshed, unwritable);
@@ -83,7 +86,7 @@ public final class TranscriptRepository implements PastSessionPort {
     synchronized void rescan(Collection<Path> files, TranscriptLocator locator, CacheFallback unwritable) {
         ensureLoaded();
         boolean changed = files.stream()
-                .map(file -> Files.exists(file) ? refresh(file, locator) : known.remove(file.toString()) != null)
+                .map(file -> Files.exists(file) ? refresh(file, locator) : forget(file.toString()))
                 .reduce(false, Boolean::logicalOr);
         persist(changed, unwritable);
     }
@@ -144,13 +147,24 @@ public final class TranscriptRepository implements PastSessionPort {
             }
             CachedTranscript after = read(file, before, attributes.size(), modified, fileKey, locator);
             known.put(key, after);
+            unreadable.remove(key);
             return true;
-        } catch (IOException vanishedOrUnreadable) {
-            return known.remove(key) != null;
+        } catch (NoSuchFileException vanished) {
+            return forget(key);
+        } catch (IOException cannotRead) {
+            if (known.containsKey(key)) {
+                unreadable.put(key, new Reason(FileFailure.causeOf(cannotRead)));
+            }
+            return false;
         } catch (ProjectUnavailableException cannotLocate) {
             // deferred: a cwd git fails on is read again and asked again on every scan, with no warning — close it when that shows up as load, since it never shows a wrong row.
             return false;
         }
+    }
+
+    private boolean forget(String key) {
+        unreadable.remove(key);
+        return known.remove(key) != null;
     }
 
     private static CachedTranscript read(

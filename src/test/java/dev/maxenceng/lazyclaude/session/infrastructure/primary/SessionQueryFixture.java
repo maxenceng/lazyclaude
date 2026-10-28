@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingTheRegisteredSession;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static org.mockito.Mockito.mock;
 
@@ -67,16 +68,31 @@ public final class SessionQueryFixture {
         return new TicketWorktreeCommand(worktreeService(sessions, locator, worktrees));
     }
 
+    public static SessionQuery sessionQueryHostingTheRegistered(
+            LiveSessionPort sessions,
+            PastSessionPort past,
+            ProjectLocatorPort locator,
+            SessionWatchPort watch,
+            TranscriptWatchPort transcriptWatch,
+            WarningPort warnings) {
+        HostPort hosts = mock(HostPort.class);
+        return new SessionQuery(hostingTheRegisteredSession(
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts), hosts));
+    }
+
     private static SessionApplicationService worktreeService(
             LiveSessionPort sessions, ProjectLocatorPort locator, WorktreePort worktrees) {
-        return sessionApplicationService(
-                sessions,
-                mock(PastSessionPort.class),
-                locator,
-                mock(SessionWatchPort.class),
-                mock(TranscriptWatchPort.class),
-                mock(WarningPort.class),
-                mock(HostPort.class),
-                worktrees);
+        HostPort hosts = mock(HostPort.class);
+        return hostingTheRegisteredSession(
+                sessionApplicationService(
+                        sessions,
+                        mock(PastSessionPort.class),
+                        locator,
+                        mock(SessionWatchPort.class),
+                        mock(TranscriptWatchPort.class),
+                        mock(WarningPort.class),
+                        hosts,
+                        worktrees),
+                hosts);
     }
 }

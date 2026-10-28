@@ -16,7 +16,4 @@ public final class ProcessIdFixture {
         return new ProcessId(1761);
     }
 
-    public static ProcessId fourthProcessId() {
-        return new ProcessId(40117);
-    }
 }

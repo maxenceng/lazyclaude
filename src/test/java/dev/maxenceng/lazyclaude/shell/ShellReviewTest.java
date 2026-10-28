@@ -40,7 +40,7 @@ class ShellReviewTest {
         shell.press(key('p'));
         Screen screen = Screen.of(shell);
 
-        assertThat(screen.text()).contains("╭Files", "╭Comments", "╭dock").doesNotContain("╭Board", "╭Sessions", "╭Docs", "╭Elsewhere");
+        assertThat(screen.text()).contains("╭Files", "╭Comments", "╭dock").doesNotContain("╭Board", "╭Sessions", "╭Docs");
         assertThat(screen.statusLine()).isEqualTo(statusLine);
     }
 
@@ -53,13 +53,13 @@ class ShellReviewTest {
     }
 
     @Test
-    void shouldRestoreTheFourPanelsWithTheSameTicketSelectedOnEscape() {
+    void shouldRestoreTheThreePanelsWithTheSameTicketSelectedOnEscape() {
         Shell shell = shellReviewing(twoFileDiffView(), loadingThreadsView());
 
         shell.press(namedKey(KeyCode.ESCAPE));
         Screen screen = Screen.of(shell);
 
-        assertThat(screen.text()).contains("╭Board", "╭Sessions", "╭Docs", "╭Elsewhere").doesNotContain("╭Files", "╭Comments");
+        assertThat(screen.text()).contains("╭Board", "╭Sessions", "╭Docs").doesNotContain("╭Files", "╭Comments");
         assertThat(screen.reversedText()).anySatisfy(row -> assertThat(row).contains("PROJ-1"));
         assertThat(shell.focus()).isEqualTo(Focus.BOARD);
     }

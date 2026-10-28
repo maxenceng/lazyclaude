@@ -61,6 +61,7 @@ final class ConfigurationNodes {
     private static final String TAKEN = "%s is lazyclaude's %s";
     private static final String ON_LINE = " on line %d";
     private static final String BY_DEFAULT = " by default";
+    private static final boolean DESKTOP_BY_DEFAULT = true;
 
     private final String file;
     private final Compose compose = new Compose(LoadSettings.builder().setAllowNonScalarKeys(true).build());
@@ -69,13 +70,21 @@ final class ConfigurationNodes {
         this.file = file;
     }
 
+    /** What a missing file means: the layout decision's chords, and notifications on. */
+    static Configuration defaults() {
+        return Configuration.builder()
+                .reservedChords(ReservedChords.defaults())
+                .desktopNotifications(DESKTOP_BY_DEFAULT)
+                .build();
+    }
+
     Configuration read(String text) {
         List<ConfigurationEntry> top = entriesOf(parsed(text), SECTIONS);
         List<ConfigurationEntry> bindings = section(top, KEYBINDING, ACTIONS.keySet());
         List<ConfigurationEntry> notifications = section(top, NOTIFICATIONS, List.of(DESKTOP));
         return Configuration.builder()
                 .reservedChords(reserved(bindings))
-                .desktopNotifications(notifications.stream().findFirst().map(this::desktop).orElseGet(() -> Configuration.defaults().desktopNotifications()))
+                .desktopNotifications(notifications.stream().findFirst().map(this::desktop).orElse(DESKTOP_BY_DEFAULT))
                 .build();
     }
 

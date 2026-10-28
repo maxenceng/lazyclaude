@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,7 +17,7 @@ import dev.maxenceng.lazyclaude.shared.domain.Warning;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 /**
- * Decides, from how the machine's live sessions stood at the last read and stand now, which desktop notification to show,
+ * Decides, from how the live sessions lazyclaude hosts in the project stood at the last read and stand now, which desktop notification to show,
  * replace or close. A session entering waiting is notified, unless it is the watched one; one moving between waiting for
  * permission and waiting for input has its notification replaced in place; one that leaves waiting, or dies, has it closed, and
  * so has one that becomes watched. The first read only records, so a session already waiting when lazyclaude starts is not
@@ -47,12 +48,12 @@ public final class DesktopNotificationManager {
         if (!desktop || !(sessions instanceof AvailableSessions available)) {
             return;
         }
-        List<PlacedSession> now = available.everyone(project);
+        List<LiveSession> now = available.live();
         Map<SessionId, SessionState> states = now.stream()
-                .collect(Collectors.toUnmodifiableMap(placed -> placed.session().id(), placed -> placed.session().state()));
+                .collect(Collectors.toUnmodifiableMap(LiveSession::id, LiveSession::state));
         seen.exchange(states).ifPresent(previous -> {
             open.sessions().stream().filter(id -> !states.containsKey(id)).forEach(this::closeFor);
-            now.forEach(placed -> react(placed, Optional.ofNullable(previous.get(placed.session().id()))));
+            now.forEach(session -> react(project, session, Optional.ofNullable(previous.get(session.id()))));
         });
     }
 
@@ -62,21 +63,19 @@ public final class DesktopNotificationManager {
         open.sessions().stream().filter(next::watches).forEach(this::closeFor);
     }
 
-    private void react(PlacedSession placed, Optional<SessionState> was) {
-        LiveSession session = placed.session();
+    private void react(Project project, LiveSession session, Optional<SessionState> was) {
         if (was.filter(session.state()::equals).isPresent()) {
             return;
         }
         session.state().waitingFor().ifPresentOrElse(
-                reason -> notifyWaiting(placed, reason, was), () -> closeFor(session.id()));
+                reason -> notifyWaiting(project, session, reason, was), () -> closeFor(session.id()));
     }
 
-    private void notifyWaiting(PlacedSession placed, WaitingFor reason, Optional<SessionState> was) {
-        SessionId session = placed.session().id();
+    private void notifyWaiting(Project project, LiveSession session, WaitingFor reason, Optional<SessionState> was) {
         if (was.flatMap(SessionState::waitingFor).isPresent()) {
-            replaceFor(session, notificationOf(placed, reason));
-        } else if (!watched.get().watches(session)) {
-            fireFor(session, notificationOf(placed, reason));
+            replaceFor(session.id(), notificationOf(project, session, reason));
+        } else if (!watched.get().watches(session.id())) {
+            fireFor(session.id(), notificationOf(project, session, reason));
         }
     }
 
@@ -110,10 +109,11 @@ public final class DesktopNotificationManager {
         failing.raise(warnings, new Warning(WARNING.formatted(failure.getMessage())));
     }
 
-    private static DesktopNotification notificationOf(PlacedSession placed, WaitingFor reason) {
+    private static DesktopNotification notificationOf(Project project, LiveSession session, WaitingFor reason) {
+        Path root = project.root();
         return DesktopNotification.builder()
-                .title(new NotificationTitle(
-                        TITLE.formatted(placed.place().name().value(), placed.session().name().value())))
+                .title(new NotificationTitle(TITLE.formatted(
+                        Optional.ofNullable(root.getFileName()).orElse(root), session.name().value())))
                 .body(new NotificationBody(
                         switch (reason) {
                             case WaitingReason said -> said.value();

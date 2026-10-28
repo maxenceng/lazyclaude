@@ -14,7 +14,9 @@ import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
 import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
+import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.FileName;
+import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Utf8Text;
@@ -61,7 +63,12 @@ final class TicketFileReader {
             return Optional.empty();
         }
         List<String> body = lines.subList(closing.getAsInt() + 1, lines.size());
-        return Optional.of(entry(name, fields, TicketBody.of(String.join(LINE_BREAK, body))));
+        return Optional.of(entry(name, fields, body(String.join(LINE_BREAK, body))));
+    }
+
+    /** Whitespace renders as a blank, so a body of only whitespace is as good as none. */
+    private static TicketBody body(String text) {
+        return text.isBlank() ? new NoBody() : new Body(text);
     }
 
     /** Reads the file at {@code file}, named by its last element. */

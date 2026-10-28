@@ -3,12 +3,12 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.session.published.ClaudeVersionFixture.version;
 import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
+import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.noFirstPrompt;
+import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.openingUnder;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.thirdProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
-import static dev.maxenceng.lazyclaude.session.published.ResidenceNameFixture.kittyName;
-import static dev.maxenceng.lazyclaude.session.published.ResidenceNameFixture.tmuxName;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.thirdSessionId;
@@ -18,6 +18,8 @@ import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.thir
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.aiTitle;
+import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.firstPrompt;
+import static dev.maxenceng.lazyclaude.session.published.TranscriptReadingFixture.readable;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 
 import java.time.Duration;
@@ -27,12 +29,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
-import dev.maxenceng.lazyclaude.session.domain.Hosting;
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
-import dev.maxenceng.lazyclaude.session.published.PlaceName;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
@@ -61,16 +61,8 @@ public final class SessionsViewFixture {
                 .links(List.of());
     }
 
-    public static LiveSessionView hostedLiveSessionView() {
-        return hostedSessionViewBuilder().build();
-    }
-
-    public static LiveSessionView.LiveSessionViewBuilder hostedSessionViewBuilder() {
-        return sessionViewBuilder().hosting(Hosting.HOSTED);
-    }
-
-    public static LiveSessionView hostedSessionViewWith(SessionState state) {
-        return hostedSessionViewBuilder().state(state).build();
+    public static LiveSessionView sessionViewWith(SessionState state) {
+        return sessionViewBuilder().state(state).build();
     }
 
     public static HostedSessionView startingHostedSessionView() {
@@ -107,7 +99,6 @@ public final class SessionsViewFixture {
                 .pid(new ProcessId(1000L + number))
                 .name(new SessionName(name))
                 .state(state)
-                .hosting(Hosting.HOSTED)
                 .build();
         return HostedSessionView.builder()
                 .id(hostedSessionIdOf(number))
@@ -139,28 +130,8 @@ public final class SessionsViewFixture {
         return AvailableSessionsView.builder().live(live).past(List.of()).hosted(hosted).build();
     }
 
-    public static ElsewhereGroupView elsewhereGroupViewOf(List<LiveSessionView> sessions) {
-        return new ElsewhereGroupView(new PlaceName("other"), sessions);
-    }
-
-    public static ElsewhereGroupView elsewhereGroupViewNamed(String name, LiveSessionView... sessions) {
-        return new ElsewhereGroupView(new PlaceName(name), List.of(sessions));
-    }
-
-    public static SessionsView sessionsViewElsewhere(ElsewhereGroupView... groups) {
-        return AvailableSessionsView.builder()
-                .live(List.of())
-                .elsewhere(List.of(groups))
-                .past(List.of())
-                .build();
-    }
-
-    public static SessionsView sessionsViewWithElsewhere(List<LiveSessionView> live, ElsewhereGroupView... groups) {
-        return AvailableSessionsView.builder()
-                .live(live)
-                .elsewhere(List.of(groups))
-                .past(List.of())
-                .build();
+    public static List<LiveSessionView> liveViewsOf(SessionsView view) {
+        return ((AvailableSessionsView) view).live();
     }
 
     public static LiveSessionView sessionView() {
@@ -188,10 +159,6 @@ public final class SessionsViewFixture {
                 .build();
     }
 
-    public static LiveSessionView sessionViewWith(SessionState state) {
-        return sessionViewBuilder().state(state).build();
-    }
-
     public static LiveSessionView waitingSessionView() {
         return sessionViewWith(waitingForPermission());
     }
@@ -212,6 +179,8 @@ public final class SessionsViewFixture {
         return PastSessionView.builder()
                 .id(pastSessionIdOf(1))
                 .title(aiTitle())
+                .opening(firstPrompt())
+                .reading(readable())
                 .directory(projectRootDirectory().path())
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 13, 50))
                 .age(new SessionAge(Duration.ofMinutes(10)))
@@ -224,13 +193,13 @@ public final class SessionsViewFixture {
     }
 
     public static PastSessionView pastSessionViewTitled(SessionTitle title) {
-        return pastSessionViewBuilder().title(title).build();
+        return pastSessionViewBuilder().title(title).opening(openingUnder(title)).build();
     }
 
     public static PastSessionView pastSessionViewNumbered(int number) {
         return pastSessionViewBuilder()
                 .id(pastSessionIdOf(number))
-                .title(new AiTitle("Past session %d".formatted(number)))
+                .title(new AiTitle("Past session %d".formatted(number))).opening(noFirstPrompt())
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 14, 0).minusMinutes(number * 10L))
                 .age(new SessionAge(Duration.ofMinutes(number * 10L)))
                 .build();
@@ -239,7 +208,7 @@ public final class SessionsViewFixture {
     public static PastSessionView linkedPastSessionView(int number, TicketLink... links) {
         return pastSessionViewBuilder()
                 .id(pastSessionIdOf(number))
-                .title(new AiTitle("Past %d".formatted(number)))
+                .title(new AiTitle("Past %d".formatted(number))).opening(noFirstPrompt())
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 14, 0).minusMinutes(number * 10L))
                 .age(new SessionAge(Duration.ofMinutes(number * 10L)))
                 .links(List.of(links))
@@ -293,19 +262,6 @@ public final class SessionsViewFixture {
                 .name(new SessionName(name))
                 .state(state)
                 .links(List.of(links))
-                .build();
-    }
-
-    public static LiveSessionView kittySessionView() {
-        return sessionViewBuilder().name(new SessionName("fix-status")).residenceName(Optional.of(kittyName())).build();
-    }
-
-    public static LiveSessionView tmuxSessionView() {
-        return sessionViewBuilder()
-                .id(secondSessionId())
-                .name(new SessionName("lint-pass"))
-                .state(waitingForInput())
-                .residenceName(Optional.of(tmuxName()))
                 .build();
     }
 

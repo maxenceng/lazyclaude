@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.application;
 
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
+import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingTheRegisteredSession;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedIn;
@@ -93,6 +94,7 @@ class SessionApplicationServiceWorktreeTest {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(worktreeDirectory())));
         when(locator.locate(worktreeDirectory())).thenReturn(project());
+        hostingTheRegisteredSession(service, hosts);
 
         assertThat(service.worktreeOf(project(), noTickets(), ticketWorktree(), headCommit()))
                 .contains(heldWorktree(occupiedWorktreeContents()));
@@ -133,6 +135,7 @@ class SessionApplicationServiceWorktreeTest {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
         when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(worktreeDirectory())));
         when(locator.locate(worktreeDirectory())).thenReturn(project());
+        hostingTheRegisteredSession(service, hosts);
 
         assertThatThrownBy(() -> service.removeWorktree(project(), noTickets(), ticketWorktree(), headCommit()))
                 .isInstanceOf(WorktreeNotClearException.class);

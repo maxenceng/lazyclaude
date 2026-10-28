@@ -1,11 +1,10 @@
 package dev.maxenceng.lazyclaude.shell;
 
-/** Where keyboard focus is: one of the four left panels, or the two a review swaps them for, or the main view or dock on the right. */
+/** Where keyboard focus is: one of the three left panels, or the two a review swaps them for, or the main view or dock on the right. */
 enum Focus {
     BOARD(Column.LEFT, false),
     SESSIONS(Column.LEFT, false),
     DOCS(Column.LEFT, false),
-    ELSEWHERE(Column.LEFT, false),
     FILES(Column.LEFT, true),
     COMMENTS(Column.LEFT, true),
     MAIN(Column.RIGHT, false),
@@ -26,7 +25,7 @@ enum Focus {
         return column;
     }
 
-    /** Whether it is one of the panels a review shows in place of the four, which do not stand beside them. */
+    /** Whether it is one of the panels a review shows in place of the three, which do not stand beside them. */
     boolean reviewing() {
         return reviewing;
     }

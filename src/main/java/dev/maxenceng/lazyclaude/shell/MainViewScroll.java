@@ -2,9 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 /**
  * Where the main view is scrolled to. The offset is the first visible row of the whole detail; the
- * heights come from the last render, so it can never rest beyond the last row that fits. A view that tails
- * (a transcript) also follows: while it rests on the last row, content added below carries it down, and scrolling
- * up lets go until the bottom is reached again.
+ * heights come from the last render, so it can never rest beyond the last row that fits.
  */
 final class MainViewScroll {
 
@@ -12,7 +10,6 @@ final class MainViewScroll {
     private static final int HALF = 2;
 
     private int offset;
-    private boolean following = true;
     private int contentHeight;
     private int viewHeight;
 
@@ -25,13 +22,6 @@ final class MainViewScroll {
         this.contentHeight = contentHeight;
         this.viewHeight = viewHeight;
         offset = Math.min(offset, maxOffset());
-    }
-
-    /** Takes the heights the last render saw like {@link #observe}, and keeps the last row in view while the view follows. */
-    void follow(int contentHeight, int viewHeight) {
-        this.contentHeight = contentHeight;
-        this.viewHeight = viewHeight;
-        offset = following ? maxOffset() : Math.min(offset, maxOffset());
     }
 
     void rowDown() {
@@ -56,18 +46,14 @@ final class MainViewScroll {
 
     void bottom() {
         offset = maxOffset();
-        following = true;
     }
 
-    /** Back to the top, and ready to follow: the next thing shown that tails starts at its latest row. */
     void reset() {
         top();
-        following = true;
     }
 
     private void move(int rows) {
         offset = Math.clamp((long) offset + rows, 0, maxOffset());
-        following = offset >= maxOffset();
     }
 
     private int halfPage() {

@@ -11,7 +11,4 @@ public sealed interface ProjectLocation permits LocatedInProject, NotLocated {
 
     /** Whether a session working in {@code directory}, located like this, is {@code project}'s. */
     boolean holds(Project project, WorkingDirectory directory);
-
-    /** Where a session working in {@code directory}, located like this, belongs when {@code project} is the one lazyclaude works on. */
-    SessionPlace placeOf(Project project, WorkingDirectory directory);
 }

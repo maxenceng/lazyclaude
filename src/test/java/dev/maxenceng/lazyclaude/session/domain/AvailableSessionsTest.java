@@ -1,6 +1,5 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
-import static dev.maxenceng.lazyclaude.session.domain.ElsewhereGroupFixture.otherProjectGroup;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSession;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
@@ -8,7 +7,6 @@ import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hoste
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openLive;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openStarting;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.startingIn;
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.hostedLiveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.newestSession;
@@ -17,7 +15,6 @@ import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.session
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsWithElsewhere;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.sessionName;
@@ -38,53 +35,17 @@ import dev.maxenceng.lazyclaude.session.published.SessionName;
 class AvailableSessionsTest {
 
     @Test
-    void shouldMarkALiveSessionHostedWhenItsPidIsOneLazyclaudeSpawned() {
+    void shouldKeepALiveSessionWhenItsPidIsOneLazyclaudeSpawned() {
         Sessions hosting = liveSessionsOf(List.of(liveSession())).hosting(hostedSessionsOf(hostedSession()));
 
-        assertThat(hosting).isEqualTo(availableSessionsHosting(List.of(hostedLiveSession()), List.of(openLive(hostedLiveSession()))));
+        assertThat(hosting).isEqualTo(availableSessionsHosting(List.of(liveSession()), List.of(openLive(liveSession()))));
     }
 
     @Test
-    void shouldLeaveALiveSessionOutsideWhenItsPidIsNotOneLazyclaudeSpawned() {
+    void shouldDropALiveSessionWhenItsPidIsNotOneLazyclaudeSpawned() {
         AvailableSessions hosting = liveSessionsOf(List.of(newestSession())).hosting(hostedSessionsOf(hostedSession()));
 
-        assertThat(hosting.live()).extracting(LiveSession::hosting).containsExactly(Hosting.OUTSIDE);
-    }
-
-    @Test
-    void shouldMarkASessionElsewhereHostedWhenItsPidIsOneLazyclaudeSpawned() {
-        AvailableSessions hosting = liveSessionsWithElsewhere(List.of(), List.of(otherProjectGroup(List.of(liveSession()))))
-                .hosting(hostedSessionsOf(hostedSession()));
-
-        assertThat(hosting.elsewhere())
-                .as("a session lazyclaude hosts is never an outside session, wherever its cwd belongs")
-                .isEqualTo(List.of(otherProjectGroup(List.of(hostedLiveSession()))));
-    }
-
-    @Test
-    void shouldLeaveASessionElsewhereOutsideWhenItsPidIsNotOneLazyclaudeSpawned() {
-        AvailableSessions hosting = liveSessionsWithElsewhere(List.of(), List.of(otherProjectGroup(List.of(newestSession()))))
-                .hosting(hostedSessionsOf(hostedSession()));
-
-        assertThat(hosting.elsewhere()).isEqualTo(List.of(otherProjectGroup(List.of(newestSession()))));
-    }
-
-    @Test
-    void shouldFindALiveSessionOfTheProjectById() {
-        assertThat(liveSessionsOf(List.of(liveSession(), newestSession())).liveSession(newestSession().id())).contains(newestSession());
-    }
-
-    @Test
-    void shouldFindALiveSessionElsewhereById() {
-        AvailableSessions sessions =
-                liveSessionsWithElsewhere(List.of(liveSession()), List.of(otherProjectGroup(List.of(newestSession()))));
-
-        assertThat(sessions.liveSession(newestSession().id())).contains(newestSession());
-    }
-
-    @Test
-    void shouldFindNoLiveSessionForAnIdNoneRuns() {
-        assertThat(liveSessionsOf(List.of(liveSession())).liveSession(newestSession().id())).isEmpty();
+        assertThat(hosting.live()).as("a claude started in another terminal is not lazyclaude's to list").isEmpty();
     }
 
     @Test
@@ -178,16 +139,6 @@ class AvailableSessionsTest {
                 liveSessionsOf(List.of(sessionIn(workingDirectoryAt("/work/app.worktrees/PROJ-1-ticket-again"))));
 
         assertThat(sessions.namesIn(worktreeDirectory())).isEmpty();
-    }
-
-    @Test
-    void shouldNameASessionElsewhereWhoseDirectoryIsInTheWorktree() {
-        AvailableSessions sessions = liveSessionsWithElsewhere(
-                List.of(), List.of(otherProjectGroup(List.of(sessionIn(worktreeDirectory())))));
-
-        assertThat(sessions.namesIn(worktreeDirectory()))
-                .as("any live session counts, whichever place the sessions are grouped under")
-                .containsExactly(sessionName());
     }
 
     @Test

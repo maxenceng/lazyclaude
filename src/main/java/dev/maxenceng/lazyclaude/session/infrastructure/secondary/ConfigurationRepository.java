@@ -14,7 +14,7 @@ import dev.maxenceng.lazyclaude.session.domain.ConfigurationRefusedException;
 
 /**
  * Finds and reads {@code config.yml}, under {@code $XDG_CONFIG_HOME/lazyclaude/} or {@code ~/.config/lazyclaude/} when that is
- * unset, as {@link KittyConfigRepository} finds kitty's. A missing file is the defaults, but a link to a missing one is refused:
+ * unset, as the XDG base directory spec has it. A missing file is the defaults, but a link to a missing one is refused:
  * its rebindings were meant to apply. lazyclaude never writes it.
  */
 public final class ConfigurationRepository implements ConfigurationPort {
@@ -45,7 +45,7 @@ public final class ConfigurationRepository implements ConfigurationPort {
             if (Files.isSymbolicLink(file)) {
                 throw new ConfigurationRefusedException(LINKS_TO_NOTHING.formatted(shown));
             }
-            return Configuration.defaults();
+            return ConfigurationNodes.defaults();
         } catch (IOException e) {
             throw new ConfigurationRefusedException(CANNOT_READ.formatted(shown, FileFailure.causeOf(e)));
         }

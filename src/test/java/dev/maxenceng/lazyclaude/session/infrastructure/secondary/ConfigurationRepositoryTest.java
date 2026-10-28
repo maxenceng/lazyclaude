@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.defaultConfiguration;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.rebindingFocusLeft;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withoutDesktopNotifications;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigYmlFixture.configYml;
@@ -17,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import dev.maxenceng.lazyclaude.session.domain.Configuration;
 import dev.maxenceng.lazyclaude.session.domain.ConfigurationRefusedException;
 
 class ConfigurationRepositoryTest {
@@ -36,14 +36,14 @@ class ConfigurationRepositoryTest {
 
     @Test
     void shouldGiveTheDefaultsWhenThereIsNoFile() {
-        assertThat(repository.configuration()).isEqualTo(Configuration.defaults());
+        assertThat(repository.configuration()).isEqualTo(defaultConfiguration());
     }
 
     @Test
     void shouldGiveTheDefaultsForAnEmptyFile() throws IOException {
         configYml(configHome, "");
 
-        assertThat(repository.configuration()).isEqualTo(Configuration.defaults());
+        assertThat(repository.configuration()).isEqualTo(defaultConfiguration());
     }
 
     @Test

@@ -279,6 +279,21 @@ class ArchitectureTest {
             .should(beBuiltOnlyByTheirOwnBuilderWhenTheyHoldMoreThanOne())
             .allowEmptyShould(true);
 
+    // A composite is assembled by whoever reads its parts, and a sealed type is a choice its reader makes; a static factory on
+    // either moves that reading into the type and passes the builder rule through a call to self (ADR 0060).
+    @ArchTest
+    static final ArchRule composite_and_sealed_types_declare_no_static_factory = classes()
+            .that()
+            .resideInAnyPackage("..domain..", "..published..")
+            .and()
+            .resideOutsideOfPackage(ROOT + ".error..")
+            .and()
+            .areNotEnums()
+            .and()
+            .haveSimpleNameNotEndingWith("Builder")
+            .should(buildNothingOfThemselvesFromAStaticMethodWhenCompositeOrSealed())
+            .allowEmptyShould(true);
+
     // A view is a read model as wide as the domain type it shows, so it is built the same way.
     @ArchTest
     static final ArchRule views_are_built_through_their_own_builder = classes()
@@ -527,6 +542,27 @@ class ArchitectureTest {
                                                 construction.getOriginOwner().getSimpleName(),
                                                 type.getSimpleName(),
                                                 type.getSimpleName()))));
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> buildNothingOfThemselvesFromAStaticMethodWhenCompositeOrSealed() {
+        return new ArchCondition<>("build nothing of themselves from a static method when composite or sealed") {
+            @Override
+            public void check(JavaClass type, ConditionEvents events) {
+                if (nonStaticFields(type).size() < 2 && !type.reflect().isSealed()) {
+                    return;
+                }
+                Stream.<JavaCodeUnitAccess<?>>concat(
+                                type.getConstructorCallsFromSelf().stream(), type.getConstructorReferencesFromSelf().stream())
+                        .filter(construction -> construction.getOrigin().getModifiers().contains(JavaModifier.STATIC))
+                        .filter(construction -> construction.getTargetOwner().isAssignableTo(type.getName()))
+                        .forEach(construction -> events.add(SimpleConditionEvent.violated(
+                                construction,
+                                "%s builds %s in a static method; the reader of its parts builds it"
+                                        .formatted(
+                                                type.getSimpleName(),
+                                                construction.getTargetOwner().getSimpleName()))));
             }
         };
     }

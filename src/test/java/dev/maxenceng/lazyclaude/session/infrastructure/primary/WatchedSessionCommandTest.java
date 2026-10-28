@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingTheRegisteredSession;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
@@ -24,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
+import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
@@ -56,6 +58,9 @@ class WatchedSessionCommandTest {
     @Mock
     private DesktopNotificationPort notifications;
 
+    @Mock
+    private HostPort hosts;
+
     @Test
     void shouldCloseTheNotificationOfTheSessionItIsToldIsInView() {
         when(sessions.liveSessions(any()))
@@ -63,8 +68,8 @@ class WatchedSessionCommandTest {
                 .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
         when(locator.locate(any())).thenReturn(project());
         when(notifications.show(inputNotification())).thenReturn(notificationId());
-        SessionApplicationService service =
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications);
+        SessionApplicationService service = hostingTheRegisteredSession(
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts);
         service.subscribe(project(), noTickets(), read -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(changed.capture(), any());
@@ -83,8 +88,8 @@ class WatchedSessionCommandTest {
                 .thenReturn(List.of(reportedWaitingFor(inputNeeded())))
                 .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
         when(locator.locate(any())).thenReturn(project());
-        SessionApplicationService service =
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications);
+        SessionApplicationService service = hostingTheRegisteredSession(
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts);
         service.subscribe(project(), noTickets(), read -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(changed.capture(), any());

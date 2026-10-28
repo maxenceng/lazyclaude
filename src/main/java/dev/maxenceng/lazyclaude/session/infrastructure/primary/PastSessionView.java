@@ -8,15 +8,19 @@ import java.util.Optional;
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.PastSession;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
+import dev.maxenceng.lazyclaude.session.published.OpeningPrompt;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
+import dev.maxenceng.lazyclaude.session.published.TranscriptReading;
 
 /** One past session as the shell reads it: what its row and the main view show, and the tickets it is linked to. */
 public record PastSessionView(
         SessionId id,
         SessionTitle title,
+        OpeningPrompt opening,
+        TranscriptReading reading,
         Path directory,
         LocalDateTime lastActivity,
         SessionAge age,
@@ -27,6 +31,8 @@ public record PastSessionView(
         return builder()
                 .id(session.id())
                 .title(session.title())
+                .opening(session.opening())
+                .reading(session.reading())
                 .directory(session.directory().path())
                 .lastActivity(available.lastActiveLocally(session))
                 .age(available.ageOf(session))
@@ -52,6 +58,8 @@ public record PastSessionView(
     public static final class PastSessionViewBuilder {
         private SessionId id;
         private SessionTitle title;
+        private OpeningPrompt opening;
+        private TranscriptReading reading;
         private Path directory;
         private LocalDateTime lastActivity;
         private SessionAge age;
@@ -67,6 +75,16 @@ public record PastSessionView(
 
         public PastSessionViewBuilder title(SessionTitle title) {
             this.title = title;
+            return this;
+        }
+
+        public PastSessionViewBuilder opening(OpeningPrompt opening) {
+            this.opening = opening;
+            return this;
+        }
+
+        public PastSessionViewBuilder reading(TranscriptReading reading) {
+            this.reading = reading;
             return this;
         }
 
@@ -96,7 +114,7 @@ public record PastSessionView(
         }
 
         public PastSessionView build() {
-            return new PastSessionView(id, title, directory, lastActivity, age, startedAt, links);
+            return new PastSessionView(id, title, opening, reading, directory, lastActivity, age, startedAt, links);
         }
     }
 }

@@ -126,14 +126,8 @@ final class SessionRows {
         return selected;
     }
 
-    /** The session whose transcript the main view shows: the selected one, unless lazyclaude hosts it or the row is not a session. */
-    Optional<TranscriptSubject> selectedTranscript() {
-        return selected().flatMap(row -> switch (row) {
-            case LiveSessionRow live when !live.session().isHosted() ->
-                Optional.of(new TranscriptSubject(live.session().id(), live.session().directory()));
-            case PastSessionRow past -> Optional.of(new TranscriptSubject(past.session().id(), past.session().directory()));
-            default -> Optional.empty();
-        });
+    boolean pastSelected() {
+        return selected().filter(PastSessionRow.class::isInstance).isPresent();
     }
 
     boolean olderSelected() {

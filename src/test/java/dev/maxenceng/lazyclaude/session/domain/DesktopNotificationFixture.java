@@ -29,13 +29,6 @@ public final class DesktopNotificationFixture {
                 .build();
     }
 
-    public static DesktopNotification otherProjectNotification() {
-        return DesktopNotification.builder()
-                .title(new NotificationTitle("other · lazyclaude-b6"))
-                .body(new NotificationBody("input needed"))
-                .build();
-    }
-
     public static NotificationId secondNotificationId() {
         return new NotificationId("43");
     }
