@@ -3,12 +3,12 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.session.published.ClaudeVersionFixture.version;
 import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
+import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.noFirstPrompt;
+import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.openingUnder;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.thirdProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
-import static dev.maxenceng.lazyclaude.session.published.SessionFactsFixture.readFacts;
-import static dev.maxenceng.lazyclaude.session.published.SessionFactsFixture.titledFacts;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.thirdSessionId;
@@ -17,6 +17,9 @@ import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.sess
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.thirdSessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
+import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.aiTitle;
+import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.firstPrompt;
+import static dev.maxenceng.lazyclaude.session.published.TranscriptReadingFixture.readable;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 
 import java.time.Duration;
@@ -175,7 +178,9 @@ public final class SessionsViewFixture {
     public static PastSessionView.PastSessionViewBuilder pastSessionViewBuilder() {
         return PastSessionView.builder()
                 .id(pastSessionIdOf(1))
-                .facts(readFacts())
+                .title(aiTitle())
+                .opening(firstPrompt())
+                .reading(readable())
                 .directory(projectRootDirectory().path())
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 13, 50))
                 .age(new SessionAge(Duration.ofMinutes(10)))
@@ -188,13 +193,13 @@ public final class SessionsViewFixture {
     }
 
     public static PastSessionView pastSessionViewTitled(SessionTitle title) {
-        return pastSessionViewBuilder().facts(titledFacts(title)).build();
+        return pastSessionViewBuilder().title(title).opening(openingUnder(title)).build();
     }
 
     public static PastSessionView pastSessionViewNumbered(int number) {
         return pastSessionViewBuilder()
                 .id(pastSessionIdOf(number))
-                .facts(titledFacts(new AiTitle("Past session %d".formatted(number))))
+                .title(new AiTitle("Past session %d".formatted(number))).opening(noFirstPrompt())
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 14, 0).minusMinutes(number * 10L))
                 .age(new SessionAge(Duration.ofMinutes(number * 10L)))
                 .build();
@@ -203,7 +208,7 @@ public final class SessionsViewFixture {
     public static PastSessionView linkedPastSessionView(int number, TicketLink... links) {
         return pastSessionViewBuilder()
                 .id(pastSessionIdOf(number))
-                .facts(titledFacts(new AiTitle("Past %d".formatted(number))))
+                .title(new AiTitle("Past %d".formatted(number))).opening(noFirstPrompt())
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 14, 0).minusMinutes(number * 10L))
                 .age(new SessionAge(Duration.ofMinutes(number * 10L)))
                 .links(List.of(links))

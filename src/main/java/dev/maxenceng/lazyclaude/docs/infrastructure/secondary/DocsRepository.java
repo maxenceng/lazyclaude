@@ -10,8 +10,10 @@ import dev.maxenceng.lazyclaude.docs.domain.DocsUnavailableException;
 import dev.maxenceng.lazyclaude.docs.domain.Document;
 import dev.maxenceng.lazyclaude.docs.domain.ReadDocument;
 import dev.maxenceng.lazyclaude.docs.domain.UnreadableDocument;
+import dev.maxenceng.lazyclaude.docs.published.Content;
 import dev.maxenceng.lazyclaude.docs.published.DocumentPath;
 import dev.maxenceng.lazyclaude.docs.published.DocumentText;
+import dev.maxenceng.lazyclaude.docs.published.EmptyDocument;
 import dev.maxenceng.lazyclaude.docs.published.Reason;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Utf8Text;
@@ -49,9 +51,14 @@ public final class DocsRepository implements DocsPort {
         return Utf8Text.decode(bytes)
                 .<Document>map(text -> ReadDocument.builder()
                         .path(path)
-                        .text(DocumentText.of(text))
+                        .text(text(text))
                         .build())
                 .orElseGet(() -> unreadable(path, UNREADABLE.formatted(NOT_UTF8)));
+    }
+
+    /** A file of only whitespace shows as empty, the same as one that holds nothing. */
+    private static DocumentText text(String text) {
+        return text.isBlank() ? new EmptyDocument() : new Content(text);
     }
 
     private static UnreadableDocument unreadable(DocumentPath path, String reason) {

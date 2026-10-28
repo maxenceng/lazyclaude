@@ -6,12 +6,13 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
-import static dev.maxenceng.lazyclaude.session.published.SessionFactsFixture.titledFacts;
-import static dev.maxenceng.lazyclaude.session.published.SessionFactsFixture.unreadableFacts;
-import static dev.maxenceng.lazyclaude.session.published.SessionFactsFixture.untitledFacts;
+import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.noFirstPrompt;
+import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.openingUnder;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.firstPrompt;
+import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.noTitle;
 import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
 import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.weakLink;
+import static dev.maxenceng.lazyclaude.session.published.TranscriptReadingFixture.unreadable;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
@@ -80,7 +81,7 @@ class ShellSessionCardTest {
     @Test
     void shouldHeadTheCardWithTheFirstPromptAndOmitTheLineBehindTheMarkWhenTheTranscriptHasNoTitle() {
         Shell shell = shellOnSessions(
-                pastSessionsViewOf(List.of(pastSessionViewBuilder().facts(titledFacts(firstPrompt())).build())));
+                pastSessionsViewOf(List.of(pastSessionViewBuilder().title(firstPrompt()).opening(openingUnder(firstPrompt())).build())));
 
         assertThat(Screen.of(shell).mainViewRows())
                 .containsOnlyOnce("/ticket start PROJ-1")
@@ -89,20 +90,31 @@ class ShellSessionCardTest {
 
     @Test
     void shouldHeadTheCardWithTheShortIdWhenTheTranscriptHoldsNeitherTitleNorPrompt() {
-        Shell shell = shellOnSessions(pastSessionsViewOf(List.of(pastSessionViewBuilder().facts(untitledFacts()).build())));
+        Shell shell = shellOnSessions(pastSessionsViewOf(List.of(pastSessionViewBuilder().title(noTitle()).opening(noFirstPrompt()).build())));
 
         assertThat(Screen.of(shell).mainViewRows().getFirst()).isEqualTo(pastSessionView().id().shortValue());
     }
 
     @Test
-    void shouldShowWhyTheTranscriptCannotBeReadInPlaceOfTheFactsItLacks() {
-        Shell shell = shellOnSessions(pastSessionsViewOf(List.of(pastSessionViewBuilder().facts(unreadableFacts()).build())));
+    void shouldKeepWhatAnEarlierReadSaidAndAddWhyTheTranscriptCannotBeReadNow() {
+        Shell shell = shellOnSessions(pastSessionsViewOf(List.of(pastSessionViewBuilder().reading(unreadable()).build())));
 
         assertThat(Screen.of(shell).mainViewRows())
                 .containsSubsequence(
+                        "Refine PROJ-1",
+                        "› /ticket start PROJ-1",
                         "transcript unreadable: no registry and no claude",
                         "/work/app",
-                        "started 2026-10-10 12:40 · last active 10m ago")
+                        "started 2026-10-10 12:40 · last active 10m ago");
+    }
+
+    @Test
+    void shouldHeadTheCardOfATranscriptNeverReadWithTheShortIdAndWhyItCannotBeRead() {
+        Shell shell = shellOnSessions(pastSessionsViewOf(List.of(
+                pastSessionViewBuilder().title(noTitle()).opening(noFirstPrompt()).reading(unreadable()).build())));
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .containsSubsequence(pastSessionView().id().shortValue(), "transcript unreadable: no registry and no claude")
                 .noneMatch(row -> row.startsWith("›"));
     }
 
@@ -110,7 +122,7 @@ class ShellSessionCardTest {
     void shouldStillResumeAPastSessionWhoseTranscriptCannotBeReadWithEnter() {
         when(hosting.resume(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
         Shell shell = shellHosting(
-                pastSessionsViewOf(List.of(pastSessionViewBuilder().facts(unreadableFacts()).build())), hosting, blankScreens());
+                pastSessionsViewOf(List.of(pastSessionViewBuilder().reading(unreadable()).build())), hosting, blankScreens());
         shell.press(alt('j'));
 
         shell.press(enter());

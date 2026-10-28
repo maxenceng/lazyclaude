@@ -9,7 +9,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
-import static dev.maxenceng.lazyclaude.session.published.SessionFactsFixture.titledFacts;
+import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.openingUnder;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.firstPrompt;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.noTitle;
@@ -190,7 +190,7 @@ class ShellPastSessionsTest {
         Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionView()), List.of(pastSessionViewNumbered(2))));
 
         shell.sessionsChanged(pastSessionsViewOf(List.of(
-                pastSessionViewBuilder().id(sessionId()).facts(titledFacts(firstPrompt())).build(), pastSessionViewNumbered(2))));
+                pastSessionViewBuilder().id(sessionId()).title(firstPrompt()).opening(openingUnder(firstPrompt())).build(), pastSessionViewNumbered(2))));
 
         assertThat(Screen.of(shell).reversedText())
                 .as("the selection follows the session id from the live block into the past one")
@@ -203,7 +203,7 @@ class ShellPastSessionsTest {
     void shouldUnfoldTheOlderPastSessionsWhenTheSelectedSessionDiesIntoThem() {
         Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionView()), pastSessionViewsNumbered(5)));
         List<PastSessionView> past = new ArrayList<>(pastSessionViewsNumbered(5));
-        past.add(pastSessionViewBuilder().id(sessionId()).facts(titledFacts(firstPrompt())).build());
+        past.add(pastSessionViewBuilder().id(sessionId()).title(firstPrompt()).opening(openingUnder(firstPrompt())).build());
 
         shell.sessionsChanged(pastSessionsViewOf(past));
 

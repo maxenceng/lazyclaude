@@ -10,11 +10,6 @@ public record Configuration(ReservedChords reservedChords, boolean desktopNotifi
         Assert.notNull("reserved chords", reservedChords);
     }
 
-    /** What a missing file means: the layout decision's chords, and notifications on. */
-    public static Configuration defaults() {
-        return new Configuration(ReservedChords.defaults(), true);
-    }
-
     public static ConfigurationBuilder builder() {
         return new ConfigurationBuilder();
     }

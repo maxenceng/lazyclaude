@@ -15,11 +15,17 @@ import dev.maxenceng.lazyclaude.session.domain.NotLocated;
 import dev.maxenceng.lazyclaude.session.domain.PastSession;
 import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
 import dev.maxenceng.lazyclaude.session.domain.StartedAt;
-import dev.maxenceng.lazyclaude.session.published.ReadFacts;
+import dev.maxenceng.lazyclaude.session.published.AiTitle;
+import dev.maxenceng.lazyclaude.session.published.FirstPrompt;
+import dev.maxenceng.lazyclaude.session.published.NoFirstPrompt;
+import dev.maxenceng.lazyclaude.session.published.NoTitle;
+import dev.maxenceng.lazyclaude.session.published.OpeningPrompt;
+import dev.maxenceng.lazyclaude.session.published.ReadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.Reason;
-import dev.maxenceng.lazyclaude.session.published.SessionFacts;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.session.published.UnreadableFacts;
+import dev.maxenceng.lazyclaude.session.published.SessionTitle;
+import dev.maxenceng.lazyclaude.session.published.TranscriptReading;
+import dev.maxenceng.lazyclaude.session.published.UnreadableTranscript;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -69,7 +75,7 @@ record CachedTranscript(
 
     /**
      * Empty when the transcript says too little to be a session: no session id, no {@code cwd}, no entry with a timestamp, or a
-     * {@code cwd} that is no path. {@code unreadable} is why the transcript cannot be read now, which replaces its facts.
+     * {@code cwd} that is no path. {@code unreadable} is why the transcript cannot be read now; what earlier reads drew from it stays.
      */
     Optional<LocatedPastSession> toLocated(Optional<Reason> unreadable) {
         if (sessionId.isBlank() || cwd == null || startedAt == null || lastActivity == null) {
@@ -78,7 +84,9 @@ record CachedTranscript(
         try {
             PastSession session = PastSession.builder()
                     .id(new SessionId(sessionId))
-                    .facts(unreadable.<SessionFacts>map(UnreadableFacts::new).orElseGet(this::facts))
+                    .title(title())
+                    .opening(opening())
+                    .reading(unreadable.<TranscriptReading>map(UnreadableTranscript::new).orElseGet(ReadableTranscript::new))
                     .directory(new WorkingDirectory(Path.of(cwd)))
                     .lastActivity(new LastActivity(Instant.ofEpochMilli(lastActivity)))
                     .startedAt(new StartedAt(Instant.ofEpochMilli(startedAt)))
@@ -99,8 +107,16 @@ record CachedTranscript(
                 .build();
     }
 
-    private SessionFacts facts() {
-        return ReadFacts.of(said(aiTitle), said(firstPrompt));
+    /** The title Claude Code gave the session, else what it was first asked, else nothing. */
+    private SessionTitle title() {
+        return said(aiTitle)
+                .<SessionTitle>map(AiTitle::new)
+                .or(() -> said(firstPrompt).map(FirstPrompt::new))
+                .orElseGet(NoTitle::new);
+    }
+
+    private OpeningPrompt opening() {
+        return said(firstPrompt).<OpeningPrompt>map(FirstPrompt::new).orElseGet(NoFirstPrompt::new);
     }
 
     /** A title or a prompt written blank says nothing, the same as none. */

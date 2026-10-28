@@ -45,7 +45,7 @@ public final class ConfigurationRepository implements ConfigurationPort {
             if (Files.isSymbolicLink(file)) {
                 throw new ConfigurationRefusedException(LINKS_TO_NOTHING.formatted(shown));
             }
-            return Configuration.defaults();
+            return ConfigurationNodes.defaults();
         } catch (IOException e) {
             throw new ConfigurationRefusedException(CANNOT_READ.formatted(shown, FileFailure.causeOf(e)));
         }

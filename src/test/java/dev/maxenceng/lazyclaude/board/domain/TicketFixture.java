@@ -8,11 +8,11 @@ import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
 import static dev.maxenceng.lazyclaude.board.published.TypeNameFixture.typeName;
 
 import dev.maxenceng.lazyclaude.board.domain.Ticket.TicketBuilder;
+import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoContext;
 import dev.maxenceng.lazyclaude.board.published.NoType;
 import dev.maxenceng.lazyclaude.board.published.Status;
-import dev.maxenceng.lazyclaude.board.published.TicketBody;
 
 public final class TicketFixture {
 
@@ -34,7 +34,7 @@ public final class TicketFixture {
     }
 
     public static Ticket ticketWithBody(String text) {
-        return ticketBuilder().body(TicketBody.of(text)).build();
+        return ticketBuilder().body(new Body(text)).build();
     }
 
     public static Ticket bareTicket() {

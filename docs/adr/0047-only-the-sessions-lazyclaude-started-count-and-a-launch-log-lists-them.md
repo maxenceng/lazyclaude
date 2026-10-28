@@ -55,5 +55,8 @@ to serve sessions started elsewhere costs more than it gives a developer who sta
   the context map and CLAUDE.md change with the code that goes, not before it.
 - A session started in a plain terminal and later wanted in lazyclaude has to be resumed by hand; lazyclaude will not
   find it.
+- A `claude` started in another terminal no longer blocks removing its ticket's worktree, and its `/ticket` run no longer
+  preselects a verb: the worktree check and the preselection see hosted sessions only. git still refuses to remove a
+  worktree with uncommitted changes.
 - Whether a hosted session outlives lazyclaude, and so whether the next launch offers to resume what quitting ended, is
   LAZY-26's.

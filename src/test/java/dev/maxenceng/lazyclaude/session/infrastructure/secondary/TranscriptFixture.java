@@ -16,8 +16,10 @@ import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
 import dev.maxenceng.lazyclaude.session.domain.RootFallback;
 import dev.maxenceng.lazyclaude.session.domain.StartedAt;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
-import dev.maxenceng.lazyclaude.session.published.SessionFacts;
+import dev.maxenceng.lazyclaude.session.published.OpeningPrompt;
+import dev.maxenceng.lazyclaude.session.published.ReadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.SessionTitle;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class TranscriptFixture {
@@ -171,11 +173,19 @@ public final class TranscriptFixture {
     }
 
     public static LocatedPastSession pastSessionOf(
-            String sessionId, SessionFacts facts, String cwd, String lastActivity, String startedAt, ProjectLocation location) {
+            String sessionId,
+            SessionTitle title,
+            OpeningPrompt opening,
+            String cwd,
+            String lastActivity,
+            String startedAt,
+            ProjectLocation location) {
         return LocatedPastSession.builder()
                 .session(PastSession.builder()
                         .id(new SessionId(sessionId))
-                        .facts(facts)
+                        .title(title)
+                        .opening(opening)
+                        .reading(new ReadableTranscript())
                         .directory(new WorkingDirectory(Path.of(cwd)))
                         .lastActivity(new LastActivity(Instant.parse(lastActivity)))
                         .startedAt(new StartedAt(Instant.parse(startedAt)))

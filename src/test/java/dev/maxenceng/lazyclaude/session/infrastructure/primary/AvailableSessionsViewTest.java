@@ -23,9 +23,9 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTicketHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsViewHosting;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
-import static dev.maxenceng.lazyclaude.session.published.SessionFactsFixture.unreadableFacts;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
+import static dev.maxenceng.lazyclaude.session.published.TranscriptReadingFixture.unreadable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 
@@ -162,8 +162,8 @@ class AvailableSessionsViewTest {
     @Test
     void shouldViewAPastSessionWhoseTranscriptCannotBeReadWithTheReason() {
         AvailableSessionsView view =
-                AvailableSessionsView.from(pastSessionsOf(List.of(pastSessionBuilder().facts(unreadableFacts()).build())));
+                AvailableSessionsView.from(pastSessionsOf(List.of(pastSessionBuilder().reading(unreadable()).build())));
 
-        assertThat(view.past()).containsExactly(pastSessionViewBuilder().facts(unreadableFacts()).build());
+        assertThat(view.past()).containsExactly(pastSessionViewBuilder().reading(unreadable()).build());
     }
 }

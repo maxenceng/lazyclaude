@@ -12,15 +12,17 @@ import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.FirstPrompt;
 import dev.maxenceng.lazyclaude.session.published.Marker;
+import dev.maxenceng.lazyclaude.session.published.NoFirstPrompt;
 import dev.maxenceng.lazyclaude.session.published.NoTitle;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
-import dev.maxenceng.lazyclaude.session.published.ReadFacts;
+import dev.maxenceng.lazyclaude.session.published.ReadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
+import dev.maxenceng.lazyclaude.session.published.TranscriptReading;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
-import dev.maxenceng.lazyclaude.session.published.UnreadableFacts;
+import dev.maxenceng.lazyclaude.session.published.UnreadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.Version;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
@@ -164,7 +166,7 @@ final class SessionText {
 
     /** What a past session's row and heading say: its title, else what it was first asked, else its short id. */
     static String title(PastSessionView session) {
-        return switch (session.facts().title()) {
+        return switch (session.title()) {
             case AiTitle title -> title.value();
             case FirstPrompt prompt -> prompt.value();
             case NoTitle _ -> session.id().shortValue();
@@ -173,7 +175,7 @@ final class SessionText {
 
     /** A title that stands in for a missing one is dimmed, so it does not read as something the session said. */
     static boolean titleIsStandIn(PastSessionView session) {
-        return session.facts().title() instanceof NoTitle;
+        return session.title() instanceof NoTitle;
     }
 
     static String label(SessionState state) {
@@ -210,7 +212,8 @@ final class SessionText {
 
     /**
      * The rows of the main view for a past session: its title, what it was first asked behind {@code ›} when the title is not that
-     * prompt itself, or why the transcript cannot be read; then each ticket it is linked to, its directory, and when it ran.
+     * prompt itself, and why the transcript cannot be read now when it cannot; then each ticket it is linked to, its directory,
+     * and when it ran.
      */
     static List<DetailRow> card(PastSessionView session) {
         return Stream.of(
@@ -230,12 +233,24 @@ final class SessionText {
     private static Stream<DetailRow> cardHead(PastSessionView session) {
         Style heading = titleIsStandIn(session) ? Style.EMPTY.bold().dim() : Style.EMPTY.bold();
         DetailRow title = new DetailRow(title(session), heading);
-        return switch (session.facts()) {
-            case ReadFacts(AiTitle _, FirstPrompt prompt) ->
-                Stream.of(title, new DetailRow(PROMPT_FORMAT.formatted(prompt.value()), Style.EMPTY));
-            case ReadFacts _ -> Stream.of(title);
-            case UnreadableFacts unreadable ->
-                Stream.of(title, new DetailRow(UNREADABLE_FORMAT.formatted(unreadable.reason().value()), Style.EMPTY.dim()));
+        return Stream.of(Stream.of(title), openingLine(session), readingLine(session.reading()))
+                .flatMap(Function.identity());
+    }
+
+    /** The opening prompt is shown only under a title Claude Code wrote; a title that is the prompt already says it. */
+    private static Stream<DetailRow> openingLine(PastSessionView session) {
+        return switch (session.opening()) {
+            case FirstPrompt prompt when session.title() instanceof AiTitle ->
+                Stream.of(new DetailRow(PROMPT_FORMAT.formatted(prompt.value()), Style.EMPTY));
+            case FirstPrompt _, NoFirstPrompt _ -> Stream.empty();
+        };
+    }
+
+    private static Stream<DetailRow> readingLine(TranscriptReading reading) {
+        return switch (reading) {
+            case ReadableTranscript _ -> Stream.empty();
+            case UnreadableTranscript unreadable ->
+                Stream.of(new DetailRow(UNREADABLE_FORMAT.formatted(unreadable.reason().value()), Style.EMPTY.dim()));
         };
     }
 
