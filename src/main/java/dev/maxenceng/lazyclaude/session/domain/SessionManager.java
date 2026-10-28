@@ -172,7 +172,7 @@ public final class SessionManager {
     }
 
     private Optional<PastSession> pastSessionOf(LaunchEntry entry, LoggedTranscripts transcripts, KnownTickets tickets) {
-        return Optional.ofNullable(transcripts.read().get(entry.id()))
+        return transcripts.of(entry.id())
                 .map(facts -> PastSession.builder()
                         .id(entry.id())
                         .title(facts.title())
@@ -189,7 +189,7 @@ public final class SessionManager {
     private static List<TicketLink> linksOfHosted(
             OpenHostedSession hosted, LaunchLog logged, LoggedTranscripts transcripts, KnownTickets tickets) {
         LaunchCommand launch = logged.entryOf(hosted.session().id()).map(LaunchEntry::command).orElse(hosted.session().command());
-        return Optional.ofNullable(transcripts.read().get(hosted.id()))
+        return transcripts.of(hosted.id())
                 .map(TranscriptFacts::links)
                 .orElseGet(() -> LinkFacts.builder().build())
                 .launchedAs(launch.launchRun())

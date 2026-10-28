@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.session.published.LinkVerb;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 
 public final class LinkFactsFixture {
 
@@ -46,8 +47,9 @@ public final class LinkFactsFixture {
         return Arrays.stream(ids).map(NamedTicketId::new).toList();
     }
 
-    public static TranscriptFacts factsRunning(TicketRun... runs) {
+    public static TranscriptFacts factsRunning(SessionId id, TicketRun... runs) {
         return TranscriptFacts.builder()
+                .id(id)
                 .title(aiTitle())
                 .opening(firstPrompt())
                 .reading(readable())

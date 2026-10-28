@@ -60,6 +60,7 @@ public final class LaunchLogRepository implements LaunchLogPort {
         }
     }
 
+    // deferred: a second lazyclaude on the project loses this one's entries and reads its live sessions as interrupted — close it when the desktop frontend runs beside the TUI.
     @Override
     public void change(Project project, LaunchLogFallback fallback, UnaryOperator<LaunchLog> change) {
         Path file = fileOf(project);

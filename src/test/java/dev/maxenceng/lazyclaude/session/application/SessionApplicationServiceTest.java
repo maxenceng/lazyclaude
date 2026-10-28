@@ -48,7 +48,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -161,7 +160,7 @@ class SessionApplicationServiceTest {
     @Test
     void shouldReadThePastSessionsOfTheProjectToo() {
         when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFacts())));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(pastTranscriptFacts(pastSessionId(1))));
 
         assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts).sessionsFor(project(), noTickets()))
                 .isEqualTo(pastSessionsOf(List.of(pastSession())));
@@ -188,7 +187,7 @@ class SessionApplicationServiceTest {
                 sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(id, factsRunning(ticketRun("start", "PROJ-1")))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "PROJ-1"))));
 
         assertThat(service.sessionsFor(project(), boardTickets()).live())
                 .containsExactly(liveSessionBuilder().id(id).links(List.of(ticketLink("PROJ-1", "start"))).build());
@@ -248,7 +247,7 @@ class SessionApplicationServiceTest {
     void shouldPreselectReviewWhenAPastSessionRanDesignOnTheTicket() {
         when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFactsRunning(ticketRun("design", "PROJ-1")))));
+                .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("design", "PROJ-1"))));
 
         assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
                         .preselected())
@@ -267,7 +266,7 @@ class SessionApplicationServiceTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFactsRunning(ticketRun("design", "PROJ-1")))));
+                .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("design", "PROJ-1"))));
         SessionApplicationService service = hostingTheRegisteredSession(
                 sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees), hosts);
         service.subscribe(project(), boardTickets(), read -> {});
@@ -362,7 +361,7 @@ class SessionApplicationServiceTest {
                 sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(id, factsRunning(ticketRun("start", "PROJ-1")))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "PROJ-1"))));
         service.subscribe(project(), noTickets(), received::add);
 
         service.knowTickets(project(), boardTickets());
@@ -379,7 +378,7 @@ class SessionApplicationServiceTest {
                 sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(id, factsRunning(ticketRun("start", "PROJ-1")))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "PROJ-1"))));
         service.subscribe(project(), noTickets(), received::add);
 
         service.refresh(project(), boardTickets());

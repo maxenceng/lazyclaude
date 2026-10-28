@@ -15,7 +15,6 @@ import static org.mockito.Mockito.mock;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
@@ -77,12 +76,13 @@ public final class PastSessionFixture {
                 .build();
     }
 
-    public static TranscriptFacts pastTranscriptFacts() {
-        return pastTranscriptFactsRunning();
+    public static TranscriptFacts pastTranscriptFacts(SessionId id) {
+        return pastTranscriptFactsRunning(id);
     }
 
-    public static TranscriptFacts pastTranscriptFactsRunning(TicketRun... runs) {
+    public static TranscriptFacts pastTranscriptFactsRunning(SessionId id, TicketRun... runs) {
         return TranscriptFacts.builder()
+                .id(id)
                 .title(aiTitle())
                 .opening(firstPrompt())
                 .reading(readable())
@@ -93,6 +93,7 @@ public final class PastSessionFixture {
 
     public static TranscriptFacts pastTranscriptFactsActiveMinutesAgo(int number, int minutes) {
         return TranscriptFacts.builder()
+                .id(pastSessionId(number))
                 .title(new AiTitle("Past session %d".formatted(number)))
                 .opening(noFirstPrompt())
                 .reading(readable())
@@ -101,8 +102,8 @@ public final class PastSessionFixture {
                 .build();
     }
 
-    public static LoggedTranscripts transcriptsRead(Map<SessionId, TranscriptFacts> read) {
-        return LoggedTranscripts.builder().read(read).build();
+    public static LoggedTranscripts transcriptsRead(TranscriptFacts... read) {
+        return LoggedTranscripts.builder().read(List.of(read)).build();
     }
 
     public static LoggedTranscripts transcriptsGone(SessionId... gone) {

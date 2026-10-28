@@ -63,9 +63,8 @@ public final class TranscriptRepository implements PastSessionPort {
                         .filter(transcript -> logged.contains(new SessionId(transcript.sessionId())))
                         .flatMap(transcript -> transcript
                                 .toFacts(Optional.ofNullable(unreadable.get(transcript.path())))
-                                .map(facts -> Map.entry(new SessionId(transcript.sessionId()), facts))
                                 .stream())
-                        .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue, (first, second) -> first)))
+                        .toList())
                 .gone(logged.stream()
                         .filter(id -> listedWhole && !names.contains(id.value()))
                         .toList())

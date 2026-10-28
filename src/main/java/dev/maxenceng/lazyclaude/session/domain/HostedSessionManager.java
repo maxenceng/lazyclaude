@@ -253,6 +253,7 @@ public final class HostedSessionManager {
             earlyExit = Optional.ofNullable(earlyExits.remove(session.id()));
             if (earlyExit.isEmpty()) {
                 open.add(session);
+                // deferred: only the launch id is logged, so the session a /clear starts is never a past session and its /ticket runs link nothing — close it when that conversation is missed from the past block.
                 logged(project, entries -> entries.launched(entryOf(session)));
             }
         }

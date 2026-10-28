@@ -123,9 +123,9 @@ class TranscriptRepositoryTest {
 
         TranscriptRepository repository = scanned(projects, cacheFile, logged, unwritable, unlistable);
 
-        assertThat(repository.transcriptsOf(everyLoggedSession()).read().keySet())
+        assertThat(repository.transcriptsOf(everyLoggedSession()).read())
                 .as("a project with hundreds of transcripts reads none it did not start")
-                .containsExactly(new SessionId(sessionId()));
+                .extracting(TranscriptFacts::id).containsExactly(new SessionId(sessionId()));
         assertThat(Files.readString(cacheFile)).doesNotContain(otherSessionId());
     }
 

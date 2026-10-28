@@ -80,7 +80,6 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -327,7 +326,7 @@ class SessionManagerTest {
     void shouldHideThePastSessionAHostedSessionRunsSinceItWasCleared() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSessionBuilder().session(secondSessionId()).build()));
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(launchEntryOf(secondSessionId())));
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(secondSessionId(), pastTranscriptFacts())));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(pastTranscriptFacts(secondSessionId())));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), noTickets(), oneHosted()).past())
                 .as("resuming the session a tab runs would put a second claude on its transcript")
@@ -417,10 +416,7 @@ class SessionManagerTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(2), pastLaunchEntry(1), pastLaunchEntry(3)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(
-                        pastSessionId(2), pastTranscriptFactsActiveMinutesAgo(2, 20),
-                        pastSessionId(1), pastTranscriptFactsActiveMinutesAgo(1, 10),
-                        pastSessionId(3), pastTranscriptFactsActiveMinutesAgo(3, 30))));
+                .thenReturn(transcriptsRead(pastTranscriptFactsActiveMinutesAgo(2, 20), pastTranscriptFactsActiveMinutesAgo(1, 10), pastTranscriptFactsActiveMinutesAgo(3, 30)));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), noTickets(), oneHosted()))
                 .isEqualTo(availableSessionsOf(
@@ -435,9 +431,7 @@ class SessionManagerTest {
     void shouldOrderPastSessionsOfTheSameActivityByIdSoTheRowsDoNotShuffle() {
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(2), pastLaunchEntry(1)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(
-                        pastSessionId(2), pastTranscriptFactsActiveMinutesAgo(2, 10),
-                        pastSessionId(1), pastTranscriptFactsActiveMinutesAgo(1, 10))));
+                .thenReturn(transcriptsRead(pastTranscriptFactsActiveMinutesAgo(2, 10), pastTranscriptFactsActiveMinutesAgo(1, 10)));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), noTickets(), noneHosted()))
                 .isEqualTo(pastSessionsOf(List.of(pastSessionActiveMinutesAgo(1, 10), pastSessionActiveMinutesAgo(2, 10))));
@@ -447,9 +441,7 @@ class SessionManagerTest {
     void shouldListAnInterruptedSessionFirstEvenWhenAnEndedOneWasActiveLater() {
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1), interruptedLaunchEntry(2)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(
-                        pastSessionId(1), pastTranscriptFactsActiveMinutesAgo(1, 10),
-                        pastSessionId(2), pastTranscriptFactsActiveMinutesAgo(2, 50))));
+                .thenReturn(transcriptsRead(pastTranscriptFactsActiveMinutesAgo(1, 10), pastTranscriptFactsActiveMinutesAgo(2, 50)));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), noTickets(), noneHosted()).past())
                 .as("a session lazyclaude cut off is the one the developer most likely wants back")
@@ -462,8 +454,7 @@ class SessionManagerTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(launchEntryOf(hostedSession().id()), pastLaunchEntry(1)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(
-                        hostedSession().id(), pastTranscriptFacts(), pastSessionId(1), pastTranscriptFacts())));
+                .thenReturn(transcriptsRead(pastTranscriptFacts(hostedSession().id()), pastTranscriptFacts(pastSessionId(1))));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), noTickets(), oneHosted()))
                 .as("a live session with a transcript is live, not also past")
@@ -474,7 +465,7 @@ class SessionManagerTest {
     void shouldHideThePastSessionOfAHostedSessionStillStarting() {
         when(sessions.recordOf(processId())).thenReturn(Optional.empty());
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(launchEntryOf(hostedSession().id())));
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(hostedSession().id(), pastTranscriptFacts())));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(pastTranscriptFacts(hostedSession().id())));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), noTickets(), oneHosted()))
                 .as("a resumed session shows once, as its tab, before Claude Code has rewritten its record")
@@ -510,7 +501,7 @@ class SessionManagerTest {
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1), pastLaunchEntry(2)));
         when(past.transcriptsOf(any()))
                 .thenReturn(LoggedTranscripts.builder()
-                        .read(Map.of(pastSessionId(2), pastTranscriptFactsActiveMinutesAgo(2, 20)))
+                        .read(List.of(pastTranscriptFactsActiveMinutesAgo(2, 20)))
                         .gone(List.of(pastSessionId(1)))
                         .build());
 
@@ -559,7 +550,7 @@ class SessionManagerTest {
     @Test
     void shouldLinkAPastSessionToTheTicketItsLaunchRanBeforeItsTranscriptSaysAnything() {
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(ticketLaunchEntry(1, Verb.DESIGN)));
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFacts())));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(pastTranscriptFacts(pastSessionId(1))));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), boardTickets(), noneHosted()).past())
                 .singleElement()
@@ -572,15 +563,14 @@ class SessionManagerTest {
     void shouldMoveAPastSessionsLinkWhenItsTranscriptRanALaterVerb() {
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(ticketLaunchEntry(1, Verb.DESIGN)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(
-                        pastSessionId(1),
-                        TranscriptFacts.builder()
+                .thenReturn(transcriptsRead(TranscriptFacts.builder()
+                                .id(pastSessionId(1))
                                 .title(aiTitle())
                                 .opening(firstPrompt())
                                 .reading(readable())
                                 .lastActivity(new LastActivity(now()))
                                 .links(ran(ticketRun("start", "PROJ-1")))
-                                .build())));
+                                .build()));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), boardTickets(), noneHosted()).past())
                 .singleElement()
@@ -592,7 +582,7 @@ class SessionManagerTest {
     @Test
     void shouldLeaveAPastSessionUnlinkedWhenNothingLinkedIt() {
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFacts())));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(pastTranscriptFacts(pastSessionId(1))));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), boardTickets(), noneHosted()))
                 .isEqualTo(pastSessionsOf(List.of(pastSession())));
@@ -615,7 +605,7 @@ class SessionManagerTest {
     void shouldReuseTheLastReadOfTheHostedSessionsWhenOnlyTheTranscriptsChange() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(log.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFacts())));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(pastTranscriptFacts(pastSessionId(1))));
         sessionManager(sessions, past, log, watch, transcriptWatch, warnings).watch(project(), noTickets(), HostedSessionFixture::oneHosted, listener);
         ArgumentCaptor<Runnable> registryChanged = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(any(), registryChanged.capture(), any());
@@ -719,7 +709,7 @@ class SessionManagerTest {
     void shouldLinkALiveSessionThroughItsTranscriptFoundBySessionId() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(liveSession().id(), factsRunning(ticketRun("start", "PROJ-1")))));
+                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "PROJ-1"))));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), boardTickets(), oneHosted()))
                 .isEqualTo(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(ticketLink("PROJ-1", "start"))).build())));
@@ -737,7 +727,7 @@ class SessionManagerTest {
     void shouldListALiveSessionLinkedToTwoTicketsWithBothLinks() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(liveSession().id(), factsRunning(ticketRun("review", "PROJ-1", "PROJ-2")))));
+                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("review", "PROJ-1", "PROJ-2"))));
 
         AvailableSessions read = sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), boardTickets(), oneHosted());
 
@@ -751,7 +741,7 @@ class SessionManagerTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.transcriptsOf(any()))
                 .thenReturn(noTranscripts())
-                .thenReturn(transcriptsRead(Map.of(liveSession().id(), factsRunning(ticketRun("start", "PROJ-1")))));
+                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "PROJ-1"))));
         sessionManager(sessions, past, log, watch, transcriptWatch, warnings).watch(project(), boardTickets(), HostedSessionFixture::oneHosted, listener);
         ArgumentCaptor<Runnable> registryChanged = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(any(), registryChanged.capture(), any());
@@ -776,7 +766,7 @@ class SessionManagerTest {
     void shouldLinkASessionToATicketLearnedAfterTheWatchStarted() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(liveSession().id(), factsRunning(ticketRun("start", "PROJ-1")))));
+                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "PROJ-1"))));
         SessionManager manager = sessionManager(sessions, past, log, watch, transcriptWatch, warnings);
         manager.watch(project(), noTickets(), HostedSessionFixture::oneHosted, listener);
 
@@ -790,7 +780,7 @@ class SessionManagerTest {
     void shouldKeepLinkingAgainstTheTicketsLearnedOnLaterChangesOfTheRegistry() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(liveSession().id(), factsRunning(ticketRun("start", "PROJ-1")))));
+                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "PROJ-1"))));
         SessionManager manager = sessionManager(sessions, past, log, watch, transcriptWatch, warnings);
         manager.watch(project(), noTickets(), HostedSessionFixture::oneHosted, listener);
         ArgumentCaptor<Runnable> registryChanged = ArgumentCaptor.forClass(Runnable.class);

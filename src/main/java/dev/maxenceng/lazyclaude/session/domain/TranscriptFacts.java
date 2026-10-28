@@ -2,14 +2,17 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.OpeningPrompt;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
 import dev.maxenceng.lazyclaude.session.published.TranscriptReading;
 
-/** What the transcript of a logged session says of it: its title, what it was first asked, whether it can be read now, when it was last active and its {@code /ticket} runs. */
+/** What the transcript of a logged session says of it: which session it is, its title, what it was first asked, whether it can be read now, when it was last active and its {@code /ticket} runs. */
 public record TranscriptFacts(
+        SessionId id,
         SessionTitle title, OpeningPrompt opening, TranscriptReading reading, LastActivity lastActivity, LinkFacts links) {
 
     public TranscriptFacts {
+        Assert.notNull("id", id);
         Assert.notNull("title", title);
         Assert.notNull("opening prompt", opening);
         Assert.notNull("reading", reading);
@@ -22,6 +25,7 @@ public record TranscriptFacts(
     }
 
     public static final class TranscriptFactsBuilder {
+        private SessionId id;
         private SessionTitle title;
         private OpeningPrompt opening;
         private TranscriptReading reading;
@@ -29,6 +33,11 @@ public record TranscriptFacts(
         private LinkFacts links;
 
         private TranscriptFactsBuilder() {}
+
+        public TranscriptFactsBuilder id(SessionId id) {
+            this.id = id;
+            return this;
+        }
 
         public TranscriptFactsBuilder title(SessionTitle title) {
             this.title = title;
@@ -56,7 +65,7 @@ public record TranscriptFacts(
         }
 
         public TranscriptFacts build() {
-            return new TranscriptFacts(title, opening, reading, lastActivity, links);
+            return new TranscriptFacts(id, title, opening, reading, lastActivity, links);
         }
     }
 }

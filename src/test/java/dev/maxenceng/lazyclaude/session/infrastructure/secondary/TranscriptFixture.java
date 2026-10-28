@@ -165,6 +165,7 @@ public final class TranscriptFixture {
     public static TranscriptFacts factsOf(
             SessionTitle title, OpeningPrompt opening, String lastActivity) {
         return TranscriptFacts.builder()
+                .id(new SessionId(SESSION_ID))
                 .title(title)
                 .opening(opening)
                 .reading(new ReadableTranscript())
@@ -188,7 +189,7 @@ public final class TranscriptFixture {
     }
 
     static List<TranscriptFacts> readOf(TranscriptRepository repository) {
-        return List.copyOf(repository.transcriptsOf(everyLoggedSession()).read().values());
+        return repository.transcriptsOf(everyLoggedSession()).read();
     }
 
     static Instant lastActivityOf(TranscriptRepository repository) {
@@ -196,7 +197,7 @@ public final class TranscriptFixture {
     }
 
     static LinkFacts linksOf(TranscriptRepository repository) {
-        return repository.transcriptsOf(everyLoggedSession()).read().get(new SessionId(SESSION_ID)).links();
+        return repository.transcriptsOf(everyLoggedSession()).of(new SessionId(SESSION_ID)).orElseThrow().links();
     }
 
     static TranscriptRepository scanned(Path projects, Path cache, CacheFallback unwritable, RootFallback unlistable) {

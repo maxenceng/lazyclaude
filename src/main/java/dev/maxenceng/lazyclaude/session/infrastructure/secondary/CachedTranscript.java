@@ -16,6 +16,7 @@ import dev.maxenceng.lazyclaude.session.published.NoTitle;
 import dev.maxenceng.lazyclaude.session.published.OpeningPrompt;
 import dev.maxenceng.lazyclaude.session.published.ReadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
 import dev.maxenceng.lazyclaude.session.published.TranscriptReading;
 import dev.maxenceng.lazyclaude.session.published.UnreadableTranscript;
@@ -68,6 +69,7 @@ record CachedTranscript(
             return Optional.empty();
         }
         return Optional.of(TranscriptFacts.builder()
+                .id(new SessionId(sessionId))
                 .title(title())
                 .opening(opening())
                 .reading(unreadable.<TranscriptReading>map(UnreadableTranscript::new).orElseGet(ReadableTranscript::new))

@@ -61,7 +61,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -361,7 +360,7 @@ class LazyClaudeTest {
         Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, pastSessions, launchLog, sessionWatch, mock(TranscriptWatchPort.class), raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(PendingReviewCommand.class), ReservedChords.defaults(), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(TicketWorktreeCommand.class), warningQuery(raised));
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(sessionWatch).watch(any(), changed.capture(), any());
-        when(pastSessions.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFacts())));
+        when(pastSessions.transcriptsOf(any())).thenReturn(transcriptsRead(pastTranscriptFacts(pastSessionId(1))));
 
         changed.getValue().run();
 

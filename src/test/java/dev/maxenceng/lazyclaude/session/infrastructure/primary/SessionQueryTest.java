@@ -42,7 +42,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -138,9 +137,7 @@ class SessionQueryTest {
     void shouldViewEachPastSessionWithTheTimeSinceItsLastActivityNewestFirst() {
         when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(3), pastLaunchEntry(1)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(
-                        pastSessionId(3), pastTranscriptFactsActiveMinutesAgo(3, 30),
-                        pastSessionId(1), pastTranscriptFactsActiveMinutesAgo(1, 10))));
+                .thenReturn(transcriptsRead(pastTranscriptFactsActiveMinutesAgo(3, 30), pastTranscriptFactsActiveMinutesAgo(1, 10)));
 
         assertThat(sessionQuery(sessions, past, launchLog, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT))
                 .isEqualTo(pastSessionsViewOf(List.of(pastSessionViewNumbered(1), pastSessionViewNumbered(3))));
@@ -150,7 +147,7 @@ class SessionQueryTest {
     void shouldViewThePastSessionsAfterTheLiveOnes() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFacts())));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(pastTranscriptFacts(pastSessionId(1))));
 
         SessionsView view = sessionQueryHostingTheRegistered(sessions, past, launchLog, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT);
 
@@ -163,7 +160,7 @@ class SessionQueryTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         SessionQuery query = sessionQueryHostingTheRegistered(sessions, past, launchLog, watch, transcriptWatch, warnings);
         SessionId id = sessionId();
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(id, factsRunning(ticketRun("start", "proj-1")))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "proj-1"))));
 
         assertThat(liveViewsOf(query.sessionsFor(WITH_TICKETS)))
                 .containsExactly(sessionViewBuilder().id(id).links(List.of(ticketLink("PROJ-1", "start"))).build());
@@ -173,7 +170,7 @@ class SessionQueryTest {
     void shouldViewTheLinksOfAPastSession() {
         when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFactsRunning(ticketRun("review", "PROJ-2")))));
+                .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("review", "PROJ-2"))));
 
         assertThat(sessionQuery(sessions, past, launchLog, watch, transcriptWatch, warnings).sessionsFor(WITH_TICKETS))
                 .isEqualTo(pastSessionsViewOf(List.of(pastSessionViewBuilder().links(List.of(ticketLink("PROJ-2", "review"))).build())));
@@ -182,7 +179,7 @@ class SessionQueryTest {
     @Test
     void shouldViewAPastSessionWithNoRecordedEndAsInterrupted() {
         when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(interruptedLaunchEntry(1)));
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFacts())));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(pastTranscriptFacts(pastSessionId(1))));
 
         assertThat(sessionQuery(sessions, past, launchLog, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT).past())
                 .singleElement()
@@ -195,7 +192,7 @@ class SessionQueryTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         SessionQuery query = sessionQueryHostingTheRegistered(sessions, past, launchLog, watch, transcriptWatch, warnings);
         SessionId id = sessionId();
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(id, factsRunning(ticketRun("start", "PROJ-1")))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "PROJ-1"))));
 
         assertThat(liveViewsOf(query.sessionsFor(OF_THE_PROJECT)))
                 .containsExactly(sessionViewBuilder().id(id).build());

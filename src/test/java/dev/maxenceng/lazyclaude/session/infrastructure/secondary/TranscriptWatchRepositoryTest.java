@@ -45,6 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
 import dev.maxenceng.lazyclaude.session.domain.PollingFallback;
 import dev.maxenceng.lazyclaude.session.domain.RootFallback;
+import dev.maxenceng.lazyclaude.session.domain.TranscriptFacts;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 
@@ -100,7 +101,7 @@ class TranscriptWatchRepositoryTest {
         watcher.watch(() -> Set.of(new SessionId(sessionId())), probe.listener(), fallback, cache, unlistable);
 
         assertThat(probe.changedWithin(within())).isTrue();
-        assertThat(transcripts.transcriptsOf(everyLoggedSession()).read().keySet()).containsExactly(new SessionId(sessionId()));
+        assertThat(transcripts.transcriptsOf(everyLoggedSession()).read()).extracting(TranscriptFacts::id).containsExactly(new SessionId(sessionId()));
     }
 
     @Test
