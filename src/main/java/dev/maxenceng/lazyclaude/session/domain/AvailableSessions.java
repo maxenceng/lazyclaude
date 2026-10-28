@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -15,67 +16,41 @@ import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * The sessions of one project that could be read: the live ones, then the past ones, the hosted ones in tab order, with the clock their ages are read
- * from. That a session is one or the other, never both, and the order, are the manager's.
+ * The sessions of one project: the hosted ones in tab order, each starting, live or unknown, then the past ones, with the clock their
+ * ages are read from. That a session is one or the other, never both, is the manager's.
  */
-public record AvailableSessions(
-        List<LiveSession> live,
-        List<PastSession> past,
-        List<OpenHostedSession> hosted,
-        SessionClock clock)
-        implements Sessions {
+public record AvailableSessions(List<PastSession> past, List<OpenHostedSession> hosted, SessionClock clock) {
+
+    private static final Comparator<LiveSession> NEWEST_FIRST = Comparator.comparing(LiveSession::startedAt)
+            .reversed()
+            .thenComparing(session -> session.id().value());
 
     public AvailableSessions {
-        Assert.notNull("live sessions", live);
         Assert.notNull("past sessions", past);
         Assert.notNull("hosted tabs", hosted);
         Assert.notNull("clock", clock);
     }
 
-    @Override
-    public AvailableSessions hosting(HostedSessions open) {
-        List<LiveSession> owned = live.stream()
-                .filter(session -> open.pids().contains(session.pid()))
-                .map(session -> linkedByLaunch(open, session))
+    /** The hosted sessions that have something to show, newest start first. */
+    public List<LiveSession> live() {
+        return hosted.stream()
+                .flatMap(open -> open.phase().live().stream())
+                .sorted(NEWEST_FIRST)
                 .toList();
-        return builder()
-                .live(owned)
-                .past(past)
-                .hosted(open.sessions().stream()
-                        .map(session -> OpenHostedSession.builder()
-                                .session(session)
-                                .phase(session.phaseAmong(owned))
-                                .build())
-                        .toList())
-                .clock(clock)
-                .build();
     }
 
-    private static LiveSession linkedByLaunch(HostedSessions open, LiveSession session) {
-        return open.withPid(session.pid())
-                .flatMap(HostedSession::startingLink)
-                .map(session::linkedBy)
-                .orElse(session);
-    }
-
-    /** The names of the live sessions whose directory is {@code worktree} or below it, hosted ones that are still starting included. */
+    /** The names of the hosted sessions whose directory is {@code worktree} or below it, those still starting included. */
     public List<SessionName> namesIn(WorkingDirectory worktree) {
-        Stream<SessionName> registered = live.stream()
-                .filter(session -> session.runsIn(worktree))
-                .map(LiveSession::name);
-        Stream<SessionName> starting = hosted.stream()
-                .filter(open -> open.phase() instanceof StartingPhase)
-                .map(OpenHostedSession::session)
-                .filter(session -> session.runsIn(worktree))
-                .map(HostedSession::name);
-        return Stream.concat(registered, starting).toList();
+        return hosted.stream()
+                .filter(open -> open.session().runsIn(worktree))
+                .map(OpenHostedSession::name)
+                .toList();
     }
 
-    @Override
     public boolean ranVerb(LinkedTicketId ticket, Verb verb) {
         LinkVerb ran = new LinkVerb(verb.label());
         return Stream.concat(
-                        live.stream().map(LiveSession::links), past.stream().map(PastSession::links))
+                        live().stream().map(LiveSession::links), past.stream().map(PastSession::links))
                         .anyMatch(links -> TicketLink.to(links, ticket)
                                 .filter(link -> link instanceof StrongLink strong && strong.verb().equals(ran))
                                 .isPresent())
@@ -107,17 +82,11 @@ public record AvailableSessions(
     }
 
     public static final class AvailableSessionsBuilder {
-        private List<LiveSession> live;
         private List<PastSession> past;
         private List<OpenHostedSession> hosted = List.of();
         private SessionClock clock;
 
         private AvailableSessionsBuilder() {}
-
-        public AvailableSessionsBuilder live(List<LiveSession> live) {
-            this.live = live;
-            return this;
-        }
 
         public AvailableSessionsBuilder past(List<PastSession> past) {
             this.past = past;
@@ -135,7 +104,7 @@ public record AvailableSessions(
         }
 
         public AvailableSessions build() {
-            return new AvailableSessions(live, past, hosted, clock);
+            return new AvailableSessions(past, hosted, clock);
         }
     }
 }

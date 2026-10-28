@@ -3,11 +3,11 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.domain.CommitIdFixture.commitId;
-import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedIn;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ticketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.worktreePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryOver;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryOverOccupied;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.aheadWorktreeContentsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.clearHeldWorktreeView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.dirtyWorktreeContentsView;
@@ -82,7 +82,6 @@ class SessionQueryWorktreeTest {
     @Test
     void shouldViewAClearTicketWorktree() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(query.worktreeOf(worktreePayload(headCommit()))).isEqualTo(clearHeldWorktreeView());
     }
@@ -91,7 +90,6 @@ class SessionQueryWorktreeTest {
     void shouldViewTheDirtyPathsOfATicketWorktree() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
         when(worktrees.dirtyPaths(worktreeDirectory())).thenReturn(List.of(dirtyPath()));
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(query.worktreeOf(worktreePayload(headCommit())))
                 .isEqualTo(heldWorktreeView(dirtyWorktreeContentsView(), false));
@@ -101,44 +99,31 @@ class SessionQueryWorktreeTest {
     void shouldViewTheCommitsBeyondTheMerge() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
         when(worktrees.commitsBeyond(worktreeDirectory(), headCommit())).thenReturn(List.of(commitId()));
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(query.worktreeOf(worktreePayload(headCommit())))
                 .isEqualTo(heldWorktreeView(aheadWorktreeContentsView(), false));
     }
 
     @Test
-    void shouldViewTheLiveSessionsInATicketWorktree() {
+    void shouldViewTheHostedSessionsInATicketWorktree() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(worktreeDirectory())));
-        when(locator.locate(worktreeDirectory())).thenReturn(project());
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
 
-        assertThat(query.worktreeOf(worktreePayload(headCommit())))
+        assertThat(sessionQueryOverOccupied(sessions, worktrees).worktreeOf(worktreePayload(headCommit())))
                 .isEqualTo(heldWorktreeView(occupiedWorktreeContentsView(), false));
     }
 
     @Test
     void shouldViewNoMergedPullRequestWhenNoneIsKnownForTheBranch() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(query.worktreeOf(worktreePayload(new NoMergedHead())))
                 .isEqualTo(heldWorktreeView(new NoMergedPullRequestView(), false));
     }
 
     @Test
-    void shouldViewNoSessionsReadWhenTheSessionsCannotBeRead() {
-        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
-        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
-
-        assertThat(query.worktreeOf(worktreePayload(headCommit())))
-                .isEqualTo(heldWorktreeView(new NoSessionsReadView(), false));
-    }
-
-    @Test
     void shouldViewNoWorktreeWhereGitListsNone() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(false);
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(query.worktreeOf(worktreePayload(headCommit()))).isEqualTo(new NoWorktreeView());
     }
@@ -147,7 +132,6 @@ class SessionQueryWorktreeTest {
     void shouldViewWhyGitCannotSayWhatStandsInTheWorktree() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
         when(worktrees.dirtyPaths(worktreeDirectory())).thenThrow(new WorktreeUnavailableException("git status: fatal"));
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(query.worktreeOf(worktreePayload(headCommit())))
                 .isEqualTo(new UnreadableWorktreeView(new Reason("git status: fatal")));
@@ -156,7 +140,6 @@ class SessionQueryWorktreeTest {
     @Test
     void shouldViewWhyGitCannotListTheWorktrees() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenThrow(new WorktreeUnavailableException("git is gone"));
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(query.worktreeOf(worktreePayload(headCommit())))
                 .isEqualTo(new UnreadableWorktreeView(new Reason("git is gone")));

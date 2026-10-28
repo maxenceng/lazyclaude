@@ -2,7 +2,6 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static dev.tamboui.toolkit.Toolkit.column;
 import static dev.tamboui.toolkit.Toolkit.panel;
-import static dev.tamboui.toolkit.Toolkit.richText;
 import static dev.tamboui.toolkit.Toolkit.row;
 import static dev.tamboui.toolkit.Toolkit.stack;
 import static dev.tamboui.toolkit.Toolkit.text;
@@ -71,7 +70,6 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeRemovalVi
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeView;
 import dev.maxenceng.lazyclaude.session.published.FixedChord;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.PaneHeight;
@@ -80,6 +78,7 @@ import dev.maxenceng.lazyclaude.session.published.PaneWidth;
 import dev.maxenceng.lazyclaude.session.published.PastedText;
 import dev.maxenceng.lazyclaude.session.published.ReservedAction;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
@@ -121,7 +120,6 @@ public final class Shell extends ToolkitApp {
     private static final String NO_DOCS = "no docs";
     private static final String DOCS_UNAVAILABLE = "docs unavailable";
     private static final String NO_LIVE_SESSION = "no live session";
-    private static final String SESSIONS_UNAVAILABLE = "sessions unavailable: ";
 
     private static final int DEFAULT_PANE_WIDTH = 80;
     private static final int DEFAULT_PANE_HEIGHT = 24;
@@ -190,7 +188,7 @@ public final class Shell extends ToolkitApp {
     private final ReviewKeys reviewKeys;
     private final Path root;
     private final DockTabs dock = new DockTabs();
-    private Map<HostedSessionId, PaneSize> paneSizes = Map.of();
+    private Map<SessionId, PaneSize> paneSizes = Map.of();
     private final AtomicBoolean repaintPending = new AtomicBoolean();
     private PullRequestsView pullRequests;
     private volatile BoardView lastRead;
@@ -1028,7 +1026,7 @@ public final class Shell extends ToolkitApp {
     private void paneDrawn(Rect area) {
         paneArea = Optional.of(area);
         PaneSize size = paneSize();
-        List<HostedSessionId> resized = dock.tabs().stream()
+        List<SessionId> resized = dock.tabs().stream()
                 .map(HostedSessionView::id)
                 .filter(id -> !size.equals(paneSizes.get(id)))
                 .toList();
@@ -1037,7 +1035,7 @@ public final class Shell extends ToolkitApp {
     }
 
     /** Remembers that the ptys of {@code ids} now have {@code size}. */
-    private void sized(List<HostedSessionId> ids, PaneSize size) {
+    private void sized(List<SessionId> ids, PaneSize size) {
         paneSizes = Stream.concat(
                         paneSizes.entrySet().stream().filter(sized -> !ids.contains(sized.getKey())),
                         ids.stream().map(id -> Map.entry(id, size)))
@@ -1215,7 +1213,7 @@ public final class Shell extends ToolkitApp {
         };
     }
 
-    private boolean focusTab(HostedSessionId id) {
+    private boolean focusTab(SessionId id) {
         dock.select(id);
         return focusOn(Focus.DOCK);
     }
@@ -1359,11 +1357,9 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element sessionsPanel() {
-        Element body = sessions.unavailable()
-                .<Element>map(reason -> richText(SESSIONS_UNAVAILABLE + reason.value()).wrapWord().dim())
-                .orElseGet(() -> sessions.isEmpty()
-                        ? text(NO_LIVE_SESSION).dim()
-                        : new SessionRowsElement(sessions.visible(), sessions.selectedIndex(), focus == Focus.SESSIONS));
+        Element body = sessions.isEmpty()
+                ? text(NO_LIVE_SESSION).dim()
+                : new SessionRowsElement(sessions.visible(), sessions.selectedIndex(), focus == Focus.SESSIONS);
         return sized(
                 framed(SESSIONS_TITLE, Focus.SESSIONS, new PaneProbe(body, area -> sessionsArea = Optional.of(area))),
                 Focus.SESSIONS);

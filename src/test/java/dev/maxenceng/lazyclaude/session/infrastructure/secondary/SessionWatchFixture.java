@@ -6,6 +6,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Set;
 
 import dev.maxenceng.lazyclaude.session.domain.WatchFallback;
 
@@ -15,6 +16,7 @@ public final class SessionWatchFixture {
     private static final Duration SHORT_SWEEP = Duration.ofMillis(200);
     private static final Duration REWRITE_PAUSE = Duration.ofMillis(20);
     private static final Duration LONG_SWEEP = Duration.ofMinutes(5);
+    private static final Set<Long> HOSTED = Set.of(17234L, 22862L);
 
     private SessionWatchFixture() {}
 
@@ -31,7 +33,7 @@ public final class SessionWatchFixture {
     }
 
     static SessionWatchRepository watching(SessionWatchRepository watcher, ChangeProbe probe, WatchFallback fallback) {
-        watcher.watch(probe.listener(), fallback);
+        watcher.watch(pid -> HOSTED.contains(pid.value()), probe.listener(), fallback);
         return watcher;
     }
 

@@ -14,11 +14,15 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.WatchFallback;
+import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.NotWatching;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WatchServiceFactory;
@@ -26,12 +30,11 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WatchServiceStat
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Watching;
 
 /**
- * Tells the domain when the session registry may have changed: at once when Claude Code rewrites a
- * {@code .json} record (a {@code .key} file is not one), and on a sweep every few seconds besides, because
- * a session whose process died never rewrites its record. One thread carries both, so a change is never
- * reported twice at once, and a batch of events never outlasts a sweep, so a registry rewritten without
- * pause still reports. When the registry cannot be put under a watch the sweep carries on alone, and the
- * fallback is told why.
+ * Tells the domain when the registry record of a hosted session may have changed: at once when Claude Code rewrites the
+ * {@code <pid>.json} of a pid lazyclaude hosts (another process's record, and a {@code .key} file, are not one), and on a sweep
+ * every few seconds besides, for a record that was not there to be watched. One thread carries both, so a change is never
+ * reported twice at once, and a batch of events never outlasts a sweep, so a registry rewritten without pause still reports. When
+ * the registry cannot be put under a watch the sweep carries on alone, and the fallback is told why.
  */
 public final class SessionWatchRepository implements SessionWatchPort, AutoCloseable {
 
@@ -39,6 +42,7 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
     static final Duration SWEEP_INTERVAL = Duration.ofSeconds(2);
 
     private static final String RECORD_SUFFIX = ".json";
+    private static final Pattern DIGITS = Pattern.compile("\\d{1,18}");
     private static final String CAUSE = "cannot watch %s (%s)";
     private static final String WORKER_NAME = "session-watch";
 
@@ -65,9 +69,9 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
     }
 
     @Override
-    public void watch(Runnable changed, WatchFallback fallback) {
+    public void watch(Predicate<ProcessId> hosted, Runnable changed, WatchFallback fallback) {
         WatchServiceState state = watchOver(fallback);
-        workers.add(Thread.ofPlatform().daemon().name(WORKER_NAME).start(() -> loop(state, changed)));
+        workers.add(Thread.ofPlatform().daemon().name(WORKER_NAME).start(() -> loop(state, hosted, changed)));
     }
 
     @Override
@@ -95,15 +99,17 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
     }
 
     // deferred: an exception other than a closed or interrupted watch ends this thread, and the sessions stop updating with only a warning to say so — close it when a re-read can fail in a way the domain does not turn into a value.
-    private void loop(WatchServiceState state, Runnable changed) {
+    private void loop(WatchServiceState state, Predicate<ProcessId> hosted, Runnable changed) {
         try {
+            long lastRefresh = System.nanoTime();
             while (!Thread.currentThread().isInterrupted()) {
                 boolean relevant = switch (state) {
-                    case Watching(WatchService service) -> waitForEvents(service);
+                    case Watching(WatchService service) -> waitForEvents(service, hosted);
                     case NotWatching _ -> sleepThroughSweep();
                 };
-                if (relevant) {
+                if (relevant || System.nanoTime() - lastRefresh >= sweepInterval.toNanos()) {
                     changed.run();
+                    lastRefresh = System.nanoTime();
                 }
             }
         } catch (InterruptedException | ClosedWatchServiceException stopped) {
@@ -116,32 +122,42 @@ public final class SessionWatchRepository implements SessionWatchPort, AutoClose
         return true;
     }
 
-    private boolean waitForEvents(WatchService service) throws InterruptedException {
+    private boolean waitForEvents(WatchService service, Predicate<ProcessId> hosted) throws InterruptedException {
         WatchKey first = service.poll(sweepInterval.toMillis(), TimeUnit.MILLISECONDS);
         if (first == null) {
             return true;
         }
-        boolean relevant = process(first);
+        boolean relevant = process(first, hosted);
         long deadline = System.nanoTime() + sweepInterval.toNanos();
         WatchKey more = service.poll(batchWindow.toMillis(), TimeUnit.MILLISECONDS);
         while (more != null && System.nanoTime() - deadline < 0) {
-            relevant |= process(more);
+            relevant |= process(more, hosted);
             more = service.poll(batchWindow.toMillis(), TimeUnit.MILLISECONDS);
         }
         if (more != null) {
-            relevant |= process(more);
+            relevant |= process(more, hosted);
         }
         return relevant;
     }
 
-    private static boolean process(WatchKey key) {
-        boolean relevant = key.pollEvents().stream().anyMatch(event -> event.kind() == OVERFLOW || isRecord(event));
+    private static boolean process(WatchKey key, Predicate<ProcessId> hosted) {
+        boolean relevant = key.pollEvents().stream().anyMatch(event -> event.kind() == OVERFLOW || isHostedRecord(event, hosted));
         key.reset();
         return relevant;
     }
 
-    private static boolean isRecord(WatchEvent<?> event) {
-        return event.context() instanceof Path name && name.toString().endsWith(RECORD_SUFFIX);
+    private static boolean isHostedRecord(WatchEvent<?> event, Predicate<ProcessId> hosted) {
+        return event.context() instanceof Path name && pidOf(name.toString()).filter(hosted).isPresent();
+    }
+
+    private static Optional<ProcessId> pidOf(String fileName) {
+        return fileName.endsWith(RECORD_SUFFIX) && DIGITS.matcher(stem(fileName)).matches()
+                ? Optional.of(new ProcessId(Long.parseLong(stem(fileName))))
+                : Optional.empty();
+    }
+
+    private static String stem(String fileName) {
+        return fileName.substring(0, fileName.length() - RECORD_SUFFIX.length());
     }
 
     private NotWatching giveUpWatching(String reason, WatchFallback fallback) {

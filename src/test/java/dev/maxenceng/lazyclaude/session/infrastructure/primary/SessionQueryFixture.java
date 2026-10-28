@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingATicketSessionInTheWorktree;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingTheRegisteredSession;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static org.mockito.Mockito.mock;
@@ -78,6 +79,30 @@ public final class SessionQueryFixture {
         HostPort hosts = mock(HostPort.class);
         return new SessionQuery(hostingTheRegisteredSession(
                 sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts), hosts));
+    }
+
+    public static SessionQuery sessionQueryOverOccupied(LiveSessionPort sessions, WorktreePort worktrees) {
+        return new SessionQuery(occupiedWorktreeService(sessions, worktrees));
+    }
+
+    public static TicketWorktreeCommand ticketWorktreeCommandOverOccupied(LiveSessionPort sessions, WorktreePort worktrees) {
+        return new TicketWorktreeCommand(occupiedWorktreeService(sessions, worktrees));
+    }
+
+    private static SessionApplicationService occupiedWorktreeService(LiveSessionPort sessions, WorktreePort worktrees) {
+        HostPort hosts = mock(HostPort.class);
+        return hostingATicketSessionInTheWorktree(
+                sessionApplicationService(
+                        sessions,
+                        mock(PastSessionPort.class),
+                        mock(ProjectLocatorPort.class),
+                        mock(SessionWatchPort.class),
+                        mock(TranscriptWatchPort.class),
+                        mock(WarningPort.class),
+                        hosts,
+                        worktrees),
+                hosts,
+                worktrees);
     }
 
     private static SessionApplicationService worktreeService(

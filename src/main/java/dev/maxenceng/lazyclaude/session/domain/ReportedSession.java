@@ -1,42 +1,51 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
-import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
+import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.WaitingFor;
-import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
+import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
+import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
+import dev.maxenceng.lazyclaude.session.published.WaitingReason;
+import dev.maxenceng.lazyclaude.session.published.YourTurn;
 
 /**
- * A session whose process runs, as its source reported it after the liveness check: its status is still
- * Claude Code's, not yet one of lazyclaude's states.
+ * What Claude Code's registry record says of a hosted session: the session its process runs now, which {@code /clear} replaces,
+ * and its status, still Claude Code's and not yet one of lazyclaude's states.
  */
 public record ReportedSession(
-        SessionId id,
-        ProcessId pid,
+        SessionId session,
         SessionName name,
-        WorkingDirectory directory,
         StartedAt startedAt,
         ClaudeVersion version,
         ReportedStatus status,
-        WaitingFor waitingFor,
-        Entrypoint entrypoint) {
+        WaitingFor waitingFor) {
 
     public ReportedSession {
-        Assert.notNull("id", id);
-        Assert.notNull("pid", pid);
+        Assert.notNull("session", session);
         Assert.notNull("name", name);
-        Assert.notNull("directory", directory);
         Assert.notNull("started at", startedAt);
         Assert.notNull("version", version);
         Assert.notNull("status", status);
         Assert.notNull("waiting for", waitingFor);
-        Assert.notNull("entrypoint", entrypoint);
     }
 
-    boolean isSdkCli() {
-        return entrypoint instanceof SdkCliEntrypoint;
+    /** A waiting session blocked on a permission prompt asks for permission; any other reason asks for input. */
+    public SessionState state() {
+        return switch (status) {
+            case BUSY, SHELL -> new Busy();
+            case IDLE -> new YourTurn();
+            case WAITING -> waiting();
+        };
+    }
+
+    private SessionState waiting() {
+        return waitingFor instanceof WaitingReason reason && reason.isPermissionPrompt()
+                ? new WaitingForPermission(reason)
+                : new WaitingForInput(waitingFor);
     }
 
     public static ReportedSessionBuilder builder() {
@@ -44,35 +53,22 @@ public record ReportedSession(
     }
 
     public static final class ReportedSessionBuilder {
-        private SessionId id;
-        private ProcessId pid;
+        private SessionId session;
         private SessionName name;
-        private WorkingDirectory directory;
         private StartedAt startedAt;
         private ClaudeVersion version;
         private ReportedStatus status;
         private WaitingFor waitingFor;
-        private Entrypoint entrypoint;
 
         private ReportedSessionBuilder() {}
 
-        public ReportedSessionBuilder id(SessionId id) {
-            this.id = id;
-            return this;
-        }
-
-        public ReportedSessionBuilder pid(ProcessId pid) {
-            this.pid = pid;
+        public ReportedSessionBuilder session(SessionId session) {
+            this.session = session;
             return this;
         }
 
         public ReportedSessionBuilder name(SessionName name) {
             this.name = name;
-            return this;
-        }
-
-        public ReportedSessionBuilder directory(WorkingDirectory directory) {
-            this.directory = directory;
             return this;
         }
 
@@ -96,13 +92,8 @@ public record ReportedSession(
             return this;
         }
 
-        public ReportedSessionBuilder entrypoint(Entrypoint entrypoint) {
-            this.entrypoint = entrypoint;
-            return this;
-        }
-
         public ReportedSession build() {
-            return new ReportedSession(id, pid, name, directory, startedAt, version, status, waitingFor, entrypoint);
+            return new ReportedSession(session, name, startedAt, version, status, waitingFor);
         }
     }
 }

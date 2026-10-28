@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -8,7 +10,6 @@ import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import dev.maxenceng.lazyclaude.session.published.HostStart;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
@@ -38,23 +39,27 @@ public final class HostedSessionManager {
     private static final String NO_PLACE = "%s has no folder beside it to keep worktrees in";
 
     private final HostPort hosts;
+    private final LiveSessionPort records;
     private final WarningPort warnings;
     private final WorktreePort worktrees;
+    private final SessionClock clock;
     private final List<HostedSession> open = new ArrayList<>();
-    private final List<HostedSessionId> spawning = new ArrayList<>();
-    private final Map<HostedSessionId, ExitCode> earlyExits = new HashMap<>();
+    private final List<SessionId> spawning = new ArrayList<>();
+    private final Map<SessionId, ExitCode> earlyExits = new HashMap<>();
     private final List<OpenSessionsListener> changeListeners = new CopyOnWriteArrayList<>();
     private final List<TicketDoneEndedListener> doneEndedListeners = new CopyOnWriteArrayList<>();
 
-    public HostedSessionManager(HostPort hosts, WarningPort warnings, WorktreePort worktrees) {
+    public HostedSessionManager(HostPort hosts, LiveSessionPort records, WarningPort warnings, WorktreePort worktrees, Clock clock) {
         this.hosts = hosts;
+        this.records = records;
         this.warnings = warnings;
         this.worktrees = worktrees;
+        this.clock = new SessionClock(clock);
     }
 
     /** A plain {@code claude} in the project root. */
     public HostStart startUnlinked(Project project, PaneSize size) {
-        return start(new NewClaude(), new WorkingDirectory(project.root()), size);
+        return start(new NewClaude(SessionId.random()), new WorkingDirectory(project.root()), size);
     }
 
     /**
@@ -65,7 +70,7 @@ public final class HostedSessionManager {
     public HostStart startTicket(TicketStart ticket, PaneSize size) {
         try {
             return start(
-                    TicketClaude.builder().ticket(ticket.ticket()).verb(ticket.verb()).build(),
+                    TicketClaude.builder().session(SessionId.random()).ticket(ticket.ticket()).verb(ticket.verb()).build(),
                     ticketDirectory(ticket.worktree()),
                     size);
         } catch (WorktreeUnavailableException unavailable) {
@@ -92,14 +97,24 @@ public final class HostedSessionManager {
 
     /**
      * {@code claude --resume} of {@code session}, in {@code recorded} when it still exists, else nothing; the open
-     * session already resuming it when there is one, since two {@code claude} on one transcript would both write to it.
+     * session already running as it when there is one, since two {@code claude} on one transcript would both write to it. An open
+     * session runs as the id it was launched with until its registry record names another, as it does after {@code /clear}.
      */
     public HostStart resume(SessionId session, WorkingDirectory recorded, PaneSize size) {
         return open().sessions().stream()
-                .filter(hosted -> hosted.resumes(session))
+                .filter(hosted -> hosted.id().equals(session) || runningNow(hosted).filter(session::equals).isPresent())
                 .findFirst()
-                .<HostStart>map(resuming -> new StartedHost(resuming.id()))
+                .<HostStart>map(running -> new StartedHost(running.id()))
                 .orElseGet(() -> resumeAt(session, recorded, size));
+    }
+
+    /** None while its record is not written, is another process's, or cannot be read: then it runs as the id it was launched with. */
+    private Optional<SessionId> runningNow(HostedSession hosted) {
+        try {
+            return records.recordOf(hosted.pid()).filter(hosted::reportedBy).map(ReportedSession::session);
+        } catch (SessionRecordUnreadableException unreadable) {
+            return Optional.empty();
+        }
     }
 
     private HostStart resumeAt(SessionId session, WorkingDirectory recorded, PaneSize size) {
@@ -116,15 +131,15 @@ public final class HostedSessionManager {
         }
     }
 
-    public void send(HostedSessionId id, TerminalInput input) {
+    public void send(SessionId id, TerminalInput input) {
         hosts.send(id, input);
     }
 
-    public void resize(HostedSessionId id, PaneSize size) {
+    public void resize(SessionId id, PaneSize size) {
         hosts.resize(id, size);
     }
 
-    public TerminalScreen screenOf(HostedSessionId id) {
+    public TerminalScreen screenOf(SessionId id) {
         return hosts.screenOf(id);
     }
 
@@ -175,24 +190,36 @@ public final class HostedSessionManager {
         return new NotStartedHost();
     }
 
+    /**
+     * Claims {@code command}'s id under the lock before spawning, so two resumes of one session racing on the shell's
+     * background threads start one {@code claude}: the loser answers with the open session, or with nothing while the
+     * winner is still spawning, since its tab opens when that spawn returns. The spawn instant is taken before spawning and to the
+     * millisecond, as the registry records it, so the session's own record is never older than its spawn.
+     */
     private HostStart start(LaunchCommand command, WorkingDirectory directory, PaneSize size) {
-        HostedSessionId id = HostedSessionId.random();
+        SessionId id = command.session();
         HostLaunch launch = HostLaunch.builder()
-                .id(id)
                 .command(command)
                 .directory(directory)
                 .size(size)
                 .build();
         synchronized (open) {
+            if (spawning.contains(id)) {
+                return new NotStartedHost();
+            }
+            if (open.stream().anyMatch(session -> session.id().equals(id))) {
+                return new StartedHost(id);
+            }
             spawning.add(id);
         }
+        StartedAt spawnedAt = new StartedAt(clock.clock().instant().truncatedTo(ChronoUnit.MILLIS));
         try {
             ProcessId pid = hosts.spawn(launch, code -> exited(id, code));
             return registered(HostedSession.builder()
-                    .id(id)
                     .pid(pid)
                     .directory(directory)
                     .command(command)
+                    .spawnedAt(spawnedAt)
                     .build());
         } catch (HostUnavailableException unavailable) {
             synchronized (open) {
@@ -226,7 +253,7 @@ public final class HostedSessionManager {
         return new StartedHost(session.id());
     }
 
-    private void exited(HostedSessionId id, ExitCode code) {
+    private void exited(SessionId id, ExitCode code) {
         Optional<HostedSession> dropped;
         synchronized (open) {
             dropped = open.stream().filter(session -> session.id().equals(id)).findFirst();

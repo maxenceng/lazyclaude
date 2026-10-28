@@ -47,10 +47,4 @@ class WorktreeStateTest {
                 .isFalse();
     }
 
-    @Test
-    void shouldNeverBeClearWithoutTheSessionsRead() {
-        assertThat(new NoSessionsRead().clear())
-                .as("a claude started outside lazyclaude may be running in the worktree and would lose its directory")
-                .isFalse();
-    }
 }

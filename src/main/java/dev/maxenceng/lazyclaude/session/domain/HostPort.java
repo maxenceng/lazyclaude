@@ -2,9 +2,9 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import java.util.function.Consumer;
 
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
@@ -23,17 +23,17 @@ public interface HostPort {
     boolean exists(WorkingDirectory directory);
 
     /** Hands the session a key, a paste or a mouse event, as the bytes a terminal would send; nothing for a session that is gone. */
-    void send(HostedSessionId id, TerminalInput input);
+    void send(SessionId id, TerminalInput input);
 
     /** Gives the session's pty and emulator a new size. */
-    void resize(HostedSessionId id, PaneSize size);
+    void resize(SessionId id, PaneSize size);
 
     /** What the session shows right now; blank for a session that is gone. */
-    TerminalScreen screenOf(HostedSessionId id);
+    TerminalScreen screenOf(SessionId id);
 
     /** Ends the session's process. */
-    void end(HostedSessionId id);
+    void end(SessionId id);
 
     /** Tells {@code listener} which session drew something, on a thread of the host's own. */
-    void onScreenChange(Consumer<HostedSessionId> listener);
+    void onScreenChange(Consumer<SessionId> listener);
 }

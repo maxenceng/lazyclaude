@@ -1,22 +1,30 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
- * One read of the live sessions: the id of every session running on the machine, which hides its past row, and the live
- * sessions of {@code project}. A change to the transcripts reuses it rather than reading the registry again.
+ * One read of the hosted sessions of {@code project}: where each stands by its registry record. A change to the transcripts
+ * reuses it rather than reading the records again.
  */
-public record RunningSessions(
-        Project project, List<SessionId> ids, List<LiveSession> live) {
+public record RunningSessions(Project project, List<OpenHostedSession> hosted) {
 
     public RunningSessions {
         Assert.notNull("project", project);
-        Assert.notNull("running ids", ids);
-        Assert.notNull("live sessions", live);
+        Assert.notNull("hosted sessions", hosted);
+    }
+
+    /** The session every hosted one runs now and the one it was launched with, each of which hides its past row. */
+    // deferred: the transcript a hosted session left by /clear has no row until its tab closes, since resuming it would reuse the tab's id — close it when the host knows a pty by something other than its launch id.
+    public List<SessionId> ids() {
+        return hosted.stream()
+                .flatMap(open -> Stream.of(open.id(), open.session().id()))
+                .distinct()
+                .toList();
     }
 
     public static RunningSessionsBuilder builder() {
@@ -25,8 +33,7 @@ public record RunningSessions(
 
     public static final class RunningSessionsBuilder {
         private Project project;
-        private List<SessionId> ids;
-        private List<LiveSession> live;
+        private List<OpenHostedSession> hosted;
 
         private RunningSessionsBuilder() {}
 
@@ -35,18 +42,13 @@ public record RunningSessions(
             return this;
         }
 
-        public RunningSessionsBuilder ids(List<SessionId> ids) {
-            this.ids = ids;
-            return this;
-        }
-
-        public RunningSessionsBuilder live(List<LiveSession> live) {
-            this.live = live;
+        public RunningSessionsBuilder hosted(List<OpenHostedSession> hosted) {
+            this.hosted = hosted;
             return this;
         }
 
         public RunningSessions build() {
-            return new RunningSessions(project, ids, live);
+            return new RunningSessions(project, hosted);
         }
     }
 }

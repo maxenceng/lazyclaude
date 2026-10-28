@@ -17,7 +17,7 @@ words mean.
 |---|---|---|
 | Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; a session belongs to the one its `cwd` belongs to, so a ticket worktree's sessions sit under its project. | `shared` |
 | Working directory | The directory lazyclaude was started in, or a session's `cwd`; the project is located from it. | `shared` |
-| Warning | A degraded mode lazyclaude carries on in (the docs or board watch fell back to polling, the board on screen kept because it could not be read again, the sessions watch left to its sweep, live sessions read from `claude agents`), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, and is never printed over the screen. | `shared` |
+| Warning | A degraded mode lazyclaude carries on in (the docs or board watch fell back to polling, the board on screen kept because it could not be read again, the sessions watch left to its sweep), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, and is never printed over the screen. | `shared` |
 
 ## shell
 
@@ -69,10 +69,10 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Live session | A session whose process runs, as the registry lists it after the liveness check, or `claude agents --json` when the registry is unusable. `sdk-cli` sessions are not listed from the registry, and only those whose pid lazyclaude hosts are listed at all. | `session` |
-| Registry | Claude Code's `~/.claude/sessions/<pid>.json` records, one per running process; internal and undocumented, so never trusted without the liveness check. | `session` |
+| Live session | A hosted session whose registry record reports a status, with the state that record reports, or `Unknown` with a warning when the record is there and cannot be read. Only the sessions lazyclaude hosts are listed at all; a `claude` in another terminal shows nowhere. | `session` |
+| Registry | Claude Code's `~/.claude/sessions/<pid>.json` records, one per running process; internal and undocumented, so a record that does not parse or lacks what a session needs is refused for its own session, with a warning naming why, and the others keep their state. | `session` |
 | Sweep | Re-reading the live sessions on a timer (every 2 s), always, watch or not: a session whose process died never rewrites its record, so only the sweep notices. Without a watch, the sweep is all there is. | `session` |
-| Hosted session | A live session lazyclaude spawned: the real `claude` on a pty, drawn in a dock tab. Started by `N` or by resuming an unlinked past session; its tab closes when `claude` exits, and it dies with lazyclaude. | `session` |
+| Hosted session | A session lazyclaude spawned: the real `claude` on a pty, drawn in a dock tab, named by its session id from launch (`claude --session-id <uuid>` for `N` and a `/ticket` launch, the id it resumes for a resume), so its row, tab and notification carry that id before Claude Code has written anything. Its state, and the session it runs once `/clear` has replaced the one it launched, are read from the registry record of its own pid; the launch id stays its tab's. Its tab closes when `claude` exits, and it dies with lazyclaude. | `session` |
 | Pty bytes | What crosses a hosted session's pty, both ways: output as `claude` wrote it, input already encoded by the frontend's own emulator. `session`'s backend never emulates. | `session` |
 | Watched session | The session whose dock tab is selected while the dock and the terminal both have focus. It is never notified, and becoming watched closes its notification. The terminal counts as focused until it reports a focus-out. In the desktop frontend, the selected session pane's session while that pane and the window both have focus. | `session` (the rule), `shell` and the desktop frontend (what is watched) |
 | Desktop notification | The `notify-send` notification a session's transition into waiting fires, under either frontend, titled `<project> · <session name>` with the registry's waiting text as body. Replaced in place when the session moves between waiting for permission and waiting for input; closed, over D-Bus, when it stops waiting or becomes watched. | `session` |
@@ -86,8 +86,8 @@ words mean.
 | Weak link | A link found only through the branch name; shown as less certain, with a dim `(branch)` and no verb. | `session` |
 | Unlinked session | A session attributed to no ticket. Started from lazyclaude, it runs in the project root. | `session` |
 | Marker | What a live session asks of you, in the board gutter and on the status line: `!` waiting for permission, `?` waiting for input, `•` your turn; the strongest is `!` > `?` > `•`. Busy, unknown and past are not markers. | `session` |
-| Starting | A hosted session with no registry record yet: just spawned, or still on Claude Code's trust dialog. No marker, never notified. | `session` |
-| Unread | A hosted session while the registry cannot be read: whether it is starting, busy or waiting is unknown. Its tab reads `starting`, and it counts as busy, so `q` asks first. | `session` |
+| Starting | A hosted session with no registry record yet, or only one an earlier process of its pid left: just spawned, or still on Claude Code's trust dialog. No marker, never notified. | `session` |
+| Unread | A hosted session whose registry record is there and cannot be used, or reports a status lazyclaude does not know: whether it is busy or waiting is unknown. It shows as `Unknown`, and it counts as busy, so `q` asks first. | `session` |
 | Busy | The session is working; nothing is asked of you. The registry's `busy` and `shell` both show as busy. | `session` |
 | Your turn | The session finished and waits for your next prompt, without blocking on anything. Shown, never notified. | `session` |
 | Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session (its *Worktree state*). Removal is `git worktree remove` only; the local ticket branch stays. | `shared` (its path), `session` (creates and removes it) |
@@ -95,7 +95,7 @@ words mean.
 | Verb picker | The popup `n` opens on a ticket, listing its allowed verbs with the preselected one under the cursor. | `shell` |
 | Preselected verb | The allowed verb the verb picker opens on, from status, past sessions and the pull request's state. | `session` |
 | Waiting | The session is blocked on you: *waiting for permission* (a permission prompt) or *waiting for input* (any other question). The only state that notifies. | `session` |
-| Unknown (state) | The session reports a `status` lazyclaude does not know, or none, as a newer Claude Code may. Still listed, with a grey `·`; never notified. | `session` |
+| Unknown (state) | What an unread session shows: its record cannot be used, or reports a `status` lazyclaude does not know, as a newer Claude Code may. Still listed, with a grey `·` and one warning; never notified. | `session` |
 | Reserved chord | A chord lazyclaude takes before `claude` sees it, inside every hosted session: the seven focus, hide, zoom and next-waiting chords, `alt+h/j/k/l/m/z/w` unless `config.yml` rebinds them. The same file binds them in the desktop frontend. | `session` |
 | Fixed chord | A chord lazyclaude keeps for itself and `config.yml` cannot move — `ctrl+c` quit, `ctrl+d`/`ctrl+u` half page — so no reserved chord may be rebound onto one. | `session` |
 

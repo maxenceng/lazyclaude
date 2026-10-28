@@ -4,9 +4,9 @@ import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeUnavailableException;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 
 /** What the shell asks of {@code session}: a project's live and past sessions as a view, and a view again whenever they may have changed. It only reads: the hosted sessions' screens included. */
@@ -18,7 +18,7 @@ public final class SessionQuery {
         this.sessions = sessions;
     }
 
-    /** The project's live and past sessions, or why none could be read; never a failure. */
+    /** The project's hosted and past sessions; a hosted session whose record cannot be read shows as unknown. */
     public SessionsView sessionsFor(SessionPayload payload) {
         return SessionsView.from(sessions.sessionsFor(payload.toDomain(), payload.tickets()));
     }
@@ -72,7 +72,7 @@ public final class SessionQuery {
     }
 
     /** What a hosted session shows right now, blank for one that is gone. */
-    public TerminalScreen screenOf(HostedSessionId id) {
+    public TerminalScreen screenOf(SessionId id) {
         return sessions.screenOf(id);
     }
 

@@ -13,7 +13,7 @@ import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.review.published.MergedHead;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 
 public final class HostedSessionPayloadFixture {
 
@@ -27,11 +27,11 @@ public final class HostedSessionPayloadFixture {
         return new ResumeHostedPayload(sessionId(), worktreeDirectory().path(), paneSize());
     }
 
-    public static HostedInputPayload typingPayload(HostedSessionId id) {
+    public static HostedInputPayload typingPayload(SessionId id) {
         return new HostedInputPayload(id, typedA());
     }
 
-    public static ResizePayload resizePayload(HostedSessionId id) {
+    public static ResizePayload resizePayload(SessionId id) {
         return new ResizePayload(id, resizedPaneSize());
     }
 

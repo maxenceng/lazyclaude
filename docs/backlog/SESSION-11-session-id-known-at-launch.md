@@ -1,6 +1,6 @@
 ---
 id: SESSION-11
-status: todo
+status: in-review
 context: session
 type: feature
 tracker_id: 94
@@ -16,8 +16,9 @@ created: 2026-10-26
 - [ ] A resume keeps the id it resumes, and a second resume of the same session is still refused while the first runs.
 - [ ] A hosted session's state (busy, waiting for permission with its reason, waiting for input, your turn) comes from
       `~/.claude/sessions/<pid>.json` for its pid; nothing reads `/proc` or runs `claude agents --json`.
-- [ ] A hosted session whose record is missing, unreadable or of an unknown shape shows as `Unknown`, with one warning
-      naming why, and the others keep their state.
+- [ ] A hosted session whose record is unreadable or of an unknown shape shows as `Unknown`, with one warning naming
+      why, and the others keep their state. One with no record yet, or a record with no status yet, is still starting:
+      Claude Code writes none on its trust dialog, and its first record a moment before its first status.
 - [ ] A session in another terminal entering waiting fires no desktop notification; a hosted one still does, by ADR
       0033's rule.
 - [ ] `make contract` checks a live hosted `claude`'s registry record has the fields the domain reads.

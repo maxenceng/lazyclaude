@@ -35,7 +35,7 @@ build: ## Compile main sources
 test: ## Run every test, architecture rules included
 	$(MVN) test
 
-contract: ## Check the registry against `claude agents --json`, a hosted pid and `gh`; run by hand after a Claude Code or gh upgrade
+contract: ## Check a live hosted `claude`'s registry record, its keybindings and `gh`; run by hand after a Claude Code or gh upgrade
 	$(MVN) test -Dgroups=contract -DexcludedGroups= -Dsurefire.failIfNoSpecifiedTests=false
 
 test-one: ## Run one test class or method, e.g. make test-one T=SomeTest

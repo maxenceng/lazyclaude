@@ -1,11 +1,9 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSession;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionsOf;
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openLive;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openStarting;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.openUnread;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.startingIn;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
@@ -31,56 +29,27 @@ import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
+import dev.maxenceng.lazyclaude.session.published.Unknown;
 
 class AvailableSessionsTest {
 
     @Test
-    void shouldKeepALiveSessionWhenItsPidIsOneLazyclaudeSpawned() {
-        Sessions hosting = liveSessionsOf(List.of(liveSession())).hosting(hostedSessionsOf(hostedSession()));
+    void shouldListTheLiveSessionsOfTheHostedOnesNewestStartFirst() {
+        AvailableSessions sessions = liveSessionsOf(List.of(liveSession(), newestSession()));
 
-        assertThat(hosting).isEqualTo(availableSessionsHosting(List.of(liveSession()), List.of(openLive(liveSession()))));
+        assertThat(sessions.live()).containsExactly(newestSession(), liveSession());
     }
 
     @Test
-    void shouldDropALiveSessionWhenItsPidIsNotOneLazyclaudeSpawned() {
-        AvailableSessions hosting = liveSessionsOf(List.of(newestSession())).hosting(hostedSessionsOf(hostedSession()));
-
-        assertThat(hosting.live()).as("a claude started in another terminal is not lazyclaude's to list").isEmpty();
+    void shouldListNoLiveSessionForAHostedOneStillStarting() {
+        assertThat(availableSessionsHosting(List.of(), List.of(openStarting())).live()).isEmpty();
     }
 
     @Test
-    void shouldListAHostedSessionAsStartingWhileTheRegistryHasNoRecordOfIt() {
-        Sessions hosting = liveSessionsOf(List.of()).hosting(hostedSessionsOf(hostedSession()));
-
-        assertThat(hosting).isEqualTo(availableSessionsHosting(List.of(), List.of(openStarting())));
-    }
-
-    @Test
-    void shouldLinkALiveHostedSessionToTheTicketItWasStartedFor() {
-        HostedSession started = hostedSessionRunning(Verb.REVIEW);
-        AvailableSessions hosting =
-                liveSessionsOf(List.of(liveSession())).hosting(hostedSessionsOf(started));
-
-        assertThat(hosting.live())
-                .extracting(LiveSession::links)
-                .as("its transcript has not linked it yet, and it must not drop to the unlinked section meanwhile")
-                .containsExactly(List.of(strongLink("PROJ-1", "review")));
-    }
-
-    @Test
-    void shouldKeepTheLinkItsTranscriptAlreadyGivesToThatTicket() {
-        LiveSession linked = liveSessionBuilder().links(List.of(strongLink("PROJ-1", "respond"))).build();
-
-        AvailableSessions hosting = liveSessionsOf(List.of(linked)).hosting(hostedSessionsOf(hostedSessionRunning(Verb.REVIEW)));
-
-        assertThat(hosting.live()).extracting(LiveSession::links).containsExactly(List.of(strongLink("PROJ-1", "respond")));
-    }
-
-    @Test
-    void shouldLinkNoLiveSessionThatIsNotHostedForATicket() {
-        AvailableSessions hosting = liveSessionsOf(List.of(liveSession())).hosting(hostedSessionsOf(hostedSession()));
-
-        assertThat(hosting.live()).extracting(LiveSession::links).containsExactly(List.of());
+    void shouldListAnUnreadHostedSessionAsLiveWithAnUnknownState() {
+        assertThat(availableSessionsHosting(List.of(), List.of(openUnread())).live())
+                .extracting(LiveSession::state)
+                .containsExactly(new Unknown());
     }
 
     @Test
@@ -99,9 +68,14 @@ class AvailableSessionsTest {
 
     @Test
     void shouldHaveRunAVerbWhenAHostedSessionStillStartingWasLaunchedWithIt() {
-        AvailableSessions hosting = liveSessionsOf(List.of()).hosting(hostedSessionsOf(hostedSessionRunning(Verb.DESIGN)));
+        AvailableSessions sessions = availableSessionsHosting(
+                List.of(),
+                List.of(OpenHostedSession.builder()
+                        .session(hostedSessionRunning(Verb.DESIGN))
+                        .phase(new StartingPhase())
+                        .build()));
 
-        assertThat(hosting.ranVerb(linkedTicketId(), Verb.DESIGN)).isTrue();
+        assertThat(sessions.ranVerb(linkedTicketId(), Verb.DESIGN)).isTrue();
     }
 
     @Test
@@ -154,7 +128,7 @@ class AvailableSessionsTest {
     @Test
     void shouldNameAHostedSessionOnceWhenItIsLive() {
         AvailableSessions sessions = availableSessionsHosting(
-                List.of(sessionIn(worktreeDirectory())),
+                List.of(),
                 List.of(OpenHostedSession.builder()
                         .session(hostedSessionBuilder().directory(worktreeDirectory()).build())
                         .phase(new LivePhase(sessionIn(worktreeDirectory())))

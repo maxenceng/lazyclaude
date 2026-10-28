@@ -1,18 +1,24 @@
 package dev.maxenceng.lazyclaude.session.application;
 
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.clock;
+import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketStart;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
+import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
+import dev.maxenceng.lazyclaude.session.domain.SpawnedEarlierClock;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
@@ -91,6 +97,14 @@ public final class SessionApplicationServiceFixture {
         return service;
     }
 
+    public static SessionApplicationService hostingATicketSessionInTheWorktree(
+            SessionApplicationService service, HostPort hosts, WorktreePort worktrees) {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        service.startTicket(ticketStart(Verb.DESIGN), paneSize());
+        return service;
+    }
+
     private static SessionApplicationService sessionApplicationService(
             LiveSessionPort sessions,
             PastSessionPort past,
@@ -113,6 +127,6 @@ public final class SessionApplicationServiceFixture {
                 worktrees,
                 notifications,
                 desktopNotifications,
-                clock());
+                new SpawnedEarlierClock());
     }
 }

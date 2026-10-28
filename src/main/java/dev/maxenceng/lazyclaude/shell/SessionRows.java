@@ -8,15 +8,12 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.AvailableSessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnavailableSessionsView;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
-import dev.maxenceng.lazyclaude.session.published.Reason;
 
 /**
  * The Sessions panel's rows and what the shell remembers about them: the selection, by session id, so it survives the
@@ -43,20 +40,13 @@ final class SessionRows {
     }
 
     List<SessionRow> visible() {
-        return switch (sessions) {
-            case AvailableSessionsView available -> rowsOf(available);
-            case UnavailableSessionsView _ -> List.of();
-        };
-    }
-
-    private List<SessionRow> rowsOf(AvailableSessionsView available) {
         return Stream.concat(
-                        ticket.stream().flatMap(selectedTicket -> ticketSection(available, selectedTicket)),
-                        unlinkedSection(available))
+                        ticket.stream().flatMap(selectedTicket -> ticketSection(sessions, selectedTicket)),
+                        unlinkedSection(sessions))
                 .toList();
     }
 
-    private Stream<SessionRow> ticketSection(AvailableSessionsView available, LinkedTicketId selectedTicket) {
+    private Stream<SessionRow> ticketSection(SessionsView available, LinkedTicketId selectedTicket) {
         List<SessionRow> linked = Stream.of(
                         available.live().stream()
                                 .flatMap(session -> session.linkTo(selectedTicket)
@@ -78,7 +68,7 @@ final class SessionRows {
                 .flatMap(Function.identity());
     }
 
-    private Stream<SessionRow> unlinkedSection(AvailableSessionsView available) {
+    private Stream<SessionRow> unlinkedSection(SessionsView available) {
         List<LiveSessionView> live = available.unlinkedLive();
         List<PastSessionView> past = available.unlinkedPast();
         if (live.isEmpty() && past.isEmpty()) {
@@ -91,11 +81,6 @@ final class SessionRows {
                         past.stream().limit(shown).<SessionRow>map(session -> new PastSessionRow(session, Optional.empty())),
                         Included.<SessionRow>when(shown < past.size(), new OlderSessionsRow(past.size() - shown)))
                 .flatMap(Function.identity());
-    }
-
-    /** Why there are no sessions to show, when no source answered. */
-    Optional<Reason> unavailable() {
-        return sessions instanceof UnavailableSessionsView unavailable ? Optional.of(unavailable.reason()) : Optional.empty();
     }
 
     /** The hosted sessions, in tab order, whether or not the registry could be read. */
@@ -136,12 +121,12 @@ final class SessionRows {
 
     /** The strongest marker among the live sessions linked to {@code ticketId}, for the ticket's row on the board. */
     Optional<Marker> markerOf(LinkedTicketId ticketId) {
-        return sessions instanceof AvailableSessionsView available ? available.strongestMarkerOf(ticketId) : Optional.empty();
+        return sessions.strongestMarkerOf(ticketId);
     }
 
     /** How many of the project's live sessions, linked or not, carry each marker, for the status line. */
     Map<Marker, Long> markerCounts() {
-        return sessions instanceof AvailableSessionsView available ? available.markerCounts() : Map.of();
+        return sessions.markerCounts();
     }
 
     /** The verb the shown ticket's {@code n new} row offers to start, none while it offers no session, as a {@code done} ticket does not. */
@@ -160,9 +145,9 @@ final class SessionRows {
 
     /** Selects the session of the shown ticket with the strongest marker, the first of any tied, else its {@code n new} row, else the first row. */
     void selectStrongestMarker() {
-        Optional<RowKey> strongest = sessions instanceof AvailableSessionsView available
-                ? ticket.flatMap(available::strongestSessionOf).map(session -> new LiveSessionRow(session, Optional.empty()).key())
-                : Optional.empty();
+        Optional<RowKey> strongest = ticket
+                .flatMap(sessions::strongestSessionOf)
+                .map(session -> new LiveSessionRow(session, Optional.empty()).key());
         selected = strongest.or(this::newSessionKey).or(this::firstSelectable);
     }
 
@@ -216,11 +201,10 @@ final class SessionRows {
 
     /** Whether {@code key} is an unlinked past session the fold hides, as a selected live session is once it dies idle long enough. */
     private boolean isFolded(RowKey key) {
-        return sessions instanceof AvailableSessionsView available
-                && available.unlinkedPast().stream()
-                        .skip(PAST_SHOWN)
-                        .map(session -> new PastSessionRow(session, Optional.empty()))
-                        .anyMatch(row -> row.key().equals(key));
+        return sessions.unlinkedPast().stream()
+                .skip(PAST_SHOWN)
+                .map(session -> new PastSessionRow(session, Optional.empty()))
+                .anyMatch(row -> row.key().equals(key));
     }
 
     private static int indexOf(List<SessionRow> rows, RowKey key) {

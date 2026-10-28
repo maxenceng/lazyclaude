@@ -1,13 +1,14 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
-import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedIn;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.worktreePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.ticketWorktreeCommand;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.ticketWorktreeCommandOverOccupied;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.dirtyWorktreeContentsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.occupiedWorktreeContentsView;
 import static dev.maxenceng.lazyclaude.session.published.DirtyPathFixture.dirtyPath;
+import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,6 +19,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,7 +57,6 @@ class TicketWorktreeCommandTest {
 
     @Test
     void shouldRemoveAClearWorktree() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(command.remove(worktreePayload(headCommit()))).isEqualTo(new RemovedWorktreeView());
         verify(worktrees).remove(project(), worktreeDirectory());
@@ -64,7 +65,6 @@ class TicketWorktreeCommandTest {
     @Test
     void shouldRefuseAWorktreeWithADirtyPathAndSayWhat() {
         when(worktrees.dirtyPaths(worktreeDirectory())).thenReturn(List.of(dirtyPath()));
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(command.remove(worktreePayload(headCommit())))
                 .isEqualTo(new RefusedRemovalView(dirtyWorktreeContentsView()));
@@ -72,18 +72,16 @@ class TicketWorktreeCommandTest {
     }
 
     @Test
-    void shouldRefuseAWorktreeWithALiveSessionInItAndNameIt() {
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(worktreeDirectory())));
-        when(locator.locate(worktreeDirectory())).thenReturn(project());
+    void shouldRefuseAWorktreeWithAHostedSessionInItAndNameIt() {
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
 
-        assertThat(command.remove(worktreePayload(headCommit())))
+        assertThat(ticketWorktreeCommandOverOccupied(sessions, worktrees).remove(worktreePayload(headCommit())))
                 .isEqualTo(new RefusedRemovalView(occupiedWorktreeContentsView()));
         verify(worktrees, never()).remove(any(), any());
     }
 
     @Test
     void shouldRefuseAWorktreeWhenNoMergedPullRequestIsKnown() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(command.remove(worktreePayload(new NoMergedHead())))
                 .isEqualTo(new RefusedRemovalView(new NoMergedPullRequestView()));
@@ -91,17 +89,7 @@ class TicketWorktreeCommandTest {
     }
 
     @Test
-    void shouldRefuseAWorktreeWhenTheSessionsCannotBeRead() {
-        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
-
-        assertThat(command.remove(worktreePayload(headCommit())))
-                .isEqualTo(new RefusedRemovalView(new NoSessionsReadView()));
-        verify(worktrees, never()).remove(any(), any());
-    }
-
-    @Test
     void shouldFailWithGitsMessageWhenGitRefusesToRemove() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
         doThrow(new WorktreeNotRemovedException("git worktree remove: fatal: contains modified or untracked files"))
                 .when(worktrees)
                 .remove(project(), worktreeDirectory());
@@ -114,7 +102,6 @@ class TicketWorktreeCommandTest {
     @Test
     void shouldFailWithWhyWhenGitCannotSayWhatStandsInTheWorktree() {
         when(worktrees.dirtyPaths(worktreeDirectory())).thenThrow(new WorktreeUnavailableException("git status: fatal"));
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(command.remove(worktreePayload(headCommit())))
                 .isEqualTo(new FailedRemovalView(new Reason("git status: fatal")));

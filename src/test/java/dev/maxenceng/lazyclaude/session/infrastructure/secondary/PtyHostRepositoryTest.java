@@ -33,13 +33,13 @@ import dev.maxenceng.lazyclaude.session.domain.HostUnavailableException;
 import dev.maxenceng.lazyclaude.session.published.CellColumn;
 import dev.maxenceng.lazyclaude.session.published.CellRow;
 import dev.maxenceng.lazyclaude.session.published.CursorAt;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.IndexedColour;
 import dev.maxenceng.lazyclaude.session.published.Modifier;
 import dev.maxenceng.lazyclaude.session.published.Modifiers;
 import dev.maxenceng.lazyclaude.session.published.NamedKey;
 import dev.maxenceng.lazyclaude.session.published.NoCursor;
 import dev.maxenceng.lazyclaude.session.published.RgbColour;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StyledRun;
 import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.session.published.TextAttribute;
@@ -47,7 +47,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 class PtyHostRepositoryTest {
 
-    private final HostedSessionId id = HostedSessionId.random();
+    private final SessionId id = sessionId();
 
     @Test
     void shouldReturnThePidOfTheChild() {
@@ -69,7 +69,7 @@ class PtyHostRepositoryTest {
     @Test
     void shouldTellThatTheScreenChanged() throws Exception {
         PtyHostRepository host = hostRunning("printf 'drawn'; read line");
-        CompletableFuture<HostedSessionId> drew = new CompletableFuture<>();
+        CompletableFuture<SessionId> drew = new CompletableFuture<>();
         host.onScreenChange(drew::complete);
 
         host.spawn(newLaunch(id), code -> {});
@@ -162,7 +162,7 @@ class PtyHostRepositoryTest {
 
         host.spawn(resumeLaunch(id), code -> {});
 
-        assertThat(text(screenContaining(host, id, "args:"))).contains("args: --resume " + sessionId().value());
+        assertThat(text(screenContaining(host, id, "args:"))).contains("args: --resume " + id.value());
         host.end(id);
     }
 
@@ -173,17 +173,17 @@ class PtyHostRepositoryTest {
         host.spawn(ticketLaunch(id), code -> {});
 
         assertThat(text(screenContaining(host, id, "args:")))
-                .contains("args:[-n][PROJ-1 review][/ticket review PROJ-1]");
+                .contains("args:[--session-id][" + id.value() + "][-n][PROJ-1 review][/ticket review PROJ-1]");
         host.end(id);
     }
 
     @Test
-    void shouldAddNothingToACommandThatBeginsANewSession() throws Exception {
+    void shouldNameTheSessionOfACommandThatBeginsANewOne() throws Exception {
         PtyHostRepository host = hostRunning("echo \"args:[$*]\"; read line");
 
         host.spawn(newLaunch(id), code -> {});
 
-        assertThat(text(screenContaining(host, id, "args:"))).contains("args:[]");
+        assertThat(text(screenContaining(host, id, "args:"))).contains("args:[--session-id " + id.value() + "]");
         host.end(id);
     }
 
@@ -207,7 +207,7 @@ class PtyHostRepositoryTest {
 
     @Test
     void shouldTypeIntoTheChild() throws Exception {
-        PtyHostRepository host = hostOfCommand("/bin/cat");
+        PtyHostRepository host = hostRunning("exec /bin/cat");
         host.spawn(newLaunch(id), code -> {});
 
         host.send(id, typed('h', Modifiers.none()));
@@ -231,7 +231,7 @@ class PtyHostRepositoryTest {
 
     @Test
     void shouldReachTheChildWithTabAndShiftTab() throws Exception {
-        PtyHostRepository host = hostOfCommand("/bin/cat", "-vT");
+        PtyHostRepository host = hostRunning("exec /bin/cat -vT");
         host.spawn(newLaunch(id), code -> {});
 
         host.send(id, pressed(NamedKey.TAB));
@@ -257,7 +257,7 @@ class PtyHostRepositoryTest {
 
     @Test
     void shouldPasteBareWhenTheChildNeverTurnedBracketedPasteOn() throws Exception {
-        PtyHostRepository host = hostOfCommand("/bin/cat", "-v");
+        PtyHostRepository host = hostRunning("exec /bin/cat -v");
         host.spawn(newLaunch(id), code -> {});
 
         host.send(id, pasted("plain"));
@@ -283,7 +283,7 @@ class PtyHostRepositoryTest {
 
     @Test
     void shouldSendNoMouseToAChildThatDidNotAskForIt() throws Exception {
-        PtyHostRepository host = hostOfCommand("/bin/cat", "-v");
+        PtyHostRepository host = hostRunning("exec /bin/cat -v");
         host.spawn(newLaunch(id), code -> {});
 
         host.send(id, leftPressAt(4, 2));

@@ -1,14 +1,12 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.session.published.ClaudeVersionFixture.version;
-import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.noFirstPrompt;
 import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.openingUnder;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.thirdProcessId;
-import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.thirdSessionId;
@@ -26,12 +24,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
@@ -67,7 +63,7 @@ public final class SessionsViewFixture {
 
     public static HostedSessionView startingHostedSessionView() {
         return HostedSessionView.builder()
-                .id(hostedSessionId())
+                .id(sessionId())
                 .pid(processId())
                 .live(Optional.empty())
                 .busyOrWaiting(false)
@@ -76,7 +72,7 @@ public final class SessionsViewFixture {
 
     public static HostedSessionView startingTicketHostedSessionView() {
         return HostedSessionView.builder()
-                .id(hostedSessionId())
+                .id(sessionId())
                 .pid(processId())
                 .live(Optional.empty())
                 .busyOrWaiting(false)
@@ -86,7 +82,7 @@ public final class SessionsViewFixture {
 
     public static HostedSessionView liveHostedSessionView(LiveSessionView live, boolean busyOrWaiting) {
         return HostedSessionView.builder()
-                .id(hostedSessionId())
+                .id(sessionId())
                 .pid(live.pid())
                 .live(Optional.of(live))
                 .busyOrWaiting(busyOrWaiting)
@@ -117,8 +113,8 @@ public final class SessionsViewFixture {
                 .build();
     }
 
-    public static HostedSessionId hostedSessionIdOf(int number) {
-        return new HostedSessionId(UUID.fromString("00000000-0000-0000-0000-%012d".formatted(number)));
+    public static SessionId hostedSessionIdOf(int number) {
+        return new SessionId("00000000-0000-0000-0000-%012d".formatted(number));
     }
 
     public static SessionsView sessionsViewWithTabs(HostedSessionView... tabs) {
@@ -127,11 +123,11 @@ public final class SessionsViewFixture {
     }
 
     public static SessionsView sessionsViewHosting(List<LiveSessionView> live, List<HostedSessionView> hosted) {
-        return AvailableSessionsView.builder().live(live).past(List.of()).hosted(hosted).build();
+        return SessionsView.builder().live(live).past(List.of()).hosted(hosted).build();
     }
 
     public static List<LiveSessionView> liveViewsOf(SessionsView view) {
-        return ((AvailableSessionsView) view).live();
+        return view.live();
     }
 
     public static LiveSessionView sessionView() {
@@ -168,7 +164,7 @@ public final class SessionsViewFixture {
     }
 
     public static SessionsView sessionsViewOf(List<LiveSessionView> sessions, List<PastSessionView> past) {
-        return AvailableSessionsView.builder().live(sessions).past(past).build();
+        return SessionsView.builder().live(sessions).past(past).build();
     }
 
     public static SessionsView pastSessionsViewOf(List<PastSessionView> past) {
@@ -225,14 +221,6 @@ public final class SessionsViewFixture {
 
     public static SessionsView emptySessionsView() {
         return sessionsViewOf(List.of());
-    }
-
-    public static SessionsView unavailableSessionsView() {
-        return unavailableSessionsViewHosting(List.of());
-    }
-
-    public static SessionsView unavailableSessionsViewHosting(List<HostedSessionView> hosted) {
-        return UnavailableSessionsView.builder().reason(reason()).hosted(hosted).build();
     }
 
     public static List<LiveSessionView> everyStateSessionViews() {

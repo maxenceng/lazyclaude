@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.review.published.MergedHead;
+import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationManager;
 import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
 import dev.maxenceng.lazyclaude.session.domain.HeldWorktree;
@@ -19,7 +20,6 @@ import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
-import dev.maxenceng.lazyclaude.session.domain.Sessions;
 import dev.maxenceng.lazyclaude.session.domain.TicketDoneEndedListener;
 import dev.maxenceng.lazyclaude.session.domain.TicketStart;
 import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
@@ -30,7 +30,6 @@ import dev.maxenceng.lazyclaude.session.domain.WorktreeManager;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeNotClearException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
@@ -42,8 +41,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * Reads a project's live, past and hosted sessions, linked to the tickets it is handed, and keeps a listener handed them
- * again as they change, notifying the desktop of the project's sessions that enter waiting; and starts, feeds and ends the hosted ones.
+ * Reads a project's hosted and past sessions, linked to the tickets it is handed, and keeps a listener handed them
+ * again as they change, notifying the desktop of the hosted sessions that enter waiting; and starts, feeds and ends the hosted ones.
  */
 public final class SessionApplicationService {
 
@@ -53,7 +52,7 @@ public final class SessionApplicationService {
     private final DesktopNotificationManager notifying;
     private final boolean desktopNotifications;
     private final LastPushedSessions lastPushed = new LastPushedSessions();
-    private final AtomicReference<Consumer<Sessions>> delivering = new AtomicReference<>(sessions -> {});
+    private final AtomicReference<Consumer<AvailableSessions>> delivering = new AtomicReference<>(sessions -> {});
 
     public SessionApplicationService(
             LiveSessionPort sessions,
@@ -67,26 +66,25 @@ public final class SessionApplicationService {
             DesktopNotificationPort notifications,
             boolean desktopNotifications,
             Clock clock) {
-        this.hosted = new HostedSessionManager(hosts, warnings, worktrees);
+        this.hosted = new HostedSessionManager(hosts, sessions, warnings, worktrees, clock);
         this.worktreeing = new WorktreeManager(worktrees);
         this.notifying = new DesktopNotificationManager(notifications, warnings);
         this.desktopNotifications = desktopNotifications;
         this.manager = new SessionManager(sessions, pastSessions, locator, watch, transcriptWatch, warnings, clock);
     }
 
-    public Sessions sessionsFor(Project project, KnownTickets tickets) {
-        return manager.sessionsFor(project, tickets).hosting(hosted.open());
+    public AvailableSessions sessionsFor(Project project, KnownTickets tickets) {
+        return manager.sessionsFor(project, tickets, hosted.open());
     }
 
-    public void subscribe(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
-        Consumer<Sessions> hosting = sessions -> {
+    public void subscribe(Project project, KnownTickets tickets, Consumer<AvailableSessions> listener) {
+        Consumer<AvailableSessions> hosting = sessions -> {
             lastPushed.remember(sessions);
-            Sessions hostedOnly = sessions.hosting(hosted.open());
-            notifying.seen(project, hostedOnly, desktopNotifications);
-            listener.accept(hostedOnly);
+            notifying.seen(project, sessions, desktopNotifications);
+            listener.accept(sessions);
         };
-        manager.watch(project, tickets, hosting);
-        hosted.onChange(() -> manager.refresh(project, hosting));
+        manager.watch(project, tickets, hosted::open, hosting);
+        hosted.onChange(() -> manager.refresh(project, hosted.open(), hosting));
         delivering.set(hosting);
     }
 
@@ -97,12 +95,12 @@ public final class SessionApplicationService {
 
     /** From now on sessions are linked against {@code tickets}, the ids of the board as it was last read; the subscriber is handed them linked that way at once. */
     public void knowTickets(Project project, KnownTickets tickets) {
-        manager.know(project, tickets, delivering.get());
+        manager.know(project, tickets, hosted.open(), delivering.get());
     }
 
     /** Reads the live sessions and the transcripts again now, linked against {@code tickets}, rather than at the next change or sweep. */
     public void refresh(Project project, KnownTickets tickets) {
-        manager.know(project, tickets, delivering.get());
+        manager.know(project, tickets, hosted.open(), delivering.get());
         manager.rescanTranscripts();
     }
 
@@ -122,23 +120,21 @@ public final class SessionApplicationService {
 
     /**
      * The verbs a ticket allows and the one to start on: {@code design} while no session has run it, {@code done} once the branch
-     * is merged. The sessions are the watcher's last push, with the hosted ones as they are now, so the render thread asking
-     * on every move never waits on the registry; only before the first push are they read here. A registry that cannot be
-     * read leaves only the hosted ones to go by.
+     * is merged. The sessions are the watcher's last push, so the render thread asking on every move never waits on the
+     * registry; only before the first push are they read here.
      */
-    // deferred: a session that ran design counts one watcher tick late unless lazyclaude hosts it — close it when a preselection is seen stale.
     public VerbChoice verbChoiceFor(
             Project project, KnownTickets tickets, LinkedTicketId ticket, List<Verb> allowed, boolean merged) {
         return VerbChoice.of(allowed, sessionsAsPushed(project, tickets).ranVerb(ticket, Verb.DESIGN), merged);
     }
 
-    private Sessions sessionsAsPushed(Project project, KnownTickets tickets) {
-        return lastPushed.last().map(pushed -> pushed.hosting(hosted.open())).orElseGet(() -> sessionsFor(project, tickets));
+    private AvailableSessions sessionsAsPushed(Project project, KnownTickets tickets) {
+        return lastPushed.last().orElseGet(() -> sessionsFor(project, tickets));
     }
 
     /**
-     * The ticket worktree and what stands in it, none when the ticket has no worktree. The sessions are the watcher's last push with
-     * the hosted ones as they are now, as {@link #verbChoiceFor} reads them. It runs {@code git}, so not on the render thread.
+     * The ticket worktree and what stands in it, none when the ticket has no worktree. The sessions are the watcher's last push, as
+     * {@link #verbChoiceFor} reads them. It runs {@code git}, so not on the render thread.
      */
     public Optional<HeldWorktree> worktreeOf(Project project, KnownTickets tickets, TicketWorktree worktree, MergedHead merged) {
         return worktreeing.held(worktree, merged, sessionsAsPushed(project, tickets));
@@ -162,15 +158,15 @@ public final class SessionApplicationService {
         return hosted.resume(session, recorded, size);
     }
 
-    public void send(HostedSessionId id, TerminalInput input) {
+    public void send(SessionId id, TerminalInput input) {
         hosted.send(id, input);
     }
 
-    public void resize(HostedSessionId id, PaneSize size) {
+    public void resize(SessionId id, PaneSize size) {
         hosted.resize(id, size);
     }
 
-    public TerminalScreen screenOf(HostedSessionId id) {
+    public TerminalScreen screenOf(SessionId id) {
         return hosted.screenOf(id);
     }
 

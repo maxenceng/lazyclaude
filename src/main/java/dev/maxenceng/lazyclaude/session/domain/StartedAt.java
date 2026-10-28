@@ -11,6 +11,10 @@ public record StartedAt(Instant value) implements Comparable<StartedAt> {
         Assert.notNull("start time", value);
     }
 
+    public boolean isBefore(StartedAt other) {
+        return value.isBefore(other.value);
+    }
+
     @Override
     public int compareTo(StartedAt other) {
         return value.compareTo(other.value);

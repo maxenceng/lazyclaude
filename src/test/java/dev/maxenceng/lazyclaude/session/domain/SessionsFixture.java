@@ -1,7 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
-import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
+import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -13,7 +13,6 @@ import java.util.List;
 
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
-import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class SessionsFixture {
 
@@ -47,32 +46,23 @@ public final class SessionsFixture {
     }
 
     public static AvailableSessions availableSessionsOf(List<LiveSession> sessions, List<PastSession> past) {
-        return AvailableSessions.builder().live(sessions).past(past).clock(sessionClock()).build();
+        return availableSessionsHosting(past, sessions.stream().map(HostedSessionFixture::hostedLive).toList());
     }
 
-    public static AvailableSessions availableSessionsHosting(List<LiveSession> sessions, List<OpenHostedSession> hosted) {
-        return AvailableSessions.builder()
-                .live(sessions)
-                .past(List.of())
-                .hosted(hosted)
-                .clock(sessionClock())
-                .build();
+    public static AvailableSessions availableSessionsHosting(List<PastSession> past, List<OpenHostedSession> hosted) {
+        return AvailableSessions.builder().past(past).hosted(hosted).clock(sessionClock()).build();
     }
 
-    public static SessionsUnavailableException sessionsUnavailable() {
-        return new SessionsUnavailableException(reason().value());
-    }
-
-    public static UnavailableSessions unavailableSessions() {
-        return unavailableSessionsHosting(List.of());
-    }
-
-    public static UnavailableSessions unavailableSessionsHosting(List<OpenHostedSession> hosted) {
-        return UnavailableSessions.builder().reason(reason()).hosted(hosted).build();
+    public static AvailableSessions hostingSessions(List<OpenHostedSession> hosted) {
+        return availableSessionsHosting(List.of(), hosted);
     }
 
     public static SessionManager sessionManager(LiveSessionPort sessions, ProjectLocatorPort locator, SessionWatchPort watch, WarningPort warnings) {
         return sessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings);
+    }
+
+    public static SessionRecordUnreadableException recordUnreadable() {
+        return new SessionRecordUnreadableException("%d.json does not parse: Unexpected end-of-input".formatted(processId().value()));
     }
 
     public static SessionManager sessionManager(
@@ -83,9 +73,5 @@ public final class SessionsFixture {
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings) {
         return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, clock());
-    }
-
-    public static WorkingDirectory workingDirectoryOf(ReportedSession session) {
-        return session.directory();
     }
 }
