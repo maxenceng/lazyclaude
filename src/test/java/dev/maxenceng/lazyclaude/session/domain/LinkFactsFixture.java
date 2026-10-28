@@ -1,14 +1,15 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketIds;
+import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.aiTitle;
+import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.firstPrompt;
+import static dev.maxenceng.lazyclaude.session.published.TranscriptReadingFixture.readable;
 
 import java.util.Arrays;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.session.published.LinkVerb;
-import dev.maxenceng.lazyclaude.session.published.StrongLink;
-import dev.maxenceng.lazyclaude.session.published.TicketLinkFixture;
-import dev.maxenceng.lazyclaude.session.published.WeakLink;
 
 public final class LinkFactsFixture {
 
@@ -29,31 +30,29 @@ public final class LinkFactsFixture {
     public static TicketRun ticketRun(String verb, String... ids) {
         return TicketRun.builder()
                 .verb(new LinkVerb(verb))
-                .ids(Arrays.stream(ids).map(NamedTicketId::new).toList())
+                .ids(namedIds(ids))
                 .build();
     }
 
     public static LinkFacts ran(TicketRun... runs) {
-        return LinkFacts.builder().runs(List.of(runs)).branchIds(List.of()).build();
+        return LinkFacts.builder().runs(List.of(runs)).build();
     }
 
-    public static LinkFacts onBranches(String... branchIds) {
-        return LinkFacts.builder().runs(List.of()).branchIds(namedIds(branchIds)).build();
-    }
-
-    public static LinkFacts ranOnBranch(TicketRun run, String branchId) {
-        return LinkFacts.builder().runs(List.of(run)).branchIds(namedIds(branchId)).build();
-    }
-
-    public static StrongLink strong(String ticket, String verb) {
-        return TicketLinkFixture.strongLink(ticket, verb);
+    public static LinkFacts noRuns() {
+        return ran();
     }
 
     public static List<NamedTicketId> namedIds(String... ids) {
         return Arrays.stream(ids).map(NamedTicketId::new).toList();
     }
 
-    public static WeakLink weak(String ticket) {
-        return TicketLinkFixture.weakLink(ticket);
+    public static TranscriptFacts factsRunning(TicketRun... runs) {
+        return TranscriptFacts.builder()
+                .title(aiTitle())
+                .opening(firstPrompt())
+                .reading(readable())
+                .lastActivity(new LastActivity(now()))
+                .links(ran(runs))
+                .build();
     }
 }

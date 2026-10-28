@@ -11,9 +11,9 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * What {@link HostedSessionCommand} is asked a resume of a ticket's past session with: the session, the directory its transcript
- * recorded, the project root and the ticket's branch, whose worktree is added back when the recorded directory is it and is gone,
- * and the pane's size.
+ * What {@link HostedSessionCommand} is asked a resume of a ticket's past session with: the session, the directory it was launched
+ * in, the project root and the ticket's branch, whose worktree is added back when the launch directory is it and is gone, and the
+ * pane's size.
  */
 public record ResumeTicketHostedPayload(
         SessionId session, Path recordedDirectory, Path root, String branch, PaneSize size) {

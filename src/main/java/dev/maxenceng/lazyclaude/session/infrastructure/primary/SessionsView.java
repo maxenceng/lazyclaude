@@ -35,12 +35,12 @@ public record SessionsView(List<LiveSessionView> live, List<PastSessionView> pas
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
     }
 
-    /** The strongest marker among the live sessions linked to {@code ticket}, weak links included. */
+    /** The strongest marker among the live sessions linked to {@code ticket}. */
     public Optional<Marker> strongestMarkerOf(LinkedTicketId ticket) {
         return strongestSessionOf(ticket).flatMap(LiveSessionView::marker);
     }
 
-    /** The live session linked to {@code ticket}, weak links included, with the strongest marker; the first of any tied. */
+    /** The live session linked to {@code ticket}, with the strongest marker; the first of any tied. */
     public Optional<LiveSessionView> strongestSessionOf(LinkedTicketId ticket) {
         return live.stream()
                 .filter(session -> session.linkTo(ticket).isPresent() && session.marker().isPresent())

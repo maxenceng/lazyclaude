@@ -1,22 +1,26 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noRuns;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ran;
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
 import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.noFirstPrompt;
 import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.openingUnder;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.aiTitle;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.firstPrompt;
 import static dev.maxenceng.lazyclaude.session.published.TranscriptReadingFixture.readable;
-import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
-import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class PastSessionFixture {
 
@@ -61,27 +65,57 @@ public final class PastSessionFixture {
         return pastSessionBuilder().title(title).opening(openingUnder(title)).build();
     }
 
-    public static PastSession pastSessionIn(WorkingDirectory directory) {
-        return pastSessionBuilder().directory(directory).build();
+    public static LaunchEntry pastLaunchEntry(int number) {
+        return interruptedLaunchEntry(number).endedAt(new EndedAt(now().minus(Duration.ofMinutes(5))));
     }
 
-    public static LocatedPastSession.LocatedPastSessionBuilder locatedPastSessionBuilder() {
-        return LocatedPastSession.builder().session(pastSession()).location(locatedInProject());
+    public static LaunchEntry interruptedLaunchEntry(int number) {
+        return LaunchEntry.builder()
+                .command(new NewClaude(pastSessionId(number)))
+                .directory(projectRootDirectory())
+                .startedAt(new StartedAt(now().minus(Duration.ofMinutes(80))))
+                .build();
     }
 
-    public static LocatedPastSession locatedPastSession() {
-        return locatedPastSessionBuilder().build();
+    public static TranscriptFacts pastTranscriptFacts() {
+        return pastTranscriptFactsRunning();
     }
 
-    public static LocatedPastSession locatedIn(PastSession session) {
-        return locatedPastSessionBuilder().session(session).build();
+    public static TranscriptFacts pastTranscriptFactsRunning(TicketRun... runs) {
+        return TranscriptFacts.builder()
+                .title(aiTitle())
+                .opening(firstPrompt())
+                .reading(readable())
+                .lastActivity(new LastActivity(now().minus(Duration.ofMinutes(10))))
+                .links(ran(runs))
+                .build();
     }
 
-    public static LocatedPastSession notLocated(PastSession session) {
-        return locatedPastSessionBuilder().session(session).location(new NotLocated()).build();
+    public static TranscriptFacts pastTranscriptFactsActiveMinutesAgo(int number, int minutes) {
+        return TranscriptFacts.builder()
+                .title(new AiTitle("Past session %d".formatted(number)))
+                .opening(noFirstPrompt())
+                .reading(readable())
+                .lastActivity(new LastActivity(now().minus(Duration.ofMinutes(minutes))))
+                .links(noRuns())
+                .build();
     }
 
-    public static ProjectLocation locatedInProject() {
-        return new LocatedInProject(project());
+    public static LoggedTranscripts transcriptsRead(Map<SessionId, TranscriptFacts> read) {
+        return LoggedTranscripts.builder().read(read).build();
+    }
+
+    public static LoggedTranscripts transcriptsGone(SessionId... gone) {
+        return LoggedTranscripts.builder().gone(List.of(gone)).build();
+    }
+
+    public static LoggedTranscripts noTranscripts() {
+        return LoggedTranscripts.builder().build();
+    }
+
+    public static PastSessionPort quietPastSessions() {
+        PastSessionPort past = mock(PastSessionPort.class);
+        lenient().when(past.transcriptsOf(any())).thenReturn(noTranscripts());
+        return past;
     }
 }

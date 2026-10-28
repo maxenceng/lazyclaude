@@ -4,7 +4,9 @@ import static dev.maxenceng.lazyclaude.session.application.SessionApplicationSer
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
+import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.emptyLaunchLogPort;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.quietPastSessions;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWaitingFor;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWith;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
@@ -28,7 +30,6 @@ import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
-import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
@@ -41,9 +42,6 @@ class WatchedSessionCommandTest {
 
     @Mock
     private LiveSessionPort sessions;
-
-    @Mock
-    private PastSessionPort past;
 
     @Mock
     private TranscriptWatchPort transcriptWatch;
@@ -70,7 +68,7 @@ class WatchedSessionCommandTest {
                 .thenReturn(Optional.of(reportedWaitingFor(inputNeeded())));
         when(notifications.show(inputNotification())).thenReturn(notificationId());
         SessionApplicationService service =
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications);
+                sessionApplicationService(sessions, quietPastSessions(), emptyLaunchLogPort(), watch, transcriptWatch, warnings, hosts, notifications);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
         service.subscribe(project(), noTickets(), read -> {});
@@ -91,7 +89,7 @@ class WatchedSessionCommandTest {
                 .thenReturn(Optional.of(reportedWaitingFor(inputNeeded())))
                 .thenReturn(Optional.of(reportedWaitingFor(inputNeeded())));
         SessionApplicationService service =
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications);
+                sessionApplicationService(sessions, quietPastSessions(), emptyLaunchLogPort(), watch, transcriptWatch, warnings, hosts, notifications);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
         service.subscribe(project(), noTickets(), read -> {});

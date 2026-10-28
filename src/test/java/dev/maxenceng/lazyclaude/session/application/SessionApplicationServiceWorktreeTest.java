@@ -3,7 +3,9 @@ package dev.maxenceng.lazyclaude.session.application;
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingATicketSessionInTheWorktree;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
+import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.emptyLaunchLogPort;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.quietPastSessions;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.recordUnreadable;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketStart;
@@ -39,7 +41,6 @@ import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.ExitCode;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
-import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.TicketDoneEndedListener;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
@@ -53,9 +54,6 @@ class SessionApplicationServiceWorktreeTest {
 
     @Mock
     private LiveSessionPort sessions;
-
-    @Mock
-    private PastSessionPort past;
 
     @Mock
     private TranscriptWatchPort transcriptWatch;
@@ -85,7 +83,7 @@ class SessionApplicationServiceWorktreeTest {
 
     @BeforeEach
     void setUp() {
-        service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees);
+        service = sessionApplicationService(sessions, quietPastSessions(), emptyLaunchLogPort(), watch, transcriptWatch, warnings, hosts, worktrees);
     }
 
     @Test

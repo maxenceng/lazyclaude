@@ -8,12 +8,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.UnaryOperator;
 
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
+import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
@@ -25,9 +27,11 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * Holds the hosted sessions that are open, in start order, and decides where each runs: a new unlinked session in the
- * project root, a resumed one in the directory its transcript recorded, and none with a warning when that directory is
- * gone, since {@code claude --resume} anywhere else would not find the transcript. A session whose {@code claude} exits is dropped, with a warning when the exit was not clean; one that could not
- * be started is never held, and says why.
+ * project root, a resumed one in the directory it was launched in, and none with a warning when that directory is
+ * gone, since {@code claude --resume} anywhere else would not find the transcript. Each session that starts is appended to the
+ * project's launch log, and one whose {@code claude} exits by itself has its end recorded there; a quit that ends it records
+ * none. A launch log that cannot be changed is said once and never stops a session. A session whose {@code claude} exits is
+ * dropped, with a warning when the exit was not clean; one that could not be started is never held, and says why.
  */
 public final class HostedSessionManager {
 
@@ -42,24 +46,28 @@ public final class HostedSessionManager {
     private final LiveSessionPort records;
     private final WarningPort warnings;
     private final WorktreePort worktrees;
+    private final LaunchLogPort log;
     private final SessionClock clock;
     private final List<HostedSession> open = new ArrayList<>();
     private final List<SessionId> spawning = new ArrayList<>();
+    private final List<SessionId> endingWithLazyclaude = new CopyOnWriteArrayList<>();
     private final Map<SessionId, ExitCode> earlyExits = new HashMap<>();
     private final List<OpenSessionsListener> changeListeners = new CopyOnWriteArrayList<>();
     private final List<TicketDoneEndedListener> doneEndedListeners = new CopyOnWriteArrayList<>();
 
-    public HostedSessionManager(HostPort hosts, LiveSessionPort records, WarningPort warnings, WorktreePort worktrees, Clock clock) {
+    public HostedSessionManager(
+            HostPort hosts, LiveSessionPort records, WarningPort warnings, WorktreePort worktrees, LaunchLogPort log, Clock clock) {
         this.hosts = hosts;
         this.records = records;
         this.warnings = warnings;
         this.worktrees = worktrees;
+        this.log = log;
         this.clock = new SessionClock(clock);
     }
 
     /** A plain {@code claude} in the project root. */
     public HostStart startUnlinked(Project project, PaneSize size) {
-        return start(new NewClaude(SessionId.random()), new WorkingDirectory(project.root()), size);
+        return start(project, new NewClaude(SessionId.random()), new WorkingDirectory(project.root()), size);
     }
 
     /**
@@ -70,6 +78,7 @@ public final class HostedSessionManager {
     public HostStart startTicket(TicketStart ticket, PaneSize size) {
         try {
             return start(
+                    ticket.worktree().project(),
                     TicketClaude.builder().session(SessionId.random()).ticket(ticket.ticket()).verb(ticket.verb()).build(),
                     ticketDirectory(ticket.worktree()),
                     size);
@@ -92,7 +101,7 @@ public final class HostedSessionManager {
                 return notStartedFor(unavailable.getMessage());
             }
         }
-        return resume(session, recorded, size);
+        return resume(worktree.project(), session, recorded, size);
     }
 
     /**
@@ -100,12 +109,12 @@ public final class HostedSessionManager {
      * session already running as it when there is one, since two {@code claude} on one transcript would both write to it. An open
      * session runs as the id it was launched with until its registry record names another, as it does after {@code /clear}.
      */
-    public HostStart resume(SessionId session, WorkingDirectory recorded, PaneSize size) {
+    public HostStart resume(Project project, SessionId session, WorkingDirectory recorded, PaneSize size) {
         return open().sessions().stream()
                 .filter(hosted -> hosted.id().equals(session) || runningNow(hosted).filter(session::equals).isPresent())
                 .findFirst()
                 .<HostStart>map(running -> new StartedHost(running.id()))
-                .orElseGet(() -> resumeAt(session, recorded, size));
+                .orElseGet(() -> resumeAt(project, session, recorded, size));
     }
 
     /** None while its record is not written, is another process's, or cannot be read: then it runs as the id it was launched with. */
@@ -117,12 +126,12 @@ public final class HostedSessionManager {
         }
     }
 
-    private HostStart resumeAt(SessionId session, WorkingDirectory recorded, PaneSize size) {
+    private HostStart resumeAt(Project project, SessionId session, WorkingDirectory recorded, PaneSize size) {
         if (!hosts.exists(recorded)) {
             warnings.raise(new Warning(GONE_WARNING.formatted(recorded.path())));
             return new NotStartedHost();
         }
-        return start(new ResumeClaude(session), recorded, size);
+        return start(project, new ResumeClaude(session), recorded, size);
     }
 
     public HostedSessions open() {
@@ -145,7 +154,9 @@ public final class HostedSessionManager {
 
     /** Ends every open session's {@code claude}: they live and die with lazyclaude. */
     public void endAll() {
-        open().sessions().forEach(session -> hosts.end(session.id()));
+        List<SessionId> ending = open().sessions().stream().map(HostedSession::id).toList();
+        endingWithLazyclaude.addAll(ending);
+        ending.forEach(hosts::end);
     }
 
     /** Tells {@code listener} whenever a session opens or closes. */
@@ -196,7 +207,7 @@ public final class HostedSessionManager {
      * winner is still spawning, since its tab opens when that spawn returns. The spawn instant is taken before spawning and to the
      * millisecond, as the registry records it, so the session's own record is never older than its spawn.
      */
-    private HostStart start(LaunchCommand command, WorkingDirectory directory, PaneSize size) {
+    private HostStart start(Project project, LaunchCommand command, WorkingDirectory directory, PaneSize size) {
         SessionId id = command.session();
         HostLaunch launch = HostLaunch.builder()
                 .command(command)
@@ -214,8 +225,8 @@ public final class HostedSessionManager {
         }
         StartedAt spawnedAt = new StartedAt(clock.clock().instant().truncatedTo(ChronoUnit.MILLIS));
         try {
-            ProcessId pid = hosts.spawn(launch, code -> exited(id, code));
-            return registered(HostedSession.builder()
+            ProcessId pid = hosts.spawn(launch, code -> exited(project, id, code));
+            return registered(project, HostedSession.builder()
                     .pid(pid)
                     .directory(directory)
                     .command(command)
@@ -230,14 +241,19 @@ public final class HostedSessionManager {
         }
     }
 
-    /** A claude that died before its spawn returned is never held: nothing would ever close its tab. */
-    private HostStart registered(HostedSession session) {
+    /**
+     * A claude that died before its spawn returned is never held: nothing would ever close its tab. One that lives is opened and
+     * logged under one lock, so its exit, which takes that lock to find it, records its end after its launch and never before; and
+     * it is open before it is logged, so a read of the log that finds it reads the open sessions with it.
+     */
+    private HostStart registered(Project project, HostedSession session) {
         Optional<ExitCode> earlyExit;
         synchronized (open) {
             spawning.remove(session.id());
             earlyExit = Optional.ofNullable(earlyExits.remove(session.id()));
             if (earlyExit.isEmpty()) {
                 open.add(session);
+                logged(project, entries -> entries.launched(entryOf(session)));
             }
         }
         return earlyExit.<HostStart>map(this::notStartedAfter).orElseGet(() -> startedAs(session));
@@ -253,7 +269,7 @@ public final class HostedSessionManager {
         return new StartedHost(session.id());
     }
 
-    private void exited(SessionId id, ExitCode code) {
+    private void exited(Project project, SessionId id, ExitCode code) {
         Optional<HostedSession> dropped;
         synchronized (open) {
             dropped = open.stream().filter(session -> session.id().equals(id)).findFirst();
@@ -265,9 +281,29 @@ public final class HostedSessionManager {
         if (dropped.isEmpty()) {
             return;
         }
+        if (!endingWithLazyclaude.remove(id)) {
+            EndedAt ended = new EndedAt(clock.clock().instant());
+            logged(project, entries -> entries.ended(id, ended));
+        }
         warnOfFailure(code);
         changed();
         dropped.flatMap(HostedSession::doneTicket).ifPresent(this::doneEnded);
+    }
+
+    private static LaunchEntry entryOf(HostedSession session) {
+        return LaunchEntry.builder()
+                .command(session.command())
+                .directory(session.directory())
+                .startedAt(session.spawnedAt())
+                .build();
+    }
+
+    private void logged(Project project, UnaryOperator<LaunchLog> change) {
+        log.change(project, this::warnOfLog, change);
+    }
+
+    private void warnOfLog(Reason cause) {
+        warnings.raise(LaunchLogWarning.of(cause));
     }
 
     private void doneEnded(LinkedTicketId ticket) {

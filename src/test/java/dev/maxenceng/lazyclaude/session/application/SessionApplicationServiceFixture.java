@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.application;
 
+
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketStart;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
@@ -15,13 +16,13 @@ import java.util.Optional;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
+import dev.maxenceng.lazyclaude.session.domain.LaunchLogPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.SpawnedEarlierClock;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
-import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 public final class SessionApplicationServiceFixture {
@@ -31,64 +32,64 @@ public final class SessionApplicationServiceFixture {
     public static SessionApplicationService sessionApplicationService(
             LiveSessionPort sessions,
             PastSessionPort past,
-            ProjectLocatorPort locator,
+            LaunchLogPort log,
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
             HostPort hosts) {
         return sessionApplicationService(
-                sessions, past, locator, watch, transcriptWatch, warnings, hosts, mock(WorktreePort.class));
+                sessions, past, log, watch, transcriptWatch, warnings, hosts, mock(WorktreePort.class));
     }
 
     public static SessionApplicationService sessionApplicationService(
             LiveSessionPort sessions,
             PastSessionPort past,
-            ProjectLocatorPort locator,
+            LaunchLogPort log,
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
             HostPort hosts,
             WorktreePort worktrees) {
         return sessionApplicationService(
-                sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees, mock(DesktopNotificationPort.class), true);
+                sessions, past, log, watch, transcriptWatch, warnings, hosts, worktrees, mock(DesktopNotificationPort.class), true);
     }
 
     public static SessionApplicationService sessionApplicationService(
             LiveSessionPort sessions,
             PastSessionPort past,
-            ProjectLocatorPort locator,
+            LaunchLogPort log,
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
             DesktopNotificationPort notifications) {
         return sessionApplicationService(
-                sessions, past, locator, watch, transcriptWatch, warnings, mock(HostPort.class), mock(WorktreePort.class), notifications, true);
+                sessions, past, log, watch, transcriptWatch, warnings, mock(HostPort.class), mock(WorktreePort.class), notifications, true);
     }
 
     public static SessionApplicationService sessionApplicationService(
             LiveSessionPort sessions,
             PastSessionPort past,
-            ProjectLocatorPort locator,
+            LaunchLogPort log,
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
             HostPort hosts,
             DesktopNotificationPort notifications) {
         return sessionApplicationService(
-                sessions, past, locator, watch, transcriptWatch, warnings, hosts, mock(WorktreePort.class), notifications, true);
+                sessions, past, log, watch, transcriptWatch, warnings, hosts, mock(WorktreePort.class), notifications, true);
     }
 
     public static SessionApplicationService sessionApplicationServiceWithoutDesktopNotifications(
             LiveSessionPort sessions,
             PastSessionPort past,
-            ProjectLocatorPort locator,
+            LaunchLogPort log,
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
             HostPort hosts,
             DesktopNotificationPort notifications) {
         return sessionApplicationService(
-                sessions, past, locator, watch, transcriptWatch, warnings, hosts, mock(WorktreePort.class), notifications, false);
+                sessions, past, log, watch, transcriptWatch, warnings, hosts, mock(WorktreePort.class), notifications, false);
     }
 
     public static SessionApplicationService hostingTheRegisteredSession(SessionApplicationService service, HostPort hosts) {
@@ -108,7 +109,7 @@ public final class SessionApplicationServiceFixture {
     private static SessionApplicationService sessionApplicationService(
             LiveSessionPort sessions,
             PastSessionPort past,
-            ProjectLocatorPort locator,
+            LaunchLogPort log,
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
@@ -119,7 +120,7 @@ public final class SessionApplicationServiceFixture {
         return new SessionApplicationService(
                 sessions,
                 past,
-                locator,
+                log,
                 watch,
                 transcriptWatch,
                 warnings,

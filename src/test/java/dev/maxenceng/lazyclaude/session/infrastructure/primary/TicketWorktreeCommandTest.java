@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
+import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.emptyLaunchLogPort;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.worktreePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.ticketWorktreeCommand;
@@ -51,7 +52,7 @@ class TicketWorktreeCommandTest {
 
     @BeforeEach
     void setUp() {
-        command = ticketWorktreeCommand(sessions, locator, worktrees);
+        command = ticketWorktreeCommand(sessions, emptyLaunchLogPort(), worktrees);
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
     }
 

@@ -5,14 +5,20 @@ import static dev.maxenceng.lazyclaude.session.application.SessionApplicationSer
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationServiceWithoutDesktopNotifications;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
+import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.emptyLaunchLog;
+import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.launchLogOf;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.boardTickets;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.factsRunning;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
-import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ran;
-import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.strong;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ticketRun;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
-import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedPastSession;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.noTranscripts;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastLaunchEntry;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSession;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionId;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastTranscriptFacts;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastTranscriptFactsRunning;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.transcriptsRead;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWaitingFor;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWith;
@@ -25,12 +31,15 @@ import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.l
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
+import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.ticketLink;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -42,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -53,6 +63,7 @@ import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.DesktopNotificationPort;
 import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
+import dev.maxenceng.lazyclaude.session.domain.LaunchLogPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
@@ -69,7 +80,6 @@ import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
-import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 @ExtendWith(MockitoExtension.class)
@@ -85,7 +95,7 @@ class SessionApplicationServiceTest {
     private TranscriptWatchPort transcriptWatch;
 
     @Mock
-    private ProjectLocatorPort locator;
+    private LaunchLogPort launchLog;
 
     @Mock
     private SessionWatchPort watch;
@@ -102,11 +112,17 @@ class SessionApplicationServiceTest {
     @Mock
     private DesktopNotificationPort notifications;
 
+    @BeforeEach
+    void setUp() {
+        lenient().when(launchLog.read(any(), any())).thenReturn(emptyLaunchLog());
+        lenient().when(past.transcriptsOf(any())).thenReturn(noTranscripts());
+    }
+
     @Test
     void shouldReadTheStateOfTheHostedSessionsFromTheirRecords() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         SessionApplicationService service = hostingTheRegisteredSession(
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts), hosts);
+                sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts), hosts);
 
         AvailableSessions read = service.sessionsFor(project(), noTickets());
 
@@ -115,7 +131,7 @@ class SessionApplicationServiceTest {
 
     @Test
     void shouldReadNoRecordWhenNoSessionIsHosted() {
-        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts)
+        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts)
                         .sessionsFor(project(), noTickets())
                         .live())
                 .as("lazyclaude lists only the sessions it hosts, so a claude in another terminal is never looked for")
@@ -128,7 +144,7 @@ class SessionApplicationServiceTest {
         when(sessions.recordOf(processId())).thenThrow(recordUnreadable()).thenReturn(Optional.of(reportedSession()));
         List<AvailableSessions> received = new ArrayList<>();
         SessionApplicationService service = hostingTheRegisteredSession(
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts), hosts);
+                sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts), hosts);
 
         service.subscribe(project(), noTickets(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
@@ -144,9 +160,10 @@ class SessionApplicationServiceTest {
 
     @Test
     void shouldReadThePastSessionsOfTheProjectToo() {
-        when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
+        when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFacts())));
 
-        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts).sessionsFor(project(), noTickets()))
+        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts).sessionsFor(project(), noTickets()))
                 .isEqualTo(pastSessionsOf(List.of(pastSession())));
     }
 
@@ -154,7 +171,7 @@ class SessionApplicationServiceTest {
     void shouldHandTheListenerTheSessionsAgainWhenTheTranscriptWatcherReportsAChange() {
         List<AvailableSessions> received = new ArrayList<>();
 
-        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts).subscribe(project(), noTickets(), received::add);
+        sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts).subscribe(project(), noTickets(), received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(transcriptWatch).watch(any(), changed.capture(), any(), any(), any());
         changed.getValue().run();
@@ -168,20 +185,20 @@ class SessionApplicationServiceTest {
     void shouldLinkTheHostedSessionsToTheTicketsItIsHanded() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         SessionApplicationService service =
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+                sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
-        when(past.linkFacts()).thenReturn(Map.of(id, ran(ticketRun("start", "PROJ-1"))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(id, factsRunning(ticketRun("start", "PROJ-1")))));
 
         assertThat(service.sessionsFor(project(), boardTickets()).live())
-                .containsExactly(liveSessionBuilder().id(id).links(List.of(strong("PROJ-1", "start"))).build());
+                .containsExactly(liveSessionBuilder().id(id).links(List.of(ticketLink("PROJ-1", "start"))).build());
     }
 
     @Test
     void shouldStartAnUnlinkedSessionThroughTheHost() {
         when(hosts.spawn(any(), any())).thenReturn(processId());
 
-        HostStart start = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts)
+        HostStart start = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts)
                 .startUnlinked(project(), paneSize());
 
         assertThat(start).isInstanceOf(StartedHost.class);
@@ -192,7 +209,7 @@ class SessionApplicationServiceTest {
         when(hosts.spawn(any(), any())).thenReturn(processId());
         ArgumentCaptor<HostLaunch> launched = ArgumentCaptor.forClass(HostLaunch.class);
 
-        HostStart start = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts)
+        HostStart start = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts)
                 .startUnlinked(project(), paneSize());
         verify(hosts).spawn(launched.capture(), any());
 
@@ -206,7 +223,7 @@ class SessionApplicationServiceTest {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
         when(hosts.spawn(any(), any())).thenReturn(processId());
 
-        HostStart start = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).startTicket(ticketStart(Verb.REVIEW), paneSize());
+        HostStart start = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).startTicket(ticketStart(Verb.REVIEW), paneSize());
 
         assertThat(start).isInstanceOf(StartedHost.class);
     }
@@ -216,30 +233,31 @@ class SessionApplicationServiceTest {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
         when(hosts.spawn(any(), any())).thenReturn(processId());
 
-        HostStart start = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).resumeInTicketWorktree(sessionId(), worktreeDirectory(), ticketWorktree(), paneSize());
+        HostStart start = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).resumeInTicketWorktree(sessionId(), worktreeDirectory(), ticketWorktree(), paneSize());
 
         assertThat(start).isEqualTo(new StartedHost(sessionId()));
     }
 
     @Test
     void shouldPreselectDesignWhenNoSessionHasRunItOnTheTicket() {
-        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false))
+        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false))
                 .isEqualTo(VerbChoice.builder().verbs(List.of(Verb.REVIEW, Verb.DESIGN)).preselected(Verb.DESIGN).build());
     }
 
     @Test
     void shouldPreselectReviewWhenAPastSessionRanDesignOnTheTicket() {
-        when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
-        when(past.linkFacts()).thenReturn(Map.of(pastSession().id(), ran(ticketRun("design", "PROJ-1"))));
+        when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
+        when(past.transcriptsOf(any()))
+                .thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFactsRunning(ticketRun("design", "PROJ-1")))));
 
-        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
+        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
                         .preselected())
                 .isEqualTo(Verb.REVIEW);
     }
 
     @Test
     void shouldPreselectDoneWhenTheBranchIsMerged() {
-        assertThat(sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.RESPOND, Verb.DONE), true)
+        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.RESPOND, Verb.DONE), true)
                         .preselected())
                 .isEqualTo(Verb.DONE);
     }
@@ -247,10 +265,11 @@ class SessionApplicationServiceTest {
     @Test
     void shouldAnswerTheChoiceFromTheLastPushWithoutReadingTheRecordsAgain() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
-        when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
-        when(past.linkFacts()).thenReturn(Map.of(pastSession().id(), ran(ticketRun("design", "PROJ-1"))));
+        when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
+        when(past.transcriptsOf(any()))
+                .thenReturn(transcriptsRead(Map.of(pastSessionId(1), pastTranscriptFactsRunning(ticketRun("design", "PROJ-1")))));
         SessionApplicationService service = hostingTheRegisteredSession(
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees), hosts);
+                sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees), hosts);
         service.subscribe(project(), boardTickets(), read -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(any(), changed.capture(), any());
@@ -267,7 +286,7 @@ class SessionApplicationServiceTest {
     void shouldNotLetAnUnreadableRecordStopTheChoice() {
         when(sessions.recordOf(processId())).thenThrow(recordUnreadable());
         SessionApplicationService service = hostingTheRegisteredSession(
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, worktrees), hosts);
+                sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees), hosts);
 
         assertThat(service.verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
                         .preselected())
@@ -278,7 +297,7 @@ class SessionApplicationServiceTest {
     void shouldHandTheListenerTheSessionsAgainWhenAHostedSessionOpens() {
         when(hosts.spawn(any(), any())).thenReturn(processId());
         List<AvailableSessions> received = new ArrayList<>();
-        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        SessionApplicationService service = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         service.subscribe(project(), noTickets(), received::add);
 
         service.startUnlinked(project(), paneSize());
@@ -291,7 +310,7 @@ class SessionApplicationServiceTest {
 
     @Test
     void shouldListAHostedSessionAsStartingBeforeItsRecordIsWritten() {
-        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        SessionApplicationService service = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
 
         assertThat(service.sessionsFor(project(), noTickets()).hosted())
@@ -302,7 +321,7 @@ class SessionApplicationServiceTest {
     @Test
     void shouldCountAHostedSessionAsBusyWhileItsRecordCannotBeRead() {
         when(sessions.recordOf(processId())).thenThrow(recordUnreadable());
-        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        SessionApplicationService service = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
 
         assertThat(service.sessionsFor(project(), noTickets()).hosted())
@@ -315,7 +334,7 @@ class SessionApplicationServiceTest {
     @Test
     void shouldEndEveryHostedSessionOnQuit() {
         when(hosts.spawn(any(), any())).thenReturn(processId());
-        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        SessionApplicationService service = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         SessionId id = ((StartedHost) service.startUnlinked(project(), paneSize())).id();
 
         service.endAll();
@@ -326,7 +345,7 @@ class SessionApplicationServiceTest {
     @Test
     void shouldHandTheListenerTheSessionsReadAgainAndAskForTheTranscriptsAgainOnRefresh() {
         List<AvailableSessions> received = new ArrayList<>();
-        SessionApplicationService service = sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+        SessionApplicationService service = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         service.subscribe(project(), noTickets(), received::add);
 
         service.refresh(project(), noTickets());
@@ -340,16 +359,16 @@ class SessionApplicationServiceTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         List<AvailableSessions> received = new ArrayList<>();
         SessionApplicationService service =
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+                sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
-        when(past.linkFacts()).thenReturn(Map.of(id, ran(ticketRun("start", "PROJ-1"))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(id, factsRunning(ticketRun("start", "PROJ-1")))));
         service.subscribe(project(), noTickets(), received::add);
 
         service.knowTickets(project(), boardTickets());
 
         assertThat(received).singleElement().satisfies(linked -> assertThat(linked.live())
-                .containsExactly(liveSessionBuilder().id(id).links(List.of(strong("PROJ-1", "start"))).build()));
+                .containsExactly(liveSessionBuilder().id(id).links(List.of(ticketLink("PROJ-1", "start"))).build()));
     }
 
     @Test
@@ -357,16 +376,16 @@ class SessionApplicationServiceTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         List<AvailableSessions> received = new ArrayList<>();
         SessionApplicationService service =
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
+                sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
-        when(past.linkFacts()).thenReturn(Map.of(id, ran(ticketRun("start", "PROJ-1"))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(Map.of(id, factsRunning(ticketRun("start", "PROJ-1")))));
         service.subscribe(project(), noTickets(), received::add);
 
         service.refresh(project(), boardTickets());
 
         assertThat(received).singleElement().satisfies(linked -> assertThat(linked.live())
-                .containsExactly(liveSessionBuilder().id(id).links(List.of(strong("PROJ-1", "start"))).build()));
+                .containsExactly(liveSessionBuilder().id(id).links(List.of(ticketLink("PROJ-1", "start"))).build()));
     }
 
     @Test
@@ -376,7 +395,7 @@ class SessionApplicationServiceTest {
                 .thenReturn(Optional.of(reportedWaitingFor(inputNeeded())));
         when(notifications.show(inputNotification())).thenReturn(notificationId());
         hostingTheRegisteredSession(
-                        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts)
+                        sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, notifications), hosts)
                 .subscribe(project(), noTickets(), received -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(any(), changed.capture(), any());
@@ -389,7 +408,7 @@ class SessionApplicationServiceTest {
 
     @Test
     void shouldNotNotifyAClaudeRunningInAnotherTerminalEnteringWaiting() {
-        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, notifications)
+        sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, notifications)
                 .subscribe(project(), noTickets(), received -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(any(), changed.capture(), any());
@@ -407,11 +426,11 @@ class SessionApplicationServiceTest {
         List<AvailableSessions> withNotifications = new ArrayList<>();
         List<AvailableSessions> withoutNotifications = new ArrayList<>();
         hostingTheRegisteredSession(
-                        sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts)
+                        sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, notifications), hosts)
                 .subscribe(project(), noTickets(), withNotifications::add);
         hostingTheRegisteredSession(
                         sessionApplicationServiceWithoutDesktopNotifications(
-                                sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications),
+                                sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, notifications),
                         hosts)
                 .subscribe(project(), noTickets(), withoutNotifications::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
@@ -432,7 +451,7 @@ class SessionApplicationServiceTest {
                 .thenReturn(Optional.of(reportedWaitingFor(inputNeeded())));
         hostingTheRegisteredSession(
                         sessionApplicationServiceWithoutDesktopNotifications(
-                                sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications),
+                                sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, notifications),
                         hosts)
                 .subscribe(project(), noTickets(), received -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
@@ -448,7 +467,7 @@ class SessionApplicationServiceTest {
     void shouldNotNotifyAgainWhenARefreshHandsOverTheSameStates() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedWaitingFor(inputNeeded())));
         SessionApplicationService service = hostingTheRegisteredSession(
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts);
+                sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, notifications), hosts);
         service.subscribe(project(), noTickets(), received -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(any(), changed.capture(), any());
@@ -467,7 +486,7 @@ class SessionApplicationServiceTest {
                 .thenReturn(Optional.of(reportedWaitingFor(inputNeeded())));
         when(notifications.show(any())).thenReturn(notificationId());
         SessionApplicationService service =
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications);
+                sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, notifications);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
         service.subscribe(project(), noTickets(), received -> {});

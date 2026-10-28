@@ -11,7 +11,6 @@ import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
-import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -52,7 +51,7 @@ public record AvailableSessions(List<PastSession> past, List<OpenHostedSession> 
         return Stream.concat(
                         live().stream().map(LiveSession::links), past.stream().map(PastSession::links))
                         .anyMatch(links -> TicketLink.to(links, ticket)
-                                .filter(link -> link instanceof StrongLink strong && strong.verb().equals(ran))
+                                .filter(link -> link.verb().equals(ran))
                                 .isPresent())
                 || hosted.stream().anyMatch(open -> open.session().runs(ticket, verb));
     }

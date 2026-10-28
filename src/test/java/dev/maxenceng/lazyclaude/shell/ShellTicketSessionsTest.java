@@ -4,8 +4,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionViewsNumbered;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
-import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
-import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.weakLink;
+import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.ticketLink;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.pressed;
@@ -27,7 +26,7 @@ class ShellTicketSessionsTest {
     @Test
     void shouldShowTheSelectedTicketsSectionUnderADimHeaderWithItsId() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
-                List.of(linkedNamedSessionView(1, "refiner", new Busy(), strongLink("PROJ-1", "refine")))));
+                List.of(linkedNamedSessionView(1, "refiner", new Busy(), ticketLink("PROJ-1", "refine")))));
 
         Screen screen = Screen.of(shell);
 
@@ -38,8 +37,8 @@ class ShellTicketSessionsTest {
     @Test
     void shouldListALiveSessionOfTheTicketBeforeItsPastOnesWhateverTheirAges() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
-                List.of(linkedNamedSessionView(1, "live-one", new Busy(), strongLink("PROJ-1", "start"))),
-                List.of(linkedPastSessionView(1, strongLink("PROJ-1", "refine")))));
+                List.of(linkedNamedSessionView(1, "live-one", new Busy(), ticketLink("PROJ-1", "start"))),
+                List.of(linkedPastSessionView(1, ticketLink("PROJ-1", "refine")))));
 
         assertThat(Screen.of(shell).boardPanelText()).containsSubsequence("live-one", "Past 1");
     }
@@ -47,7 +46,7 @@ class ShellTicketSessionsTest {
     @Test
     void shouldShowEveryLinkedPastSessionWithoutAFold() {
         List<PastSessionView> past = IntStream.rangeClosed(1, 8)
-                .mapToObj(number -> linkedPastSessionView(number, strongLink("PROJ-1", "start")))
+                .mapToObj(number -> linkedPastSessionView(number, ticketLink("PROJ-1", "start")))
                 .toList();
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(List.of(), past));
         pressed(shell, key('j'), 7);
@@ -59,7 +58,7 @@ class ShellTicketSessionsTest {
     void shouldFollowTheTicketsSectionWithTheUnlinkedOneUnderADimHeader() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
                 List.of(
-                        linkedNamedSessionView(1, "linked-one", new Busy(), strongLink("PROJ-1", "start")),
+                        linkedNamedSessionView(1, "linked-one", new Busy(), ticketLink("PROJ-1", "start")),
                         linkedNamedSessionView(2, "loose-one", new Busy())),
                 pastSessionViewsNumbered(2)));
 
@@ -81,7 +80,7 @@ class ShellTicketSessionsTest {
     @Test
     void shouldListASessionLinkedToTwoTicketsUnderEachOfThem() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
-                List.of(linkedNamedSessionView(1, "both-ones", new Busy(), strongLink("PROJ-1", "review"), strongLink("PROJ-2", "review")))));
+                List.of(linkedNamedSessionView(1, "both-ones", new Busy(), ticketLink("PROJ-1", "review"), ticketLink("PROJ-2", "review")))));
 
         assertThat(Screen.of(shell).boardPanelText()).contains("both-ones");
         shell.press(alt('k'));
@@ -92,23 +91,10 @@ class ShellTicketSessionsTest {
     }
 
     @Test
-    void shouldSuffixAWeakLinkWithADimBranchAndKeepItInTheOrderOfTheOthers() {
-        Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
-                List.of(),
-                List.of(linkedPastSessionView(1, weakLink("PROJ-1")), linkedPastSessionView(2, strongLink("PROJ-1", "start")))));
-
-        Screen screen = Screen.of(shell);
-
-        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("○ Past 1 \\(branch\\)\\s+10m"));
-        assertThat(screen.boardPanelText()).containsSubsequence("Past 1", "Past 2");
-        assertThat(screen.dimText()).anySatisfy(line -> assertThat(line).contains("(branch)"));
-    }
-
-    @Test
     void shouldReadTheVerbBeforeTheTitleOfALinkedSession() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
-                List.of(linkedNamedSessionView(1, "refiner", new YourTurn(), strongLink("PROJ-1", "refine"))),
-                List.of(linkedPastSessionView(1, strongLink("PROJ-1", "start")))));
+                List.of(linkedNamedSessionView(1, "refiner", new YourTurn(), ticketLink("PROJ-1", "refine"))),
+                List.of(linkedPastSessionView(1, ticketLink("PROJ-1", "start")))));
 
         assertThat(Screen.of(shell).boardPanelLines())
                 .anySatisfy(line -> assertThat(line).matches("• refine\\s+refiner\\s+pane"))
@@ -125,7 +111,7 @@ class ShellTicketSessionsTest {
     @Test
     void shouldShowADimNoSessionRowUnderATicketWithNoLinkedSession() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
-                List.of(linkedNamedSessionView(1, "other-one", new Busy(), strongLink("PROJ-2", "start")))));
+                List.of(linkedNamedSessionView(1, "other-one", new Busy(), ticketLink("PROJ-2", "start")))));
 
         Screen screen = Screen.of(shell);
 
@@ -138,7 +124,7 @@ class ShellTicketSessionsTest {
     void shouldShowOnlyTheUnlinkedSectionWithNoTicketSelected() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
                 List.of(
-                        linkedNamedSessionView(1, "linked-one", new Busy(), strongLink("PROJ-1", "start")),
+                        linkedNamedSessionView(1, "linked-one", new Busy(), ticketLink("PROJ-1", "start")),
                         linkedNamedSessionView(2, "loose-one", new Busy()))));
         shell.press(alt('k'));
         shell.press(key('k'));
@@ -154,7 +140,7 @@ class ShellTicketSessionsTest {
     void shouldStartTheSelectionOnTheFirstRowBelowTheHeader() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
                 List.of(
-                        linkedNamedSessionView(1, "linked-one", new Busy(), strongLink("PROJ-1", "start")),
+                        linkedNamedSessionView(1, "linked-one", new Busy(), ticketLink("PROJ-1", "start")),
                         linkedNamedSessionView(2, "loose-one", new Busy()))));
 
         assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("linked-one");
@@ -164,7 +150,7 @@ class ShellTicketSessionsTest {
     void shouldSkipTheHeaderRowsWithJAndK() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
                 List.of(
-                        linkedNamedSessionView(1, "linked-one", new Busy(), strongLink("PROJ-1", "start")),
+                        linkedNamedSessionView(1, "linked-one", new Busy(), ticketLink("PROJ-1", "start")),
                         linkedNamedSessionView(2, "loose-one", new Busy()))));
 
         shell.press(key('j'));
@@ -183,15 +169,15 @@ class ShellTicketSessionsTest {
     void shouldFollowTheSessionIdWhenAnotherLinkedSessionAppearsAbove() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
                 List.of(
-                        linkedNamedSessionView(1, "first-one", new Busy(), strongLink("PROJ-1", "start")),
-                        linkedNamedSessionView(2, "second-one", new Busy(), strongLink("PROJ-1", "start")))));
+                        linkedNamedSessionView(1, "first-one", new Busy(), ticketLink("PROJ-1", "start")),
+                        linkedNamedSessionView(2, "second-one", new Busy(), ticketLink("PROJ-1", "start")))));
         shell.press(key('j'));
 
         shell.sessionsChanged(sessionsViewOf(
                 List.of(
-                        linkedNamedSessionView(3, "newest-one", new Busy(), strongLink("PROJ-1", "start")),
-                        linkedNamedSessionView(1, "first-one", new Busy(), strongLink("PROJ-1", "start")),
-                        linkedNamedSessionView(2, "second-one", new Busy(), strongLink("PROJ-1", "start")))));
+                        linkedNamedSessionView(3, "newest-one", new Busy(), ticketLink("PROJ-1", "start")),
+                        linkedNamedSessionView(1, "first-one", new Busy(), ticketLink("PROJ-1", "start")),
+                        linkedNamedSessionView(2, "second-one", new Busy(), ticketLink("PROJ-1", "start")))));
 
         assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("second-one");
     }
@@ -200,7 +186,7 @@ class ShellTicketSessionsTest {
     void shouldMoveASessionUnderItsTicketOnceItsTranscriptNamesItAndKeepItSelected() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(List.of(linkedNamedSessionView(1, "late-one", new Busy()))));
 
-        shell.sessionsChanged(sessionsViewOf(List.of(linkedNamedSessionView(1, "late-one", new Busy(), strongLink("PROJ-1", "start")))));
+        shell.sessionsChanged(sessionsViewOf(List.of(linkedNamedSessionView(1, "late-one", new Busy(), ticketLink("PROJ-1", "start")))));
 
         assertThat(Screen.of(shell).boardPanelText()).containsSubsequence("PROJ-1", "late-one").doesNotContain("unlinked");
         assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("late-one");
@@ -210,10 +196,10 @@ class ShellTicketSessionsTest {
     void shouldGoToTheFirstRowOfAnotherTicketsSectionWhenTheBoardSelectionMoves() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
                 List.of(
-                        linkedNamedSessionView(1, "one-one", new Busy(), strongLink("PROJ-1", "start")),
-                        linkedNamedSessionView(2, "one-two", new Busy(), strongLink("PROJ-1", "start")),
-                        linkedNamedSessionView(3, "two-one", new Busy(), strongLink("PROJ-2", "start")),
-                        linkedNamedSessionView(4, "two-two", new Busy(), strongLink("PROJ-2", "start")))));
+                        linkedNamedSessionView(1, "one-one", new Busy(), ticketLink("PROJ-1", "start")),
+                        linkedNamedSessionView(2, "one-two", new Busy(), ticketLink("PROJ-1", "start")),
+                        linkedNamedSessionView(3, "two-one", new Busy(), ticketLink("PROJ-2", "start")),
+                        linkedNamedSessionView(4, "two-two", new Busy(), ticketLink("PROJ-2", "start")))));
         shell.press(key('j'));
 
         shell.press(alt('k'));

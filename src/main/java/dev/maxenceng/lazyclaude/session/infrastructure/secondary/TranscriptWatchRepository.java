@@ -18,24 +18,26 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
 import dev.maxenceng.lazyclaude.session.domain.PollingFallback;
 import dev.maxenceng.lazyclaude.session.domain.RootFallback;
-import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.NotWatching;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WatchServiceFactory;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WatchServiceState;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.Watching;
 
 /**
- * Keeps the transcripts current. Transcripts sit at a fixed depth, so it watches {@code ~/.claude/projects/} and each
+ * Keeps the transcripts of the logged sessions current. Transcripts sit at a fixed depth, so it watches {@code ~/.claude/projects/} and each
  * folder in it itself, and a folder created later gets a watch of its own. A changed file is read once it has been quiet
  * for the settle time, not on every line it grows by; an {@code OVERFLOW} re-states every transcript. When a watch cannot
  * be set up the transcripts are re-stated on a timer instead, and the fallback is told why, naming the sysctl only this
@@ -89,11 +91,11 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
 
     @Override
     public void watch(
-            TranscriptLocator locator, Runnable changed, PollingFallback fallback, CacheFallback cache, RootFallback root) {
+            Supplier<Set<SessionId>> logged, Runnable changed, PollingFallback fallback, CacheFallback cache, RootFallback root) {
         workers.add(Thread.ofPlatform()
                 .daemon()
                 .name(WORKER_NAME)
-                .start(() -> run(locator, changed, fallback, cache, root)));
+                .start(() -> run(logged, changed, fallback, cache, root)));
     }
 
     @Override
@@ -109,14 +111,14 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
 
     // deferred: an exception other than a closed or interrupted watch ends this thread, and the past sessions stop updating with only a warning to say so — close it when a rescan can fail in a way the adapter does not turn into a value.
     private void run(
-            TranscriptLocator locator, Runnable changed, PollingFallback fallback, CacheFallback cache, RootFallback root) {
+            Supplier<Set<SessionId>> logged, Runnable changed, PollingFallback fallback, CacheFallback cache, RootFallback root) {
         try {
             WatchServiceState state = watchOver(fallback);
-            transcripts.rescanAll(locator, cache, root);
+            transcripts.rescanAll(logged.get(), cache, root);
             changed.run();
             // deferred: a transcripts root that does not exist when lazyclaude starts is not watched, so past sessions of a Claude Code first run in this session appear at the next start — close it when that is seen.
             if (state instanceof Watching || Files.isDirectory(transcriptsRoot)) {
-                follow(state, locator, changed, fallback, cache, root);
+                follow(state, logged, changed, fallback, cache, root);
             }
         } catch (InterruptedException | ClosedWatchServiceException stopped) {
             Thread.currentThread().interrupt();
@@ -125,7 +127,7 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
 
     private void follow(
             WatchServiceState initial,
-            TranscriptLocator locator,
+            Supplier<Set<SessionId>> logged,
             Runnable changed,
             PollingFallback fallback,
             CacheFallback cache,
@@ -154,11 +156,11 @@ public final class TranscriptWatchRepository implements TranscriptWatchPort, Aut
             List<Path> settled = pending.quietSince(Instant.now().minus(settle));
             if (everything) {
                 pending = PendingTranscripts.none();
-                transcripts.rescanAll(locator, cache, root);
+                transcripts.rescanAll(logged.get(), cache, root);
                 changed.run();
             } else if (!settled.isEmpty()) {
                 pending = pending.without(settled);
-                transcripts.rescan(settled, locator, cache);
+                transcripts.rescan(settled, logged.get(), cache);
                 changed.run();
             }
         }

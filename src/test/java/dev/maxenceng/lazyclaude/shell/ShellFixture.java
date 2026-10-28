@@ -14,7 +14,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedNamedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
-import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
+import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.ticketLink;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -170,7 +170,7 @@ final class ShellFixture {
     }
 
     static SessionsView yourTurnOnTheFirstTicket() {
-        return sessionsViewOf(List.of(linkedNamedSessionView(1, "calm-one", new YourTurn(), strongLink("PROJ-1", "start"))));
+        return sessionsViewOf(List.of(linkedNamedSessionView(1, "calm-one", new YourTurn(), ticketLink("PROJ-1", "start"))));
     }
 
     static Object noHostStarted(InvocationOnMock invocation) {

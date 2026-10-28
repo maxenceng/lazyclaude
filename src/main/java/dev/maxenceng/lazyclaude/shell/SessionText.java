@@ -18,7 +18,6 @@ import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.ReadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
-import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.TranscriptReading;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
@@ -27,7 +26,6 @@ import dev.maxenceng.lazyclaude.session.published.Version;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.WaitingReason;
-import dev.maxenceng.lazyclaude.session.published.WeakLink;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
@@ -41,7 +39,7 @@ final class SessionText {
     private static final String INPUT_GLYPH = "?";
     private static final String UNKNOWN_GLYPH = "·";
     private static final String PAST_GLYPH = "○";
-    private static final String BRANCH_SUFFIX = "(branch)";
+    private static final String INTERRUPTED_GLYPH = "↺";
     private static final String PANE_LABEL = "pane";
     private static final String QUIT_PROMPT_ONE = "1 hosted session is busy or waiting — quit? y/n";
     private static final String QUIT_PROMPT_MANY = "%d hosted sessions are busy or waiting — quit? y/n";
@@ -110,17 +108,9 @@ final class SessionText {
         };
     }
 
-    /** The verb a linked row reads before its title; a weak link, and a session with no link, have none. */
+    /** The verb a linked row reads before its title; a session with no link has none. */
     static Optional<String> verb(Optional<TicketLink> link) {
-        return link.filter(StrongLink.class::isInstance).map(strong -> ((StrongLink) strong).verb().value());
-    }
-
-    static boolean isWeak(Optional<TicketLink> link) {
-        return link.filter(WeakLink.class::isInstance).isPresent();
-    }
-
-    static String branchSuffix() {
-        return BRANCH_SUFFIX;
+        return link.map(found -> found.verb().value());
     }
 
     /** What a hosted session's row says at its right edge. */
@@ -152,8 +142,9 @@ final class SessionText {
         return UNLINKED_LABEL;
     }
 
-    static String pastGlyph() {
-        return PAST_GLYPH;
+    /** A past session's glyph: a dim circle, or, for one lazyclaude's quit, a crash or a kill cut off, the resume arrow. */
+    static String pastGlyph(PastSessionView session) {
+        return session.interrupted() ? INTERRUPTED_GLYPH : PAST_GLYPH;
     }
 
     static String olderGlyph() {
@@ -255,11 +246,7 @@ final class SessionText {
     }
 
     private static DetailRow ticketLine(TicketLink link) {
-        String how = switch (link) {
-            case StrongLink strong -> strong.verb().value();
-            case WeakLink _ -> BRANCH_SUFFIX;
-        };
-        return new DetailRow(TICKET_FORMAT.formatted(link.ticket().value(), how), Style.EMPTY);
+        return new DetailRow(TICKET_FORMAT.formatted(link.ticket().value(), link.verb().value()), Style.EMPTY);
     }
 
     private static DetailRow fact(String name, String value) {

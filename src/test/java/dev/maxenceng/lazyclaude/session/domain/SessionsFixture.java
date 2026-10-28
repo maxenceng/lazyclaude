@@ -1,7 +1,10 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.noTranscripts;
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -11,7 +14,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 
-import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 public final class SessionsFixture {
@@ -57,8 +59,10 @@ public final class SessionsFixture {
         return availableSessionsHosting(List.of(), hosted);
     }
 
-    public static SessionManager sessionManager(LiveSessionPort sessions, ProjectLocatorPort locator, SessionWatchPort watch, WarningPort warnings) {
-        return sessionManager(sessions, mock(PastSessionPort.class), locator, watch, mock(TranscriptWatchPort.class), warnings);
+    public static SessionManager sessionManager(LiveSessionPort sessions, LaunchLogPort log, SessionWatchPort watch, WarningPort warnings) {
+        PastSessionPort past = mock(PastSessionPort.class);
+        lenient().when(past.transcriptsOf(any())).thenReturn(noTranscripts());
+        return sessionManager(sessions, past, log, watch, mock(TranscriptWatchPort.class), warnings);
     }
 
     public static SessionRecordUnreadableException recordUnreadable() {
@@ -68,10 +72,10 @@ public final class SessionsFixture {
     public static SessionManager sessionManager(
             LiveSessionPort sessions,
             PastSessionPort past,
-            ProjectLocatorPort locator,
+            LaunchLogPort log,
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings) {
-        return new SessionManager(sessions, past, locator, watch, transcriptWatch, warnings, clock());
+        return new SessionManager(sessions, past, log, watch, transcriptWatch, warnings, clock());
     }
 }

@@ -4,7 +4,7 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * One line of a transcript as Claude Code writes it, reduced to the fields lazyclaude reads: every one is as the JSON
- * has it, null where the JSON lacks it. {@code gitBranch} is on most entries; {@code aiTitle} is on the {@code ai-title} entries, which carry no
+ * has it, null where the JSON lacks it. {@code aiTitle} is on the {@code ai-title} entries, which carry no
  * {@code timestamp}; {@code message} is on the {@code user} and {@code assistant} ones.
  */
-record TranscriptLine(String type, String timestamp, String cwd, String aiTitle, String gitBranch, Boolean isMeta, JsonNode message) {}
+record TranscriptLine(String type, String timestamp, String aiTitle, Boolean isMeta, JsonNode message) {}

@@ -27,9 +27,9 @@ public final class HostedSessionCommand {
         return sessions.resumeInTicketWorktree(payload.session(), payload.recorded(), payload.worktree(), payload.size());
     }
 
-    /** {@code claude --resume} of a past session, in its recorded directory, or the project root with a warning when that is gone. */
+    /** {@code claude --resume} of a past session, in the directory it was launched in, or nothing with a warning when that is gone. */
     public HostStart resume(ResumeHostedPayload payload) {
-        return sessions.resume(payload.session(), payload.recorded(), payload.size());
+        return sessions.resume(payload.project(), payload.session(), payload.recorded(), payload.size());
     }
 
     public void send(HostedInputPayload payload) {

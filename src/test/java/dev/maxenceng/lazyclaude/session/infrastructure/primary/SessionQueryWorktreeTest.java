@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.domain.CommitIdFixture.commitId;
+import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.emptyLaunchLogPort;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ticketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.worktreePayload;
@@ -76,7 +77,7 @@ class SessionQueryWorktreeTest {
 
     @BeforeEach
     void setUp() {
-        query = sessionQueryOver(sessions, locator, worktrees);
+        query = sessionQueryOver(sessions, emptyLaunchLogPort(), worktrees);
     }
 
     @Test
@@ -152,7 +153,7 @@ class SessionQueryWorktreeTest {
         SessionApplicationService service = sessionApplicationService(
                 sessions,
                 mock(PastSessionPort.class),
-                locator,
+                emptyLaunchLogPort(),
                 mock(SessionWatchPort.class),
                 mock(TranscriptWatchPort.class),
                 mock(WarningPort.class),

@@ -1,6 +1,6 @@
 ---
 id: SESSION-12
-status: todo
+status: in-review
 context: session
 type: feature
 tracker_id: 95
@@ -11,21 +11,21 @@ created: 2026-10-26
 
 ## Acceptance criteria
 
-- [ ] Each launch (new, `/ticket`, resume) appends an entry to the project's launch log under
+- [x] Each launch (new, `/ticket`, resume) appends an entry to the project's launch log under
       `$XDG_STATE_HOME/lazyclaude/` (`~/.local/state/lazyclaude/` when unset or not absolute): session id, directory,
       launch command, started at. A resume does not add a second entry for an id already logged.
-- [ ] The Sessions panel's past block lists the logged sessions with no live process, and nothing else: a session
+- [x] The Sessions panel's past block lists the logged sessions with no live process, and nothing else: a session
       ended in a plain terminal never shows.
-- [ ] Only logged ids' transcripts are read, through the transcript cache; a project with hundreds of transcripts in
+- [x] Only logged ids' transcripts are read, through the transcript cache; a project with hundreds of transcripts in
       `~/.claude/projects` reads none it did not start.
-- [ ] An entry whose transcript is gone is dropped from the log on the next read, silently; an entry whose process is
+- [x] An entry whose transcript is gone is dropped from the log on the next read, silently; an entry whose process is
       live is kept while its transcript is not yet written.
-- [ ] An entry records an end when its `claude` exits by itself, and only then: one lazyclaude ended on quit, or that
+- [x] An entry records an end when its `claude` exits by itself, and only then: one lazyclaude ended on quit, or that
       a crash or kill cut off, has none. A logged entry with no live process and no end is *interrupted*: the past
       block lists it first, with a marker, and `enter` resumes it. Resuming clears the end (ADR 0048).
-- [ ] A `/ticket` launch is linked to its tickets with its verb from the first frame; a later `/ticket <verb> <ids>`
+- [x] A `/ticket` launch is linked to its tickets with its verb from the first frame; a later `/ticket <verb> <ids>`
       in the transcript adds a link or moves the last verb. A branch name links nothing.
-- [ ] A launch log that cannot be read or written raises one warning, and hosted sessions still run; one that does not
+- [x] A launch log that cannot be read or written raises one warning, and hosted sessions still run; one that does not
       parse warns with its `file:line`, lists no past sessions, and is not overwritten.
 
 ## Model decision

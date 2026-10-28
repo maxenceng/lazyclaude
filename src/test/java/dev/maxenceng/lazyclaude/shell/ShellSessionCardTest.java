@@ -10,8 +10,7 @@ import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.no
 import static dev.maxenceng.lazyclaude.session.published.OpeningPromptFixture.openingUnder;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.firstPrompt;
 import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.noTitle;
-import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
-import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.weakLink;
+import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.ticketLink;
 import static dev.maxenceng.lazyclaude.session.published.TranscriptReadingFixture.unreadable;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
@@ -57,18 +56,10 @@ class ShellSessionCardTest {
     @Test
     void shouldNameTheLinkedTicketsWithTheirLastVerb() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
-                List.of(), List.of(pastSessionViewBuilder().links(List.of(strongLink("PROJ-1", "start"))).build())));
+                List.of(), List.of(pastSessionViewBuilder().links(List.of(ticketLink("PROJ-1", "start"))).build())));
 
         assertThat(Screen.of(shell).mainViewRows())
                 .containsSubsequence("› /ticket start PROJ-1", "", "PROJ-1  start", "/work/app");
-    }
-
-    @Test
-    void shouldNameATicketOnlyItsBranchLinksWithoutAVerb() {
-        Shell shell = shellOnTicketSessionsPanel(
-                sessionsViewOf(List.of(), List.of(pastSessionViewBuilder().links(List.of(weakLink("PROJ-1"))).build())));
-
-        assertThat(Screen.of(shell).mainViewRows()).contains("PROJ-1  (branch)");
     }
 
     @Test

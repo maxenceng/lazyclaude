@@ -48,6 +48,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCom
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeKeybindingsRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigurationRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LaunchLogRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.NotifySendRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
@@ -77,6 +78,8 @@ public final class LazyClaude {
     private static final String TRANSCRIPTS = ".claude/projects";
     private static final String XDG_CACHE_HOME = "XDG_CACHE_HOME";
     private static final String DEFAULT_CACHE_HOME = ".cache";
+    private static final String XDG_STATE_HOME = "XDG_STATE_HOME";
+    private static final String DEFAULT_STATE_HOME = ".local/state";
     private static final String CACHE_DIRECTORY = "lazyclaude";
     private static final String CACHE_FILE = "past-sessions.json";
     private static final List<String> CLAUDE = List.of("claude");
@@ -187,7 +190,7 @@ public final class LazyClaude {
         return new SessionApplicationService(
                 new SessionRegistryRepository(registry),
                 transcripts,
-                new ProjectLocatorRepository(),
+                new LaunchLogRepository(stateHome(home, System.getenv(XDG_STATE_HOME)).resolve(CACHE_DIRECTORY)),
                 new SessionWatchRepository(registry),
                 new TranscriptWatchRepository(home.resolve(TRANSCRIPTS), transcripts),
                 warnings,
@@ -205,6 +208,15 @@ public final class LazyClaude {
                 .map(Path::of)
                 .filter(Path::isAbsolute)
                 .orElseGet(() -> home.resolve(DEFAULT_CACHE_HOME));
+    }
+
+    /** {@code $XDG_STATE_HOME} when it is set to an absolute path, else {@code ~/.local/state}, as the XDG base directory spec has it. */
+    static Path stateHome(Path home, String xdgStateHome) {
+        return Optional.ofNullable(xdgStateHome)
+                .filter(set -> !set.isBlank())
+                .map(Path::of)
+                .filter(Path::isAbsolute)
+                .orElseGet(() -> home.resolve(DEFAULT_STATE_HOME));
     }
 
     /**

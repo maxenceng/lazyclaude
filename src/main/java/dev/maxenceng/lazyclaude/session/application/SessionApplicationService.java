@@ -16,6 +16,7 @@ import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.HostedSessionManager;
 import dev.maxenceng.lazyclaude.session.domain.KnownTickets;
 import dev.maxenceng.lazyclaude.session.domain.LastPushedSessions;
+import dev.maxenceng.lazyclaude.session.domain.LaunchLogPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
@@ -36,7 +37,6 @@ import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
-import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -57,7 +57,7 @@ public final class SessionApplicationService {
     public SessionApplicationService(
             LiveSessionPort sessions,
             PastSessionPort pastSessions,
-            ProjectLocatorPort locator,
+            LaunchLogPort launchLog,
             SessionWatchPort watch,
             TranscriptWatchPort transcriptWatch,
             WarningPort warnings,
@@ -66,11 +66,11 @@ public final class SessionApplicationService {
             DesktopNotificationPort notifications,
             boolean desktopNotifications,
             Clock clock) {
-        this.hosted = new HostedSessionManager(hosts, sessions, warnings, worktrees, clock);
+        this.hosted = new HostedSessionManager(hosts, sessions, warnings, worktrees, launchLog, clock);
         this.worktreeing = new WorktreeManager(worktrees);
         this.notifying = new DesktopNotificationManager(notifications, warnings);
         this.desktopNotifications = desktopNotifications;
-        this.manager = new SessionManager(sessions, pastSessions, locator, watch, transcriptWatch, warnings, clock);
+        this.manager = new SessionManager(sessions, pastSessions, launchLog, watch, transcriptWatch, warnings, clock);
     }
 
     public AvailableSessions sessionsFor(Project project, KnownTickets tickets) {
@@ -154,8 +154,8 @@ public final class SessionApplicationService {
         hosted.onTicketDoneEnded(listener);
     }
 
-    public HostStart resume(SessionId session, WorkingDirectory recorded, PaneSize size) {
-        return hosted.resume(session, recorded, size);
+    public HostStart resume(Project project, SessionId session, WorkingDirectory recorded, PaneSize size) {
+        return hosted.resume(project, session, recorded, size);
     }
 
     public void send(SessionId id, TerminalInput input) {

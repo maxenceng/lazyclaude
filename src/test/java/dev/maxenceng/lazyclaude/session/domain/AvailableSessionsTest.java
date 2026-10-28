@@ -16,8 +16,7 @@ import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessio
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.sessionName;
-import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
-import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.weakLink;
+import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.ticketLink;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectoryAt;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
@@ -54,14 +53,14 @@ class AvailableSessionsTest {
 
     @Test
     void shouldHaveRunAVerbWhenAPastSessionLastRanItOnTheTicket() {
-        PastSession design = pastSessionBuilder().links(List.of(strongLink("PROJ-1", "design"))).build();
+        PastSession design = pastSessionBuilder().links(List.of(ticketLink("PROJ-1", "design"))).build();
 
         assertThat(pastSessionsOf(List.of(design)).ranVerb(linkedTicketId(), Verb.DESIGN)).isTrue();
     }
 
     @Test
     void shouldHaveRunAVerbWhenALiveSessionLastRanItOnTheTicket() {
-        LiveSession design = liveSessionBuilder().links(List.of(strongLink("PROJ-1", "design"))).build();
+        LiveSession design = liveSessionBuilder().links(List.of(ticketLink("PROJ-1", "design"))).build();
 
         assertThat(liveSessionsOf(List.of(design)).ranVerb(linkedTicketId(), Verb.DESIGN)).isTrue();
     }
@@ -80,16 +79,9 @@ class AvailableSessionsTest {
 
     @Test
     void shouldNotHaveRunAVerbAnotherTicketsSessionRan() {
-        PastSession design = pastSessionBuilder().links(List.of(strongLink("PROJ-2", "design"))).build();
+        PastSession design = pastSessionBuilder().links(List.of(ticketLink("PROJ-2", "design"))).build();
 
         assertThat(pastSessionsOf(List.of(design)).ranVerb(linkedTicketId(), Verb.DESIGN)).isFalse();
-    }
-
-    @Test
-    void shouldNotHaveRunAVerbAWeakLinkNamesNoVerbFor() {
-        PastSession weak = pastSessionBuilder().links(List.of(weakLink("PROJ-1"))).build();
-
-        assertThat(pastSessionsOf(List.of(weak)).ranVerb(linkedTicketId(), Verb.DESIGN)).isFalse();
     }
 
     @Test

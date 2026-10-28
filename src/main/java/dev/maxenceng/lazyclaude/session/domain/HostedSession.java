@@ -4,12 +4,10 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
-import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
-import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
@@ -59,16 +57,6 @@ public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCom
     /** The ticket this session was started to close out with {@code /ticket done}, none for a session that ran any other verb. */
     public Optional<LinkedTicketId> doneTicket() {
         return command instanceof TicketClaude(_, LinkedTicketId ticket, Verb verb) && verb == Verb.DONE ? Optional.of(ticket) : Optional.empty();
-    }
-
-    /** The link to its ticket that starting it gives it before any transcript does. */
-    public Optional<StrongLink> startingLink() {
-        return command instanceof TicketClaude(_, LinkedTicketId ticket, Verb verb)
-                ? Optional.of(StrongLink.builder()
-                        .ticket(ticket)
-                        .verb(new LinkVerb(verb.label()))
-                        .build())
-                : Optional.empty();
     }
 
     /** Whether this session was started to run {@code verb} on {@code ticket}. */
