@@ -9,16 +9,13 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import dev.maxenceng.lazyclaude.session.domain.NamedTicketId;
-
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * What a run of transcript lines adds to what is already known: the last {@code cwd}, the last title, the first prompt and
- * first timestamp when none is known yet, the last timestamp, every ticket-id prefix of a {@code gitBranch}, and every
- * {@code /ticket} run, from a command's args or a {@code Skill} call, the latest of a repeated one last. A line that cannot carry any of them is not parsed, and
+ * What a run of transcript lines adds to what is already known: the last title, the first prompt when none is known yet, the
+ * last timestamp, and every {@code /ticket} run, from a command's args or a {@code Skill} call, the latest of a repeated one last. A line that cannot carry any of them is not parsed, and
  * one that does not parse is skipped, so the rest of the transcript still counts.
  */
 final class TranscriptTail {
@@ -26,7 +23,6 @@ final class TranscriptTail {
     private static final JsonMapper MAPPER = JsonMapper.builder().build();
     private static final String TIMESTAMP_KEY = "\"timestamp\"";
     private static final String AI_TITLE_KEY = "\"aiTitle\"";
-    private static final String GIT_BRANCH_KEY = "\"gitBranch\"";
     private static final String USER = "user";
     private static final String ASSISTANT = "assistant";
     private static final String TOOL_USE = "tool_use";
@@ -42,27 +38,21 @@ final class TranscriptTail {
     private static final String CONTENT = "content";
     private static final String TEXT = "text";
 
-    private String cwd;
     private String aiTitle;
     private String firstPrompt;
-    private Long startedAt;
     private Long lastActivity;
-    private final List<String> branchIds;
     private final List<CachedTicketRun> ticketRuns;
 
     TranscriptTail(CachedTranscript known) {
-        this.cwd = known.cwd();
         this.aiTitle = known.aiTitle();
         this.firstPrompt = known.firstPrompt();
-        this.startedAt = known.startedAt();
         this.lastActivity = known.lastActivity();
-        this.branchIds = new ArrayList<>(known.branchIds());
         this.ticketRuns = new ArrayList<>(known.ticketRuns());
     }
 
     void accept(byte[] line) {
         String text = new String(line, StandardCharsets.UTF_8);
-        if (!text.contains(TIMESTAMP_KEY) && !text.contains(AI_TITLE_KEY) && !text.contains(GIT_BRANCH_KEY)) {
+        if (!text.contains(TIMESTAMP_KEY) && !text.contains(AI_TITLE_KEY)) {
             return;
         }
         TranscriptLine entry;
@@ -78,9 +68,6 @@ final class TranscriptTail {
     }
 
     private void remember(TranscriptLine entry) {
-        if (entry.cwd() != null && !entry.cwd().isBlank()) {
-            cwd = entry.cwd();
-        }
         if (entry.aiTitle() != null && !entry.aiTitle().isBlank()) {
             aiTitle = entry.aiTitle();
         }
@@ -88,18 +75,7 @@ final class TranscriptTail {
         if (firstPrompt == null && USER.equals(entry.type()) && !Boolean.TRUE.equals(entry.isMeta())) {
             firstPrompt = promptOf(entry.message()).orElse(null);
         }
-        rememberBranch(entry.gitBranch());
         ticketRunOf(entry).ifPresent(this::ran);
-    }
-
-    private void rememberBranch(String gitBranch) {
-        if (gitBranch == null) {
-            return;
-        }
-        NamedTicketId.prefixOf(gitBranch)
-                .map(NamedTicketId::value)
-                .filter(id -> !branchIds.contains(id))
-                .ifPresent(branchIds::add);
     }
 
     private void ran(CachedTicketRun run) {
@@ -147,9 +123,6 @@ final class TranscriptTail {
     }
 
     private void seen(long millis) {
-        if (startedAt == null) {
-            startedAt = millis;
-        }
         lastActivity = millis;
     }
 
@@ -195,13 +168,9 @@ final class TranscriptTail {
                 fileKey,
                 offset,
                 known.sessionId(),
-                cwd,
-                known.projectRoot(),
                 aiTitle,
                 firstPrompt,
-                startedAt,
                 lastActivity,
-                List.copyOf(branchIds),
                 List.copyOf(ticketRuns));
     }
 }

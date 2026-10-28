@@ -14,13 +14,9 @@ public final class TranscriptCacheFixture {
                 "(dev=803,ino=4242)",
                 1000,
                 "3f2a91c0-5d4e-4b8a-9c11-0e7d2a6b8f10",
-                "/work/app",
-                "/work/app",
                 "Refine PROJ-1",
                 "/ticket start PROJ-1",
-                1_760_170_800_000L,
                 1_760_173_920_000L,
-                List.of("PROJ-1"),
                 List.of(new CachedTicketRun("start", List.of("PROJ-1"))));
     }
 
@@ -32,13 +28,9 @@ public final class TranscriptCacheFixture {
                 "(dev=803,ino=4243)",
                 2048,
                 "9b1e44d2-77aa-4c3f-8d20-5a6c0b1f2e33",
-                "/work/app.worktrees/gone",
                 null,
                 null,
-                null,
-                1_760_100_000_000L,
                 1_760_110_000_000L,
-                List.of(),
                 List.of());
     }
 }

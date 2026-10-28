@@ -67,6 +67,9 @@ class HostedSessionManagerTest {
     private WorktreePort worktrees;
 
     @Mock
+    private LaunchLogPort log;
+
+    @Mock
     private OpenSessionsListener changed;
 
     @Mock
@@ -82,7 +85,7 @@ class HostedSessionManagerTest {
 
     @BeforeEach
     void setUp() {
-        manager = new HostedSessionManager(hosts, records, warnings, worktrees, clock());
+        manager = new HostedSessionManager(hosts, records, warnings, worktrees, log, clock());
     }
 
     @Test
@@ -125,7 +128,7 @@ class HostedSessionManagerTest {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
         when(hosts.spawn(any(), any())).thenReturn(processId());
 
-        HostStart start = manager.resume(sessionId(), worktreeDirectory(), paneSize());
+        HostStart start = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
 
         verify(hosts).spawn(launched.capture(), any());
         assertThat(launched.getValue()).isEqualTo(resumeLaunch(idOf(start), worktreeDirectory()));
@@ -137,7 +140,7 @@ class HostedSessionManagerTest {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
         when(hosts.spawn(any(), any())).thenReturn(processId());
 
-        assertThat(idOf(manager.resume(sessionId(), worktreeDirectory(), paneSize()))).isEqualTo(sessionId());
+        assertThat(idOf(manager.resume(project(), sessionId(), worktreeDirectory(), paneSize()))).isEqualTo(sessionId());
     }
 
     @Test
@@ -155,7 +158,7 @@ class HostedSessionManagerTest {
         when(hosts.spawn(any(), any())).thenReturn(processId());
         HostStart begun = manager.startUnlinked(project(), paneSize());
 
-        HostStart resumed = manager.resume(idOf(begun), projectRootDirectory(), paneSize());
+        HostStart resumed = manager.resume(project(), idOf(begun), projectRootDirectory(), paneSize());
 
         assertThat(resumed)
                 .as("a claude begun under an id is already running that session, and a second would share its transcript")
@@ -167,9 +170,9 @@ class HostedSessionManagerTest {
     void shouldAnswerWithTheOpenSessionInsteadOfResumingTheSameSessionTwice() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
         when(hosts.spawn(any(), any())).thenReturn(processId());
-        HostStart first = manager.resume(sessionId(), worktreeDirectory(), paneSize());
+        HostStart first = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
 
-        HostStart second = manager.resume(sessionId(), worktreeDirectory(), paneSize());
+        HostStart second = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
 
         assertThat(second).as("two claude resuming one session would both write its transcript").isEqualTo(first);
         verify(hosts).spawn(any(), any());
@@ -182,7 +185,7 @@ class HostedSessionManagerTest {
         when(records.recordOf(processId()))
                 .thenReturn(Optional.of(reportedSessionBuilder().session(secondSessionId()).startedAt(new StartedAt(now())).build()));
 
-        HostStart second = manager.resume(secondSessionId(), worktreeDirectory(), paneSize());
+        HostStart second = manager.resume(project(), secondSessionId(), worktreeDirectory(), paneSize());
 
         assertThat(second).as("after /clear the tab writes the record's session, so resuming it would put a second claude on it").isEqualTo(first);
         verify(hosts).spawn(any(), any());
@@ -196,7 +199,7 @@ class HostedSessionManagerTest {
         when(records.recordOf(processId()))
                 .thenReturn(Optional.of(reportedSessionBuilder().session(secondSessionId()).startedAt(earlierStartedAt()).build()));
 
-        manager.resume(secondSessionId(), worktreeDirectory(), paneSize());
+        manager.resume(project(), secondSessionId(), worktreeDirectory(), paneSize());
 
         verify(hosts, times(2)).spawn(any(), any());
     }
@@ -205,7 +208,7 @@ class HostedSessionManagerTest {
     void shouldKeepTheInstantItSpawnedASessionAtToTheMillisecond() {
         when(hosts.spawn(any(), any())).thenReturn(processId());
         HostedSessionManager spawning = new HostedSessionManager(
-                hosts, records, warnings, worktrees, Clock.fixed(now().plus(Duration.ofNanos(1)), ZoneOffset.UTC));
+                hosts, records, warnings, worktrees, log, Clock.fixed(now().plus(Duration.ofNanos(1)), ZoneOffset.UTC));
 
         spawning.startUnlinked(project(), paneSize());
 
@@ -227,10 +230,10 @@ class HostedSessionManagerTest {
             return processId();
         }).thenReturn(secondProcessId());
         CompletableFuture<HostStart> first =
-                CompletableFuture.supplyAsync(() -> manager.resume(sessionId(), worktreeDirectory(), paneSize()));
+                CompletableFuture.supplyAsync(() -> manager.resume(project(), sessionId(), worktreeDirectory(), paneSize()));
         spawnBegun.await();
 
-        HostStart second = manager.resume(sessionId(), worktreeDirectory(), paneSize());
+        HostStart second = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
         spawnMayReturn.countDown();
 
         assertThat(second)
@@ -244,7 +247,7 @@ class HostedSessionManagerTest {
     void shouldRefuseToResumeAndWarnWhenTheRecordedDirectoryIsGone() {
         when(hosts.exists(worktreeDirectory())).thenReturn(false);
 
-        HostStart start = manager.resume(sessionId(), worktreeDirectory(), paneSize());
+        HostStart start = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
 
         assertThat(start)
                 .as("claude --resume finds a transcript under its directory's project folder, so anywhere else it exits")
@@ -259,7 +262,7 @@ class HostedSessionManagerTest {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
         when(hosts.spawn(any(), any())).thenThrow(new HostUnavailableException("no pty"));
 
-        assertThat(manager.resume(sessionId(), worktreeDirectory(), paneSize()))
+        assertThat(manager.resume(project(), sessionId(), worktreeDirectory(), paneSize()))
                 .isEqualTo(new NotStartedHost());
         assertThat(manager.open().sessions()).isEmpty();
         assertThat(raisedTexts(warnings)).containsExactly("hosted session: no pty.");

@@ -17,7 +17,7 @@ import dev.tamboui.toolkit.element.Size;
 /**
  * Draws one session per line, top-down inside whatever area it gets, scrolled just far enough to show the
  * selected one: a live session as its state glyph in its colour, its name and its age against the right edge; a
- * past one as a dim {@code ○}, its title and the age since its last activity; and the row of older ones, dim.
+ * past one as a dim {@code ○} (or {@code ↺} when it was cut off), its title and the age since its last activity; and the row of older ones, dim.
  */
 final class SessionRowsElement implements Element {
 
@@ -59,19 +59,19 @@ final class SessionRowsElement implements Element {
             }
             case PastSessionRow past -> {
                 Style title = SessionText.titleIsStandIn(past.session()) ? plain.dim() : plain;
-                line(frame, area, y, SessionText.pastGlyph(), plain.dim(),
+                line(frame, area, y, SessionText.pastGlyph(past.session()), plain.dim(),
                         middle(past.link(), SessionText.title(past.session()), plain, title, verbWidth), past.session().age().label(), plain);
             }
             case OlderSessionsRow older ->
                 line(frame, area, y, SessionText.olderGlyph(), plain.dim(),
-                        new MiddleText(NOTHING, plain, SessionText.olderLabel(older), plain.dim(), NOTHING), NOTHING, plain);
+                        new MiddleText(NOTHING, plain, SessionText.olderLabel(older), plain.dim()), NOTHING, plain);
             case SectionHeaderRow header ->
                 frame.buffer().setString(area.x(), y, RowsElement.fit(header.label(), area.width()), Style.EMPTY.dim());
             case NoSessionRow _ -> dimLabel(frame, area, y, SessionText.noSessionLabel(), plain);
             case NewSessionRow newSession -> dimLabel(frame, area, y, SessionText.newSessionLabel(newSession), plain);
             case StartingSessionRow _ ->
                 line(frame, area, y, SessionText.startingGlyph(), plain.dim(),
-                        new MiddleText(NOTHING, plain, SessionText.startingLabel(), plain.dim(), NOTHING), SessionText.paneLabel(), plain);
+                        new MiddleText(NOTHING, plain, SessionText.startingLabel(), plain.dim()), SessionText.paneLabel(), plain);
         }
     }
 
@@ -83,8 +83,7 @@ final class SessionRowsElement implements Element {
 
     private static MiddleText middle(Optional<TicketLink> link, String title, Style plain, Style titleStyle, int verbWidth) {
         String verb = SessionText.verb(link).map(found -> found + GAP.repeat(verbWidth - found.length() + VERB_GAP)).orElse(NOTHING);
-        String suffix = SessionText.isWeak(link) ? GAP + SessionText.branchSuffix() : NOTHING;
-        return new MiddleText(verb, plain, title, titleStyle, suffix);
+        return new MiddleText(verb, plain, title, titleStyle);
     }
 
     private static int verbWidth(List<SessionRow> rows) {
@@ -100,11 +99,11 @@ final class SessionRowsElement implements Element {
                 .orElse(0);
     }
 
-    // deferred: a panel narrower than verb and branch suffix draws both whole and the age overwrites them — close it when someone runs a panel that narrow.
+    // deferred: a panel narrower than the verb draws it whole and the age overwrites it — close it when someone runs a panel that narrow.
     private static void line(Frame frame, Rect area, int y, String glyph, Style glyphStyle, MiddleText middle, String age, Style ageStyle) {
         int ageWidth = age.isEmpty() ? 0 : GAP.length() + age.length();
         int textWidth = Math.max(0, area.width() - glyph.length() - GAP.length() - ageWidth);
-        int titleWidth = Math.max(0, textWidth - middle.verb().length() - middle.suffix().length());
+        int titleWidth = Math.max(0, textWidth - middle.verb().length());
         String fitted = titleWidth == 0 ? NOTHING : RowsElement.fit(middle.title(), titleWidth);
         String padding = GAP.repeat(Math.max(0, titleWidth - fitted.codePointCount(0, fitted.length())));
         int x = area.x() + glyph.length();
@@ -115,8 +114,6 @@ final class SessionRowsElement implements Element {
         x += middle.verb().length();
         frame.buffer().setString(x, y, fitted, middle.titleStyle());
         x += fitted.codePointCount(0, fitted.length());
-        frame.buffer().setString(x, y, middle.suffix(), middle.titleStyle().dim());
-        x += middle.suffix().length();
         frame.buffer().setString(x, y, padding, middle.titleStyle());
         if (ageWidth > 0) {
             frame.buffer().setString(area.x() + area.width() - age.length() - GAP.length(), y, GAP + age, ageStyle);

@@ -4,14 +4,10 @@ public final class TicketLinkFixture {
 
     private TicketLinkFixture() {}
 
-    public static StrongLink strongLink(String ticket, String verb) {
-        return StrongLink.builder()
+    public static TicketLink ticketLink(String ticket, String verb) {
+        return TicketLink.builder()
                 .ticket(new LinkedTicketId(ticket))
                 .verb(new LinkVerb(verb))
                 .build();
-    }
-
-    public static WeakLink weakLink(String ticket) {
-        return new WeakLink(new LinkedTicketId(ticket));
     }
 }

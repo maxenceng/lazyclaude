@@ -7,20 +7,18 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
+import java.util.List;
+import java.util.Set;
 
 import dev.maxenceng.lazyclaude.session.domain.CacheFallback;
 import dev.maxenceng.lazyclaude.session.domain.LastActivity;
-import dev.maxenceng.lazyclaude.session.domain.LocatedPastSession;
-import dev.maxenceng.lazyclaude.session.domain.PastSession;
-import dev.maxenceng.lazyclaude.session.domain.ProjectLocation;
+import dev.maxenceng.lazyclaude.session.domain.LinkFacts;
 import dev.maxenceng.lazyclaude.session.domain.RootFallback;
-import dev.maxenceng.lazyclaude.session.domain.StartedAt;
-import dev.maxenceng.lazyclaude.session.domain.TranscriptLocator;
+import dev.maxenceng.lazyclaude.session.domain.TranscriptFacts;
 import dev.maxenceng.lazyclaude.session.published.OpeningPrompt;
 import dev.maxenceng.lazyclaude.session.published.ReadableTranscript;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
-import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class TranscriptFixture {
 
@@ -125,14 +123,6 @@ public final class TranscriptFixture {
                 .formatted(timestamp, cwd, branch);
     }
 
-    public static String branchLineWithoutTimestamp(String branch) {
-        return "{\"type\":\"file-history-snapshot\",\"gitBranch\":\"%s\"}\n".formatted(branch);
-    }
-
-    public static String lineWithoutCwd(String timestamp) {
-        return "{\"type\":\"queue-operation\",\"timestamp\":\"%s\"}\n".formatted(timestamp);
-    }
-
     public static String aiTitleLine(String title) {
         return "{\"type\":\"ai-title\",\"aiTitle\":%s,\"sessionId\":\"%s\"}\n".formatted(quoted(title), SESSION_ID);
     }
@@ -172,25 +162,15 @@ public final class TranscriptFixture {
         return Files.getLastModifiedTime(file).toInstant();
     }
 
-    public static LocatedPastSession pastSessionOf(
-            String sessionId,
-            SessionTitle title,
-            OpeningPrompt opening,
-            String cwd,
-            String lastActivity,
-            String startedAt,
-            ProjectLocation location) {
-        return LocatedPastSession.builder()
-                .session(PastSession.builder()
-                        .id(new SessionId(sessionId))
-                        .title(title)
-                        .opening(opening)
-                        .reading(new ReadableTranscript())
-                        .directory(new WorkingDirectory(Path.of(cwd)))
-                        .lastActivity(new LastActivity(Instant.parse(lastActivity)))
-                        .startedAt(new StartedAt(Instant.parse(startedAt)))
-                        .build())
-                .location(location)
+    public static TranscriptFacts factsOf(
+            SessionTitle title, OpeningPrompt opening, String lastActivity) {
+        return TranscriptFacts.builder()
+                .id(new SessionId(SESSION_ID))
+                .title(title)
+                .opening(opening)
+                .reading(new ReadableTranscript())
+                .lastActivity(new LastActivity(Instant.parse(lastActivity)))
+                .links(LinkFacts.builder().build())
                 .build();
     }
 
@@ -204,14 +184,30 @@ public final class TranscriptFixture {
         return new String(line, StandardCharsets.UTF_8);
     }
 
+    static Set<SessionId> everyLoggedSession() {
+        return Set.of(new SessionId(SESSION_ID), new SessionId(OTHER_SESSION_ID), new SessionId(THIRD_SESSION_ID));
+    }
+
+    static List<TranscriptFacts> readOf(TranscriptRepository repository) {
+        return repository.transcriptsOf(everyLoggedSession()).read();
+    }
+
     static Instant lastActivityOf(TranscriptRepository repository) {
-        return repository.pastSessions().getFirst().session().lastActivity().value();
+        return readOf(repository).getFirst().lastActivity().value();
+    }
+
+    static LinkFacts linksOf(TranscriptRepository repository) {
+        return repository.transcriptsOf(everyLoggedSession()).of(new SessionId(SESSION_ID)).orElseThrow().links();
+    }
+
+    static TranscriptRepository scanned(Path projects, Path cache, CacheFallback unwritable, RootFallback unlistable) {
+        return scanned(projects, cache, everyLoggedSession(), unwritable, unlistable);
     }
 
     static TranscriptRepository scanned(
-            Path projects, Path cache, TranscriptLocator locator, CacheFallback unwritable, RootFallback unlistable) {
+            Path projects, Path cache, Set<SessionId> logged, CacheFallback unwritable, RootFallback unlistable) {
         TranscriptRepository repository = new TranscriptRepository(projects, new TranscriptCacheFile(cache));
-        repository.rescanAll(locator, unwritable, unlistable);
+        repository.rescanAll(logged, unwritable, unlistable);
         return repository;
     }
 

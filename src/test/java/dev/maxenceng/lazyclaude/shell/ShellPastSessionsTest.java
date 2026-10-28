@@ -37,6 +37,24 @@ class ShellPastSessionsTest {
     }
 
     @Test
+    void shouldMarkAnInterruptedPastSessionWithTheResumeArrowInPlaceOfTheCircle() {
+        Screen screen = Screen.of(shellOnSessions(pastSessionsViewOf(List.of(pastSessionViewBuilder().interrupted(true).build()))));
+
+        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("↺ Refine PROJ-1\\s+10m"));
+    }
+
+    @Test
+    void shouldListAnInterruptedSessionAboveTheEndedOnesTheContextGaveAfterIt() {
+        Screen screen = Screen.of(shellOnSessions(pastSessionsViewOf(List.of(
+                pastSessionViewBuilder().interrupted(true).title(firstPrompt()).opening(openingUnder(firstPrompt())).build(),
+                pastSessionViewNumbered(2)))));
+
+        assertThat(screen.boardPanelLines().stream().filter(line -> line.startsWith("↺") || line.startsWith("○")).toList())
+                .extracting(line -> line.substring(0, 1))
+                .containsExactly("↺", "○");
+    }
+
+    @Test
     void shouldListPastSessionsAfterTheLiveOnesInTheOrderTheContextGave() {
         Screen screen = Screen.of(shellOnSessions(sessionsViewOf(List.of(sessionView()), pastSessionViewsNumbered(2))));
 

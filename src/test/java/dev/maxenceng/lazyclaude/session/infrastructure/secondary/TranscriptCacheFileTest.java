@@ -59,11 +59,12 @@ class TranscriptCacheFileTest {
         Path file = directory.resolve("past-sessions.json");
         Files.writeString(
                 file,
-                "{\"version\":1,\"transcripts\":[{\"path\":\"/home/max/.claude/projects/-work-app/s.jsonl\",\"size\":1,\"modified\":1,\"fileKey\":\"k\",\"offset\":1,\"sessionId\":\"s\"}]}",
+                "{\"version\":%d,\"transcripts\":[{\"path\":\"/home/max/.claude/projects/-work-app/s.jsonl\",\"size\":1,\"modified\":1,\"fileKey\":\"k\",\"offset\":1,\"sessionId\":\"s\",\"ticketRuns\":[]}]}"
+                        .formatted(TranscriptCacheFile.FORMAT_VERSION - 1),
                 StandardCharsets.UTF_8);
 
         assertThat(new TranscriptCacheFile(file).load())
-                .as("a version 1 cache holds no link facts, so every transcript is read again to find them")
+                .as("the previous version held branch facts and project roots this one drops, so every logged transcript is read again")
                 .isEmpty();
     }
 

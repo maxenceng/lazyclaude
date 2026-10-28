@@ -1,7 +1,11 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import java.util.List;
+import java.util.Optional;
+
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
@@ -15,6 +19,14 @@ public record TicketClaude(SessionId session, LinkedTicketId ticket, Verb verb) 
         Assert.notNull("session", session);
         Assert.notNull("ticket", ticket);
         Assert.notNull("verb", verb);
+    }
+
+    @Override
+    public Optional<TicketRun> launchRun() {
+        return Optional.of(TicketRun.builder()
+                .verb(new LinkVerb(verb.label()))
+                .ids(List.of(new NamedTicketId(ticket.value())))
+                .build());
     }
 
     /** The name the session is given, which its row shows: the ticket and the verb. */

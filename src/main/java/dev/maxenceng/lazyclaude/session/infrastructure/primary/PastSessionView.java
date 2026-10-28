@@ -15,7 +15,7 @@ import dev.maxenceng.lazyclaude.session.published.SessionTitle;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.TranscriptReading;
 
-/** One past session as the shell reads it: what its row and the main view show, and the tickets it is linked to. */
+/** One past session as the shell reads it: what its row and the main view show, the tickets it is linked to, and whether it was cut off rather than ended by its {@code claude}. */
 public record PastSessionView(
         SessionId id,
         SessionTitle title,
@@ -25,7 +25,8 @@ public record PastSessionView(
         LocalDateTime lastActivity,
         SessionAge age,
         LocalDateTime startedAt,
-        List<TicketLink> links) {
+        List<TicketLink> links,
+        boolean interrupted) {
 
     static PastSessionView from(AvailableSessions available, PastSession session) {
         return builder()
@@ -38,6 +39,7 @@ public record PastSessionView(
                 .age(available.ageOf(session))
                 .startedAt(available.startedLocally(session))
                 .links(session.links())
+                .interrupted(session.interrupted())
                 .build();
     }
 
@@ -65,6 +67,7 @@ public record PastSessionView(
         private SessionAge age;
         private LocalDateTime startedAt;
         private List<TicketLink> links;
+        private boolean interrupted;
 
         private PastSessionViewBuilder() {}
 
@@ -113,8 +116,13 @@ public record PastSessionView(
             return this;
         }
 
+        public PastSessionViewBuilder interrupted(boolean interrupted) {
+            this.interrupted = interrupted;
+            return this;
+        }
+
         public PastSessionView build() {
-            return new PastSessionView(id, title, opening, reading, directory, lastActivity, age, startedAt, links);
+            return new PastSessionView(id, title, opening, reading, directory, lastActivity, age, startedAt, links, interrupted);
         }
     }
 }

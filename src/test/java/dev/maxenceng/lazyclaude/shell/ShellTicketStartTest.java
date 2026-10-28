@@ -9,7 +9,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTicketHostedSessionView;
-import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.strongLink;
+import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.ticketLink;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
@@ -115,7 +115,7 @@ class ShellTicketStartTest {
         when(hosting.resumeInTicketWorktree(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
         Shell shell = shellOnTicket(
                 ticketViewIn(Status.TODO),
-                sessionsViewOf(List.of(), List.of(linkedPastSessionView(1, strongLink("PROJ-1", "start")))),
+                sessionsViewOf(List.of(), List.of(linkedPastSessionView(1, ticketLink("PROJ-1", "start")))),
                 hosting,
                 blankScreens());
         shell.press(alt('j'));

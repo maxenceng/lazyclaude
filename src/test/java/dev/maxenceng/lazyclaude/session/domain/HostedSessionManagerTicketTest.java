@@ -60,6 +60,9 @@ class HostedSessionManagerTicketTest {
     private WorktreePort worktrees;
 
     @Mock
+    private LaunchLogPort log;
+
+    @Mock
     private TicketDoneEndedListener doneEnded;
 
     @Mock
@@ -75,7 +78,7 @@ class HostedSessionManagerTicketTest {
 
     @BeforeEach
     void setUp() {
-        manager = new HostedSessionManager(hosts, records, warnings, worktrees, clock());
+        manager = new HostedSessionManager(hosts, records, warnings, worktrees, log, clock());
     }
 
     @Test

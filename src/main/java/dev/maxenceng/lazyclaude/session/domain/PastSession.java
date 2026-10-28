@@ -11,8 +11,8 @@ import dev.maxenceng.lazyclaude.session.published.TranscriptReading;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * A session with no live process, only a transcript: what that transcript last said of it, whether it can be read now, and the
- * tickets it links the session to.
+ * A launch-log entry with no live process: what its transcript last said of it, whether it can be read now, the tickets it links
+ * the session to, and whether lazyclaude's quit, a crash or a kill cut it off rather than its {@code claude} exiting by itself.
  */
 public record PastSession(
         SessionId id,
@@ -22,7 +22,8 @@ public record PastSession(
         WorkingDirectory directory,
         LastActivity lastActivity,
         StartedAt startedAt,
-        List<TicketLink> links) {
+        List<TicketLink> links,
+        boolean interrupted) {
 
     public PastSession {
         Assert.notNull("id", id);
@@ -36,7 +37,7 @@ public record PastSession(
     }
 
     public PastSession linkedTo(List<TicketLink> links) {
-        return new PastSession(id, title, opening, reading, directory, lastActivity, startedAt, links);
+        return new PastSession(id, title, opening, reading, directory, lastActivity, startedAt, links, interrupted);
     }
 
     public static PastSessionBuilder builder() {
@@ -52,6 +53,7 @@ public record PastSession(
         private LastActivity lastActivity;
         private StartedAt startedAt;
         private List<TicketLink> links = List.of();
+        private boolean interrupted;
 
         private PastSessionBuilder() {}
 
@@ -95,8 +97,13 @@ public record PastSession(
             return this;
         }
 
+        public PastSessionBuilder interrupted(boolean interrupted) {
+            this.interrupted = interrupted;
+            return this;
+        }
+
         public PastSession build() {
-            return new PastSession(id, title, opening, reading, directory, lastActivity, startedAt, links);
+            return new PastSession(id, title, opening, reading, directory, lastActivity, startedAt, links, interrupted);
         }
     }
 }

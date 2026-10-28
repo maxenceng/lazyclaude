@@ -25,11 +25,10 @@ public record OpenHostedSession(HostedSession session, HostedPhase phase) {
         return phase.live().map(LiveSession::name).orElseGet(session::name);
     }
 
-    /** This session with its live session linked to {@code links}, and to its ticket by the launch that began it when its transcript has not yet said so. */
+    /** This session with its live session linked to {@code links}. */
     public OpenHostedSession linkedTo(List<TicketLink> links) {
         return phase.live()
-                .map(live -> session.startingLink().map(starting -> live.linkedTo(links).linkedBy(starting)).orElseGet(() -> live.linkedTo(links)))
-                .map(linked -> new OpenHostedSession(session, phase.showing(linked)))
+                .map(live -> new OpenHostedSession(session, phase.showing(live.linkedTo(links))))
                 .orElse(this);
     }
 

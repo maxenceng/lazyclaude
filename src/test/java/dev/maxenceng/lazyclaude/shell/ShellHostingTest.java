@@ -5,11 +5,13 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedTab;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionViewBuilder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTabNumbered;
 import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.leftPressAt;
 import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.wheelUpAt;
+import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningViewFixture.warningViewOf;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
@@ -162,6 +164,20 @@ class ShellHostingTest {
         verify(hosting).resume(payload.capture());
         assertThat(payload.getValue().session()).isEqualTo(pastSessionView().id());
         assertThat(payload.getValue().recordedDirectory()).isEqualTo(pastSessionView().directory());
+        assertThat(payload.getValue().root()).as("the launch log that lists the session is the project's").isEqualTo(project().root());
+    }
+
+    @Test
+    void shouldResumeAnInterruptedPastSessionWithEnterLikeAnyOther() {
+        when(hosting.resume(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
+        Shell shell = shellHosting(
+                sessionsViewOf(List.of(), List.of(pastSessionViewBuilder().interrupted(true).build())), hosting, screens);
+        shell.press(alt('j'));
+
+        shell.press(enter());
+
+        verify(hosting).resume(any());
+        assertThat(shell.focus()).isEqualTo(Focus.DOCK);
     }
 
     @Test

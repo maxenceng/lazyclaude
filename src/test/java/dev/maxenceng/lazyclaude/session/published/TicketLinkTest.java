@@ -1,7 +1,10 @@
 package dev.maxenceng.lazyclaude.session.published;
 
+import static dev.maxenceng.lazyclaude.session.published.TicketLinkFixture.ticketLink;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -10,14 +13,14 @@ import dev.maxenceng.lazyclaude.error.domain.AssertionException;
 class TicketLinkTest {
 
     @Test
-    void shouldNameTheTicketOfAStrongLink() {
-        assertThat(new StrongLink(new LinkedTicketId("PROJ-1"), new LinkVerb("start")).ticket())
-                .isEqualTo(new LinkedTicketId("PROJ-1"));
+    void shouldFindTheLinkToATicketAmongSeveral() {
+        assertThat(TicketLink.to(List.of(ticketLink("PROJ-1", "start"), ticketLink("PROJ-2", "review")), new LinkedTicketId("PROJ-2")))
+                .contains(ticketLink("PROJ-2", "review"));
     }
 
     @Test
-    void shouldNameTheTicketOfAWeakLink() {
-        assertThat(new WeakLink(new LinkedTicketId("PROJ-1")).ticket()).isEqualTo(new LinkedTicketId("PROJ-1"));
+    void shouldFindNoLinkToATicketItIsNotLinkedTo() {
+        assertThat(TicketLink.to(List.of(ticketLink("PROJ-1", "start")), new LinkedTicketId("PROJ-2"))).isEmpty();
     }
 
     @Test
