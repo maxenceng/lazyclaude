@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSession;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.noneHosted;
@@ -42,6 +43,8 @@ import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessio
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.recordUnreadable;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionManager;
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.earlierStartedAt;
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.startedAt;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.cacheUnwritable;
@@ -49,6 +52,7 @@ import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.registryUnwatchable;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.transcriptsUnlistable;
 import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.transcriptsUnwatchable;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.permissionPrompt;
@@ -301,12 +305,50 @@ class SessionManagerTest {
     }
 
     @Test
-    void shouldListASessionWhoseStatusItDoesNotKnowAsUnknown() {
-        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedWith(ReportedStatus.UNKNOWN)));
+    void shouldListAHostedSessionAsTheSessionItsRecordNamesOnceItIsCleared() {
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSessionBuilder().session(secondSessionId()).build()));
 
-        assertThat(sessionManager(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(project(), noTickets(), oneHosted()))
-                .as("a newer Claude Code's status must not hide a session that runs")
-                .isEqualTo(liveSessionsOf(List.of(sessionWith(new Unknown()))));
+        assertThat(sessionManager(sessions, locator, watch, warnings).sessionsFor(project(), noTickets(), oneHosted()).live())
+                .as("/clear gives the same process a new session, and the row must follow it to its new transcript")
+                .singleElement()
+                .extracting(LiveSession::id)
+                .isEqualTo(secondSessionId());
+    }
+
+    @Test
+    void shouldHideThePastSessionAHostedSessionRunsSinceItWasCleared() {
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSessionBuilder().session(secondSessionId()).build()));
+        when(past.pastSessions()).thenReturn(List.of(locatedIn(pastSessionBuilder().id(secondSessionId()).build())));
+
+        assertThat(sessionManager(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(project(), noTickets(), oneHosted()).past())
+                .as("resuming the session a tab runs would put a second claude on its transcript")
+                .isEmpty();
+    }
+
+    @Test
+    void shouldListAHostedSessionAsStartingWhileItsPidHoldsARecordLeftByAnEarlierProcess() {
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSessionBuilder().startedAt(earlierStartedAt()).build()));
+
+        assertThat(sessionManager(sessions, locator, watch, warnings)
+                        .sessionsFor(project(), noTickets(), hostedSessionsOf(hostedSessionBuilder().spawnedAt(startedAt()).build()))
+                        .hosted())
+                .as("a crashed claude's record must not lend its session to the new process the OS gave its pid")
+                .singleElement()
+                .extracting(OpenHostedSession::phase)
+                .isInstanceOf(StartingPhase.class);
+    }
+
+    @Test
+    void shouldDateAHostedSessionWhoseRecordCannotBeReadFromItsSpawn() {
+        when(sessions.recordOf(processId())).thenThrow(recordUnreadable());
+
+        assertThat(sessionManager(sessions, locator, watch, warnings)
+                        .sessionsFor(project(), noTickets(), hostedSessionsOf(hostedSessionBuilder().spawnedAt(startedAt()).build()))
+                        .live())
+                .as("an unread session's age must not restart at every read")
+                .singleElement()
+                .extracting(LiveSession::startedAt)
+                .isEqualTo(startedAt());
     }
 
     @Test

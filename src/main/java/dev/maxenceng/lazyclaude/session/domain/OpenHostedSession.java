@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.domain;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 
@@ -12,6 +13,11 @@ public record OpenHostedSession(HostedSession session, HostedPhase phase) {
     public OpenHostedSession {
         Assert.notNull("session", session);
         Assert.notNull("phase", phase);
+    }
+
+    /** The session it runs now: the one its registry record names, else the one it was launched with. */
+    public SessionId id() {
+        return phase.live().map(LiveSession::id).orElseGet(session::id);
     }
 
     /** What it is called: the name its registry record gave it, else the one it was launched with. */

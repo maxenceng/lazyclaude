@@ -23,7 +23,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SessionRecordUnreadableException;
-import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 
 class SessionRegistryRepositoryTest {
 
@@ -141,12 +140,24 @@ class SessionRegistryRepositoryTest {
     }
 
     @Test
-    void shouldReportAStatusItDoesNotKnowAsUnknown() throws IOException {
+    void shouldRefuseAStatusItDoesNotKnowNamingIt() throws IOException {
         writeRecord(sessions, recordFileName(), record("napping"));
 
-        assertThat(registry.recordOf(registeredProcess()))
-                .as("a status from a newer Claude Code must not make the session unreadable")
-                .contains(registered(ReportedStatus.UNKNOWN, new NoWaitingReason()));
+        assertThatThrownBy(() -> registry.recordOf(registeredProcess()))
+                .as("what a newer Claude Code means by a status cannot be guessed, so quitting must ask rather than assume it idle")
+                .isInstanceOf(SessionRecordUnreadableException.class)
+                .hasMessageContaining(recordFileName())
+                .hasMessageContaining("napping");
+    }
+
+    @Test
+    void shouldRefuseARecordThatLacksASessionIdNamingTheField() throws IOException {
+        writeRecord(sessions, recordFileName(), record("busy").replaceFirst("\"sessionId\":\"[^\"]*\",", ""));
+
+        assertThatThrownBy(() -> registry.recordOf(registeredProcess()))
+                .as("the row follows the session its record names, so a record that names none cannot be used")
+                .isInstanceOf(SessionRecordUnreadableException.class)
+                .hasMessageContaining("sessionId");
     }
 
     @Test

@@ -10,8 +10,11 @@ import java.util.function.Predicate;
 
 import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
 import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
+import dev.maxenceng.lazyclaude.session.published.Modifiers;
+import dev.maxenceng.lazyclaude.session.published.NamedKey;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.TerminalInputFixture;
 
 public final class RegistryContractFixture {
 
@@ -34,8 +37,18 @@ public final class RegistryContractFixture {
         return recordWhere(pid, record -> true);
     }
 
-    public static Optional<ReportedSession> recordOnceReportingAStatus(ProcessId pid) throws InterruptedException {
-        return recordWhere(pid, record -> record.status() != ReportedStatus.UNKNOWN);
+    public static Optional<ReportedSession> recordOnceIdle(ProcessId pid) throws InterruptedException {
+        return recordWhere(pid, record -> record.status() == ReportedStatus.IDLE);
+    }
+
+    public static Optional<ReportedSession> recordOnceNamingAnotherSessionThan(ProcessId pid, SessionId launched)
+            throws InterruptedException {
+        return recordWhere(pid, record -> !record.session().equals(launched));
+    }
+
+    public static void typedThenEntered(PtyHostRepository host, SessionId id, String command) {
+        command.codePoints().forEach(character -> host.send(id, TerminalInputFixture.typed(character, Modifiers.none())));
+        host.send(id, TerminalInputFixture.pressed(NamedKey.ENTER));
     }
 
     private static Optional<ReportedSession> recordWhere(ProcessId pid, Predicate<ReportedSession> expected)

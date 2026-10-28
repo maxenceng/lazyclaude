@@ -1,6 +1,6 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
-import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.earlierStartedAt;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
@@ -26,7 +26,8 @@ public final class HostedSessionFixture {
         return HostedSession.builder()
                 .pid(processId())
                 .directory(projectRootDirectory())
-                .command(new NewClaude(sessionId()));
+                .command(new NewClaude(sessionId()))
+                .spawnedAt(earlierStartedAt());
     }
 
     public static HostedSession hostedSession() {
@@ -83,7 +84,7 @@ public final class HostedSessionFixture {
     public static LiveSession unknownSession() {
         return LiveSessionFixture.liveSessionBuilder()
                 .name(hostedSession().name())
-                .startedAt(new StartedAt(now()))
+                .startedAt(earlierStartedAt())
                 .version(new NoVersion())
                 .state(new Unknown())
                 .build();
@@ -95,6 +96,7 @@ public final class HostedSessionFixture {
                         .pid(live.pid())
                         .directory(live.directory())
                         .command(new NewClaude(live.id()))
+                        .spawnedAt(earlierStartedAt())
                         .build())
                 .phase(new LivePhase(live))
                 .build();

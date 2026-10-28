@@ -11,6 +11,7 @@ import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.StartedAt;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.Version;
 import dev.maxenceng.lazyclaude.session.published.WaitingFor;
@@ -55,6 +56,7 @@ public final class RegistryFixture {
 
     public static ReportedSession registered(ReportedStatus status, WaitingFor waitingFor) {
         return ReportedSession.builder()
+                .session(new SessionId(SESSION_ID))
                 .name(new SessionName("lazyclaude-b6"))
                 .startedAt(new StartedAt(Instant.ofEpochMilli(1791662734987L)))
                 .version(new Version("2.1.296"))

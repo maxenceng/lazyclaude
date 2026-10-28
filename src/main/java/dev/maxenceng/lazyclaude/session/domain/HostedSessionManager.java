@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,18 +39,22 @@ public final class HostedSessionManager {
     private static final String NO_PLACE = "%s has no folder beside it to keep worktrees in";
 
     private final HostPort hosts;
+    private final LiveSessionPort records;
     private final WarningPort warnings;
     private final WorktreePort worktrees;
+    private final SessionClock clock;
     private final List<HostedSession> open = new ArrayList<>();
     private final List<SessionId> spawning = new ArrayList<>();
     private final Map<SessionId, ExitCode> earlyExits = new HashMap<>();
     private final List<OpenSessionsListener> changeListeners = new CopyOnWriteArrayList<>();
     private final List<TicketDoneEndedListener> doneEndedListeners = new CopyOnWriteArrayList<>();
 
-    public HostedSessionManager(HostPort hosts, WarningPort warnings, WorktreePort worktrees) {
+    public HostedSessionManager(HostPort hosts, LiveSessionPort records, WarningPort warnings, WorktreePort worktrees, Clock clock) {
         this.hosts = hosts;
+        this.records = records;
         this.warnings = warnings;
         this.worktrees = worktrees;
+        this.clock = new SessionClock(clock);
     }
 
     /** A plain {@code claude} in the project root. */
@@ -91,14 +97,24 @@ public final class HostedSessionManager {
 
     /**
      * {@code claude --resume} of {@code session}, in {@code recorded} when it still exists, else nothing; the open
-     * session already running as it when there is one, since two {@code claude} on one transcript would both write to it.
+     * session already running as it when there is one, since two {@code claude} on one transcript would both write to it. An open
+     * session runs as the id it was launched with until its registry record names another, as it does after {@code /clear}.
      */
     public HostStart resume(SessionId session, WorkingDirectory recorded, PaneSize size) {
         return open().sessions().stream()
-                .filter(hosted -> hosted.id().equals(session))
+                .filter(hosted -> hosted.id().equals(session) || runningNow(hosted).filter(session::equals).isPresent())
                 .findFirst()
                 .<HostStart>map(running -> new StartedHost(running.id()))
                 .orElseGet(() -> resumeAt(session, recorded, size));
+    }
+
+    /** None while its record is not written, is another process's, or cannot be read: then it runs as the id it was launched with. */
+    private Optional<SessionId> runningNow(HostedSession hosted) {
+        try {
+            return records.recordOf(hosted.pid()).filter(hosted::reportedBy).map(ReportedSession::session);
+        } catch (SessionRecordUnreadableException unreadable) {
+            return Optional.empty();
+        }
     }
 
     private HostStart resumeAt(SessionId session, WorkingDirectory recorded, PaneSize size) {
@@ -177,7 +193,8 @@ public final class HostedSessionManager {
     /**
      * Claims {@code command}'s id under the lock before spawning, so two resumes of one session racing on the shell's
      * background threads start one {@code claude}: the loser answers with the open session, or with nothing while the
-     * winner is still spawning, since its tab opens when that spawn returns.
+     * winner is still spawning, since its tab opens when that spawn returns. The spawn instant is taken before spawning and to the
+     * millisecond, as the registry records it, so the session's own record is never older than its spawn.
      */
     private HostStart start(LaunchCommand command, WorkingDirectory directory, PaneSize size) {
         SessionId id = command.session();
@@ -195,12 +212,14 @@ public final class HostedSessionManager {
             }
             spawning.add(id);
         }
+        StartedAt spawnedAt = new StartedAt(clock.clock().instant().truncatedTo(ChronoUnit.MILLIS));
         try {
             ProcessId pid = hosts.spawn(launch, code -> exited(id, code));
             return registered(HostedSession.builder()
                     .pid(pid)
                     .directory(directory)
                     .command(command)
+                    .spawnedAt(spawnedAt)
                     .build());
         } catch (HostUnavailableException unavailable) {
             synchronized (open) {

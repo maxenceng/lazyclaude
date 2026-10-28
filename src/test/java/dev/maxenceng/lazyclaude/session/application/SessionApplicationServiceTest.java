@@ -3,7 +3,6 @@ package dev.maxenceng.lazyclaude.session.application;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingTheRegisteredSession;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationServiceWithoutDesktopNotifications;
-import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.startedUnlinked;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.boardTickets;
@@ -111,7 +110,7 @@ class SessionApplicationServiceTest {
 
         AvailableSessions read = service.sessionsFor(project(), noTickets());
 
-        assertThat(read.live()).containsExactly(liveSessionBuilder().id(read.hosted().getFirst().session().id()).build());
+        assertThat(read.live()).containsExactly(liveSessionBuilder().build());
     }
 
     @Test
@@ -170,7 +169,8 @@ class SessionApplicationServiceTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         SessionApplicationService service =
                 sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
-        SessionId id = startedUnlinked(service, hosts);
+        hostingTheRegisteredSession(service, hosts);
+        SessionId id = sessionId();
         when(past.linkFacts()).thenReturn(Map.of(id, ran(ticketRun("start", "PROJ-1"))));
 
         assertThat(service.sessionsFor(project(), boardTickets()).live())
@@ -341,7 +341,8 @@ class SessionApplicationServiceTest {
         List<AvailableSessions> received = new ArrayList<>();
         SessionApplicationService service =
                 sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
-        SessionId id = startedUnlinked(service, hosts);
+        hostingTheRegisteredSession(service, hosts);
+        SessionId id = sessionId();
         when(past.linkFacts()).thenReturn(Map.of(id, ran(ticketRun("start", "PROJ-1"))));
         service.subscribe(project(), noTickets(), received::add);
 
@@ -357,7 +358,8 @@ class SessionApplicationServiceTest {
         List<AvailableSessions> received = new ArrayList<>();
         SessionApplicationService service =
                 sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts);
-        SessionId id = startedUnlinked(service, hosts);
+        hostingTheRegisteredSession(service, hosts);
+        SessionId id = sessionId();
         when(past.linkFacts()).thenReturn(Map.of(id, ran(ticketRun("start", "PROJ-1"))));
         service.subscribe(project(), noTickets(), received::add);
 
@@ -466,7 +468,8 @@ class SessionApplicationServiceTest {
         when(notifications.show(any())).thenReturn(notificationId());
         SessionApplicationService service =
                 sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications);
-        SessionId id = startedUnlinked(service, hosts);
+        hostingTheRegisteredSession(service, hosts);
+        SessionId id = sessionId();
         service.subscribe(project(), noTickets(), received -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(any(), changed.capture(), any());

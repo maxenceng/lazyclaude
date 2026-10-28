@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.domain;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.ticketLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.idOf;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.clock;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.nowhereTicketWorktree;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketStart;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketWorktree;
@@ -50,6 +51,9 @@ class HostedSessionManagerTicketTest {
     private HostPort hosts;
 
     @Mock
+    private LiveSessionPort records;
+
+    @Mock
     private WarningPort warnings;
 
     @Mock
@@ -71,7 +75,7 @@ class HostedSessionManagerTicketTest {
 
     @BeforeEach
     void setUp() {
-        manager = new HostedSessionManager(hosts, warnings, worktrees);
+        manager = new HostedSessionManager(hosts, records, warnings, worktrees, clock());
     }
 
     @Test

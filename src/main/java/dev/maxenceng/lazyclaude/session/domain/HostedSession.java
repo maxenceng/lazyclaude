@@ -13,10 +13,11 @@ import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * A {@code claude} process lazyclaude owns, named by the session id it was launched with: starting while no registry record
- * carries its pid, then live as the session that record describes, until its process exits and it is dropped.
+ * A {@code claude} process lazyclaude owns, its tab named by the session id it was launched with: starting while no registry record
+ * carries its pid, then live as the session that record describes, which {@code /clear} replaces, until its process exits and it is
+ * dropped.
  */
-public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCommand command) {
+public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCommand command, StartedAt spawnedAt) {
 
     private static final String PLAIN_NAME = "claude";
 
@@ -24,9 +25,10 @@ public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCom
         Assert.notNull("pid", pid);
         Assert.notNull("directory", directory);
         Assert.notNull("command", command);
+        Assert.notNull("spawned at", spawnedAt);
     }
 
-    /** The session it runs as: the id it was launched with, or the one it resumed. */
+    /** The id it was launched with, or the one it resumed: what its tab and its pty are known by, whatever session it runs now. */
     public SessionId id() {
         return command.session();
     }
@@ -34,6 +36,14 @@ public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCom
     /** The ticket this session was started for, none for a plain or resumed one. */
     public Optional<LinkedTicketId> ticket() {
         return command instanceof TicketClaude(_, LinkedTicketId ticket, _) ? Optional.of(ticket) : Optional.empty();
+    }
+
+    /**
+     * Whether {@code record} was written by this process, and not left by a {@code claude} that held its pid before and died: a record
+     * started earlier than this spawn is the other one's.
+     */
+    public boolean reportedBy(ReportedSession record) {
+        return !record.startedAt().isBefore(spawnedAt);
     }
 
     /** Whether its {@code claude} runs in {@code worktree} or below it. */
@@ -74,6 +84,7 @@ public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCom
         private ProcessId pid;
         private WorkingDirectory directory;
         private LaunchCommand command;
+        private StartedAt spawnedAt;
 
         private HostedSessionBuilder() {}
 
@@ -92,8 +103,13 @@ public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCom
             return this;
         }
 
+        public HostedSessionBuilder spawnedAt(StartedAt spawnedAt) {
+            this.spawnedAt = spawnedAt;
+            return this;
+        }
+
         public HostedSession build() {
-            return new HostedSession(pid, directory, command);
+            return new HostedSession(pid, directory, command, spawnedAt);
         }
     }
 }

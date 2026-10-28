@@ -32,13 +32,18 @@ final class SessionRecords {
     /**
      * None while the record has no status yet.
      *
-     * @throws SessionRecordUnreadableException saying what {@code source} left out of the record
+     * @throws SessionRecordUnreadableException saying what {@code source} left out of the record, or which status it reports
+     *     that this version does not know: what a newer Claude Code means by it cannot be guessed, so quitting asks
      */
     static Optional<ReportedSession> session(SessionRecord record, String source) {
         if (record.missingFields().any()) {
             throw new SessionRecordUnreadableException(
                     "%s is not a session record: it has no %s".formatted(source, record.missingFields().listed()));
         }
-        return record.hasStatus() ? Optional.of(record.toReportedSession()) : Optional.empty();
+        if (!record.hasStatus()) {
+            return Optional.empty();
+        }
+        return Optional.of(record.toReportedSession().orElseThrow(() -> new SessionRecordUnreadableException(
+                "%s reports a status this version does not know: %s".formatted(source, record.status()))));
     }
 }

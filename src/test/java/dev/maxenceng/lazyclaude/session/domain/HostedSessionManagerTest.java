@@ -3,10 +3,15 @@ package dev.maxenceng.lazyclaude.session.domain;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.newLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.idOf;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSessionBuilder;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.clock;
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.earlierStartedAt;
+import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.resizedPaneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.typedA;
 import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSaying;
@@ -23,7 +28,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
@@ -49,6 +58,9 @@ class HostedSessionManagerTest {
     private HostPort hosts;
 
     @Mock
+    private LiveSessionPort records;
+
+    @Mock
     private WarningPort warnings;
 
     @Mock
@@ -70,7 +82,7 @@ class HostedSessionManagerTest {
 
     @BeforeEach
     void setUp() {
-        manager = new HostedSessionManager(hosts, warnings, worktrees);
+        manager = new HostedSessionManager(hosts, records, warnings, worktrees, clock());
     }
 
     @Test
@@ -161,6 +173,47 @@ class HostedSessionManagerTest {
 
         assertThat(second).as("two claude resuming one session would both write its transcript").isEqualTo(first);
         verify(hosts).spawn(any(), any());
+    }
+
+    @Test
+    void shouldAnswerWithTheOpenSessionInsteadOfResumingTheSessionItRunsSinceAClear() {
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        HostStart first = manager.startUnlinked(project(), paneSize());
+        when(records.recordOf(processId()))
+                .thenReturn(Optional.of(reportedSessionBuilder().session(secondSessionId()).startedAt(new StartedAt(now())).build()));
+
+        HostStart second = manager.resume(secondSessionId(), worktreeDirectory(), paneSize());
+
+        assertThat(second).as("after /clear the tab writes the record's session, so resuming it would put a second claude on it").isEqualTo(first);
+        verify(hosts).spawn(any(), any());
+    }
+
+    @Test
+    void shouldResumeASessionThatOnlyARecordLeftByAnEarlierProcessOfTheSamePidNames() {
+        when(hosts.exists(worktreeDirectory())).thenReturn(true);
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        manager.startUnlinked(project(), paneSize());
+        when(records.recordOf(processId()))
+                .thenReturn(Optional.of(reportedSessionBuilder().session(secondSessionId()).startedAt(earlierStartedAt()).build()));
+
+        manager.resume(secondSessionId(), worktreeDirectory(), paneSize());
+
+        verify(hosts, times(2)).spawn(any(), any());
+    }
+
+    @Test
+    void shouldKeepTheInstantItSpawnedASessionAtToTheMillisecond() {
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        HostedSessionManager spawning = new HostedSessionManager(
+                hosts, records, warnings, worktrees, Clock.fixed(now().plus(Duration.ofNanos(1)), ZoneOffset.UTC));
+
+        spawning.startUnlinked(project(), paneSize());
+
+        assertThat(spawning.open().sessions())
+                .as("the registry records a start to the millisecond, so a finer spawn instant would make a session's own record look older")
+                .singleElement()
+                .extracting(HostedSession::spawnedAt)
+                .isEqualTo(new StartedAt(now()));
     }
 
     @Test

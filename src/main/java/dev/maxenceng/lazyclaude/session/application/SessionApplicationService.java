@@ -66,7 +66,7 @@ public final class SessionApplicationService {
             DesktopNotificationPort notifications,
             boolean desktopNotifications,
             Clock clock) {
-        this.hosted = new HostedSessionManager(hosts, warnings, worktrees);
+        this.hosted = new HostedSessionManager(hosts, sessions, warnings, worktrees, clock);
         this.worktreeing = new WorktreeManager(worktrees);
         this.notifying = new DesktopNotificationManager(notifications, warnings);
         this.desktopNotifications = desktopNotifications;

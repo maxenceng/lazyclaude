@@ -3,6 +3,8 @@ package dev.maxenceng.lazyclaude.session.domain;
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.laterStartedAt;
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.startedAt;
 import static dev.maxenceng.lazyclaude.session.published.ClaudeVersionFixture.version;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.secondSessionName;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.sessionName;
 
@@ -15,6 +17,7 @@ public final class ReportedSessionFixture {
 
     public static ReportedSession.ReportedSessionBuilder reportedSessionBuilder() {
         return ReportedSession.builder()
+                .session(sessionId())
                 .name(sessionName())
                 .startedAt(startedAt())
                 .version(version())
@@ -27,7 +30,7 @@ public final class ReportedSessionFixture {
     }
 
     public static ReportedSession newestReportedSession() {
-        return reportedSessionBuilder().name(secondSessionName()).startedAt(laterStartedAt()).build();
+        return reportedSessionBuilder().session(secondSessionId()).name(secondSessionName()).startedAt(laterStartedAt()).build();
     }
 
     public static ReportedSession reportedWith(ReportedStatus status) {

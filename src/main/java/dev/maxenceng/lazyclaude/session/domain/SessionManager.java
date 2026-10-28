@@ -24,7 +24,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * Builds the sessions of a project from the hosted sessions lazyclaude holds and every past one. It owns the rules: a hosted
- * session's state is drawn from the registry record of its own pid, none yet meaning it is starting, and one whose record cannot be
+ * session's state and the session it runs now are drawn from the registry record of its own pid, none yet (or one left by an earlier
+ * process of that pid) meaning it is starting, and one whose record cannot be
  * used shows as unknown, with one warning naming why, while the others keep their state. Past rows run newest activity first, a past
  * session belongs to the project its {@code cwd} was located in (or, when that directory is gone, to the one its path lies in), and
  * a hosted id hides the past session of the same id. A session is linked to tickets by its transcript, live or past, against the
@@ -139,7 +140,7 @@ public final class SessionManager {
         Map<SessionId, LinkFacts> facts = pastSessions.linkFacts();
         return AvailableSessions.builder()
                 .hosted(running.hosted().stream()
-                        .map(hosted -> hosted.linkedTo(linksOf(hosted.session().id(), facts, tickets)))
+                        .map(hosted -> hosted.linkedTo(linksOf(hosted.id(), facts, tickets)))
                         .toList())
                 .past(pastSessionsOf(project, running.ids()).stream()
                         .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))
@@ -165,7 +166,7 @@ public final class SessionManager {
 
     private HostedPhase phaseOf(HostedSession session) {
         try {
-            Optional<ReportedSession> record = sessions.recordOf(session.pid());
+            Optional<ReportedSession> record = sessions.recordOf(session.pid()).filter(session::reportedBy);
             unread.readable(session.id());
             return record.<HostedPhase>map(reported -> new LivePhase(live(session, reported))).orElseGet(StartingPhase::new);
         } catch (SessionRecordUnreadableException unusable) {
@@ -211,7 +212,7 @@ public final class SessionManager {
 
     private static LiveSession live(HostedSession session, ReportedSession reported) {
         return LiveSession.builder()
-                .id(session.id())
+                .id(reported.session())
                 .pid(session.pid())
                 .name(reported.name())
                 .directory(session.directory())
@@ -221,14 +222,13 @@ public final class SessionManager {
                 .build();
     }
 
-    // deferred: an unreadable record leaves the session's start time unknown, so its age counts from this read — close it when the launch log keeps when each session started.
-    private LiveSession unknown(HostedSession session) {
+    private static LiveSession unknown(HostedSession session) {
         return LiveSession.builder()
                 .id(session.id())
                 .pid(session.pid())
                 .name(session.name())
                 .directory(session.directory())
-                .startedAt(new StartedAt(clock.clock().instant()))
+                .startedAt(session.spawnedAt())
                 .version(new NoVersion())
                 .state(new Unknown())
                 .build();

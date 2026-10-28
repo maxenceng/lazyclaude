@@ -1,6 +1,5 @@
 package dev.maxenceng.lazyclaude.session.application;
 
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.clock;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketStart;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
@@ -19,10 +18,9 @@ import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
+import dev.maxenceng.lazyclaude.session.domain.SpawnedEarlierClock;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
-import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -99,11 +97,6 @@ public final class SessionApplicationServiceFixture {
         return service;
     }
 
-    public static SessionId startedUnlinked(SessionApplicationService service, HostPort hosts) {
-        when(hosts.spawn(any(), any())).thenReturn(processId());
-        return ((StartedHost) service.startUnlinked(project(), paneSize())).id();
-    }
-
     public static SessionApplicationService hostingATicketSessionInTheWorktree(
             SessionApplicationService service, HostPort hosts, WorktreePort worktrees) {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
@@ -134,6 +127,6 @@ public final class SessionApplicationServiceFixture {
                 worktrees,
                 notifications,
                 desktopNotifications,
-                clock());
+                new SpawnedEarlierClock());
     }
 }

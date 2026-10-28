@@ -142,7 +142,7 @@ class SessionQueryTest {
     void shouldViewTheLinksOfALiveSessionSpeltAsTheBoardSpellsThem() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         SessionQuery query = sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings);
-        SessionId id = query.sessionsFor(OF_THE_PROJECT).hosted().getFirst().id();
+        SessionId id = sessionId();
         when(past.linkFacts()).thenReturn(Map.of(id, ran(ticketRun("start", "proj-1"))));
 
         assertThat(liveViewsOf(query.sessionsFor(WITH_TICKETS)))
@@ -162,7 +162,7 @@ class SessionQueryTest {
     void shouldViewNoLinkWhenThePayloadHandsOverNoTicket() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         SessionQuery query = sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings);
-        SessionId id = query.sessionsFor(OF_THE_PROJECT).hosted().getFirst().id();
+        SessionId id = sessionId();
         when(past.linkFacts()).thenReturn(Map.of(id, ran(ticketRun("start", "PROJ-1"))));
 
         assertThat(liveViewsOf(query.sessionsFor(OF_THE_PROJECT)))

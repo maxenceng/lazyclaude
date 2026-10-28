@@ -3,17 +3,21 @@ package dev.maxenceng.lazyclaude.session.domain;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
-import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingFor;
 import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
 import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.WaitingReason;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 
-/** What Claude Code's registry record says of a hosted session: its status is still Claude Code's, not yet one of lazyclaude's states. */
+/**
+ * What Claude Code's registry record says of a hosted session: the session its process runs now, which {@code /clear} replaces,
+ * and its status, still Claude Code's and not yet one of lazyclaude's states.
+ */
 public record ReportedSession(
+        SessionId session,
         SessionName name,
         StartedAt startedAt,
         ClaudeVersion version,
@@ -21,6 +25,7 @@ public record ReportedSession(
         WaitingFor waitingFor) {
 
     public ReportedSession {
+        Assert.notNull("session", session);
         Assert.notNull("name", name);
         Assert.notNull("started at", startedAt);
         Assert.notNull("version", version);
@@ -34,7 +39,6 @@ public record ReportedSession(
             case BUSY, SHELL -> new Busy();
             case IDLE -> new YourTurn();
             case WAITING -> waiting();
-            case UNKNOWN -> new Unknown();
         };
     }
 
@@ -49,6 +53,7 @@ public record ReportedSession(
     }
 
     public static final class ReportedSessionBuilder {
+        private SessionId session;
         private SessionName name;
         private StartedAt startedAt;
         private ClaudeVersion version;
@@ -56,6 +61,11 @@ public record ReportedSession(
         private WaitingFor waitingFor;
 
         private ReportedSessionBuilder() {}
+
+        public ReportedSessionBuilder session(SessionId session) {
+            this.session = session;
+            return this;
+        }
 
         public ReportedSessionBuilder name(SessionName name) {
             this.name = name;
@@ -83,7 +93,7 @@ public record ReportedSession(
         }
 
         public ReportedSession build() {
-            return new ReportedSession(name, startedAt, version, status, waitingFor);
+            return new ReportedSession(session, name, startedAt, version, status, waitingFor);
         }
     }
 }

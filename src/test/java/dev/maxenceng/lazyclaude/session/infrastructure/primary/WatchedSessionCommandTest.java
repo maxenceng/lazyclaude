@@ -1,13 +1,14 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingTheRegisteredSession;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
-import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.startedUnlinked;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWaitingFor;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWith;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.mockito.ArgumentMatchers.any;
@@ -70,7 +71,8 @@ class WatchedSessionCommandTest {
         when(notifications.show(inputNotification())).thenReturn(notificationId());
         SessionApplicationService service =
                 sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications);
-        SessionId id = startedUnlinked(service, hosts);
+        hostingTheRegisteredSession(service, hosts);
+        SessionId id = sessionId();
         service.subscribe(project(), noTickets(), read -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(any(), changed.capture(), any());
@@ -90,7 +92,8 @@ class WatchedSessionCommandTest {
                 .thenReturn(Optional.of(reportedWaitingFor(inputNeeded())));
         SessionApplicationService service =
                 sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications);
-        SessionId id = startedUnlinked(service, hosts);
+        hostingTheRegisteredSession(service, hosts);
+        SessionId id = sessionId();
         service.subscribe(project(), noTickets(), read -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(any(), changed.capture(), any());
