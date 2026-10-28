@@ -75,6 +75,17 @@ class HostedSessionManagerTicketTest {
     }
 
     @Test
+    void shouldLaunchATicketSessionUnderTheIdItsTabCarries() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+
+        HostStart start = manager.startTicket(ticketStart(Verb.REVIEW), paneSize());
+
+        verify(hosts).spawn(launched.capture(), any());
+        assertThat(launched.getValue().command().session()).isEqualTo(idOf(start));
+    }
+
+    @Test
     void shouldRunTheVerbInTheWorktreeWhereTheBranchIsCheckedOut() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
         when(hosts.spawn(any(), any())).thenReturn(processId());

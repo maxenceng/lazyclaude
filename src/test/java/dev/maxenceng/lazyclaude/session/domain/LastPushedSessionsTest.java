@@ -1,7 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -18,7 +18,7 @@ class LastPushedSessionsTest {
     @Test
     void shouldGiveBackTheLastPush() {
         LastPushedSessions last = new LastPushedSessions();
-        last.remember(unavailableSessions());
+        last.remember(pastSessionsOf(List.of()));
 
         last.remember(liveSessionsOf(List.of()));
 

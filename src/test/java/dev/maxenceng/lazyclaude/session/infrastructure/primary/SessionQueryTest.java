@@ -8,10 +8,8 @@ import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.weak;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedIn;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedPastSession;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionActiveMinutesAgo;
-import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.newestReportedSession;
-import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.oldestReportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.recordUnreadable;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.verbChoicePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryHosting;
@@ -24,9 +22,9 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewBuilder;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
-import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketIds;
+import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSaying;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,6 +36,7 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
@@ -52,7 +51,8 @@ import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -81,38 +81,35 @@ class SessionQueryTest {
     private WarningPort warnings;
 
     @Test
-    void shouldViewNoSessionsWhenNoneIsLive() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
-
+    void shouldViewNoSessionsWhenNoneIsHosted() {
         assertThat(sessionQuery(sessions, locator, watch, warnings).sessionsFor(OF_THE_PROJECT)).isEqualTo(emptySessionsView());
     }
 
     @Test
-    void shouldViewOnlyTheSessionsLazyclaudeHostsWithTheirAge() {
-        when(sessions.liveSessions(any())).thenReturn(List.of(oldestReportedSession(), reportedSession(), newestReportedSession()));
-        when(locator.locate(any())).thenReturn(project());
+    void shouldViewTheHostedSessionWithItsAge() {
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
 
         assertThat(liveViewsOf(sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT)))
-                .as("the claudes started in another terminal are not lazyclaude's to list")
+                .usingRecursiveFieldByFieldElementComparatorIgnoringFields("id")
                 .containsExactly(sessionView());
     }
 
     @Test
-    void shouldViewWhyWhenNoSourceAnswers() {
-        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
+    void shouldViewAHostedSessionWhoseRecordCannotBeReadAsUnknown() {
+        when(sessions.recordOf(processId())).thenThrow(recordUnreadable());
 
-        assertThat(sessionQuery(sessions, locator, watch, warnings).sessionsFor(OF_THE_PROJECT))
-                .isEqualTo(unavailableSessionsView());
+        assertThat(liveViewsOf(sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT)))
+                .extracting(LiveSessionView::state)
+                .containsExactly(new Unknown());
     }
 
     @Test
     void shouldHandTheListenerAViewWheneverTheWatcherReportsAChange() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
         List<SessionsView> received = new ArrayList<>();
 
         sessionQuery(sessions, locator, watch, warnings).subscribe(OF_THE_PROJECT, received::add);
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(watch).watch(changed.capture(), any());
+        verify(watch).watch(any(), changed.capture(), any());
         changed.getValue().run();
         changed.getValue().run();
 
@@ -121,7 +118,6 @@ class SessionQueryTest {
 
     @Test
     void shouldViewEachPastSessionWithTheTimeSinceItsLastActivityNewestFirst() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
         when(past.pastSessions())
                 .thenReturn(List.of(
                         locatedIn(pastSessionActiveMinutesAgo(3, 30)),
@@ -133,29 +129,28 @@ class SessionQueryTest {
 
     @Test
     void shouldViewThePastSessionsAfterTheLiveOnes() {
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
-        when(locator.locate(any())).thenReturn(project());
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
 
         SessionsView view = sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT);
 
-        assertThat(liveViewsOf(view)).containsExactly(sessionView());
-        assertThat(((AvailableSessionsView) view).past()).containsExactly(pastSessionView());
+        assertThat(liveViewsOf(view)).usingRecursiveFieldByFieldElementComparatorIgnoringFields("id").containsExactly(sessionView());
+        assertThat(view.past()).containsExactly(pastSessionView());
     }
 
     @Test
     void shouldViewTheLinksOfALiveSessionSpeltAsTheBoardSpellsThem() {
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
-        when(locator.locate(any())).thenReturn(project());
-        when(past.linkFacts()).thenReturn(Map.of(sessionView().id(), ran(ticketRun("start", "proj-1"))));
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
+        SessionQuery query = sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings);
+        SessionId id = query.sessionsFor(OF_THE_PROJECT).hosted().getFirst().id();
+        when(past.linkFacts()).thenReturn(Map.of(id, ran(ticketRun("start", "proj-1"))));
 
-        assertThat(liveViewsOf(sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(WITH_TICKETS)))
-                .containsExactly(sessionViewBuilder().links(List.of(strong("PROJ-1", "start"))).build());
+        assertThat(liveViewsOf(query.sessionsFor(WITH_TICKETS)))
+                .containsExactly(sessionViewBuilder().id(id).links(List.of(strong("PROJ-1", "start"))).build());
     }
 
     @Test
     void shouldViewTheLinksOfAPastSession() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
         when(past.pastSessions()).thenReturn(List.of(locatedPastSession()));
         when(past.linkFacts()).thenReturn(Map.of(pastSessionView().id(), onBranches("PROJ-2")));
 
@@ -165,38 +160,38 @@ class SessionQueryTest {
 
     @Test
     void shouldViewNoLinkWhenThePayloadHandsOverNoTicket() {
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedSession()));
-        when(locator.locate(any())).thenReturn(project());
-        when(past.linkFacts()).thenReturn(Map.of(sessionView().id(), ran(ticketRun("start", "PROJ-1"))));
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
+        SessionQuery query = sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings);
+        SessionId id = query.sessionsFor(OF_THE_PROJECT).hosted().getFirst().id();
+        when(past.linkFacts()).thenReturn(Map.of(id, ran(ticketRun("start", "PROJ-1"))));
 
-        assertThat(liveViewsOf(sessionQueryHostingTheRegistered(sessions, past, locator, watch, transcriptWatch, warnings).sessionsFor(OF_THE_PROJECT)))
-                .containsExactly(sessionView());
+        assertThat(liveViewsOf(query.sessionsFor(OF_THE_PROJECT)))
+                .containsExactly(sessionViewBuilder().id(id).build());
     }
 
     @Test
     void shouldAnswerWithTheScreenTheHostHolds() {
         HostPort hosts = mock(HostPort.class);
-        when(hosts.screenOf(hostedSessionId())).thenReturn(screenSaying("hello"));
+        when(hosts.screenOf(sessionId())).thenReturn(screenSaying("hello"));
 
-        assertThat(sessionQueryHosting(hosts).screenOf(hostedSessionId())).isEqualTo(screenSaying("hello"));
+        assertThat(sessionQueryHosting(hosts).screenOf(sessionId())).isEqualTo(screenSaying("hello"));
     }
 
     @Test
     void shouldTellAListenerWhenAHostedSessionDrew() {
         HostPort hosts = mock(HostPort.class);
         Runnable listener = mock(Runnable.class);
-        ArgumentCaptor<Consumer<HostedSessionId>> drew = ArgumentCaptor.captor();
+        ArgumentCaptor<Consumer<SessionId>> drew = ArgumentCaptor.captor();
         sessionQueryHosting(hosts).onScreenChange(listener);
         verify(hosts).onScreenChange(drew.capture());
 
-        drew.getValue().accept(hostedSessionId());
+        drew.getValue().accept(sessionId());
 
         verify(listener).run();
     }
 
     @Test
     void shouldViewTheVerbsAndTheOneToPreselect() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(sessionQuery(sessions, locator, watch, warnings)
                         .verbChoiceFor(verbChoicePayload(List.of(Verb.REVIEW, Verb.DESIGN), false)))
@@ -208,7 +203,6 @@ class SessionQueryTest {
 
     @Test
     void shouldHandTheListenerAViewOnRefresh() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
         List<SessionsView> received = new ArrayList<>();
         SessionQuery query = sessionQuery(sessions, locator, watch, warnings);
         query.subscribe(OF_THE_PROJECT, received::add);
@@ -220,7 +214,6 @@ class SessionQueryTest {
 
     @Test
     void shouldHandTheListenerAViewWhenToldOfTheTicketsOnTheBoard() {
-        when(sessions.liveSessions(any())).thenReturn(List.of());
         List<SessionsView> received = new ArrayList<>();
         SessionQuery query = sessionQuery(sessions, locator, watch, warnings);
         query.subscribe(OF_THE_PROJECT, received::add);

@@ -10,7 +10,6 @@ import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSes
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.pastSessionsOf;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.liveHostedSessionView;
@@ -21,7 +20,6 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingHostedSessionView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTicketHostedSessionView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsViewHosting;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
@@ -40,11 +38,11 @@ import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 
-class AvailableSessionsViewTest {
+class SessionsViewTest {
 
     @Test
     void shouldCountEachMarkerAmongEveryLiveSessionLinkedOrNot() {
-        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
+        SessionsView view = sessionsViewOf(List.of(
                 linkedSessionView(sessionIdOf(1), new YourTurn()),
                 linkedSessionView(sessionIdOf(2), waitingForPermission(), strong("PROJ-1", "start")),
                 linkedSessionView(sessionIdOf(3), waitingForPermission())));
@@ -55,14 +53,14 @@ class AvailableSessionsViewTest {
 
     @Test
     void shouldCountNoMarkerWhenEverySessionIsBusy() {
-        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new Busy())));
+        SessionsView view = sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new Busy())));
 
         assertThat(view.markerCounts()).isEmpty();
     }
 
     @Test
     void shouldAnswerTheStrongestMarkerAmongTheLiveSessionsLinkedToATicketWeakLinksIncluded() {
-        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
+        SessionsView view = sessionsViewOf(List.of(
                 linkedSessionView(sessionIdOf(1), waitingForPermission(), strong("PROJ-2", "start")),
                 linkedSessionView(sessionIdOf(2), new YourTurn(), strong("PROJ-1", "start")),
                 linkedSessionView(sessionIdOf(3), waitingForInput(), weak("PROJ-1"))));
@@ -73,7 +71,7 @@ class AvailableSessionsViewTest {
 
     @Test
     void shouldAnswerNoMarkerForATicketWhoseSessionsAreAllBusyOrHaveNone() {
-        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
+        SessionsView view = sessionsViewOf(List.of(
                 linkedSessionView(sessionIdOf(1), new Busy(), strong("PROJ-1", "start")),
                 linkedSessionView(sessionIdOf(2), new YourTurn())));
 
@@ -84,7 +82,7 @@ class AvailableSessionsViewTest {
     @Test
     void shouldAnswerTheTicketsSessionWithTheStrongestMarker() {
         LiveSessionView strongest = linkedSessionView(sessionIdOf(2), waitingForPermission(), weak("PROJ-1"));
-        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
+        SessionsView view = sessionsViewOf(List.of(
                 linkedSessionView(sessionIdOf(1), new YourTurn(), strong("PROJ-1", "start")),
                 strongest,
                 linkedSessionView(sessionIdOf(3), waitingForPermission(), strong("PROJ-2", "start"))));
@@ -95,7 +93,7 @@ class AvailableSessionsViewTest {
     @Test
     void shouldAnswerTheFirstOfTheTicketsSessionsTiedOnTheStrongestMarker() {
         LiveSessionView first = linkedSessionView(sessionIdOf(1), waitingForInput(), strong("PROJ-1", "start"));
-        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(
+        SessionsView view = sessionsViewOf(List.of(
                 first, linkedSessionView(sessionIdOf(2), waitingForInput(), strong("PROJ-1", "review"))));
 
         assertThat(view.strongestSessionOf(linkedTicketId("PROJ-1"))).as("the Sessions panel lists them in this order, so enter lands on the top one").contains(first);
@@ -103,7 +101,7 @@ class AvailableSessionsViewTest {
 
     @Test
     void shouldAnswerNoSessionForATicketWhoseSessionsCarryNoMarker() {
-        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new Busy(), strong("PROJ-1", "start"))));
+        SessionsView view = sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new Busy(), strong("PROJ-1", "start"))));
 
         assertThat(view.strongestSessionOf(linkedTicketId("PROJ-1"))).isEmpty();
     }
@@ -112,7 +110,7 @@ class AvailableSessionsViewTest {
     void shouldAnswerOnlyTheSessionsLinkedToNoTicketAsUnlinked() {
         LiveSessionView unlinkedLive = linkedSessionView(sessionIdOf(1), new YourTurn());
         PastSessionView unlinkedPast = linkedPastSessionView(1);
-        AvailableSessionsView view = (AvailableSessionsView) sessionsViewOf(
+        SessionsView view = sessionsViewOf(
                 List.of(unlinkedLive, linkedSessionView(sessionIdOf(2), new YourTurn(), weak("PROJ-1"))),
                 List.of(linkedPastSessionView(2, strong("PROJ-1", "start")), unlinkedPast));
 
@@ -122,14 +120,14 @@ class AvailableSessionsViewTest {
 
     @Test
     void shouldViewAStartingHostedSessionWithNoLiveSessionBehindIt() {
-        AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(List.of(), List.of(openStarting())));
+        SessionsView view = SessionsView.from(availableSessionsHosting(List.of(), List.of(openStarting())));
 
         assertThat(view.hosted()).containsExactly(startingHostedSessionView());
     }
 
     @Test
     void shouldViewAStartingHostedSessionWithTheTicketItWasStartedFor() {
-        AvailableSessionsView view = AvailableSessionsView.from(availableSessionsHosting(
+        SessionsView view = SessionsView.from(availableSessionsHosting(
                 List.of(), List.of(OpenHostedSession.builder().session(hostedSessionRunning(Verb.REVIEW)).phase(new StartingPhase()).build())));
 
         assertThat(view.hosted()).containsExactly(startingTicketHostedSessionView());
@@ -137,32 +135,25 @@ class AvailableSessionsViewTest {
 
     @Test
     void shouldViewARegisteredHostedSessionWithTheLiveSessionItIs() {
-        AvailableSessionsView view = AvailableSessionsView.from(
-                availableSessionsHosting(List.of(liveSession()), List.of(openLive(liveSession()))));
+        SessionsView view = SessionsView.from(
+                availableSessionsHosting(List.of(), List.of(openLive(liveSession()))));
 
         assertThat(view.hosted()).containsExactly(liveHostedSessionView(sessionView(), true));
         assertThat(view.live()).containsExactly(sessionView());
     }
 
-    @Test
-    void shouldViewTheHostedSessionsOfSessionsThatCouldNotBeRead() {
-        UnavailableSessionsView view = UnavailableSessionsView.from(unavailableSessionsHosting(List.of(openStarting())));
-
-        assertThat(view).isEqualTo(unavailableSessionsViewHosting(List.of(startingHostedSessionView())));
-    }
-
 
     @Test
     void shouldViewAPastSessionWithTheTitleAndOpeningPromptItsTranscriptSays() {
-        AvailableSessionsView view = AvailableSessionsView.from(pastSessionsOf(List.of(pastSession())));
+        SessionsView view = SessionsView.from(pastSessionsOf(List.of(pastSession())));
 
         assertThat(view.past()).containsExactly(pastSessionView());
     }
 
     @Test
     void shouldViewAPastSessionWhoseTranscriptCannotBeReadWithTheReason() {
-        AvailableSessionsView view =
-                AvailableSessionsView.from(pastSessionsOf(List.of(pastSessionBuilder().reading(unreadable()).build())));
+        SessionsView view =
+                SessionsView.from(pastSessionsOf(List.of(pastSessionBuilder().reading(unreadable()).build())));
 
         assertThat(view.past()).containsExactly(pastSessionViewBuilder().reading(unreadable()).build());
     }

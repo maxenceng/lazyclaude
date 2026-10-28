@@ -1,83 +1,41 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.ReportedSession;
-import dev.maxenceng.lazyclaude.session.domain.SessionsUnavailableException;
-import dev.maxenceng.lazyclaude.session.domain.SourceFallback;
+import dev.maxenceng.lazyclaude.session.domain.SessionRecordUnreadableException;
+import dev.maxenceng.lazyclaude.session.published.ProcessId;
 
 /**
- * Reads Claude Code's registry, {@code ~/.claude/sessions/<pid>.json}, and keeps the records whose process
- * still runs. The registry is internal and undocumented, so a record that no longer parses makes the whole
- * registry unusable rather than being skipped: that is the signal to use {@code claude agents --json}. A
- * record that does not parse and whose file names a pid with no process is skipped instead, because a
- * dead process never rewrites it and it would pin the fallback for good.
+ * Reads Claude Code's registry record of one process, {@code ~/.claude/sessions/<pid>.json}. The registry is internal and
+ * undocumented, so a record that does not parse or lacks what a session needs is refused with the reason, for the session it
+ * belongs to alone; no record at all, or one with no status yet, is not a failure, since a {@code claude} is not up until it reports one.
  */
 public final class SessionRegistryRepository implements LiveSessionPort {
 
-    private static final String RECORD_SUFFIX = ".json";
+    private static final String RECORD_FILE = "%d.json";
 
     private final Path sessions;
-    private final LivenessCheck liveness;
 
-    public SessionRegistryRepository(Path sessions, Path proc, Path machineId) {
+    public SessionRegistryRepository(Path sessions) {
         this.sessions = sessions;
-        this.liveness = new LivenessCheck(proc, machineId);
     }
 
-    /** The leaf sources have no other to fall back to, so there is nothing to tell {@code fallback}. */
     @Override
-    public List<ReportedSession> liveSessions(SourceFallback fallback) {
-        return liveSessions();
-    }
-
-    public List<ReportedSession> liveSessions() {
-        List<Path> files = recordFiles();
-        String domain = liveness.thisMachinesDomain();
-        return files.stream()
-                .flatMap(file -> read(file)
-                        .filter(record -> liveness.isLive(record, domain))
-                        .map(record -> SessionRecords.session(record, file.getFileName().toString()))
-                        .stream())
-                .toList();
-    }
-
-    private List<Path> recordFiles() {
-        try (Stream<Path> files = Files.list(sessions)) {
-            return files.filter(file -> file.getFileName().toString().endsWith(RECORD_SUFFIX)).toList();
-        } catch (IOException e) {
-            throw unreadableRegistry(e);
-        } catch (UncheckedIOException e) {
-            throw unreadableRegistry(e.getCause());
-        }
-    }
-
-    private SessionsUnavailableException unreadableRegistry(IOException cause) {
-        return new SessionsUnavailableException(
-                "cannot read the session registry %s: %s".formatted(sessions, cause.getMessage()), cause);
-    }
-
-    private Optional<SessionRecord> read(Path file) {
-        String name = file.getFileName().toString();
+    public Optional<ReportedSession> recordOf(ProcessId pid) {
+        String name = RECORD_FILE.formatted(pid.value());
+        Path file = sessions.resolve(name);
         try {
-            return Optional.of(SessionRecords.record(Files.readAllBytes(file), name));
-        } catch (NoSuchFileException diedMeanwhile) {
-            return Optional.empty();
-        } catch (SessionsUnavailableException unparsed) {
-            if (liveness.hasProcess(name.substring(0, name.length() - RECORD_SUFFIX.length()))) {
-                throw unparsed;
-            }
+            return SessionRecords.session(SessionRecords.record(Files.readAllBytes(file), name), name);
+        } catch (NoSuchFileException notWrittenYet) {
             return Optional.empty();
         } catch (IOException e) {
-            throw new SessionsUnavailableException("cannot read %s: %s".formatted(file, e.getMessage()), e);
+            throw new SessionRecordUnreadableException("cannot read %s: %s".formatted(file, e.getMessage()), e);
         }
     }
 }

@@ -3,19 +3,15 @@ package dev.maxenceng.lazyclaude.session.domain;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSession;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSession;
-import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.liveSessionBuilder;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.unknownSession;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.sessionWith;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.secondLinkedTicketId;
-import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,34 +25,14 @@ import dev.maxenceng.lazyclaude.session.published.YourTurn;
 class HostedSessionTest {
 
     @Test
-    void shouldBeStartingWhileNoRegistryRecordCarriesItsPid() {
-        List<LiveSession> others = List.of(liveSessionBuilder().pid(secondProcessId()).build());
-
-        assertThat(hostedSession().phaseAmong(others)).isEqualTo(new StartingPhase());
-    }
-
-    @Test
-    void shouldBeStartingWhenNoSessionIsLive() {
-        assertThat(hostedSession().phaseAmong(List.of())).isEqualTo(new StartingPhase());
-    }
-
-    @Test
-    void shouldBeRegisteredAsTheLiveSessionWhosePidIsItsOwn() {
-        LiveSession ours = liveSession();
-        List<LiveSession> live = List.of(liveSessionBuilder().pid(secondProcessId()).build(), ours);
-
-        assertThat(hostedSession().phaseAmong(live)).isEqualTo(new LivePhase(ours));
-    }
-
-    @Test
     void shouldNotBeBusyOrWaitingWhileStarting() {
         assertThat(new StartingPhase().isBusyOrWaiting()).isFalse();
     }
 
     @Test
     void shouldCountAnUnreadSessionAsBusySoQuittingAsks() {
-        assertThat(new UnreadPhase().isBusyOrWaiting())
-                .as("with no registry to read, a busy claude cannot be told from an idle one, and ending it cannot be undone")
+        assertThat(new UnreadPhase(unknownSession()).isBusyOrWaiting())
+                .as("with no record to read, a busy claude cannot be told from an idle one, and ending it cannot be undone")
                 .isTrue();
     }
 
@@ -88,18 +64,18 @@ class HostedSessionTest {
     }
 
     @Test
-    void shouldResumeTheSessionItWasStartedToResume() {
-        assertThat(hostedSessionBuilder().command(new ResumeClaude(sessionId())).build().resumes(sessionId())).isTrue();
+    void shouldBeNamedByTheIdItWasLaunchedWith() {
+        assertThat(hostedSession().id()).isEqualTo(sessionId());
     }
 
     @Test
-    void shouldNotResumeAnotherSession() {
-        assertThat(hostedSessionBuilder().command(new ResumeClaude(sessionId())).build().resumes(secondSessionId())).isFalse();
+    void shouldBeNamedByTheIdItResumes() {
+        assertThat(hostedSessionBuilder().command(new ResumeClaude(secondSessionId())).build().id()).isEqualTo(secondSessionId());
     }
 
     @Test
-    void shouldResumeNothingWhenStartedAsANewClaude() {
-        assertThat(hostedSession().resumes(sessionId())).isFalse();
+    void shouldBeNamedByTheIdATicketLaunchWasGiven() {
+        assertThat(hostedSessionRunning(Verb.REVIEW).id()).isEqualTo(sessionId());
     }
 
     @Test

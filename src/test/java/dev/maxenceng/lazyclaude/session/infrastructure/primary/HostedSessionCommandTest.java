@@ -10,9 +10,9 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSess
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ticketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.typingPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.hostedSessionCommand;
-import static dev.maxenceng.lazyclaude.session.published.HostedSessionIdFixture.hostedSessionId;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.resizedPaneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
+import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.typedA;
 import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
@@ -36,8 +36,8 @@ import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.HostUnavailableException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -111,7 +111,7 @@ class HostedSessionCommandTest {
 
     @Test
     void shouldFeedTheSessionAKey() {
-        HostedSessionId id = hostedSessionId();
+        SessionId id = sessionId();
 
         hostedSessionCommand(hosts, warnings).send(typingPayload(id));
 
@@ -120,7 +120,7 @@ class HostedSessionCommandTest {
 
     @Test
     void shouldResizeTheSessionsPty() {
-        HostedSessionId id = hostedSessionId();
+        SessionId id = sessionId();
 
         hostedSessionCommand(hosts, warnings).resize(resizePayload(id));
 
@@ -131,7 +131,7 @@ class HostedSessionCommandTest {
     void shouldEndEveryHostedSession() {
         when(hosts.spawn(any(), any())).thenReturn(processId());
         HostedSessionCommand command = hostedSessionCommand(hosts, warnings);
-        HostedSessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
+        SessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
 
         command.endAll();
 

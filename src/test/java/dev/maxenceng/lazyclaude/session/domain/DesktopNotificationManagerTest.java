@@ -7,7 +7,6 @@ import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.secondNotificationId;
 import static dev.maxenceng.lazyclaude.session.domain.LiveSessionFixture.sessionWith;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.liveSessionsOf;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.unavailableSessions;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
@@ -92,6 +91,19 @@ class DesktopNotificationManagerTest {
         manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Unknown()))), true);
 
         verify(notifications, never()).show(any());
+    }
+
+    @Test
+    void shouldNeitherCloseNorFireAgainWhenAWaitingSessionIsReadAsUnknownOnce() {
+        when(notifications.show(inputNotification())).thenReturn(notificationId());
+        DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
+
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(new Unknown()))), true);
+        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
+
+        verify(notifications).show(inputNotification());
+        verifyNoMoreInteractions(notifications);
     }
 
     @Test
@@ -214,17 +226,6 @@ class DesktopNotificationManagerTest {
         manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
 
         verifyNoInteractions(notifications);
-    }
-
-    @Test
-    void shouldIgnoreSessionsThatCouldNotBeRead() {
-        when(notifications.show(inputNotification())).thenReturn(notificationId());
-        DesktopNotificationManager manager = managerHavingSeen(notifications, warnings, sessionWith(new Busy()));
-
-        manager.seen(project(), unavailableSessions(), true);
-        manager.seen(project(), liveSessionsOf(List.of(sessionWith(waitingForInput()))), true);
-
-        verify(notifications).show(inputNotification());
     }
 
     @Test

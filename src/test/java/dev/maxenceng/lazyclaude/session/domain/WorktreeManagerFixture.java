@@ -11,11 +11,11 @@ public final class WorktreeManagerFixture {
 
     private WorktreeManagerFixture() {}
 
-    public static Sessions noSessionsInTheWorktree() {
+    public static AvailableSessions noSessionsInTheWorktree() {
         return liveSessionsOf(List.of());
     }
 
-    public static Sessions oneSessionInTheWorktree() {
+    public static AvailableSessions oneSessionInTheWorktree() {
         return availableSessionsHosting(List.of(), List.of(startingIn(worktreeDirectory())));
     }
 }

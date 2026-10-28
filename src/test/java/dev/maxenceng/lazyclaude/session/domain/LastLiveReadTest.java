@@ -35,14 +35,4 @@ class LastLiveReadTest {
                 .as("another project's live sessions are not this one's")
                 .isEmpty();
     }
-
-    @Test
-    void shouldHoldNothingOnceForgotten() {
-        LastLiveRead last = new LastLiveRead();
-        last.remember(runningSessions());
-
-        last.forget();
-
-        assertThat(last.of(project())).as("a failed read must not leave the one before it standing").isEmpty();
-    }
 }

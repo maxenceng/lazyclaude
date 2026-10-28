@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
+import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.session.published.WaitingFor;
 import dev.maxenceng.lazyclaude.session.published.WaitingReason;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
@@ -20,7 +21,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
  * Decides, from how the live sessions lazyclaude hosts in the project stood at the last read and stand now, which desktop notification to show,
  * replace or close. A session entering waiting is notified, unless it is the watched one; one moving between waiting for
  * permission and waiting for input has its notification replaced in place; one that leaves waiting, or dies, has it closed, and
- * so has one that becomes watched. The first read only records, so a session already waiting when lazyclaude starts is not
+ * so has one that becomes watched. A session read as unknown keeps whatever notification it had. The first read only records, so a session already waiting when lazyclaude starts is not
  * announced again, and a read that changes no state does nothing, however often the same states are handed over. A failure of
  * the desktop is named once, and the sessions go on. With {@code desktop} off it never calls its port: markers and the status
  * line, which do not come through here, still show a waiting session.
@@ -43,17 +44,19 @@ public final class DesktopNotificationManager {
         this.warnings = warnings;
     }
 
-    /** Takes the machine's live sessions as just read; sessions that could not be read change nothing, nor does any read while {@code desktop} is off. */
-    public synchronized void seen(Project project, Sessions sessions, boolean desktop) {
-        if (!desktop || !(sessions instanceof AvailableSessions available)) {
+    /** Takes the hosted sessions as just read; nothing changes while {@code desktop} is off. */
+    public synchronized void seen(Project project, AvailableSessions sessions, boolean desktop) {
+        if (!desktop) {
             return;
         }
-        List<LiveSession> now = available.live();
+        List<LiveSession> now = sessions.live();
         Map<SessionId, SessionState> states = now.stream()
                 .collect(Collectors.toUnmodifiableMap(LiveSession::id, LiveSession::state));
         seen.exchange(states).ifPresent(previous -> {
             open.sessions().stream().filter(id -> !states.containsKey(id)).forEach(this::closeFor);
-            now.forEach(session -> react(project, session, Optional.ofNullable(previous.get(session.id()))));
+            now.stream()
+                    .filter(session -> !(session.state() instanceof Unknown))
+                    .forEach(session -> react(project, session, Optional.ofNullable(previous.get(session.id()))));
         });
     }
 

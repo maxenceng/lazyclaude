@@ -34,8 +34,6 @@ import dev.maxenceng.lazyclaude.session.published.Reason;
 @ExtendWith(MockitoExtension.class)
 class SessionWatchRepositoryTest {
 
-    private static final Path CWD = Path.of("/work/app");
-
     @Mock
     private WatchFallback fallback;
 
@@ -50,7 +48,7 @@ class SessionWatchRepositoryTest {
     @BeforeEach
     void createRegistry() throws IOException {
         sessions = root.resolve("sessions");
-        writeRecord(sessions, "17234.json", record(17234, "70c67de2-4563-47c2-b946-eb5198915ba2", CWD, "busy"));
+        writeRecord(sessions, "17234.json", record("busy"));
     }
 
     @AfterEach
@@ -62,7 +60,7 @@ class SessionWatchRepositoryTest {
     void shouldReportARecordRewrittenForAStateChange() throws Exception {
         watcher = watching(watcherWithoutSweep(sessions), probe, fallback);
 
-        writeRecord(sessions, "17234.json", record(17234, "70c67de2-4563-47c2-b946-eb5198915ba2", CWD, "idle"));
+        writeRecord(sessions, "17234.json", record("idle"));
 
         assertThat(probe.changedWithin(within())).as("without waiting for a sweep").isTrue();
     }
@@ -71,9 +69,20 @@ class SessionWatchRepositoryTest {
     void shouldReportANewRecord() throws Exception {
         watcher = watching(watcherWithoutSweep(sessions), probe, fallback);
 
-        writeRecord(sessions, "22862.json", record(22862, "a3d7d4b5-4cdb-479e-a82e-622d2542a6b8", CWD, "busy"));
+        writeRecord(sessions, "22862.json", record("busy"));
 
         assertThat(probe.changedWithin(within())).isTrue();
+    }
+
+    @Test
+    void shouldIgnoreTheRecordOfAProcessItDoesNotHost() throws Exception {
+        watcher = watching(watcherWithoutSweep(sessions), probe, fallback);
+
+        writeRecord(sessions, "99999.json", record("idle"));
+
+        assertThat(probe.quietFor(settled()))
+                .as("a claude in another terminal rewrites its record all the time, and none of it is lazyclaude's")
+                .isTrue();
     }
 
     @Test
@@ -98,7 +107,7 @@ class SessionWatchRepositoryTest {
     void shouldReportOnceForOneSaveThatFiresSeveralEvents() throws Exception {
         watcher = watching(watcherWithoutSweep(sessions), probe, fallback);
 
-        writeRecord(sessions, "17234.json", record(17234, "70c67de2-4563-47c2-b946-eb5198915ba2", CWD, "idle"));
+        writeRecord(sessions, "17234.json", record("idle"));
         assertThat(probe.changedWithin(within())).isTrue();
 
         assertThat(probe.quietFor(settled())).isTrue();
@@ -109,10 +118,21 @@ class SessionWatchRepositoryTest {
         watcher = watching(sweepingWatcher(sessions), probe, fallback);
 
         try (AutoCloseable _ = rewritingWithoutPause(sessions.resolve("17234.0123abcd.key"))) {
-            writeRecord(sessions, "17234.json", record(17234, "70c67de2-4563-47c2-b946-eb5198915ba2", CWD, "idle"));
+            writeRecord(sessions, "17234.json", record("idle"));
 
             assertThat(probe.changedWithin(within()))
                     .as("a batch that never closes would hold back every state change and every sweep")
+                    .isTrue();
+        }
+    }
+
+    @Test
+    void shouldStillSweepWhileAnotherTerminalsRecordIsRewrittenWithoutPause() throws Exception {
+        watcher = watching(sweepingWatcher(sessions), probe, fallback);
+
+        try (AutoCloseable _ = rewritingWithoutPause(sessions.resolve("99999.json"))) {
+            assertThat(probe.changedWithin(within()))
+                    .as("records lazyclaude ignores must not keep the sweep that catches a missed event from ever coming")
                     .isTrue();
         }
     }
@@ -122,7 +142,7 @@ class SessionWatchRepositoryTest {
         watcher = watching(sweepingWatcher(sessions), probe, fallback);
 
         assertThat(probe.changedWithin(within()))
-                .as("a process that died never rewrites its record")
+                .as("a record not yet written announces nothing, so a hosted session is read again on the sweep")
                 .isTrue();
         assertThat(probe.changedWithin(within())).isTrue();
     }

@@ -27,11 +27,10 @@ import static dev.maxenceng.lazyclaude.review.domain.MergedPullRequestFixture.me
 import static dev.maxenceng.lazyclaude.review.domain.PullRequestFixture.failingPullRequest;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.pullRequestsUnavailable;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQueryFixture.reviewQuery;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.locatedPastSession;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryHosting;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketIds;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.warning;
@@ -83,7 +82,9 @@ import dev.maxenceng.lazyclaude.review.domain.PullRequestWatchPort;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
+import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
@@ -122,6 +123,9 @@ class LazyClaudeTest {
 
     @Mock
     private LiveSessionPort sessions;
+
+    @Mock
+    private PastSessionPort pastSessions;
 
     @Mock
     private OpenPullRequestPort pullRequests;
@@ -232,7 +236,7 @@ class LazyClaudeTest {
     void shouldHandTheShellTheBoardAgainWhenTheBoardWatcherReportsAChange() {
         when(locator.locate(any())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
-        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies, unreadChanges(), boardWatch, raised), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(PendingReviewCommand.class), ReservedChords.defaults(), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(TicketWorktreeCommand.class), warningQuery(raised));
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies, unreadChanges(), boardWatch, raised), docsQuery(docs, watch, raised), sessionQuery(sessions, pastSessions, locator, sessionWatch, mock(TranscriptWatchPort.class), raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(PendingReviewCommand.class), ReservedChords.defaults(), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(TicketWorktreeCommand.class), warningQuery(raised));
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
         verify(boardWatch).watch(eq(project()), changed.capture(), any());
         when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket())));
@@ -331,11 +335,10 @@ class LazyClaudeTest {
     }
 
     @Test
-    void shouldOpenTheShellOnTheLiveSessionsOfTheSameProject() throws Exception {
+    void shouldOpenTheShellOnTheSessionsOfTheSameProject() throws Exception {
         when(locator.locate(any())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
         when(docs.paths(project())).thenReturn(List.of());
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> openedSessions.add(sessionsView));
 
@@ -344,31 +347,17 @@ class LazyClaudeTest {
     }
 
     @Test
-    void shouldOpenTheShellSayingWhyWhenNoSourceOfSessionsAnswers() throws Exception {
-        when(locator.locate(any())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of());
-        when(docs.paths(project())).thenReturn(List.of());
-        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
-
-        int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), err, (view, docsView, sessionsView) -> openedSessions.add(sessionsView));
-
-        assertThat(exit).as("the sessions stand alone; the board still opens").isZero();
-        assertThat(openedSessions).containsExactly(unavailableSessionsView());
-        assertThat(said.size()).as("the Sessions panel says why, not the terminal").isZero();
-    }
-
-    @Test
     void shouldHandTheShellTheSessionsAgainWhenTheWatcherReportsAChange() {
-        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, locator, sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(PendingReviewCommand.class), ReservedChords.defaults(), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(TicketWorktreeCommand.class), warningQuery(raised));
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, copies), docsQuery(docs, watch, raised), sessionQuery(sessions, pastSessions, locator, sessionWatch, mock(TranscriptWatchPort.class), raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(PendingReviewCommand.class), ReservedChords.defaults(), mock(HostedSessionCommand.class), mock(WatchedSessionCommand.class), mock(TicketWorktreeCommand.class), warningQuery(raised));
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(sessionWatch).watch(changed.capture(), any());
-        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
+        verify(sessionWatch).watch(any(), changed.capture(), any());
+        when(pastSessions.pastSessions()).thenReturn(List.of(locatedPastSession()));
 
         changed.getValue().run();
 
         assertThat(Screen.of(shell).dimText())
                 .as("watcher, application and shell are joined for the project the board was read from")
-                .anySatisfy(line -> assertThat(line).contains("sessions unavailable"));
+                .anySatisfy(line -> assertThat(line).contains("unlinked"));
     }
 
     @Test

@@ -4,17 +4,14 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.HostedPhase;
-import dev.maxenceng.lazyclaude.session.domain.LivePhase;
 import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
-import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
-import dev.maxenceng.lazyclaude.session.domain.UnreadPhase;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 
-/** One hosted session as the dock's tab reads it: starting, or the live session the registry says it is, and the ticket it was started for. */
+/** One hosted session as the dock's tab reads it: starting, or the live session its registry record says it is, unknown when the record cannot be read, and the ticket it was started for. */
 public record HostedSessionView(
-        HostedSessionId id,
+        SessionId id,
         ProcessId pid,
         Optional<LiveSessionView> live,
         boolean busyOrWaiting,
@@ -31,11 +28,7 @@ public record HostedSessionView(
     }
 
     private static Optional<LiveSessionView> liveOf(AvailableSessions available, HostedPhase phase) {
-        return switch (phase) {
-            case StartingPhase _ -> Optional.empty();
-            case LivePhase live -> Optional.of(LiveSessionView.from(available, live.session()));
-            case UnreadPhase _ -> Optional.empty();
-        };
+        return phase.live().map(live -> LiveSessionView.from(available, live));
     }
 
     public static HostedSessionViewBuilder builder() {
@@ -43,7 +36,7 @@ public record HostedSessionView(
     }
 
     public static final class HostedSessionViewBuilder {
-        private HostedSessionId id;
+        private SessionId id;
         private ProcessId pid;
         private Optional<LiveSessionView> live = Optional.empty();
         private boolean busyOrWaiting;
@@ -51,7 +44,7 @@ public record HostedSessionView(
 
         private HostedSessionViewBuilder() {}
 
-        public HostedSessionViewBuilder id(HostedSessionId id) {
+        public HostedSessionViewBuilder id(SessionId id) {
             this.id = id;
             return this;
         }

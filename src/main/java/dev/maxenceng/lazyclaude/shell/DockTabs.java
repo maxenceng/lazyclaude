@@ -5,7 +5,7 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 
 /**
  * The dock's tabs, one per hosted session in start order, and which is selected, by id so that it survives the sessions being
@@ -14,7 +14,7 @@ import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 final class DockTabs {
 
     private List<HostedSessionView> tabs = List.of();
-    private Optional<HostedSessionId> selected = Optional.empty();
+    private Optional<SessionId> selected = Optional.empty();
 
     List<HostedSessionView> tabs() {
         return tabs;
@@ -29,7 +29,7 @@ final class DockTabs {
         return selected.flatMap(this::tabOf).or(() -> tabs.stream().findFirst());
     }
 
-    void select(HostedSessionId id) {
+    void select(SessionId id) {
         selected = Optional.of(id);
     }
 
@@ -49,7 +49,7 @@ final class DockTabs {
 
     /** Swaps in the tabs read again, and says what became of the selected tab. */
     TabClosing replace(List<HostedSessionView> next) {
-        Optional<HostedSessionId> was = selectedTab().map(HostedSessionView::id);
+        Optional<SessionId> was = selectedTab().map(HostedSessionView::id);
         int index = selectedIndex();
         tabs = next;
         if (was.map(id -> tabOf(id).isPresent()).orElse(true)) {
@@ -71,11 +71,11 @@ final class DockTabs {
         return true;
     }
 
-    private Optional<HostedSessionView> tabOf(HostedSessionId id) {
+    private Optional<HostedSessionView> tabOf(SessionId id) {
         return tabs.stream().filter(tab -> tab.id().equals(id)).findFirst();
     }
 
-    private int indexOf(HostedSessionId id) {
+    private int indexOf(SessionId id) {
         return IntStream.range(0, tabs.size())
                 .filter(index -> tabs.get(index).id().equals(id))
                 .findFirst()

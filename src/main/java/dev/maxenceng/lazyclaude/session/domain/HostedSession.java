@@ -1,11 +1,9 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
-import java.util.List;
 import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
@@ -15,28 +13,27 @@ import dev.maxenceng.lazyclaude.session.published.StrongLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * A {@code claude} process lazyclaude owns: starting while no registry record carries its pid, then live as the session
- * that record describes, until its process exits and it is dropped.
+ * A {@code claude} process lazyclaude owns, named by the session id it was launched with: starting while no registry record
+ * carries its pid, then live as the session that record describes, until its process exits and it is dropped.
  */
-public record HostedSession(HostedSessionId id, ProcessId pid, WorkingDirectory directory, LaunchCommand command) {
+public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCommand command) {
 
     private static final String PLAIN_NAME = "claude";
 
     public HostedSession {
-        Assert.notNull("hosted session id", id);
         Assert.notNull("pid", pid);
         Assert.notNull("directory", directory);
         Assert.notNull("command", command);
     }
 
-    /** Whether this is {@code claude --resume} of {@code session}, which a second resume must not run beside. */
-    public boolean resumes(SessionId session) {
-        return command instanceof ResumeClaude(SessionId resumed) && resumed.equals(session);
+    /** The session it runs as: the id it was launched with, or the one it resumed. */
+    public SessionId id() {
+        return command.session();
     }
 
     /** The ticket this session was started for, none for a plain or resumed one. */
     public Optional<LinkedTicketId> ticket() {
-        return command instanceof TicketClaude(LinkedTicketId ticket, _) ? Optional.of(ticket) : Optional.empty();
+        return command instanceof TicketClaude(_, LinkedTicketId ticket, _) ? Optional.of(ticket) : Optional.empty();
     }
 
     /** Whether its {@code claude} runs in {@code worktree} or below it. */
@@ -51,12 +48,12 @@ public record HostedSession(HostedSessionId id, ProcessId pid, WorkingDirectory 
 
     /** The ticket this session was started to close out with {@code /ticket done}, none for a session that ran any other verb. */
     public Optional<LinkedTicketId> doneTicket() {
-        return command instanceof TicketClaude(LinkedTicketId ticket, Verb verb) && verb == Verb.DONE ? Optional.of(ticket) : Optional.empty();
+        return command instanceof TicketClaude(_, LinkedTicketId ticket, Verb verb) && verb == Verb.DONE ? Optional.of(ticket) : Optional.empty();
     }
 
     /** The link to its ticket that starting it gives it before any transcript does. */
     public Optional<StrongLink> startingLink() {
-        return command instanceof TicketClaude(LinkedTicketId ticket, Verb verb)
+        return command instanceof TicketClaude(_, LinkedTicketId ticket, Verb verb)
                 ? Optional.of(StrongLink.builder()
                         .ticket(ticket)
                         .verb(new LinkVerb(verb.label()))
@@ -66,16 +63,7 @@ public record HostedSession(HostedSessionId id, ProcessId pid, WorkingDirectory 
 
     /** Whether this session was started to run {@code verb} on {@code ticket}. */
     public boolean runs(LinkedTicketId ticket, Verb verb) {
-        return command instanceof TicketClaude(LinkedTicketId started, Verb ran) && started.equals(ticket) && ran == verb;
-    }
-
-    /** Where the session stands among the live sessions the registry lists: live as the one with its pid, else still starting. */
-    public HostedPhase phaseAmong(List<LiveSession> live) {
-        return live.stream()
-                .filter(session -> session.pid().equals(pid))
-                .<HostedPhase>map(LivePhase::new)
-                .findFirst()
-                .orElseGet(StartingPhase::new);
+        return command instanceof TicketClaude(_, LinkedTicketId started, Verb ran) && started.equals(ticket) && ran == verb;
     }
 
     public static HostedSessionBuilder builder() {
@@ -83,17 +71,11 @@ public record HostedSession(HostedSessionId id, ProcessId pid, WorkingDirectory 
     }
 
     public static final class HostedSessionBuilder {
-        private HostedSessionId id;
         private ProcessId pid;
         private WorkingDirectory directory;
         private LaunchCommand command;
 
         private HostedSessionBuilder() {}
-
-        public HostedSessionBuilder id(HostedSessionId id) {
-            this.id = id;
-            return this;
-        }
 
         public HostedSessionBuilder pid(ProcessId pid) {
             this.pid = pid;
@@ -111,7 +93,7 @@ public record HostedSession(HostedSessionId id, ProcessId pid, WorkingDirectory 
         }
 
         public HostedSession build() {
-            return new HostedSession(id, pid, directory, command);
+            return new HostedSession(pid, directory, command);
         }
     }
 }

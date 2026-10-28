@@ -1,17 +1,17 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
-import java.util.List;
+import java.util.Optional;
 
-/** Where the machine's live sessions are read from. */
+import dev.maxenceng.lazyclaude.session.published.ProcessId;
+
+/** Where the state of a session lazyclaude hosts is read from: Claude Code's registry record for its process. */
 public interface LiveSessionPort {
 
     /**
-     * Every session whose process runs on this machine, whatever project it belongs to, liveness already
-     * checked, with its status as Claude Code reported it.
-     * <p>
-     * When the registry is unusable and another source answers, {@code fallback} is told, on every read that falls back.
+     * What Claude Code reports of the process {@code pid}, none while it has written no record for it, or a record with no status yet:
+     * just started, or still on its trust dialog.
      *
-     * @throws SessionsUnavailableException when no source answers, with the reason
+     * @throws SessionRecordUnreadableException when the record is there and cannot be read or is of a shape not known, with why
      */
-    List<ReportedSession> liveSessions(SourceFallback fallback);
+    Optional<ReportedSession> recordOf(ProcessId pid);
 }

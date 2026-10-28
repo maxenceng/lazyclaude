@@ -1,21 +1,90 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
-import dev.maxenceng.lazyclaude.session.domain.Sessions;
-import dev.maxenceng.lazyclaude.session.domain.UnavailableSessions;
+import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
+import dev.maxenceng.lazyclaude.session.published.Marker;
 
-/** A project's sessions as the shell reads them: the live and past ones, or why none could be read. */
-public sealed interface SessionsView permits AvailableSessionsView, UnavailableSessionsView {
+/** The project's sessions: the hosted live ones newest start first, then the past ones newest activity first, and the hosted ones in tab order. */
+public record SessionsView(List<LiveSessionView> live, List<PastSessionView> past, List<HostedSessionView> hosted) {
 
-    /** The hosted sessions, in tab order: lazyclaude's own, so they are there whether or not the registry could be read. */
-    List<HostedSessionView> hosted();
+    public static SessionsView from(AvailableSessions available) {
+        return builder()
+                .live(available.live().stream()
+                        .map(session -> LiveSessionView.from(available, session))
+                        .toList())
+                .past(available.past().stream()
+                        .map(session -> PastSessionView.from(available, session))
+                        .toList())
+                .hosted(available.hosted().stream()
+                        .map(tab -> HostedSessionView.from(available, tab))
+                        .toList())
+                .build();
+    }
 
-    static SessionsView from(Sessions sessions) {
-        return switch (sessions) {
-            case AvailableSessions available -> AvailableSessionsView.from(available);
-            case UnavailableSessions unavailable -> UnavailableSessionsView.from(unavailable);
-        };
+    /** How many of this project's live sessions, linked or not, carry each marker; a marker none carries is absent. */
+    public Map<Marker, Long> markerCounts() {
+        return live.stream()
+                .flatMap(session -> session.marker().stream())
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+    }
+
+    /** The strongest marker among the live sessions linked to {@code ticket}, weak links included. */
+    public Optional<Marker> strongestMarkerOf(LinkedTicketId ticket) {
+        return strongestSessionOf(ticket).flatMap(LiveSessionView::marker);
+    }
+
+    /** The live session linked to {@code ticket}, weak links included, with the strongest marker; the first of any tied. */
+    public Optional<LiveSessionView> strongestSessionOf(LinkedTicketId ticket) {
+        return live.stream()
+                .filter(session -> session.linkTo(ticket).isPresent() && session.marker().isPresent())
+                .max(Comparator.comparing(session -> session.marker().orElse(Marker.YOUR_TURN)));
+    }
+
+    /** The live sessions linked to no ticket. */
+    public List<LiveSessionView> unlinkedLive() {
+        return live.stream().filter(LiveSessionView::isUnlinked).toList();
+    }
+
+    /** The past sessions linked to no ticket, newest activity first. */
+    public List<PastSessionView> unlinkedPast() {
+        return past.stream().filter(PastSessionView::isUnlinked).toList();
+    }
+
+    public static SessionsViewBuilder builder() {
+        return new SessionsViewBuilder();
+    }
+
+    public static final class SessionsViewBuilder {
+        private List<LiveSessionView> live;
+        private List<PastSessionView> past;
+        private List<HostedSessionView> hosted = List.of();
+
+        private SessionsViewBuilder() {}
+
+        public SessionsViewBuilder live(List<LiveSessionView> live) {
+            this.live = live;
+            return this;
+        }
+
+        public SessionsViewBuilder past(List<PastSessionView> past) {
+            this.past = past;
+            return this;
+        }
+
+        public SessionsViewBuilder hosted(List<HostedSessionView> hosted) {
+            this.hosted = hosted;
+            return this;
+        }
+
+        public SessionsView build() {
+            return new SessionsView(live, past, hosted);
+        }
     }
 }

@@ -5,57 +5,41 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
-import dev.maxenceng.lazyclaude.session.published.Busy;
+import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
-import dev.maxenceng.lazyclaude.session.published.WaitingFor;
-import dev.maxenceng.lazyclaude.session.published.WaitingForInput;
-import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
-import dev.maxenceng.lazyclaude.session.published.WaitingReason;
-import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
-import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
 import dev.maxenceng.lazyclaude.shared.domain.WarnOnce;
 import dev.maxenceng.lazyclaude.shared.domain.Warning;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
- * Builds the sessions of a project from the live sessions on the machine that are in it and every past one. It owns the rules: an
- * {@code sdk-cli} session is not listed, a session belongs to the project its {@code cwd} is located
- * in (or, when git cannot place it, the one its path lies in), rows run newest first, and a session's
- * state is drawn from its reported status only once it is known to be the project's, so a status no
- * one here knows, in another project, changes nothing. Each fallback is warned about once, however
- * often its source reports it. A live id hides the past session of the same id, a past session belongs to
- * the project its {@code cwd} was located in (or, when that directory is gone, to the one its path lies in), and
- * past rows run newest activity first. A session is linked to tickets by its transcript, live or past, against the ticket ids it is
- * handed; a live session with no transcript yet is linked to none. Which of them lazyclaude hosts is not
- * this manager's to know: the application service lays the open hosted sessions over what it reads.
+ * Builds the sessions of a project from the hosted sessions lazyclaude holds and every past one. It owns the rules: a hosted
+ * session's state is drawn from the registry record of its own pid, none yet meaning it is starting, and one whose record cannot be
+ * used shows as unknown, with one warning naming why, while the others keep their state. Past rows run newest activity first, a past
+ * session belongs to the project its {@code cwd} was located in (or, when that directory is gone, to the one its path lies in), and
+ * a hosted id hides the past session of the same id. A session is linked to tickets by its transcript, live or past, against the
+ * ticket ids it is handed; a hosted session with no transcript yet is linked by the launch that began it.
  */
 public final class SessionManager {
 
     private static final String SWEEP_WARNING = "sessions: %s; checking every %d s instead.";
-    private static final String AGENTS_WARNING = "sessions: %s; asking claude agents --json every %d s instead.";
+    private static final String UNREAD_WARNING = "hosted session %s: %s; its state is unknown.";
 
     private static final String TRANSCRIPT_WARNING = "past sessions: %s; checking every %d s instead.";
     private static final String CACHE_WARNING = "past sessions: %s; they are read in full on every start.";
     private static final String ROOT_WARNING = "past sessions: %s; only those already read show.";
 
     private static final Comparator<PastSession> MOST_RECENTLY_ACTIVE_FIRST = Comparator.comparing(PastSession::lastActivity)
-            .reversed()
-            .thenComparing(session -> session.id().value());
-
-    private static final Comparator<ReportedSession> NEWEST_FIRST = Comparator.comparing(ReportedSession::startedAt)
             .reversed()
             .thenComparing(session -> session.id().value());
 
@@ -67,12 +51,12 @@ public final class SessionManager {
     private final WarningPort warnings;
     private final SessionClock clock;
     private final WarnOnce sweeping = new WarnOnce();
-    private final WarnOnce askingAgents = new WarnOnce();
     private final WarnOnce pollingTranscripts = new WarnOnce();
     private final WarnOnce cacheUnwritable = new WarnOnce();
     private final WarnOnce rootUnlistable = new WarnOnce();
     private final LastLiveRead lastLive = new LastLiveRead();
     private final LastKnownTickets known = new LastKnownTickets();
+    private final UnreadRecords unread = new UnreadRecords();
 
     public SessionManager(
             LiveSessionPort sessions,
@@ -91,38 +75,41 @@ public final class SessionManager {
         this.clock = new SessionClock(clock);
     }
 
-    /** Reads the live sessions again; the past ones come from what the cache already holds. */
-    public Sessions sessionsFor(Project project, KnownTickets tickets) {
+    /** Reads the records of the {@code open} hosted sessions again; the past ones come from what the cache already holds. */
+    public AvailableSessions sessionsFor(Project project, KnownTickets tickets, HostedSessions open) {
         synchronized (lastLive) {
-            return readingLive(project, tickets);
+            return readingLive(project, tickets, open);
         }
     }
 
     /**
-     * Hands {@code listener} the sessions again on every change. A change to the registry reads the live sessions again; a
-     * change to the transcripts reuses the last read of them. Both deliver under one lock, so a slower read never
-     * overwrites a newer one.
+     * Hands {@code listener} the sessions again on every change, among the hosted sessions {@code open} says are open then. A
+     * change to a hosted session's record reads them again; a change to the transcripts reuses the last read. Both deliver
+     * under one lock, so a slower read never overwrites a newer one.
      */
-    public void watch(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
+    public void watch(Project project, KnownTickets tickets, Supplier<HostedSessions> open, Consumer<AvailableSessions> listener) {
         known.know(tickets);
-        watch.watch(() -> deliver(listener, () -> readingLive(project, known.current())), this::warnOfSweep);
+        watch.watch(
+                pid -> open.get().pids().contains(pid),
+                () -> deliver(listener, () -> readingLive(project, known.current(), open.get())),
+                this::warnOfSweep);
         transcriptWatch.watch(
                 this::locationOf,
-                () -> deliver(listener, () -> reusingLive(project, known.current())),
+                () -> deliver(listener, () -> reusingLive(project, known.current(), open.get())),
                 this::warnOfTranscriptPolling,
                 this::warnOfCache,
                 this::warnOfUnlistableRoot);
     }
 
     /** Hands {@code listener} the sessions again now, for a change none of the watchers sees: a hosted session opening or closing. */
-    public void refresh(Project project, Consumer<Sessions> listener) {
-        deliver(listener, () -> readingLive(project, known.current()));
+    public void refresh(Project project, HostedSessions open, Consumer<AvailableSessions> listener) {
+        deliver(listener, () -> readingLive(project, known.current(), open));
     }
 
     /** From now on sessions are linked against {@code tickets}, and {@code listener} is handed them linked that way at once. */
-    public void know(Project project, KnownTickets tickets, Consumer<Sessions> listener) {
+    public void know(Project project, KnownTickets tickets, HostedSessions open, Consumer<AvailableSessions> listener) {
         known.know(tickets);
-        refresh(project, listener);
+        refresh(project, open, listener);
     }
 
     /** Has the transcripts read again, whether or not they look changed; the sessions arrive through the watch's listener. */
@@ -130,38 +117,29 @@ public final class SessionManager {
         transcriptWatch.rescanNow();
     }
 
-    private void deliver(Consumer<Sessions> listener, Supplier<Sessions> read) {
+    private void deliver(Consumer<AvailableSessions> listener, Supplier<AvailableSessions> read) {
         synchronized (lastLive) {
             listener.accept(read.get());
         }
     }
 
-    private Sessions readingLive(Project project, KnownTickets tickets) {
-        try {
-            RunningSessions running = runningIn(project);
-            lastLive.remember(running);
-            return available(project, tickets, running);
-        } catch (SessionsUnavailableException noSource) {
-            lastLive.forget();
-            return unavailable(noSource.getMessage());
-        }
+    private AvailableSessions readingLive(Project project, KnownTickets tickets, HostedSessions open) {
+        RunningSessions running = runningIn(project, open);
+        lastLive.remember(running);
+        return available(project, tickets, running);
     }
 
-    private Sessions unavailable(String reason) {
-        return UnavailableSessions.builder().reason(new Reason(reason)).build();
-    }
-
-    private Sessions reusingLive(Project project, KnownTickets tickets) {
+    private AvailableSessions reusingLive(Project project, KnownTickets tickets, HostedSessions open) {
         return lastLive.of(project)
                 .map(running -> available(project, tickets, running))
-                .orElseGet(() -> readingLive(project, tickets));
+                .orElseGet(() -> readingLive(project, tickets, open));
     }
 
-    private Sessions available(Project project, KnownTickets tickets, RunningSessions running) {
+    private AvailableSessions available(Project project, KnownTickets tickets, RunningSessions running) {
         Map<SessionId, LinkFacts> facts = pastSessions.linkFacts();
         return AvailableSessions.builder()
-                .live(running.live().stream()
-                        .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))
+                .hosted(running.hosted().stream()
+                        .map(hosted -> hosted.linkedTo(linksOf(hosted.session().id(), facts, tickets)))
                         .toList())
                 .past(pastSessionsOf(project, running.ids()).stream()
                         .map(session -> session.linkedTo(linksOf(session.id(), facts, tickets)))
@@ -174,13 +152,28 @@ public final class SessionManager {
         return facts.getOrDefault(id, LinkFacts.none()).linksTo(tickets);
     }
 
-    private RunningSessions runningIn(Project project) {
-        List<ReportedSession> reported = sessions.liveSessions(this::warnOfAgents);
+    private RunningSessions runningIn(Project project, HostedSessions open) {
         return RunningSessions.builder()
                 .project(project)
-                .ids(reported.stream().map(ReportedSession::id).toList())
-                .live(inProject(project, reported).stream().map(SessionManager::live).toList())
+                .hosted(open.sessions().stream().map(this::opened).toList())
                 .build();
+    }
+
+    private OpenHostedSession opened(HostedSession session) {
+        return OpenHostedSession.builder().session(session).phase(phaseOf(session)).build();
+    }
+
+    private HostedPhase phaseOf(HostedSession session) {
+        try {
+            Optional<ReportedSession> record = sessions.recordOf(session.pid());
+            unread.readable(session.id());
+            return record.<HostedPhase>map(reported -> new LivePhase(live(session, reported))).orElseGet(StartingPhase::new);
+        } catch (SessionRecordUnreadableException unusable) {
+            if (unread.firstUnreadOf(session.id())) {
+                warnings.raise(new Warning(UNREAD_WARNING.formatted(session.id().shortValue(), unusable.getMessage())));
+            }
+            return new UnreadPhase(unknown(session));
+        }
     }
 
     private void warnOfTranscriptPolling(Reason cause, Duration every) {
@@ -203,20 +196,8 @@ public final class SessionManager {
         }
     }
 
-    private ProjectLocation locationOfReported(WorkingDirectory directory) {
-        try {
-            return locationOf(directory);
-        } catch (ProjectUnavailableException noLocator) {
-            throw new SessionsUnavailableException(noLocator.getMessage(), noLocator);
-        }
-    }
-
     private void warnOfSweep(Reason cause, Duration every) {
         sweeping.raise(warnings, new Warning(SWEEP_WARNING.formatted(cause.value(), every.toSeconds())));
-    }
-
-    private void warnOfAgents(Reason cause, Duration every) {
-        askingAgents.raise(warnings, new Warning(AGENTS_WARNING.formatted(cause.value(), every.toSeconds())));
     }
 
     private List<PastSession> pastSessionsOf(Project project, List<SessionId> running) {
@@ -228,46 +209,28 @@ public final class SessionManager {
                 .toList();
     }
 
-    private List<ReportedSession> inProject(Project project, List<ReportedSession> reported) {
-        List<ReportedSession> candidates = reported.stream()
-                .filter(session -> !session.isSdkCli())
-                .toList();
-        // deferred: git runs once per distinct cwd on every read of the registry, about every 2 s — close it when that shows up as load on a project with many worktrees.
-        Map<WorkingDirectory, ProjectLocation> located = candidates.stream()
-                .map(ReportedSession::directory)
-                .distinct()
-                .collect(Collectors.toMap(Function.identity(), this::locationOfReported));
-        return candidates.stream()
-                .filter(session -> located.get(session.directory()).holds(project, session.directory()))
-                .sorted(NEWEST_FIRST)
-                .toList();
+    private static LiveSession live(HostedSession session, ReportedSession reported) {
+        return LiveSession.builder()
+                .id(session.id())
+                .pid(session.pid())
+                .name(reported.name())
+                .directory(session.directory())
+                .startedAt(reported.startedAt())
+                .version(reported.version())
+                .state(reported.state())
+                .build();
     }
 
-    private static LiveSession live(ReportedSession session) {
+    // deferred: an unreadable record leaves the session's start time unknown, so its age counts from this read — close it when the launch log keeps when each session started.
+    private LiveSession unknown(HostedSession session) {
         return LiveSession.builder()
                 .id(session.id())
                 .pid(session.pid())
                 .name(session.name())
                 .directory(session.directory())
-                .startedAt(session.startedAt())
-                .version(session.version())
-                .state(stateOf(session.status(), session.waitingFor()))
+                .startedAt(new StartedAt(clock.clock().instant()))
+                .version(new NoVersion())
+                .state(new Unknown())
                 .build();
-    }
-
-    /** A waiting session blocked on a permission prompt asks for permission; any other reason asks for input. */
-    private static SessionState stateOf(ReportedStatus status, WaitingFor waitingFor) {
-        return switch (status) {
-            case BUSY, SHELL -> new Busy();
-            case IDLE -> new YourTurn();
-            case WAITING -> waiting(waitingFor);
-            case UNKNOWN -> new Unknown();
-        };
-    }
-
-    private static SessionState waiting(WaitingFor waitingFor) {
-        return waitingFor instanceof WaitingReason reason && reason.isPermissionPrompt()
-                ? new WaitingForPermission(reason)
-                : new WaitingForInput(waitingFor);
     }
 }

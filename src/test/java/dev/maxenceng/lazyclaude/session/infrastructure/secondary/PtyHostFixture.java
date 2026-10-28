@@ -2,7 +2,6 @@ package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaude;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSizeOf;
-import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -20,8 +19,8 @@ import dev.maxenceng.lazyclaude.session.domain.ExitCode;
 import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.NewClaude;
 import dev.maxenceng.lazyclaude.session.domain.ResumeClaude;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.ScreenRow;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -44,32 +43,29 @@ public final class PtyHostFixture {
         return new PtyHostRepository(List.of(command), Map.of());
     }
 
-    public static HostLaunch newLaunchIn(HostedSessionId id, Path directory, int columns, int rows) {
+    public static HostLaunch newLaunchIn(SessionId id, Path directory, int columns, int rows) {
         return HostLaunch.builder()
-                .id(id)
-                .command(new NewClaude())
+                .command(new NewClaude(id))
                 .directory(new WorkingDirectory(directory))
                 .size(paneSizeOf(columns, rows))
                 .build();
     }
 
-    public static HostLaunch newLaunch(HostedSessionId id) {
+    public static HostLaunch newLaunch(SessionId id) {
         return newLaunchIn(id, Path.of("/tmp"), 100, 30);
     }
 
-    public static HostLaunch resumeLaunch(HostedSessionId id) {
+    public static HostLaunch resumeLaunch(SessionId id) {
         return HostLaunch.builder()
-                .id(id)
-                .command(new ResumeClaude(sessionId()))
+                .command(new ResumeClaude(id))
                 .directory(new WorkingDirectory(Path.of("/tmp")))
                 .size(paneSizeOf(100, 30))
                 .build();
     }
 
-    public static HostLaunch ticketLaunch(HostedSessionId id) {
+    public static HostLaunch ticketLaunch(SessionId id) {
         return HostLaunch.builder()
-                .id(id)
-                .command(ticketClaude(Verb.REVIEW))
+                .command(ticketClaude(id, Verb.REVIEW))
                 .directory(new WorkingDirectory(Path.of("/tmp")))
                 .size(paneSizeOf(100, 30))
                 .build();
@@ -95,7 +91,7 @@ public final class PtyHostFixture {
     }
 
     public static TerminalScreen screenWhere(
-            PtyHostRepository host, HostedSessionId id, Predicate<TerminalScreen> expected) throws Exception {
+            PtyHostRepository host, SessionId id, Predicate<TerminalScreen> expected) throws Exception {
         Instant until = Instant.now().plus(PATIENCE);
         AtomicBoolean timedOut = new AtomicBoolean();
         TerminalScreen screen = host.screenOf(id);
@@ -110,7 +106,7 @@ public final class PtyHostFixture {
         return screen;
     }
 
-    public static TerminalScreen screenContaining(PtyHostRepository host, HostedSessionId id, String fragment)
+    public static TerminalScreen screenContaining(PtyHostRepository host, SessionId id, String fragment)
             throws Exception {
         return screenWhere(host, id, screen -> text(screen).contains(fragment));
     }

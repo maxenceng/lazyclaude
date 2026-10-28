@@ -11,7 +11,6 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewBuilder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionViewWith;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.unavailableSessionsView;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForInput;
 import static dev.maxenceng.lazyclaude.session.published.SessionStateFixture.waitingForPermission;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
@@ -76,13 +75,6 @@ class ShellSessionsTest {
     @Test
     void shouldSayThereIsNoLiveSessionInsteadOfStandingEmpty() {
         assertThat(Screen.of(shellOnSessions(emptySessionsView())).dimText()).contains("no live session");
-    }
-
-    @Test
-    void shouldSayWhyWhenSessionsAreUnavailable() {
-        assertThat(String.join(" ", Screen.of(shellOnSessions(unavailableSessionsView())).dimText()))
-                .as("the reason wraps inside the panel, so it spans lines")
-                .contains("sessions unavailable: no registry and no claude");
     }
 
     @Test
@@ -252,15 +244,6 @@ class ShellSessionsTest {
         shell.sessionsChanged(emptySessionsView());
 
         assertThat(Screen.of(shell).dimText()).contains("no live session");
-    }
-
-    @Test
-    void shouldShowTheReasonWhenSessionsBecomeUnavailable() {
-        Shell shell = shellOnSessions(sessionsViewOf(List.of(sessionView())));
-
-        shell.sessionsChanged(unavailableSessionsView());
-
-        assertThat(Screen.of(shell).dimText()).anySatisfy(line -> assertThat(line).contains("sessions unavailable"));
     }
 
     @Test

@@ -7,16 +7,19 @@ import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
- * One read of the live sessions: the id of every session running on the machine, which hides its past row, and the live
- * sessions of {@code project}. A change to the transcripts reuses it rather than reading the registry again.
+ * One read of the hosted sessions of {@code project}: where each stands by its registry record. A change to the transcripts
+ * reuses it rather than reading the records again.
  */
-public record RunningSessions(
-        Project project, List<SessionId> ids, List<LiveSession> live) {
+public record RunningSessions(Project project, List<OpenHostedSession> hosted) {
 
     public RunningSessions {
         Assert.notNull("project", project);
-        Assert.notNull("running ids", ids);
-        Assert.notNull("live sessions", live);
+        Assert.notNull("hosted sessions", hosted);
+    }
+
+    /** The id of every hosted session, which hides its past row. */
+    public List<SessionId> ids() {
+        return hosted.stream().map(open -> open.session().id()).toList();
     }
 
     public static RunningSessionsBuilder builder() {
@@ -25,8 +28,7 @@ public record RunningSessions(
 
     public static final class RunningSessionsBuilder {
         private Project project;
-        private List<SessionId> ids;
-        private List<LiveSession> live;
+        private List<OpenHostedSession> hosted;
 
         private RunningSessionsBuilder() {}
 
@@ -35,18 +37,13 @@ public record RunningSessions(
             return this;
         }
 
-        public RunningSessionsBuilder ids(List<SessionId> ids) {
-            this.ids = ids;
-            return this;
-        }
-
-        public RunningSessionsBuilder live(List<LiveSession> live) {
-            this.live = live;
+        public RunningSessionsBuilder hosted(List<OpenHostedSession> hosted) {
+            this.hosted = hosted;
             return this;
         }
 
         public RunningSessions build() {
-            return new RunningSessions(project, ids, live);
+            return new RunningSessions(project, hosted);
         }
     }
 }

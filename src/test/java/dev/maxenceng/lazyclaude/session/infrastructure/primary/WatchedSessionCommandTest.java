@@ -1,13 +1,13 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingTheRegisteredSession;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
+import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.startedUnlinked;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.inputNotification;
 import static dev.maxenceng.lazyclaude.session.domain.DesktopNotificationFixture.notificationId;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWaitingFor;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWith;
-import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
+import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.WaitingForFixture.inputNeeded;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,7 +15,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +31,7 @@ import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -63,39 +64,39 @@ class WatchedSessionCommandTest {
 
     @Test
     void shouldCloseTheNotificationOfTheSessionItIsToldIsInView() {
-        when(sessions.liveSessions(any()))
-                .thenReturn(List.of(reportedWith(ReportedStatus.BUSY)))
-                .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
-        when(locator.locate(any())).thenReturn(project());
+        when(sessions.recordOf(processId()))
+                .thenReturn(Optional.of(reportedWith(ReportedStatus.BUSY)))
+                .thenReturn(Optional.of(reportedWaitingFor(inputNeeded())));
         when(notifications.show(inputNotification())).thenReturn(notificationId());
-        SessionApplicationService service = hostingTheRegisteredSession(
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts);
+        SessionApplicationService service =
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications);
+        SessionId id = startedUnlinked(service, hosts);
         service.subscribe(project(), noTickets(), read -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(watch).watch(changed.capture(), any());
+        verify(watch).watch(any(), changed.capture(), any());
         changed.getValue().run();
         changed.getValue().run();
 
-        new WatchedSessionCommand(service).watching(new WatchedSessionPayload(sessionId()));
+        new WatchedSessionCommand(service).watching(new WatchedSessionPayload(id));
 
         verify(notifications).close(notificationId());
     }
 
     @Test
     void shouldNotifyAgainOnlyOnTheNextTransitionOnceNothingIsInView() {
-        when(sessions.liveSessions(any()))
-                .thenReturn(List.of(reportedWith(ReportedStatus.BUSY)))
-                .thenReturn(List.of(reportedWaitingFor(inputNeeded())))
-                .thenReturn(List.of(reportedWaitingFor(inputNeeded())));
-        when(locator.locate(any())).thenReturn(project());
-        SessionApplicationService service = hostingTheRegisteredSession(
-                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications), hosts);
+        when(sessions.recordOf(processId()))
+                .thenReturn(Optional.of(reportedWith(ReportedStatus.BUSY)))
+                .thenReturn(Optional.of(reportedWaitingFor(inputNeeded())))
+                .thenReturn(Optional.of(reportedWaitingFor(inputNeeded())));
+        SessionApplicationService service =
+                sessionApplicationService(sessions, past, locator, watch, transcriptWatch, warnings, hosts, notifications);
+        SessionId id = startedUnlinked(service, hosts);
         service.subscribe(project(), noTickets(), read -> {});
         ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
-        verify(watch).watch(changed.capture(), any());
+        verify(watch).watch(any(), changed.capture(), any());
         WatchedSessionCommand command = new WatchedSessionCommand(service);
         changed.getValue().run();
-        command.watching(new WatchedSessionPayload(sessionId()));
+        command.watching(new WatchedSessionPayload(id));
         changed.getValue().run();
 
         command.watching(new NoWatchedSessionPayload());

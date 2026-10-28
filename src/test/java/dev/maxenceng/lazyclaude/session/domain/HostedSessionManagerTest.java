@@ -12,6 +12,7 @@ import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.ty
 import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSaying;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.raisedTexts;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
@@ -23,6 +24,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -34,8 +37,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.published.HostStart;
-import dev.maxenceng.lazyclaude.session.published.HostedSessionId;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 @ExtendWith(MockitoExtension.class)
@@ -83,8 +87,8 @@ class HostedSessionManagerTest {
     void shouldListTheStartedSessionByItsPidInStartOrder() {
         when(hosts.spawn(any(), any())).thenReturn(processId(), secondProcessId());
 
-        HostedSessionId first = idOf(manager.startUnlinked(project(), paneSize()));
-        HostedSessionId second = idOf(manager.startUnlinked(project(), paneSize()));
+        SessionId first = idOf(manager.startUnlinked(project(), paneSize()));
+        SessionId second = idOf(manager.startUnlinked(project(), paneSize()));
 
         assertThat(manager.open().sessions())
                 .extracting(HostedSession::id, HostedSession::pid)
@@ -117,6 +121,37 @@ class HostedSessionManagerTest {
     }
 
     @Test
+    void shouldKeepTheIdOfTheSessionItResumes() {
+        when(hosts.exists(worktreeDirectory())).thenReturn(true);
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+
+        assertThat(idOf(manager.resume(sessionId(), worktreeDirectory(), paneSize()))).isEqualTo(sessionId());
+    }
+
+    @Test
+    void shouldNameEachNewSessionByAnIdOfItsOwn() {
+        when(hosts.spawn(any(), any())).thenReturn(processId(), secondProcessId());
+
+        SessionId first = idOf(manager.startUnlinked(project(), paneSize()));
+        SessionId second = idOf(manager.startUnlinked(project(), paneSize()));
+
+        assertThat(first).isNotEqualTo(second);
+    }
+
+    @Test
+    void shouldAnswerWithTheOpenSessionInsteadOfResumingASessionItStartedItself() {
+        when(hosts.spawn(any(), any())).thenReturn(processId());
+        HostStart begun = manager.startUnlinked(project(), paneSize());
+
+        HostStart resumed = manager.resume(idOf(begun), projectRootDirectory(), paneSize());
+
+        assertThat(resumed)
+                .as("a claude begun under an id is already running that session, and a second would share its transcript")
+                .isEqualTo(begun);
+        verify(hosts).spawn(any(), any());
+    }
+
+    @Test
     void shouldAnswerWithTheOpenSessionInsteadOfResumingTheSameSessionTwice() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
         when(hosts.spawn(any(), any())).thenReturn(processId());
@@ -125,6 +160,30 @@ class HostedSessionManagerTest {
         HostStart second = manager.resume(sessionId(), worktreeDirectory(), paneSize());
 
         assertThat(second).as("two claude resuming one session would both write its transcript").isEqualTo(first);
+        verify(hosts).spawn(any(), any());
+    }
+
+    @Test
+    void shouldResumeNothingWhileTheSameSessionIsStillBeingResumed() throws Exception {
+        CountDownLatch spawnBegun = new CountDownLatch(1);
+        CountDownLatch spawnMayReturn = new CountDownLatch(1);
+        when(hosts.exists(worktreeDirectory())).thenReturn(true);
+        when(hosts.spawn(any(), any())).thenAnswer(invocation -> {
+            spawnBegun.countDown();
+            spawnMayReturn.await();
+            return processId();
+        }).thenReturn(secondProcessId());
+        CompletableFuture<HostStart> first =
+                CompletableFuture.supplyAsync(() -> manager.resume(sessionId(), worktreeDirectory(), paneSize()));
+        spawnBegun.await();
+
+        HostStart second = manager.resume(sessionId(), worktreeDirectory(), paneSize());
+        spawnMayReturn.countDown();
+
+        assertThat(second)
+                .as("the shell resumes on background threads, and two claude resuming one session would both write its transcript")
+                .isInstanceOf(NotStartedHost.class);
+        assertThat(first.get()).isInstanceOf(StartedHost.class);
         verify(hosts).spawn(any(), any());
     }
 
@@ -182,7 +241,7 @@ class HostedSessionManagerTest {
     void shouldKeepTheOthersInOrderWhenTheFirstExits() {
         when(hosts.spawn(any(), any())).thenReturn(processId(), secondProcessId());
         manager.startUnlinked(project(), paneSize());
-        HostedSessionId second = idOf(manager.startUnlinked(project(), paneSize()));
+        SessionId second = idOf(manager.startUnlinked(project(), paneSize()));
         verify(hosts, times(2)).spawn(any(), exited.capture());
 
         exited.getAllValues().getFirst().accept(new ExitCode(0));
@@ -244,7 +303,7 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldHandInputToTheSessionItIsFor() {
-        HostedSessionId id = HostedSessionId.random();
+        SessionId id = SessionId.random();
 
         manager.send(id, typedA());
 
@@ -253,7 +312,7 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldResizeTheSessionItIsFor() {
-        HostedSessionId id = HostedSessionId.random();
+        SessionId id = SessionId.random();
 
         manager.resize(id, resizedPaneSize());
 
@@ -262,7 +321,7 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldAnswerWithTheScreenTheHostHolds() {
-        HostedSessionId id = HostedSessionId.random();
+        SessionId id = SessionId.random();
         when(hosts.screenOf(id)).thenReturn(screenSaying("hello"));
 
         assertThat(manager.screenOf(id)).isEqualTo(screenSaying("hello"));
@@ -271,8 +330,8 @@ class HostedSessionManagerTest {
     @Test
     void shouldEndEveryOpenSessionOnQuit() {
         when(hosts.spawn(any(), any())).thenReturn(processId(), secondProcessId());
-        HostedSessionId first = idOf(manager.startUnlinked(project(), paneSize()));
-        HostedSessionId second = idOf(manager.startUnlinked(project(), paneSize()));
+        SessionId first = idOf(manager.startUnlinked(project(), paneSize()));
+        SessionId second = idOf(manager.startUnlinked(project(), paneSize()));
 
         manager.endAll();
 
@@ -290,11 +349,11 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldPassScreenChangesOnToItsListener() {
-        ArgumentCaptor<Consumer<HostedSessionId>> hostListener = ArgumentCaptor.captor();
+        ArgumentCaptor<Consumer<SessionId>> hostListener = ArgumentCaptor.captor();
         manager.onScreenChange(screenChanged);
         verify(hosts).onScreenChange(hostListener.capture());
 
-        hostListener.getValue().accept(HostedSessionId.random());
+        hostListener.getValue().accept(SessionId.random());
 
         verify(screenChanged).run();
     }

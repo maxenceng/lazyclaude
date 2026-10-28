@@ -1,11 +1,11 @@
 package dev.maxenceng.lazyclaude.session.application;
 
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
-import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingTheRegisteredSession;
+import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingATicketSessionInTheWorktree;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.noTickets;
-import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedIn;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.sessionsUnavailable;
+import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
+import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.recordUnreadable;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketStart;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketWorktree;
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeStateFixture.clearWorktreeContents;
@@ -24,7 +24,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -90,40 +89,36 @@ class SessionApplicationServiceWorktreeTest {
     }
 
     @Test
-    void shouldJudgeTheWorktreeAgainstTheSessionsThatAreLiveInIt() {
+    void shouldJudgeTheWorktreeAgainstTheHostedSessionsLiveInIt() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(worktreeDirectory())));
-        when(locator.locate(worktreeDirectory())).thenReturn(project());
-        hostingTheRegisteredSession(service, hosts);
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
+        hostingATicketSessionInTheWorktree(service, hosts, worktrees);
 
         assertThat(service.worktreeOf(project(), noTickets(), ticketWorktree(), headCommit()))
                 .contains(heldWorktree(occupiedWorktreeContents()));
     }
 
     @Test
-    void shouldJudgeTheWorktreeClearWhenNoSessionIsLiveInIt() {
+    void shouldJudgeTheWorktreeClearWhenNoSessionIsHostedInIt() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         assertThat(service.worktreeOf(project(), noTickets(), ticketWorktree(), headCommit()))
                 .contains(heldWorktree(clearWorktreeContents()));
     }
 
     @Test
-    void shouldJudgeTheWorktreeByTheHostedSessionsWhenTheRegistryCannotBeRead() {
+    void shouldJudgeTheWorktreeOccupiedByAHostedSessionWhoseRecordCannotBeRead() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
-        when(sessions.liveSessions(any())).thenThrow(sessionsUnavailable());
-        when(hosts.spawn(any(), any())).thenReturn(processId());
-        service.startTicket(ticketStart(Verb.DONE), paneSize());
+        when(sessions.recordOf(processId())).thenThrow(recordUnreadable());
+        hostingATicketSessionInTheWorktree(service, hosts, worktrees);
 
         assertThat(service.worktreeOf(project(), noTickets(), ticketWorktree(), headCommit()))
                 .hasValueSatisfying(held -> assertThat(held.state().clear()).isFalse());
     }
 
     @Test
-    void shouldRemoveTheWorktreeWhenNoSessionIsLiveInIt() {
+    void shouldRemoveTheWorktreeWhenNoSessionIsHostedInIt() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
-        when(sessions.liveSessions(any())).thenReturn(List.of());
 
         service.removeWorktree(project(), noTickets(), ticketWorktree(), headCommit());
 
@@ -131,11 +126,10 @@ class SessionApplicationServiceWorktreeTest {
     }
 
     @Test
-    void shouldNotRemoveTheWorktreeWhileASessionIsLiveInIt() {
+    void shouldNotRemoveTheWorktreeWhileASessionIsHostedInIt() {
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
-        when(sessions.liveSessions(any())).thenReturn(List.of(reportedIn(worktreeDirectory())));
-        when(locator.locate(worktreeDirectory())).thenReturn(project());
-        hostingTheRegisteredSession(service, hosts);
+        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
+        hostingATicketSessionInTheWorktree(service, hosts, worktrees);
 
         assertThatThrownBy(() -> service.removeWorktree(project(), noTickets(), ticketWorktree(), headCommit()))
                 .isInstanceOf(WorktreeNotClearException.class);

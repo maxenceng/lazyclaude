@@ -46,10 +46,8 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeAgentsRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeKeybindingsRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigurationRepository;
-import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LiveSessionRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.NotifySendRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
@@ -81,11 +79,7 @@ public final class LazyClaude {
     private static final String DEFAULT_CACHE_HOME = ".cache";
     private static final String CACHE_DIRECTORY = "lazyclaude";
     private static final String CACHE_FILE = "past-sessions.json";
-    private static final Path PROC = Path.of("/proc");
-    private static final Path MACHINE_ID = Path.of("/etc/machine-id");
     private static final List<String> CLAUDE = List.of("claude");
-    private static final List<String> CLAUDE_AGENTS = List.of("claude", "agents", "--json");
-    private static final Duration CLAUDE_AGENTS_PATIENCE = Duration.ofSeconds(10);
     private static final List<String> NOTIFY_SEND = List.of("notify-send");
     private static final List<String> GDBUS = List.of("gdbus");
     private static final Duration NOTIFY_PATIENCE = Duration.ofSeconds(5);
@@ -190,11 +184,8 @@ public final class LazyClaude {
                 new TranscriptCacheFile(cacheHome(home, System.getenv(XDG_CACHE_HOME))
                         .resolve(CACHE_DIRECTORY)
                         .resolve(CACHE_FILE)));
-        LiveSessionRepository live = new LiveSessionRepository(
-                new SessionRegistryRepository(registry, PROC, MACHINE_ID),
-                new ClaudeAgentsRepository(CLAUDE_AGENTS, CLAUDE_AGENTS_PATIENCE));
         return new SessionApplicationService(
-                live,
+                new SessionRegistryRepository(registry),
                 transcripts,
                 new ProjectLocatorRepository(),
                 new SessionWatchRepository(registry),
@@ -219,7 +210,7 @@ public final class LazyClaude {
     /**
      * Opens the shell on the board of the project {@code from} belongs to and that project's docs and
      * live and past sessions, or says why there is no board and returns non-zero without opening it. Docs that
-     * cannot be listed and sessions that cannot be read do not stop it: their panels say why.
+     * cannot be listed do not stop it: their panel says why.
      */
     static int start(
             Path from, BoardQuery board, DocsQuery docs, SessionQuery sessions, PrintStream err, ShellOpener shell)
