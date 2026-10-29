@@ -4,7 +4,7 @@ Date: 2026-10-27
 
 ## Status
 
-Accepted.
+Accepted. Amended by ADR 0064, which also takes a decision's map from the map body that links it.
 
 ## Context
 
