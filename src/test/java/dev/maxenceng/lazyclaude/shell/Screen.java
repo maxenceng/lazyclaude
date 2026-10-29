@@ -142,6 +142,24 @@ public final class Screen {
         return textOfCells(WIDTH, cell -> cell.style().fg().filter(color::equals).isPresent());
     }
 
+    Position positionInLeftColumn(String fragment) {
+        int line = IntStream.range(0, lines.size())
+                .filter(y -> lines.get(y).substring(0, LEFT_COLUMN_WIDTH).contains(fragment))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no left column line holds " + fragment));
+        return new Position(lines.get(line).indexOf(fragment), line);
+    }
+
+    Position dockTabLabel(String name) {
+        int line = lineOf(DOCK_BORDER);
+        return new Position(lines.get(line).indexOf(name), line);
+    }
+
+    Position positionOf(String fragment) {
+        int line = lineOf(fragment);
+        return new Position(lines.get(line).indexOf(fragment), line);
+    }
+
     int lineOf(String fragment) {
         return IntStream.range(0, lines.size())
                 .filter(y -> lines.get(y).contains(fragment))

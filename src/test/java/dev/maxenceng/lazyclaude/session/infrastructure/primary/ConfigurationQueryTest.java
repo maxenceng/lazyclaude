@@ -4,7 +4,9 @@ import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.defau
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.rebindingFocusLeft;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.refusal;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withoutDesktopNotifications;
+import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withoutMouse;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.defaultConfigurationView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.mouselessConfigurationView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.reboundConfigurationView;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -55,6 +57,13 @@ class ConfigurationQueryTest {
         when(configurations.configuration()).thenReturn(withoutDesktopNotifications());
 
         assertThat(query.configuration().desktopNotifications()).isFalse();
+    }
+
+    @Test
+    void shouldAnswerThatTheMouseIsOff() {
+        when(configurations.configuration()).thenReturn(withoutMouse());
+
+        assertThat(query.configuration()).isEqualTo(mouselessConfigurationView());
     }
 
     @Test

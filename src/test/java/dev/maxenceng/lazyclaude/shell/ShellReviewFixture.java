@@ -113,7 +113,7 @@ final class ShellReviewFixture {
                 mock(DocsQuery.class),
                 reviews,
                 writing,
-                ReservedChords.defaults(),
+                ReservedChords.defaults(), true,
                 background);
         return ShellFixture.pressed(shell, key('j'), ticket.status().ordinal() + 1);
     }

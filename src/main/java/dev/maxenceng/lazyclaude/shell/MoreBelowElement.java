@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
@@ -19,11 +20,18 @@ final class MoreBelowElement implements Element {
     private final List<RowLine> lines;
     private final int selected;
     private final boolean highlighted;
+    private final Consumer<RowsDrawn> drawn;
 
     MoreBelowElement(List<RowLine> lines, int selected, boolean highlighted) {
+        this(lines, selected, highlighted, _ -> {});
+    }
+
+    /** {@code drawn} is told which rows were drawn where, the line that counts the rows below not among them. */
+    MoreBelowElement(List<RowLine> lines, int selected, boolean highlighted, Consumer<RowsDrawn> drawn) {
         this.lines = lines;
         this.selected = selected;
         this.highlighted = highlighted;
+        this.drawn = drawn;
     }
 
     @Override
@@ -34,10 +42,10 @@ final class MoreBelowElement implements Element {
         int rows = area.height() - ONE_LINE;
         int below = lines.size() - RowsElement.firstShown(selected, rows, lines.size()) - rows;
         if (area.height() <= ONE_LINE || lines.size() <= area.height() || below <= 0) {
-            context.renderChild(new RowsElement(lines, selected, highlighted), frame, area);
+            context.renderChild(new RowsElement(lines, selected, highlighted, drawn), frame, area);
             return;
         }
-        context.renderChild(new RowsElement(lines, selected, highlighted), frame, new Rect(area.x(), area.y(), area.width(), rows));
+        context.renderChild(new RowsElement(lines, selected, highlighted, drawn), frame, new Rect(area.x(), area.y(), area.width(), rows));
         frame.buffer()
                 .setString(area.x(), area.y() + rows, RowsElement.fit(MORE.formatted(below), area.width()), Style.EMPTY.dim());
     }

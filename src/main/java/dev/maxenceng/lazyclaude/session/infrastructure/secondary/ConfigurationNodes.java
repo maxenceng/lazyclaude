@@ -41,9 +41,10 @@ final class ConfigurationNodes {
     private static final String KEYBINDING = "keybinding";
     private static final String NOTIFICATIONS = "notifications";
     private static final String DESKTOP = "desktop";
+    private static final String MOUSE = "mouse";
     private static final Map<String, ReservedAction> ACTIONS = Arrays.stream(ReservedAction.values())
             .collect(Collectors.toUnmodifiableMap(ReservedAction::configurationName, Function.identity()));
-    private static final List<String> SECTIONS = List.of(KEYBINDING, NOTIFICATIONS);
+    private static final List<String> TOP_KEYS = List.of(KEYBINDING, NOTIFICATIONS, MOUSE);
     private static final int FIRST_LINE = 1;
     private static final int NO_LINE = 0;
     private static final String LOCATED = "%s:%d: %s";
@@ -64,27 +65,31 @@ final class ConfigurationNodes {
     private static final boolean DESKTOP_BY_DEFAULT = true;
 
     private final String file;
+    private final boolean mouseByDefault;
     private final Compose compose = new Compose(LoadSettings.builder().setAllowNonScalarKeys(true).build());
 
-    ConfigurationNodes(String file) {
+    ConfigurationNodes(String file, boolean mouseByDefault) {
         this.file = file;
+        this.mouseByDefault = mouseByDefault;
     }
 
-    /** What a missing file means: the layout decision's chords, and notifications on. */
-    static Configuration defaults() {
+    /** What a missing file means: the layout decision's chords, notifications on, and the mouse as {@code mouseByDefault} has it. */
+    static Configuration defaults(boolean mouseByDefault) {
         return Configuration.builder()
                 .reservedChords(ReservedChords.defaults())
                 .desktopNotifications(DESKTOP_BY_DEFAULT)
+                .mouse(mouseByDefault)
                 .build();
     }
 
     Configuration read(String text) {
-        List<ConfigurationEntry> top = entriesOf(parsed(text), SECTIONS);
+        List<ConfigurationEntry> top = entriesOf(parsed(text), TOP_KEYS);
         List<ConfigurationEntry> bindings = section(top, KEYBINDING, ACTIONS.keySet());
         List<ConfigurationEntry> notifications = section(top, NOTIFICATIONS, List.of(DESKTOP));
         return Configuration.builder()
                 .reservedChords(reserved(bindings))
-                .desktopNotifications(notifications.stream().findFirst().map(this::desktop).orElse(DESKTOP_BY_DEFAULT))
+                .desktopNotifications(notifications.stream().findFirst().map(this::flag).orElse(DESKTOP_BY_DEFAULT))
+                .mouse(top.stream().filter(entry -> entry.key().equals(MOUSE)).findFirst().map(this::flag).orElse(mouseByDefault))
                 .build();
     }
 
@@ -176,7 +181,7 @@ final class ConfigurationNodes {
         }
     }
 
-    private boolean desktop(ConfigurationEntry entry) {
+    private boolean flag(ConfigurationEntry entry) {
         if (!(entry.value() instanceof ScalarNode scalar)) {
             throw refused(entry.line(), NEEDS_A_BOOLEAN.formatted(entry.key()));
         }

@@ -21,6 +21,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
@@ -99,7 +100,9 @@ import dev.tamboui.tui.bindings.BindingSets;
 import dev.tamboui.tui.event.Event;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
+import dev.tamboui.tui.event.MouseButton;
 import dev.tamboui.tui.event.MouseEvent;
+import dev.tamboui.tui.event.MouseEventKind;
 
 /**
  * The terminal application itself. It owns the screen and the keyboard, and composes what
@@ -123,6 +126,8 @@ public final class Shell extends ToolkitApp {
     private static final String DOCS_UNAVAILABLE = "docs unavailable";
     private static final String NO_LIVE_SESSION = "no live session";
 
+    private static final int NO_ROW = -1;
+    private static final int BORDER = 1;
     private static final int DEFAULT_PANE_WIDTH = 80;
     private static final int DEFAULT_PANE_HEIGHT = 24;
 
@@ -192,6 +197,7 @@ public final class Shell extends ToolkitApp {
     private final ReviewKeys reviewKeys;
     private final Path root;
     private final DockTabs dock = new DockTabs();
+    private final HitMap hits = new HitMap();
     private Map<SessionId, PaneSize> paneSizes = Map.of();
     private final AtomicBoolean repaintPending = new AtomicBoolean();
     private PullRequestsView pullRequests;
@@ -203,6 +209,7 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<Set<String>> pendingMergedHeads = new AtomicReference<>();
     private final Executor background;
     private final ReservedChords chords;
+    private final boolean mouseCapture;
     private final ChordKeys chordKeys;
     private Optional<ReviewPane> review = Optional.empty();
     private Optional<VerbPicker> picker = Optional.empty();
@@ -227,6 +234,8 @@ public final class Shell extends ToolkitApp {
     private boolean zoomed;
     private Optional<WarningView> warning = Optional.empty();
     private boolean quitRequested;
+    /** Whether the press that focused the dock's pane is still held, so that its drags and release are not the session's. */
+    private boolean focusingClick;
 
     public Shell(
             BoardView board,
@@ -243,7 +252,8 @@ public final class Shell extends ToolkitApp {
             DocsQuery docsQuery,
             ReviewQuery reviews,
             PendingReviewCommand writing,
-            ReservedChords chords) {
+            ReservedChords chords,
+            boolean mouseCapture) {
         this(
                 board,
                 docs,
@@ -260,6 +270,7 @@ public final class Shell extends ToolkitApp {
                 reviews,
                 writing,
                 chords,
+                mouseCapture,
                 Executors.newVirtualThreadPerTaskExecutor());
     }
 
@@ -280,8 +291,10 @@ public final class Shell extends ToolkitApp {
             ReviewQuery reviews,
             PendingReviewCommand writing,
             ReservedChords chords,
+            boolean mouseCapture,
             Executor background) {
         this.background = background;
+        this.mouseCapture = mouseCapture;
         this.chords = chords;
         this.chordKeys = new ChordKeys(chords);
         this.board = new BoardRows(board);
@@ -540,7 +553,8 @@ public final class Shell extends ToolkitApp {
     }
 
     /**
-     * Bracketed paste and mouse capture are on, so a paste arrives whole and the wheel and clicks reach a session; Tab and
+     * Bracketed paste is on, so a paste arrives whole, and so is mouse capture unless the configuration turned it off, so the wheel and
+     * clicks reach the panels and a session; Tab and
      * Shift+Tab are unbound from focus, so they reach it too. Quit is unbound, since the shell decides when {@code q} and Ctrl+C
      * may quit.
      */
@@ -548,7 +562,7 @@ public final class Shell extends ToolkitApp {
         return TuiConfig.defaults()
                 .toBuilder()
                 .bracketedPaste(true)
-                .mouseCapture(true)
+                .mouseCapture(mouseCapture)
                 .bindings(BindingSets.defaults()
                         .toBuilder()
                         .unbind(Actions.FOCUS_NEXT)
@@ -646,9 +660,14 @@ public final class Shell extends ToolkitApp {
 
     private Optional<Boolean> pressInStatusColumns(KeyEvent key) {
         if (key.isKey(KeyCode.ENTER)) {
-            return Optional.of(selectedTicket().isPresent() && leaveZoom() ? fold() : leaveZoom());
+            return Optional.of(enterInStatusColumns());
         }
         return statusColumnsMove(key).map(move -> select(() -> board.moveInStatusColumns(move)));
+    }
+
+    /** Picks the ticket under the cursor: out of the zoom, then what {@code enter} does on the Board; leaves the zoom when there is none. */
+    private boolean enterInStatusColumns() {
+        return selectedTicket().isPresent() && leaveZoom() ? fold() : leaveZoom();
     }
 
     private static Optional<BiFunction<StatusColumns, TicketId, Optional<TicketView>>> statusColumnsMove(KeyEvent key) {
@@ -795,16 +814,168 @@ public final class Shell extends ToolkitApp {
         }
     }
 
-    /** A mouse event over the pane reaches the selected tab's session at the matching cell, whatever has focus, while the pane is drawn. */
+    /**
+     * A mouse event is resolved against what the last frame drew (ADR 0051). A popup takes every event, so nothing under it is reached;
+     * otherwise a left press focuses what it lands on and selects the row, a second one on the selected row of the focused panel does
+     * what {@code enter} does, and the wheel acts on the pane under the pointer. Over the focused pane of a hosted session, every event
+     * reaches that session.
+     */
+    // deferred: a review's panels and diff are not reached, and a click lands on the row the last frame drew — see ADR 0051.
     boolean mouse(MouseEvent event) {
-        return dock.selectedTab()
-                .filter(_ -> !zoomed || focus == Focus.DOCK)
-                .flatMap(tab -> paneArea.flatMap(area -> EmulatorInputs.mouse(event, area))
-                        .map(input -> {
-                            emulating.send(new HostedInputPayload(tab.id(), input));
-                            return true;
-                        }))
+        if (popupOpen()) {
+            return mouseInPopup(event);
+        }
+        return hits.at(event.x(), event.y()).map(hit -> reached(hit, event)).orElse(false);
+    }
+
+    private boolean popupOpen() {
+        return quitPrompt.isPresent()
+                || removalPrompt.isPresent()
+                || respondPrompt.isPresent()
+                || picker.isPresent()
+                || reviewKeys.prompt().isPresent()
+                || review.flatMap(ReviewPane::box).isPresent();
+    }
+
+    private boolean mouseInPopup(MouseEvent event) {
+        picker.filter(_ -> leftPress(event))
+                .ifPresent(open -> hits.pickerRowAt(event.x(), event.y()).ifPresent(row -> clickPickerRow(open, row)));
+        return true;
+    }
+
+    private void clickPickerRow(VerbPicker open, int row) {
+        boolean second = open.cursor() == row;
+        open.moveTo(row);
+        if (second) {
+            startVerb(open);
+        }
+    }
+
+    private boolean reached(Hit hit, MouseEvent event) {
+        return switch (hit) {
+            case RowsHit rows -> leftPress(event)
+                    ? clickRow(rows.pane(), rows.rows().rowAt(event.y()))
+                    : wheelRows(rows.pane(), event);
+            case ColumnHit column -> leftPress(event)
+                    ? clickColumnRow(column, event)
+                    : wheelColumns(event);
+            case PaneHit pane -> reachedPane(pane, event);
+            case TabHit tab -> leftPress(event) && selectTab(tab.index());
+        };
+    }
+
+    private static boolean leftPress(MouseEvent event) {
+        return event.kind() == MouseEventKind.PRESS && event.button() == MouseButton.LEFT;
+    }
+
+    private static Optional<Boolean> wheelDown(MouseEvent event) {
+        return switch (event.kind()) {
+            case SCROLL_DOWN -> Optional.of(true);
+            case SCROLL_UP -> Optional.of(false);
+            default -> Optional.empty();
+        };
+    }
+
+    private boolean clickRow(Focus pane, Optional<Integer> row) {
+        boolean second = focus == pane && row.filter(index -> index == selectedIndexOf(pane)).isPresent();
+        focusOn(pane);
+        row.ifPresent(index -> selectAt(pane, index));
+        return !second || fold();
+    }
+
+    private int selectedIndexOf(Focus pane) {
+        return switch (pane) {
+            case BOARD -> board.selectedIndex();
+            case SESSIONS -> sessions.selectedIndex();
+            case DOCS -> docs.selectedIndex();
+            default -> NO_ROW;
+        };
+    }
+
+    private void selectAt(Focus pane, int index) {
+        switch (pane) {
+            case BOARD -> select(() -> board.selectAt(index));
+            case SESSIONS -> selectSession(() -> sessions.selectAt(index));
+            case DOCS -> selectDoc(() -> docs.selectAt(index));
+            default -> {}
+        }
+    }
+
+    private boolean wheelRows(Focus pane, MouseEvent event) {
+        return wheelDown(event).map(down -> moveByWheel(pane, down)).orElse(false);
+    }
+
+    private boolean moveByWheel(Focus pane, boolean down) {
+        focusOn(pane);
+        return switch (pane) {
+            case BOARD -> select(down ? board::down : board::up);
+            case SESSIONS -> selectSession(down ? sessions::down : sessions::up);
+            case DOCS -> selectDoc(down ? docs::down : docs::up);
+            default -> true;
+        };
+    }
+
+    private boolean clickColumnRow(ColumnHit hit, MouseEvent event) {
+        Optional<TicketView> clicked = hit.rows().rowAt(event.y())
+                .flatMap(row -> board.statusColumns().ticketAt(new StatusColumnsPlace(hit.column(), row)));
+        boolean second = clicked.filter(ticket -> selectedTicket().map(TicketView::id).filter(ticket.id()::equals).isPresent())
+                .isPresent();
+        clicked.ifPresent(ticket -> select(() -> board.selectTicket(ticket)));
+        return !second || enterInStatusColumns();
+    }
+
+    private boolean wheelColumns(MouseEvent event) {
+        return wheelDown(event)
+                .map(down -> select(() -> board.moveInStatusColumns(down ? StatusColumns::down : StatusColumns::up)))
                 .orElse(false);
+    }
+
+    private boolean reachedPane(PaneHit hit, MouseEvent event) {
+        if (hit.pane() == Focus.DOCK) {
+            return reachedDock(hit.area(), event);
+        }
+        Optional<Boolean> wheel = wheelDown(event);
+        if (!leftPress(event) && wheel.isEmpty()) {
+            return false;
+        }
+        focusOn(hit.pane());
+        wheel.filter(_ -> hit.pane() == Focus.MAIN).ifPresent(mainViewScroll::wheel);
+        return true;
+    }
+
+    /**
+     * A click on the pane of a session that is not focused only focuses it, and the rest of that click, never sent a press, is dropped;
+     * the wheel focuses it and goes through (ADR 0051).
+     */
+    private boolean reachedDock(Rect pane, MouseEvent event) {
+        if (focus != Focus.DOCK) {
+            boolean wheel = wheelDown(event).isPresent();
+            if (!leftPress(event) && !wheel) {
+                return false;
+            }
+            focusOn(Focus.DOCK);
+            focusingClick = !wheel;
+            return wheel ? toSession(pane, event) : true;
+        }
+        if (focusingClick && (event.kind() == MouseEventKind.RELEASE || event.kind() == MouseEventKind.DRAG)) {
+            focusingClick = event.kind() != MouseEventKind.RELEASE;
+            return true;
+        }
+        focusingClick = false;
+        return toSession(pane, event);
+    }
+
+    private boolean toSession(Rect pane, MouseEvent event) {
+        return dock.selectedTab()
+                .flatMap(tab -> EmulatorInputs.mouse(event, pane).map(input -> {
+                    emulating.send(new HostedInputPayload(tab.id(), input));
+                    return true;
+                }))
+                .orElse(false);
+    }
+
+    private boolean selectTab(int index) {
+        return dock.tabs().stream().skip(index).findFirst().map(tab -> focusTab(tab.id())).orElse(false);
     }
 
     private boolean requestQuit() {
@@ -1037,6 +1208,10 @@ public final class Shell extends ToolkitApp {
     /** The dock was drawn in {@code area}: the pty of every tab takes that size, once, and again whenever it changes. */
     private void paneDrawn(Rect area) {
         paneArea = Optional.of(area);
+        if (dock.selectedTab().isPresent()) {
+            hits.add(new PaneHit(Focus.DOCK, area));
+        }
+        tabsDrawn(DockText.titleTabs(dock.tabs()), new Rect(area.x(), area.y() - BORDER, area.width(), BORDER));
         PaneSize size = paneSize();
         List<SessionId> resized = dock.tabs().stream()
                 .map(HostedSessionView::id)
@@ -1044,6 +1219,20 @@ public final class Shell extends ToolkitApp {
                 .toList();
         resized.forEach(id -> emulating.resize(new ResizePayload(id, size)));
         sized(resized, size);
+    }
+
+    private void stripDrawn(Rect area) {
+        tabsDrawn(DockText.stripTabs(dock.tabs()), area);
+    }
+
+    /** The labels of the tabs, as far as {@code line} shows them. */
+    private void tabsDrawn(List<TabSpan> tabs, Rect line) {
+        hits.addAll(IntStream.range(0, tabs.size())
+                .mapToObj(index -> new TabHit(
+                        index,
+                        new Rect(line.x() + tabs.get(index).offset(), line.y(), tabs.get(index).width(), line.height())
+                                .intersection(line)))
+                .toList());
     }
 
     /** Remembers that the ptys of {@code ids} now have {@code size}. */
@@ -1289,6 +1478,7 @@ public final class Shell extends ToolkitApp {
         syncWatched();
         syncWorktree();
         syncPending();
+        hits.clear();
         Element screen = column(
                 new StatusLineElement(
                         StatusText.spans(sessions.markerCounts()),
@@ -1306,7 +1496,9 @@ public final class Shell extends ToolkitApp {
                                 VerbPickerText.rows(open),
                                 Optional.of(open.cursor()),
                                 VerbPickerText.hint(),
-                                () -> sessionsArea)))
+                                () -> sessionsArea,
+                                Optional.empty(),
+                                hits::pickerDrawn)))
                 .orElse(screen);
         Element withRespond = respondPrompt
                 .<Element>map(ticket -> stack(
@@ -1332,15 +1524,34 @@ public final class Shell extends ToolkitApp {
         }
         return switch (focus) {
             case BOARD ->
-                column(StatusColumnsPanels.of(board.statusColumns(), selectedTicket().map(TicketView::id), this::statusColumnsLine), dockStrip())
+                column(StatusColumnsPanels.of(
+                        board.statusColumns(),
+                        selectedTicket().map(TicketView::id),
+                        this::statusColumnsLine,
+                        (rows, column) -> hits.add(new ColumnHit(column, rows))), dockStrip())
                         .fill();
             case MAIN -> column(mainView(), dockStrip()).fill();
             default -> dock();
         };
     }
 
+    /** A pane that takes focus from a click anywhere in it; what is drawn inside it adds the hits that are finer. */
+    private Element paneProbe(Focus pane, Element body) {
+        return new PaneProbe(body, area -> hits.add(new PaneHit(pane, area)));
+    }
+
+    private void sessionsDrawn(Rect area) {
+        sessionsArea = Optional.of(area);
+        hits.add(new PaneHit(Focus.SESSIONS, area));
+    }
+
+    private void mainViewDrawn(Rect area) {
+        mainViewArea = Optional.of(area);
+        hits.add(new PaneHit(Focus.MAIN, area));
+    }
+
     private Element dockStrip() {
-        return new DockStripElement(DockText.strip(dock.tabs(), dock.selectedIndex()));
+        return new DockStripElement(DockText.strip(dock.tabs(), dock.selectedIndex()), this::stripDrawn);
     }
 
     private RowLine statusColumnsLine(TicketView ticket) {
@@ -1356,7 +1567,7 @@ public final class Shell extends ToolkitApp {
     private Element boardPanel() {
         List<RowLine> lines = board.visible().stream().map(this::boardLine).toList();
         return sized(
-                framed(BOARD_TITLE, Focus.BOARD, new RowsElement(lines, board.selectedIndex(), focus == Focus.BOARD)),
+                framed(BOARD_TITLE, Focus.BOARD, paneProbe(Focus.BOARD, new RowsElement(lines, board.selectedIndex(), focus == Focus.BOARD, rows -> hits.add(new RowsHit(Focus.BOARD, rows))))),
                 Focus.BOARD);
     }
 
@@ -1371,9 +1582,13 @@ public final class Shell extends ToolkitApp {
     private Element sessionsPanel() {
         Element body = sessions.isEmpty()
                 ? text(NO_LIVE_SESSION).dim()
-                : new SessionRowsElement(sessions.visible(), sessions.selectedIndex(), focus == Focus.SESSIONS);
+                : new SessionRowsElement(
+                        sessions.visible(),
+                        sessions.selectedIndex(),
+                        focus == Focus.SESSIONS,
+                        rows -> hits.add(new RowsHit(Focus.SESSIONS, rows)));
         return sized(
-                framed(SESSIONS_TITLE, Focus.SESSIONS, new PaneProbe(body, area -> sessionsArea = Optional.of(area))),
+                framed(SESSIONS_TITLE, Focus.SESSIONS, new PaneProbe(body, this::sessionsDrawn)),
                 Focus.SESSIONS);
     }
 
@@ -1383,8 +1598,8 @@ public final class Shell extends ToolkitApp {
                 .<Element>map(reason -> column(text(DOCS_UNAVAILABLE).dim(), text(reason.value()).dim()))
                 .orElseGet(() -> docs.isEmpty()
                         ? text(NO_DOCS).dim()
-                        : new RowsElement(lines, docs.selectedIndex(), focus == Focus.DOCS));
-        return sized(framed(DOCS_TITLE, Focus.DOCS, body), Focus.DOCS);
+                        : new RowsElement(lines, docs.selectedIndex(), focus == Focus.DOCS, rows -> hits.add(new RowsHit(Focus.DOCS, rows))));
+        return sized(framed(DOCS_TITLE, Focus.DOCS, paneProbe(Focus.DOCS, body)), Focus.DOCS);
     }
 
     private Element sized(Panel panel, Focus owner) {
@@ -1393,7 +1608,7 @@ public final class Shell extends ToolkitApp {
 
     private Element mainView() {
         return review.map(pane -> ReviewPanels.diff(pane, focus, area -> mainViewArea = Optional.of(area)))
-                .orElseGet(() -> framed(MAIN_VIEW_TITLE, Focus.MAIN, new PaneProbe(detail(), area -> mainViewArea = Optional.of(area))).fill());
+                .orElseGet(() -> framed(MAIN_VIEW_TITLE, Focus.MAIN, new PaneProbe(detail(), this::mainViewDrawn)).fill());
     }
 
     private Element dock() {

@@ -65,6 +65,11 @@ final class DocsRows {
         return selected;
     }
 
+    /** Puts the selection on the row at {@code index} of the visible ones, when there is one. */
+    void selectAt(int index) {
+        visible().stream().skip(index).findFirst().map(DocsRow::key).ifPresent(key -> selected = Optional.of(key));
+    }
+
     void down() {
         move(DOWN);
     }

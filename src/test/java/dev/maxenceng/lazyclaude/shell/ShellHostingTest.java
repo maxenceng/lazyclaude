@@ -20,6 +20,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellHosting;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellInDock;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellWithoutMouse;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.startedPayload;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -368,10 +369,37 @@ class ShellHostingTest {
     }
 
     @Test
-    void shouldHandAClickOverThePaneToClaudeEvenWhileThePanelsHaveFocus() {
+    void shouldOnlyFocusTheDockWhenAClickLandsOnThePaneWhileThePanelsHaveFocus() {
         Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         Position origin = Screen.of(shell).dockContentOrigin();
 
+        shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
+
+        assertThat(shell.focus()).isEqualTo(Focus.DOCK);
+        verify(emulating, never()).send(any());
+    }
+
+    @Test
+    void shouldHandAWheelNotchOverTheUnfocusedPaneToClaudeAndFocusItOnTheSameNotch() {
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
+        Position origin = Screen.of(shell).dockContentOrigin();
+
+        shell.mouse(MouseEvent.scrollUp(origin.x() + 3, origin.y() + 2));
+
+        assertThat(shell.focus()).isEqualTo(Focus.DOCK);
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), wheelUpAt(3, 2)));
+    }
+
+    @Test
+    void shouldDropTheReleaseOfAClickThatOnlyFocusedThePaneAndHandTheNextClickThrough() {
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
+        Position origin = Screen.of(shell).dockContentOrigin();
+        shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
+
+        assertThat(shell.mouse(MouseEvent.release(MouseButton.LEFT, origin.x() + 4, origin.y() + 1)))
+                .as("claude never saw the press, so a lone release is dropped, not sent")
+                .isTrue();
+        verify(emulating, never()).send(any());
         shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
 
         verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), leftPressAt(4, 1)));
@@ -443,6 +471,11 @@ class ShellHostingTest {
         Screen.of(shell);
 
         verify(emulating, never()).resize(any());
+    }
+
+    @Test
+    void shouldBuildAConfigWithMouseCaptureOffWhenTheConfigurationTurnsTheMouseOff() {
+        assertThat(shellWithoutMouse().config().mouseCapture()).isFalse();
     }
 
     @Test

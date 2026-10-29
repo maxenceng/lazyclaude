@@ -8,6 +8,7 @@ final class MainViewScroll {
 
     private static final int ONE_ROW = 1;
     private static final int HALF = 2;
+    private static final int WHEEL_ROWS = 3;
 
     private int offset;
     private int contentHeight;
@@ -30,6 +31,11 @@ final class MainViewScroll {
 
     void rowUp() {
         move(-ONE_ROW);
+    }
+
+    /** One notch of the wheel, down or up. */
+    void wheel(boolean down) {
+        move(down ? WHEEL_ROWS : -WHEEL_ROWS);
     }
 
     void halfPageDown() {

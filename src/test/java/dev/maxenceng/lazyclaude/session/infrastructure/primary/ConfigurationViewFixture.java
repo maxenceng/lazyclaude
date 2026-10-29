@@ -12,6 +12,15 @@ public final class ConfigurationViewFixture {
         return ConfigurationView.builder()
                 .reservedChords(ReservedChords.defaults())
                 .desktopNotifications(true)
+                .mouse(true)
+                .build();
+    }
+
+    public static ConfigurationView mouselessConfigurationView() {
+        return ConfigurationView.builder()
+                .reservedChords(ReservedChords.defaults())
+                .desktopNotifications(true)
+                .mouse(false)
                 .build();
     }
 
@@ -19,6 +28,7 @@ public final class ConfigurationViewFixture {
         return ConfigurationView.builder()
                 .reservedChords(rebindingFocusLeft().reservedChords())
                 .desktopNotifications(true)
+                .mouse(true)
                 .build();
     }
 }

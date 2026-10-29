@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import dev.tamboui.layout.Constraint;
@@ -16,9 +17,12 @@ final class DockStripElement implements Element {
     private static final int HEIGHT = 1;
 
     private final List<StatusSpan> spans;
+    private final Consumer<Rect> drawn;
 
-    DockStripElement(List<StatusSpan> spans) {
+    /** {@code drawn} is told the area the strip was drawn in, for the mouse to find its tabs in. */
+    DockStripElement(List<StatusSpan> spans, Consumer<Rect> drawn) {
         this.spans = spans;
+        this.drawn = drawn;
     }
 
     @Override
@@ -26,6 +30,7 @@ final class DockStripElement implements Element {
         if (Areas.hasNoRoom(area)) {
             return;
         }
+        drawn.accept(area);
         IntStream.range(0, spans.size()).forEach(index -> {
             int offset = spans.subList(0, index).stream().mapToInt(StatusSpan::width).sum();
             if (offset < area.width()) {
