@@ -61,6 +61,15 @@ record StatusColumns(BoardView board) {
         return moved(ticketId, at -> new StatusColumnsPlace(at.column(), Math.max(0, at.row() + PREVIOUS)));
     }
 
+    /** A wheel notch over {@code column}: a ticket along it where the cursor stands in it, else into it at the cursor's row; an empty column keeps the cursor. */
+    Optional<TicketView> wheeled(TicketId ticketId, int column, boolean down) {
+        Optional<StatusColumnsPlace> at = locate(ticketId);
+        if (at.filter(place -> place.column() == column).isPresent()) {
+            return down ? down(ticketId) : up(ticketId);
+        }
+        return ticketAt(new StatusColumnsPlace(column, at.map(StatusColumnsPlace::row).orElse(0))).or(() -> ticket(ticketId));
+    }
+
     /** The next column that holds a ticket, at the same row or the last one it has. */
     Optional<TicketView> right(TicketId ticketId) {
         return sideways(ticketId, NEXT);

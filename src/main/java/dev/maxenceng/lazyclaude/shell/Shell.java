@@ -605,12 +605,35 @@ public final class Shell extends ToolkitApp {
     }
 
     private Optional<Boolean> answerPrompt(KeyEvent key) {
-        return quitPrompt
-                .map(_ -> answerQuitPrompt(key))
-                .or(() -> removalPrompt.map(asked -> answerRemovalPrompt(asked, key)))
-                .or(() -> reviewKeys.answerSubmitPrompt(key))
-                .or(() -> respondPrompt.map(asked -> answerRespondPrompt(asked, key)))
-                .or(() -> picker.map(open -> pressInPicker(open, key)));
+        return modal().flatMap(open -> answerModal(open, key));
+    }
+
+    /** The modal's answer to {@code key}; the comment box declines {@code ctrl+c}, which goes on to quit. */
+    private Optional<Boolean> answerModal(Modal open, KeyEvent key) {
+        return switch (open) {
+            case QUIT_PROMPT -> Optional.of(answerQuitPrompt(key));
+            case REMOVAL_PROMPT -> removalPrompt.map(asked -> answerRemovalPrompt(asked, key));
+            case SUBMIT_PROMPT -> reviewKeys.answerSubmitPrompt(key);
+            case RESPOND_PROMPT -> respondPrompt.map(asked -> answerRespondPrompt(asked, key));
+            case VERB_PICKER -> picker.map(asked -> pressInPicker(asked, key));
+            case COMMENT_BOX -> review.map(pane -> reviewKeys.press(pane, key)).filter(taken -> taken);
+        };
+    }
+
+    /** The modal open, if any; the first listed wins when more than one is. */
+    private Optional<Modal> modal() {
+        return Stream.of(Modal.values()).filter(this::isOpen).findFirst();
+    }
+
+    private boolean isOpen(Modal modal) {
+        return switch (modal) {
+            case QUIT_PROMPT -> quitPrompt.isPresent();
+            case REMOVAL_PROMPT -> removalPrompt.isPresent();
+            case SUBMIT_PROMPT -> reviewKeys.prompt().isPresent();
+            case RESPOND_PROMPT -> respondPrompt.isPresent();
+            case VERB_PICKER -> picker.isPresent();
+            case COMMENT_BOX -> review.flatMap(ReviewPane::box).isPresent();
+        };
     }
 
     private boolean pressWithoutPrompt(KeyEvent key) {
@@ -822,24 +845,14 @@ public final class Shell extends ToolkitApp {
      */
     // deferred: a review's panels and diff are not reached, and a click lands on the row the last frame drew — see ADR 0051.
     boolean mouse(MouseEvent event) {
-        if (popupOpen()) {
-            return mouseInPopup(event);
-        }
-        return hits.at(event.x(), event.y()).map(hit -> reached(hit, event)).orElse(false);
+        return modal()
+                .map(open -> mouseInModal(open, event))
+                .orElseGet(() -> hits.at(event.x(), event.y()).map(hit -> reached(hit, event)).orElse(false));
     }
 
-    private boolean popupOpen() {
-        return quitPrompt.isPresent()
-                || removalPrompt.isPresent()
-                || respondPrompt.isPresent()
-                || picker.isPresent()
-                || reviewKeys.prompt().isPresent()
-                || review.flatMap(ReviewPane::box).isPresent();
-    }
-
-    private boolean mouseInPopup(MouseEvent event) {
-        picker.filter(_ -> leftPress(event))
-                .ifPresent(open -> hits.pickerRowAt(event.x(), event.y()).ifPresent(row -> clickPickerRow(open, row)));
+    private boolean mouseInModal(Modal open, MouseEvent event) {
+        picker.filter(_ -> open == Modal.VERB_PICKER && leftPress(event))
+                .ifPresent(asked -> hits.pickerRowAt(event.x(), event.y()).ifPresent(row -> clickPickerRow(asked, row)));
         return true;
     }
 
@@ -858,7 +871,7 @@ public final class Shell extends ToolkitApp {
                     : wheelRows(rows.pane(), event);
             case ColumnHit column -> leftPress(event)
                     ? clickColumnRow(column, event)
-                    : wheelColumns(event);
+                    : wheelColumns(column, event);
             case PaneHit pane -> reachedPane(pane, event);
             case TabHit tab -> leftPress(event) && selectTab(tab.index());
         };
@@ -924,9 +937,9 @@ public final class Shell extends ToolkitApp {
         return !second || enterInStatusColumns();
     }
 
-    private boolean wheelColumns(MouseEvent event) {
+    private boolean wheelColumns(ColumnHit hit, MouseEvent event) {
         return wheelDown(event)
-                .map(down -> select(() -> board.moveInStatusColumns(down ? StatusColumns::down : StatusColumns::up)))
+                .map(down -> select(() -> board.moveInStatusColumns((columns, ticket) -> columns.wheeled(ticket, hit.column(), down))))
                 .orElse(false);
     }
 
@@ -1483,38 +1496,44 @@ public final class Shell extends ToolkitApp {
                 new StatusLineElement(
                         StatusText.spans(sessions.markerCounts()),
                         warning,
-                        quitPrompt
-                                .map(SessionText::quitPrompt)
-                                .or(() -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree())))
-                                .or(reviewKeys::prompt)),
+                        modal().flatMap(this::statusLinePrompt)),
                 panes(),
                 new KeyBarElement(keyBar()));
-        Element withPicker = picker.<Element>map(open -> stack(
-                        screen,
-                        new PopupElement(
-                                VerbPickerText.title(open),
-                                VerbPickerText.rows(open),
-                                Optional.of(open.cursor()),
-                                VerbPickerText.hint(),
-                                () -> sessionsArea,
-                                Optional.empty(),
-                                hits::pickerDrawn)))
-                .orElse(screen);
-        Element withRespond = respondPrompt
-                .<Element>map(ticket -> stack(
-                        withPicker,
-                        new PopupElement(
-                                RESPOND_TITLE,
-                                List.of(RESPOND_PROMPT.formatted(ticket.id().value())),
-                                Optional.empty(),
-                                RESPOND_HINT,
-                                () -> mainViewArea)))
-                .orElse(withPicker);
-        Element withBox = review.flatMap(ReviewPane::box)
-                .filter(open -> open.inlineAt().isEmpty())
-                .<Element>map(open -> stack(withRespond, ReviewPanels.boxPopup(open, () -> mainViewArea)))
-                .orElse(withRespond);
-        return withBox;
+        return modal().map(open -> withModal(screen, open)).orElse(screen);
+    }
+
+    private Optional<String> statusLinePrompt(Modal open) {
+        return switch (open) {
+            case QUIT_PROMPT -> quitPrompt.map(SessionText::quitPrompt);
+            case REMOVAL_PROMPT -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree()));
+            case SUBMIT_PROMPT -> reviewKeys.prompt();
+            case RESPOND_PROMPT, VERB_PICKER, COMMENT_BOX -> Optional.empty();
+        };
+    }
+
+    /** The screen with the modal's popup over it; a prompt is asked on the status line and a box drawn inline stays in the diff. */
+    private Element withModal(Element screen, Modal open) {
+        Optional<Element> popup = switch (open) {
+            case QUIT_PROMPT, REMOVAL_PROMPT, SUBMIT_PROMPT -> Optional.empty();
+            case RESPOND_PROMPT -> respondPrompt.<Element>map(ticket -> new PopupElement(
+                    RESPOND_TITLE,
+                    List.of(RESPOND_PROMPT.formatted(ticket.id().value())),
+                    Optional.empty(),
+                    RESPOND_HINT,
+                    () -> mainViewArea));
+            case VERB_PICKER -> picker.<Element>map(asked -> new PopupElement(
+                    VerbPickerText.title(asked),
+                    VerbPickerText.rows(asked),
+                    Optional.of(asked.cursor()),
+                    VerbPickerText.hint(),
+                    () -> sessionsArea,
+                    Optional.empty(),
+                    hits::pickerDrawn));
+            case COMMENT_BOX -> review.flatMap(ReviewPane::box)
+                    .filter(box -> box.inlineAt().isEmpty())
+                    .map(box -> ReviewPanels.boxPopup(box, () -> mainViewArea));
+        };
+        return popup.<Element>map(drawn -> stack(screen, drawn)).orElse(screen);
     }
 
     /** The panels, or the focused pane zoomed: the Board as its status columns, the main view, or the dock. */

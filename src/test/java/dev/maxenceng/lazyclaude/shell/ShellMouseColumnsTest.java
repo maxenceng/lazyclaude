@@ -108,6 +108,29 @@ class ShellMouseColumnsTest {
     }
 
     @Test
+    void shouldMoveTheCursorIntoTheColumnUnderThePointerOnTheFirstWheelNotch() {
+        Shell shell = shellZoomedOnColumns(
+                ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.TODO), ticketViewNumbered(3, Status.TODO));
+        Position other = Screen.of(shell).positionOf("PROJ-3");
+
+        shell.mouse(MouseEvent.scrollDown(other.x(), other.y()));
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-2");
+        shell.mouse(MouseEvent.scrollDown(other.x(), other.y()));
+
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-3");
+    }
+
+    @Test
+    void shouldKeepTheCursorOnAWheelOverAnEmptyColumn() {
+        Shell shell = shellZoomedOnColumns(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT));
+        Position empty = Screen.of(shell).positionOf("todo (0)");
+
+        shell.mouse(MouseEvent.scrollDown(empty.x(), empty.y() + 1));
+
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1 ");
+    }
+
+    @Test
     void shouldIgnoreARightClickOnATicket() {
         Shell shell = shellZoomedOnColumns(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.TODO));
         Position row = Screen.of(shell).positionOf("PROJ-2");
