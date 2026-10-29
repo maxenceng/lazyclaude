@@ -53,6 +53,7 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
 class ArchitectureTest {
 
     private static final String ROOT = "dev.maxenceng.lazyclaude";
+    private static final String KEY_EVENT = "dev.tamboui.tui.event.KeyEvent";
 
     // The domain is plain Java: it must be testable without a terminal, a process or a file.
     @ArchTest
@@ -160,6 +161,15 @@ class ArchitectureTest {
             .callMethod(CompletableFuture.class, "supplyAsync", Supplier.class)
             .orShould()
             .callMethod(CompletableFuture.class, "runAsync", Runnable.class)
+            .allowEmptyShould(true);
+
+    // A key is only ever read from the terminal; a click that acts as a key calls the operation that key calls (ADR 0051).
+    @ArchTest
+    static final ArchRule a_key_is_never_replayed = noClasses()
+            .should()
+            .callMethodWhere(target(owner(name(KEY_EVENT))).and(target(nameMatching("of(Key|Char)"))))
+            .orShould()
+            .callConstructorWhere(target(owner(name(KEY_EVENT))))
             .allowEmptyShould(true);
 
     // An Optional is unwrapped where it is checked, by map, or, orElse or a named exception; get() and orElseThrow() with no argument do not say what was absent.

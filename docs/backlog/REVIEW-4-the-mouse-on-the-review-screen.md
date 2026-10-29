@@ -1,6 +1,6 @@
 ---
 id: REVIEW-4
-status: in-review
+status: done
 context: review
 type: feature
 tracker_id: 102
@@ -39,3 +39,9 @@ none
 ## Notes
 
 Needs BOARD-7's hit map and global handler first.
+
+`ReviewPane.WHEEL_LINES` and `MainViewScroll.WHEEL_ROWS` are both 3 but count different things — diff lines against
+screen rows — so they were left as two constants rather than merged.
+
+A drag's release resolves against the last drawn frame, not the press's: the diff can scroll between the two, and the
+press line is kept apart from the cursor because a wheel notch mid-drag moves the cursor.
