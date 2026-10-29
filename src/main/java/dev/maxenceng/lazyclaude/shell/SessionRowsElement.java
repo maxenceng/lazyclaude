@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.published.SessionState;
@@ -28,11 +29,14 @@ final class SessionRowsElement implements Element {
     private final List<SessionRow> sessions;
     private final int selected;
     private final boolean highlighted;
+    private final Consumer<RowsDrawn> drawn;
 
-    SessionRowsElement(List<SessionRow> sessions, int selected, boolean highlighted) {
+    /** {@code drawn} is told which rows were drawn where, for the mouse to resolve a click against. */
+    SessionRowsElement(List<SessionRow> sessions, int selected, boolean highlighted, Consumer<RowsDrawn> drawn) {
         this.sessions = sessions;
         this.selected = selected;
         this.highlighted = highlighted;
+        this.drawn = drawn;
     }
 
     @Override
@@ -43,7 +47,9 @@ final class SessionRowsElement implements Element {
         }
         int first = Math.clamp(selected - height + 1, 0, Math.max(0, sessions.size() - height));
         int verbWidth = verbWidth(sessions);
-        IntStream.range(0, Math.min(height, sessions.size() - first))
+        int count = Math.min(height, sessions.size() - first);
+        drawn.accept(new RowsDrawn(area, first, count));
+        IntStream.range(0, count)
                 .forEach(row -> draw(frame, area, row, sessions.get(first + row), first + row == selected && highlighted, verbWidth));
     }
 

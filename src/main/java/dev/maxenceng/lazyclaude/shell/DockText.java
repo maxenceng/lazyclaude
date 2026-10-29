@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.ToIntFunction;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -44,6 +45,39 @@ final class DockText {
                         .boxed()
                         .flatMap(index -> stripTab(tabs.get(index), index == selected));
         return Stream.concat(Stream.of(new StatusSpan(STRIP_LEAD, Style.EMPTY.dim())), labels).toList();
+    }
+
+    /** Where each tab's label stands in {@link #title}, counted from the cell the title starts at. */
+    static List<TabSpan> titleTabs(List<HostedSessionView> tabs) {
+        return IntStream.range(0, tabs.size())
+                .mapToObj(index -> new TabSpan(
+                        DOCK.length() + widthBefore(tabs, index, DockText::titleWidth) + separatorsThrough(index),
+                        titleWidth(tabs.get(index))))
+                .toList();
+    }
+
+    /** Where each tab stands in {@link #strip}, brackets included, counted from the cell the strip starts at. */
+    static List<TabSpan> stripTabs(List<HostedSessionView> tabs) {
+        return IntStream.range(0, tabs.size())
+                .mapToObj(index -> new TabSpan(
+                        STRIP_LEAD.length() + widthBefore(tabs, index, DockText::stripWidth), stripWidth(tabs.get(index))))
+                .toList();
+    }
+
+    private static int widthBefore(List<HostedSessionView> tabs, int index, ToIntFunction<HostedSessionView> width) {
+        return tabs.subList(0, index).stream().mapToInt(width).sum();
+    }
+
+    private static int separatorsThrough(int index) {
+        return TABS_LEAD.length() + index * TAB_SEPARATOR.length();
+    }
+
+    private static int titleWidth(HostedSessionView tab) {
+        return tab(tab, false).stream().mapToInt(Span::width).sum();
+    }
+
+    private static int stripWidth(HostedSessionView tab) {
+        return stripTab(tab, false).mapToInt(StatusSpan::width).sum();
     }
 
     private static Stream<StatusSpan> stripTab(HostedSessionView tab, boolean selected) {

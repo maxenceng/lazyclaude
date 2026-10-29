@@ -146,7 +146,7 @@ class ShellTicketStartTest {
                 mock(dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery.class),
                 mock(dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery.class),
                 mock(dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery.class),
-                mock(PendingReviewCommand.class), ReservedChords.defaults(),
+                mock(PendingReviewCommand.class), ReservedChords.defaults(), true,
                 queued::add);
         shell.press(key('j'));
         shell.press(key('j'));

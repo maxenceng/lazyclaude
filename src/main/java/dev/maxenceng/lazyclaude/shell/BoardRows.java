@@ -86,6 +86,11 @@ final class BoardRows {
         selectedTicketId().flatMap(id -> move.apply(columns, id)).or(columns::first).ifPresent(this::moveTo);
     }
 
+    /** Puts the selection on {@code ticket}, unfolding its group. */
+    void selectTicket(TicketView ticket) {
+        moveTo(ticket);
+    }
+
     /** Puts the selection on a ticket the status columns can stand on, if it is not on one. */
     void enterStatusColumns() {
         StatusColumns columns = statusColumns();
@@ -126,6 +131,11 @@ final class BoardRows {
 
     Optional<HeaderRow> selectedHeader() {
         return selected() instanceof HeaderRow header ? Optional.of(header) : Optional.empty();
+    }
+
+    /** Puts the selection on the row at {@code index} of the visible ones, when there is one. */
+    void selectAt(int index) {
+        visible().stream().skip(index).findFirst().map(Row::key).ifPresent(key -> selected = key);
     }
 
     void down() {

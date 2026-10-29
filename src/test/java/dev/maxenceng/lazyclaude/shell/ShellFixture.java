@@ -59,15 +59,39 @@ import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
+import dev.tamboui.layout.Position;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 import dev.tamboui.tui.event.KeyModifiers;
+import dev.tamboui.tui.event.MouseButton;
+import dev.tamboui.tui.event.MouseEvent;
 
 final class ShellFixture {
 
     private ShellFixture() {}
 
+    static Shell shellWithTwoTabs(HostedSessionCommand hosting) {
+        return shellHosting(
+                sessionsViewWithTabs(hostedTab(1, "first-one", new Busy()), hostedTab(2, "second-one", new YourTurn())),
+                hosting,
+                blankScreens());
+    }
+
+    static Shell shellWithThePickerOpenOnAnInReviewTicket(HostedSessionCommand hosting) {
+        Shell shell = shellOnTicket(ticketViewIn(Status.IN_REVIEW), hosting);
+        shell.press(key('n'));
+        return shell;
+    }
+
+    static Shell shellWithoutMouse() {
+        return newShell(boardViewOf(ticketView()), emptyDocsView(), emptySessionsView(), false);
+    }
+
     static Shell newShell(BoardView board, DocsView docs, SessionsView sessions) {
+        return newShell(board, docs, sessions, true);
+    }
+
+    private static Shell newShell(BoardView board, DocsView docs, SessionsView sessions, boolean mouse) {
         return new Shell(
                 board,
                 docs,
@@ -79,7 +103,7 @@ final class ShellFixture {
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
-                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), Runnable::run);
+                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), mouse, Runnable::run);
     }
 
     static Shell shellReading(BoardQuery boards, TicketView... tickets) {
@@ -94,7 +118,7 @@ final class ShellFixture {
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
-                boards, mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), Runnable::run);
+                boards, mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), true, Runnable::run);
     }
 
     static Shell shellRefreshing(
@@ -113,7 +137,7 @@ final class ShellFixture {
                 boards,
                 docs,
                 reviews,
-                mock(PendingReviewCommand.class), ReservedChords.defaults(),
+                mock(PendingReviewCommand.class), ReservedChords.defaults(), true,
                 background);
     }
 
@@ -141,7 +165,7 @@ final class ShellFixture {
                 boards,
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
-                mock(PendingReviewCommand.class), ReservedChords.defaults(),
+                mock(PendingReviewCommand.class), ReservedChords.defaults(), true,
                 Runnable::run);
     }
 
@@ -161,7 +185,7 @@ final class ShellFixture {
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
-                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), Runnable::run);
+                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), true, Runnable::run);
         shell.press(key('j'));
         return shell;
     }
@@ -178,7 +202,7 @@ final class ShellFixture {
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
-                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), Runnable::run);
+                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), true, Runnable::run);
         shell.press(key('j'));
         return shell;
     }
@@ -219,7 +243,7 @@ final class ShellFixture {
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
-                mock(PendingReviewCommand.class), ReservedChords.defaults(),
+                mock(PendingReviewCommand.class), ReservedChords.defaults(), true,
                 background);
     }
 
@@ -249,7 +273,7 @@ final class ShellFixture {
                 boards,
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
-                mock(PendingReviewCommand.class), ReservedChords.defaults(),
+                mock(PendingReviewCommand.class), ReservedChords.defaults(), true,
                 background);
         pressed(shell, key('j'), Status.DONE.ordinal());
         shell.press(enter());
@@ -310,7 +334,7 @@ final class ShellFixture {
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 screens,
-                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), Runnable::run);
+                mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), ReservedChords.defaults(), true, Runnable::run);
         pressed(shell, key('j'), ticket.status().ordinal());
         if (ticket.status().finished()) {
             shell.press(enter());
@@ -444,7 +468,7 @@ final class ShellFixture {
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
                 mock(PendingReviewCommand.class),
-                chords,
+                chords, true,
                 background);
     }
 
@@ -523,7 +547,7 @@ final class ShellFixture {
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 reviews,
-                mock(PendingReviewCommand.class), ReservedChords.defaults(),
+                mock(PendingReviewCommand.class), ReservedChords.defaults(), true,
                 Runnable::run);
         Screen.of(shell);
         shell.press(alt('l'));
@@ -618,6 +642,10 @@ final class ShellFixture {
         Screen.of(shell);
         shell.press(key('l'));
         return shell;
+    }
+
+    static MouseEvent leftPress(Position at) {
+        return MouseEvent.press(MouseButton.LEFT, at.x(), at.y());
     }
 
     static KeyEvent enter() {

@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -27,6 +28,8 @@ final class PopupElement implements Element {
     private static final String GAP = " ";
     private static final int PADDING = 2;
     private static final int CARET_LEFT = 2;
+    private static final int SIDE_WIDTH = 1;
+    private static final int TITLE_LINES = 1;
 
     private final String title;
     private final List<String> rows;
@@ -34,6 +37,7 @@ final class PopupElement implements Element {
     private final String hint;
     private final Supplier<Optional<Rect>> anchor;
     private final Optional<BoxCaret> caret;
+    private final Consumer<RowsDrawn> rowsDrawn;
 
     /** {@code bold} is the row the cursor is on, if there is a cursor. */
     PopupElement(String title, List<String> rows, Optional<Integer> bold, String hint, Supplier<Optional<Rect>> anchor) {
@@ -48,6 +52,19 @@ final class PopupElement implements Element {
             String hint,
             Supplier<Optional<Rect>> anchor,
             Optional<BoxCaret> caret) {
+        this(title, rows, bold, hint, anchor, caret, _ -> {});
+    }
+
+    /** {@code rowsDrawn} is told where the rows were drawn, for the mouse to resolve a click against. */
+    PopupElement(
+            String title,
+            List<String> rows,
+            Optional<Integer> bold,
+            String hint,
+            Supplier<Optional<Rect>> anchor,
+            Optional<BoxCaret> caret,
+            Consumer<RowsDrawn> rowsDrawn) {
+        this.rowsDrawn = rowsDrawn;
         this.caret = caret;
         this.title = title;
         this.rows = rows;
@@ -61,6 +78,8 @@ final class PopupElement implements Element {
         Rect corner = anchor.get().orElse(area);
         int inner = width() + PADDING * GAP.length();
         Style border = Style.EMPTY.fg(Color.CYAN);
+        Rect inside = new Rect(corner.x() + SIDE_WIDTH, corner.y() + TITLE_LINES, inner, rows.size()).intersection(area);
+        rowsDrawn.accept(new RowsDrawn(inside, 0, inside.height()));
         draw(frame, area, corner, 0, ruled(TOP_LEFT, title, TOP_RIGHT, inner), border);
         IntStream.range(0, rows.size())
                 .forEach(row -> draw(frame, area, corner, row + 1, side(rows.get(row), inner),

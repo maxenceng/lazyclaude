@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import dev.tamboui.layout.Constraint;
@@ -21,11 +22,18 @@ final class RowsElement implements Element {
     private final List<RowLine> lines;
     private final int selected;
     private final boolean highlighted;
+    private final Consumer<RowsDrawn> drawn;
 
     RowsElement(List<RowLine> lines, int selected, boolean highlighted) {
+        this(lines, selected, highlighted, _ -> {});
+    }
+
+    /** {@code drawn} is told which rows were drawn where, for the mouse to resolve a click against. */
+    RowsElement(List<RowLine> lines, int selected, boolean highlighted, Consumer<RowsDrawn> drawn) {
         this.lines = lines;
         this.selected = selected;
         this.highlighted = highlighted;
+        this.drawn = drawn;
     }
 
     @Override
@@ -35,8 +43,9 @@ final class RowsElement implements Element {
             return;
         }
         int first = firstShown(selected, height, lines.size());
-        IntStream.range(0, Math.min(height, lines.size() - first))
-                .forEach(row -> renderRow(frame, area, row, first + row));
+        int count = Math.min(height, lines.size() - first);
+        drawn.accept(new RowsDrawn(area, first, count));
+        IntStream.range(0, count).forEach(row -> renderRow(frame, area, row, first + row));
     }
 
     /** The index of the first line drawn when {@code height} lines are shown of {@code size}: just far enough on to show the selected one. */

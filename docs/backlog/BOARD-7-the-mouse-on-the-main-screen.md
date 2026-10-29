@@ -1,6 +1,6 @@
 ---
 id: BOARD-7
-status: todo
+status: in-review
 context: board
 type: feature
 tracker_id: 101
@@ -11,23 +11,23 @@ created: 2026-10-27
 
 ## Acceptance criteria
 
-- [ ] A left click on a row of the Board, the status columns, Sessions or Docs focuses that panel and selects the row;
+- [x] A left click on a row of the Board, the status columns, Sessions or Docs focuses that panel and selects the row;
       the main view follows the selection as it does for `j`/`k`.
-- [ ] A second click (a press on the row already selected, in the panel that already had focus) does what `enter` does
+- [x] A second click (a press on the row already selected, in the panel that already had focus) does what `enter` does
       there: a Board header folds, the status columns pick, Sessions focuses a tab, resumes or opens the verb picker,
       a Docs folder folds.
-- [ ] A first click on the selected row of an unfocused panel only focuses it: clicking the Sessions panel whose cursor
+- [x] A first click on the selected row of an unfocused panel only focuses it: clicking the Sessions panel whose cursor
       sits on a past session does not resume it.
-- [ ] A click in the main view focuses it; a click on a dock tab's label selects that tab and focuses the dock, and a
+- [x] A click in the main view focuses it; a click on a dock tab's label selects that tab and focuses the dock, and a
       click on a tab in the dock strip does the same and ends the zoom.
-- [ ] The wheel acts on the pane under the pointer and focuses it: one row a notch in a list, three lines in the main
+- [x] The wheel acts on the pane under the pointer and focuses it: one row a notch in a list, three lines in the main
       view.
-- [ ] In the verb picker or a prompt, a click selects a row and a second click is `enter`; a click outside it does
+- [x] In the verb picker or a prompt, a click selects a row and a second click is `enter`; a click outside it does
       nothing and reaches nothing under it.
-- [ ] Right and middle clicks, the key bar, the status line, the narrow status column and a link in the ticket detail
+- [x] Right and middle clicks, the key bar, the status line, the narrow status column and a link in the ticket detail
       do nothing.
-- [ ] Every key does what it did before.
-- [ ] `config.yml`'s `mouse: false` turns mouse capture off, and it is off by default when `TERM` is `linux`; a
+- [x] Every key does what it did before.
+- [x] `config.yml`'s `mouse: false` turns mouse capture off, and it is off by default when `TERM` is `linux`; a
       `mouse` value that is not a boolean is refused with its file and line like the other settings.
 
 ## Model decision

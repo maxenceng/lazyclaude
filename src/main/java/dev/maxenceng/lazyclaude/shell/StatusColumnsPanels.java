@@ -6,6 +6,7 @@ import static dev.tamboui.toolkit.Toolkit.row;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.ObjIntConsumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -26,11 +27,18 @@ final class StatusColumnsPanels {
 
     private StatusColumnsPanels() {}
 
-    /** {@code cursor} is the id of the ticket the cursor stands on; {@code line} words a ticket as its board row does. */
-    static Element of(StatusColumns columns, Optional<TicketId> cursor, Function<TicketView, RowLine> line) {
+    /**
+     * {@code cursor} is the id of the ticket the cursor stands on; {@code line} words a ticket as its board row does; {@code drawn} is told
+     * which rows each column that shares the width drew, and which column that is.
+     */
+    static Element of(
+            StatusColumns columns,
+            Optional<TicketId> cursor,
+            Function<TicketView, RowLine> line,
+            ObjIntConsumer<RowsDrawn> drawn) {
         Optional<StatusColumnsPlace> at = cursor.flatMap(columns::locate);
         List<StatusGroupView> shared = columns.shared();
-        Stream<Element> sharing = IntStream.range(0, shared.size()).mapToObj(index -> sharing(shared.get(index), at, index, line));
+        Stream<Element> sharing = IntStream.range(0, shared.size()).mapToObj(index -> sharing(shared.get(index), at, index, line, drawn));
         Stream<Element> narrow = columns.narrow().stream().map(StatusColumnsPanels::narrow);
         Stream<Element> unreadable = Optional.of(columns.board().unreadable())
                 .filter(files -> !files.isEmpty())
@@ -40,10 +48,15 @@ final class StatusColumnsPanels {
                 .fill();
     }
 
-    private static Element sharing(StatusGroupView group, Optional<StatusColumnsPlace> at, int index, Function<TicketView, RowLine> line) {
+    private static Element sharing(
+            StatusGroupView group,
+            Optional<StatusColumnsPlace> at,
+            int index,
+            Function<TicketView, RowLine> line,
+            ObjIntConsumer<RowsDrawn> drawn) {
         Optional<Integer> row = at.filter(cursor -> cursor.column() == index).map(StatusColumnsPlace::row);
         Element body = new MoreBelowElement(
-                group.tickets().stream().map(line).toList(), row.orElse(NO_SELECTION), row.isPresent());
+                group.tickets().stream().map(line).toList(), row.orElse(NO_SELECTION), row.isPresent(), rows -> drawn.accept(rows, index));
         return Frames.framed(COLUMN_TITLE.formatted(group.status().label(), group.tickets().size()), body, row.isPresent())
                 .titleEllipsis()
                 .fill();

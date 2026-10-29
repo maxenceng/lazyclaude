@@ -33,9 +33,16 @@ clicks, menu rows and permission prompts included.
 - **The wheel acts on the pane under the pointer and focuses it.** In a list it moves the selection a row a notch, so
   the selected row stays visible; in the main view and the diff it scrolls three lines.
 - **Popups are modal.** A click outside the verb picker or a prompt does nothing, and never reaches what is under it.
+  One list says which modal is open, in the order they answer, and the keys, the mouse and the render all read it.
+  Rejected: a modal entry the render records in the hit map, which leaves the keys a second list to drift from.
 - **Clicks resolve against a per-frame hit map.** Each element records its rectangle, first visible row and tab offsets
   as it renders; the shell's global mouse handler reads the last frame's map on the render thread. Rejected: recomputing
   the layout in the handler, which writes the layout twice.
+- **Only the verb picker has rows to click.** The quit, removal, respond and submit prompts and the comment box have none, so
+  every mouse event is taken and does nothing; a click on the focused pane's `claude` that only focused it has its drags and
+  release dropped, since the session never saw the press. A wheel over the status columns moves the cursor a ticket within
+  the column under the pointer; over another column, the first notch moves it into that column at its row, and an empty
+  column keeps it where it is. Rejected: the cursor's own column wherever the pointer is, and ignoring the wheel there.
 - **`mouse: false` in `config.yml` turns mouse capture off**, and it is off by default when `TERM` is `linux`. lazyclaude
   writes no X10 decoder; the real fix is TamboUI's (#517).
 
@@ -45,6 +52,10 @@ clicks, menu rows and permission prompts included.
 - A hosted session has no hover while it is unfocused, and a click that focuses it is lost to `claude`.
 - Every pane the mouse reaches writes to the hit map, so a new pane with no entry is inert to the mouse until it adds
   one.
+- deferred: a review's Files, Comments and diff stay on their keys, the mouse reaching none of them — closes when a ticket gives
+  the review the mouse (the diff range ADR 0051 names).
+- deferred: a click lands on the row index the last frame drew, so rows that moved between that frame and the click select their
+  neighbour — closes when a mis-click on a board that re-read under the pointer is seen.
 - deferred: a terminal answering in X10 still turns clicks into keys unless `mouse: false` is set — closes when
   TamboUI decodes X10 (#517).
 - The desktop frontend takes its mouse from the browser; this ADR is the TUI's.

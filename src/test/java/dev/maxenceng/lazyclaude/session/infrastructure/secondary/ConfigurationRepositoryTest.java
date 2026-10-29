@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.defaultConfiguration;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.rebindingFocusLeft;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withoutDesktopNotifications;
+import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withoutMouse;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigYmlFixture.configYml;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigYmlFixture.configYmlInLatin1;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigYmlFixture.configYmlLinkingToNothing;
@@ -58,6 +59,46 @@ class ConfigurationRepositoryTest {
         configYml(configHome, "notifications:", "  desktop: false");
 
         assertThat(repository.configuration()).isEqualTo(withoutDesktopNotifications());
+    }
+
+    @Test
+    void shouldTurnTheMouseOff() throws IOException {
+        configYml(configHome, "mouse: false");
+
+        assertThat(repository.configuration()).isEqualTo(withoutMouse());
+    }
+
+    @Test
+    void shouldTurnTheMouseOffByDefaultOnTheLinuxConsole() {
+        assertThat(new ConfigurationRepository(home, Map.of("TERM", "linux")).configuration()).isEqualTo(withoutMouse());
+    }
+
+    @Test
+    void shouldLeaveTheMouseOnByDefaultOnAnyOtherTerminal() {
+        assertThat(new ConfigurationRepository(home, Map.of("TERM", "xterm-256color")).configuration())
+                .isEqualTo(defaultConfiguration());
+    }
+
+    @Test
+    void shouldTurnTheMouseOnOnTheLinuxConsoleWhenTheFileAsksForIt() throws IOException {
+        configYml(configHome, "mouse: true");
+
+        assertThat(new ConfigurationRepository(home, Map.of("TERM", "linux")).configuration()).isEqualTo(defaultConfiguration());
+    }
+
+    @Test
+    void shouldRefuseAMouseSettingThatIsNotABoolean() throws IOException {
+        configYml(configHome, "notifications:", "  desktop: true", "mouse: sometimes");
+
+        assertThatThrownBy(repository::configuration)
+                .hasMessage("~/.config/lazyclaude/config.yml:3: 'sometimes' is not a valid value for mouse: use true or false");
+    }
+
+    @Test
+    void shouldRefuseAMouseSettingThatIsNotAScalar() throws IOException {
+        configYml(configHome, "mouse:", "  capture: true");
+
+        assertThatThrownBy(repository::configuration).hasMessage("~/.config/lazyclaude/config.yml:1: mouse needs true or false");
     }
 
     @Test

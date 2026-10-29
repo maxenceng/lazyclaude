@@ -25,6 +25,8 @@ public final class ConfigurationRepository implements ConfigurationPort {
     private static final String FILE = "config.yml";
     private static final String HOME = "~";
     private static final String CANNOT_READ = "%s: cannot read: %s";
+    private static final String TERM = "TERM";
+    private static final String LINUX_CONSOLE = "linux";
     private static final String LINKS_TO_NOTHING = "%s: links to a file that does not exist";
 
     private final Path home;
@@ -40,15 +42,20 @@ public final class ConfigurationRepository implements ConfigurationPort {
         Path file = file();
         String shown = shown(file);
         try {
-            return new ConfigurationNodes(shown).read(Files.readString(file, StandardCharsets.UTF_8));
+            return new ConfigurationNodes(shown, mouseByDefault()).read(Files.readString(file, StandardCharsets.UTF_8));
         } catch (NoSuchFileException missing) {
             if (Files.isSymbolicLink(file)) {
                 throw new ConfigurationRefusedException(LINKS_TO_NOTHING.formatted(shown));
             }
-            return ConfigurationNodes.defaults();
+            return ConfigurationNodes.defaults(mouseByDefault());
         } catch (IOException e) {
             throw new ConfigurationRefusedException(CANNOT_READ.formatted(shown, FileFailure.causeOf(e)));
         }
+    }
+
+    /** The Linux console answers a click in a form TamboUI types as keys, so it starts with the mouse off (ADR 0051). */
+    private boolean mouseByDefault() {
+        return !LINUX_CONSOLE.equals(environment.get(TERM));
     }
 
     private Path file() {

@@ -55,6 +55,32 @@ class StatusColumnsTest {
     }
 
     @Test
+    void shouldWheelIntoAnotherColumnAtTheCursorsRowClamped() {
+        StatusColumns columns = columnsOf(
+                ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT), ticketViewNumbered(5, Status.TODO));
+
+        assertThat(columns.wheeled(ticketIdNumbered(2), 1, true).map(ticket -> ticket.id().value()))
+                .as("the first notch over todo lands in it, on its only row, without moving along it")
+                .contains("PROJ-5");
+        assertThat(columns.wheeled(ticketIdNumbered(5), 0, false).map(ticket -> ticket.id().value())).contains("PROJ-1");
+    }
+
+    @Test
+    void shouldWheelAlongTheColumnTheCursorStandsIn() {
+        StatusColumns columns = columnsOf(ticketViewNumbered(5, Status.TODO), ticketViewNumbered(6, Status.TODO));
+
+        assertThat(columns.wheeled(ticketIdNumbered(5), 1, true).map(ticket -> ticket.id().value())).contains("PROJ-6");
+        assertThat(columns.wheeled(ticketIdNumbered(6), 1, false).map(ticket -> ticket.id().value())).contains("PROJ-5");
+    }
+
+    @Test
+    void shouldKeepTheCursorWhenWheeledOverAnEmptyColumn() {
+        StatusColumns columns = columnsOf(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(8, Status.IN_PROGRESS));
+
+        assertThat(columns.wheeled(ticketIdNumbered(8), 1, true).map(ticket -> ticket.id().value())).contains("PROJ-8");
+    }
+
+    @Test
     void shouldStayPutWhenNoColumnBeyondHoldsATicket() {
         StatusColumns columns = columnsOf(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(9, Status.DONE));
 

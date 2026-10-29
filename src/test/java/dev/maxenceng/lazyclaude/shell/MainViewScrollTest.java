@@ -24,6 +24,28 @@ class MainViewScrollTest {
     }
 
     @Test
+    void shouldScrollThreeRowsPerWheelNotch() {
+        MainViewScroll scroll = scrollOverTwentyRowsInTen();
+
+        scroll.wheel(true);
+        assertThat(scroll.offset()).isEqualTo(3);
+        scroll.wheel(false);
+
+        assertThat(scroll.offset()).isZero();
+    }
+
+    @Test
+    void shouldStopTheWheelAtTheBottomAndAtTheTop() {
+        MainViewScroll scroll = scrollOver(12, 10);
+
+        scroll.wheel(false);
+        assertThat(scroll.offset()).isZero();
+        scroll.wheel(true);
+
+        assertThat(scroll.offset()).as("content height minus view height").isEqualTo(2);
+    }
+
+    @Test
     void shouldStayAtTheTopWhenScrollingUpThere() {
         MainViewScroll scroll = scrollOverTwentyRowsInTen();
 

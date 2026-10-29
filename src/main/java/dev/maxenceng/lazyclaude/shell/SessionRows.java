@@ -158,6 +158,16 @@ final class SessionRows {
         selected = Optional.of(visible().get(index).key());
     }
 
+    /** Puts the selection on the row at {@code index} of the visible ones, when there is one and the cursor may stand on it. */
+    void selectAt(int index) {
+        visible().stream()
+                .skip(index)
+                .findFirst()
+                .filter(SessionRow::selectable)
+                .map(SessionRow::key)
+                .ifPresent(key -> selected = Optional.of(key));
+    }
+
     void down() {
         move(DOWN);
     }

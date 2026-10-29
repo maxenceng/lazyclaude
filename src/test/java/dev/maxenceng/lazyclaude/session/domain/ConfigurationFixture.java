@@ -20,6 +20,7 @@ public final class ConfigurationFixture {
         return Configuration.builder()
                 .reservedChords(ReservedChords.defaults())
                 .desktopNotifications(true)
+                .mouse(true)
                 .build();
     }
 
@@ -27,6 +28,7 @@ public final class ConfigurationFixture {
         return Configuration.builder()
                 .reservedChords(ReservedChords.defaults().rebinding(Map.of(ReservedAction.FOCUS_LEFT, ctrlY())))
                 .desktopNotifications(true)
+                .mouse(true)
                 .build();
     }
 
@@ -34,6 +36,7 @@ public final class ConfigurationFixture {
         return Configuration.builder()
                 .reservedChords(ReservedChords.defaults().rebinding(Map.of(ReservedAction.ZOOM, ctrlO())))
                 .desktopNotifications(true)
+                .mouse(true)
                 .build();
     }
 
@@ -41,6 +44,15 @@ public final class ConfigurationFixture {
         return Configuration.builder()
                 .reservedChords(ReservedChords.defaults())
                 .desktopNotifications(false)
+                .mouse(true)
+                .build();
+    }
+
+    public static Configuration withoutMouse() {
+        return Configuration.builder()
+                .reservedChords(ReservedChords.defaults())
+                .desktopNotifications(true)
+                .mouse(false)
                 .build();
     }
 

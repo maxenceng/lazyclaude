@@ -64,7 +64,7 @@ final class VerbPicker {
         mergedPending = false;
     }
 
-    private void moveTo(int target) {
+    void moveTo(int target) {
         int next = Math.clamp(target, 0, choice.verbs().size() - 1);
         moved |= next != cursor;
         cursor = next;

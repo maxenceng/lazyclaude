@@ -15,4 +15,14 @@ class ConfigurationTest {
                 .as("a forgotten flag would turn notifications off, the opposite of the default")
                 .isInstanceOf(MissingMandatoryValueException.class);
     }
+
+    @Test
+    void shouldRefuseToBuildWithoutSayingWhetherTheMouseIsOn() {
+        assertThatThrownBy(() -> Configuration.builder()
+                        .reservedChords(ReservedChords.defaults())
+                        .desktopNotifications(true)
+                        .build())
+                .as("a forgotten flag would leave the mouse in whatever state the Java default is, not the terminal's")
+                .isInstanceOf(MissingMandatoryValueException.class);
+    }
 }
