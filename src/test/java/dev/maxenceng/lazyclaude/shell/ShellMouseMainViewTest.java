@@ -5,8 +5,6 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFi
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.docsView;
-import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
-import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
@@ -14,7 +12,6 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.leftPress;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.newShell;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.pressed;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOn;
-import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.shellReviewing;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -113,18 +110,6 @@ class ShellMouseMainViewTest {
         Position board = Screen.of(shell).positionInLeftColumn("draft");
 
         assertThat(shell.mouse(MouseEvent.scrollRight(board.x(), board.y()))).isFalse();
-    }
-
-    @Test
-    void shouldLeaveTheFilesCommentsAndDiffOfAReviewToTheKeys() {
-        Shell shell = shellReviewing(twoFileDiffView(), loadingThreadsView());
-        Screen review = Screen.of(shell);
-
-        assertThat(shell.mouse(leftPress(review.positionInLeftColumn("Board")))).isFalse();
-        assertThat(shell.mouse(leftPress(review.positionOf("── src/Board.java")))).isFalse();
-        assertThat(shell.mouse(MouseEvent.scrollDown(IN_THE_MAIN_VIEW.x(), IN_THE_MAIN_VIEW.y()))).isFalse();
-
-        assertThat(shell.focus()).isEqualTo(Focus.MAIN);
     }
 
     @Test

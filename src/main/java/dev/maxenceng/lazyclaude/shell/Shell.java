@@ -237,6 +237,8 @@ public final class Shell extends ToolkitApp {
     /** The drag a press forwarded to a hosted session started, until its release or the next press, whichever comes first. */
     // deferred: the rectangle is the one drawn at the press, so a layout change mid-drag clamps to the old edge — closes when a drag across a resize is seen to end off the pane
     private Optional<HostedDrag> drag = Optional.empty();
+    /** The diff line a press on a review's diff landed on, until its release or the next press, whichever comes first. */
+    private Optional<Integer> diffDrag = Optional.empty();
     /** Whether the press that focused the dock's pane is still held, so that its drags and release are not the session's. */
     private boolean focusingClick;
 
@@ -844,15 +846,18 @@ public final class Shell extends ToolkitApp {
     /**
      * A mouse event is resolved against what the last frame drew (ADR 0051). A popup takes every event, so nothing under it is reached;
      * otherwise a left press focuses what it lands on and selects the row, a second one on the selected row of the focused panel does
-     * what {@code enter} does, and the wheel acts on the pane under the pointer. Over the focused pane of a hosted session, every event
+     * what {@code enter} does, and the wheel acts on the pane under the pointer; a drag that begins on a review's diff line selects the
+     * range to the line it is released nearest. Over the focused pane of a hosted session, every event
      * reaches that session.
      */
-    // deferred: a review's panels and diff are not reached, and a click lands on the row the last frame drew — see ADR 0051.
+    // deferred: a click lands on the row the last frame drew — see ADR 0051.
     boolean mouse(MouseEvent event) {
         drag = event.kind() == MouseEventKind.PRESS ? Optional.empty() : drag;
+        diffDrag = event.kind() == MouseEventKind.PRESS ? Optional.empty() : diffDrag;
         return modal()
                 .map(open -> mouseInModal(open, event))
                 .orElseGet(() -> continuedDrag(event)
+                        .or(() -> continuedDiffDrag(event))
                         .orElseGet(() -> hits.at(event.x(), event.y()).map(hit -> reached(hit, event)).orElse(false)));
     }
 
@@ -867,6 +872,24 @@ public final class Shell extends ToolkitApp {
             drag = released ? Optional.empty() : drag;
             return true;
         });
+    }
+
+    /** A drag that began on a diff line marks the range to the line its release lands nearest in the last frame, wherever the pointer is. */
+    private Optional<Boolean> continuedDiffDrag(MouseEvent event) {
+        boolean released = event.kind() == MouseEventKind.RELEASE;
+        return diffDrag.filter(_ -> released || event.kind() == MouseEventKind.DRAG).map(from -> {
+            if (released) {
+                diffDrag = Optional.empty();
+                hits.diff().flatMap(lines -> lines.nearestLineAt(event.y())).ifPresent(to -> markRangeTo(from, to));
+            }
+            return true;
+        });
+    }
+
+    private void markRangeTo(int from, int to) {
+        review.filter(_ -> from != to)
+                .flatMap(open -> open.markRange(from, to))
+                .ifPresent(reason -> refusal = Optional.of(reason.value()));
     }
 
     private boolean mouseInModal(Modal open, MouseEvent event) {
@@ -893,6 +916,7 @@ public final class Shell extends ToolkitApp {
                     : wheelColumns(column, event);
             case PaneHit pane -> reachedPane(pane, event);
             case TabHit tab -> leftPress(event) && selectTab(tab.index());
+            case DiffHit diff -> leftPress(event) ? clickDiff(diff.drawn(), event) : wheelDiff(event);
         };
     }
 
@@ -912,11 +936,23 @@ public final class Shell extends ToolkitApp {
         boolean second = focus == pane && row.filter(index -> index == selectedIndexOf(pane)).isPresent();
         focusOn(pane);
         row.ifPresent(index -> selectAt(pane, index));
-        return !second || fold();
+        return !second || enter(pane);
+    }
+
+    /** What {@code enter} does on the row selected in {@code pane}. */
+    private boolean enter(Focus pane) {
+        return pane.reviewing() ? enterInReview() : fold();
+    }
+
+    private boolean enterInReview() {
+        review.ifPresent(open -> reviewKeys.press(open, KeyEvent.ofKey(KeyCode.ENTER)));
+        return true;
     }
 
     private int selectedIndexOf(Focus pane) {
         return switch (pane) {
+            case FILES -> review.map(ReviewPane::selectedFile).orElse(NO_ROW);
+            case COMMENTS -> review.map(ReviewPane::selectedComment).orElse(NO_ROW);
             case BOARD -> board.selectedIndex();
             case SESSIONS -> sessions.selectedIndex();
             case DOCS -> docs.selectedIndex();
@@ -929,6 +965,8 @@ public final class Shell extends ToolkitApp {
             case BOARD -> select(() -> board.selectAt(index));
             case SESSIONS -> selectSession(() -> sessions.selectAt(index));
             case DOCS -> selectDoc(() -> docs.selectAt(index));
+            case FILES -> review.ifPresent(open -> open.selectFile(index));
+            case COMMENTS -> review.ifPresent(open -> open.selectComment(index));
             default -> {}
         }
     }
@@ -943,8 +981,47 @@ public final class Shell extends ToolkitApp {
             case BOARD -> select(down ? board::down : board::up);
             case SESSIONS -> selectSession(down ? sessions::down : sessions::up);
             case DOCS -> selectDoc(down ? docs::down : docs::up);
+            case FILES -> review.map(open -> wheelFiles(open, down)).orElse(false);
+            case COMMENTS -> review.map(open -> wheelComments(open, down)).orElse(false);
             default -> true;
         };
+    }
+
+    private static boolean wheelFiles(ReviewPane open, boolean down) {
+        if (down) {
+            open.selectFileDown();
+        } else {
+            open.selectFileUp();
+        }
+        return true;
+    }
+
+    private static boolean wheelComments(ReviewPane open, boolean down) {
+        if (down) {
+            open.selectCommentDown();
+        } else {
+            open.selectCommentUp();
+        }
+        return true;
+    }
+
+    private boolean clickDiff(DiffDrawn lines, MouseEvent event) {
+        Optional<Integer> line = lines.lineAt(event.y());
+        boolean second = focus == Focus.MAIN && line.filter(index -> review.filter(open -> open.cursor() == index).isPresent()).isPresent();
+        focusOn(Focus.MAIN);
+        line.ifPresent(index -> review.ifPresent(open -> open.cursorTo(index)));
+        diffDrag = line;
+        return !second || enterInReview();
+    }
+
+    private boolean wheelDiff(MouseEvent event) {
+        return wheelDown(event)
+                .map(down -> {
+                    focusOn(Focus.MAIN);
+                    review.ifPresent(open -> open.wheel(down));
+                    return true;
+                })
+                .orElse(false);
     }
 
     private boolean clickColumnRow(ColumnHit hit, MouseEvent event) {
@@ -971,7 +1048,7 @@ public final class Shell extends ToolkitApp {
             return false;
         }
         focusOn(hit.pane());
-        wheel.filter(_ -> hit.pane() == Focus.MAIN).ifPresent(mainViewScroll::wheel);
+        wheel.filter(_ -> hit.pane() == Focus.MAIN && review.isEmpty()).ifPresent(mainViewScroll::wheel);
         return true;
     }
 
@@ -1599,7 +1676,10 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element leftColumn() {
-        return review.<Element>map(pane -> column(ReviewPanels.files(pane, focus), ReviewPanels.comments(pane, focus), ReviewPanels.review(pane))
+        return review.<Element>map(pane -> column(ReviewPanels.files(pane, focus, rows -> hits.add(new RowsHit(Focus.FILES, rows))),
+                        ReviewPanels.comments(
+                                pane, focus, rows -> hits.add(new RowsHit(Focus.COMMENTS, rows)), area -> hits.add(new PaneHit(Focus.COMMENTS, area))),
+                        ReviewPanels.review(pane))
                         .percent(LEFT_COLUMN_PERCENT))
                 .orElseGet(() -> column(boardPanel(), sessionsPanel(), docsPanel()).percent(LEFT_COLUMN_PERCENT));
     }
@@ -1647,7 +1727,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Element mainView() {
-        return review.map(pane -> ReviewPanels.diff(pane, focus, area -> mainViewArea = Optional.of(area)))
+        return review.map(pane -> ReviewPanels.diff(pane, focus, this::mainViewDrawn, lines -> hits.add(new DiffHit(lines))))
                 .orElseGet(() -> framed(MAIN_VIEW_TITLE, Focus.MAIN, new PaneProbe(detail(), this::mainViewDrawn)).fill());
     }
 
