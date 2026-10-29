@@ -23,7 +23,8 @@ clicks, menu rows and permission prompts included.
 - **A second click is `enter`.** A press on the row that was already selected, in the pane that already had focus,
   does what `enter` does there: fold, pick, resume, focus a tab, open the picker, go to a line. Rejected: a timed
   double-click, which TamboUI cannot count and which a slow pair misses; and no click action at all, which leaves
-  `enter` the one thing the mouse cannot reach.
+  `enter` the one thing the mouse cannot reach. The click calls the operation the `enter` key calls, never a replayed
+  key event, so the two cannot drift apart.
 - **A click on an unfocused hosted pane only focuses it.** Once the pane has focus, press, drag, release and wheel go
   to `claude` unchanged; the wheel goes through even on the notch that focuses. A focusing click never answers a
   permission prompt.

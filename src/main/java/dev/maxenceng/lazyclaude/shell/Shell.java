@@ -945,7 +945,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean enterInReview() {
-        review.ifPresent(open -> reviewKeys.press(open, KeyEvent.ofKey(KeyCode.ENTER)));
+        review.ifPresent(reviewKeys::enter);
         return true;
     }
 
