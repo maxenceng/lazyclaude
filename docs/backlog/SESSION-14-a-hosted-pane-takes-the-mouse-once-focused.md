@@ -1,6 +1,6 @@
 ---
 id: SESSION-14
-status: in-review
+status: done
 context: session
 type: feature
 tracker_id: 103
@@ -11,15 +11,15 @@ created: 2026-10-27
 
 ## Acceptance criteria
 
-- [ ] A click on a hosted pane that does not have focus focuses it and is not forwarded: a click that focuses a pane
+- [x] A click on a hosted pane that does not have focus focuses it and is not forwarded: a click that focuses a pane
       showing a permission prompt does not answer it.
-- [ ] Once the pane has focus, press, drag and release reach `claude` in order, as today.
-- [ ] The wheel over a hosted pane is forwarded even on the notch that focuses it.
-- [ ] A drag that starts in the pane and is released outside it sends its release at the pane's nearest edge cell, so
+- [x] Once the pane has focus, press, drag and release reach `claude` in order, as today.
+- [x] The wheel over a hosted pane is forwarded even on the notch that focuses it.
+- [x] A drag that starts in the pane and is released outside it sends its release at the pane's nearest edge cell, so
       `claude`'s selection ends.
-- [ ] Pointer moves reach `claude` while its pane has focus and it has asked for mode 1003, so its rows highlight on
+- [x] Pointer moves reach `claude` while its pane has focus and it has asked for mode 1003, so its rows highlight on
       hover; moves anywhere else are dropped and cause no render.
-- [ ] With `mouse: false`, nothing is forwarded and `claude` sees no mouse.
+- [x] With `mouse: false`, nothing is forwarded and `claude` sees no mouse.
 
 ## Model decision
 
@@ -40,3 +40,8 @@ none
 LAZY-27 found both gaps in the code already built: `mouseMotion` is never turned on, and the release of a drag that
 leaves the pane is lost. Turning motion on makes the outer terminal report every move across the screen, hence
 dropping it before a render.
+
+The outer terminal can lose a drag's release, so a press ends any drag still held rather than trusting a release to
+arrive; a drag also keeps its session once its tab closes. Review weighed dropping `followsPointer` and forwarding
+every move to the focused pane: kept, so a move no session asked for costs no send and no render, without relying on
+how TamboUI treats a handler that returns `false`.
