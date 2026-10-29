@@ -1,6 +1,6 @@
 ---
 id: SESSION-13
-status: in-review
+status: done
 context: session
 type: chore
 tracker_id: 96
@@ -45,3 +45,12 @@ Charted on the [LAZY-24](LAZY-24-desktop-evolution.md) map. Decided in
 [LAZY-37](LAZY-37-hosted-pty-for-two-frontends.md), recorded in ADR 0049. Blocked by
 [SESSION-11](SESSION-11-session-id-known-at-launch.md), which renames `HostedSessionId` to `SessionId` across the same
 port. The SIGWINCH repaint is the desktop's need and lands with it, not here.
+
+The criteria's `TerminalKey`, `PastedText`, `TerminalMouse` and `TerminalScreen` landed renamed, as
+`EmulatorKeyPayload`, `EmulatorPastePayload`, `EmulatorMousePayload` and `EmulatorScreenView`. The shell reaches them
+through `HostedEmulatorQuery` and `HostedEmulatorCommand`, not one `HostedTerminals` facade. Review rejected a facade
+that both reads and writes as an exception to the roles. ADR 0049's 2026-10-29 amendment records it.
+
+Review also found that a failed spawn must end its emulator before it frees the session id. Freed first, a racing resume
+claimed the id, and the late `ended` dropped the new emulator. Exit closing the tab was tested, not tried by hand in
+`make run`.
