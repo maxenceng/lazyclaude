@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.nio.charset.StandardCharsets;
 
@@ -6,7 +6,6 @@ import dev.maxenceng.lazyclaude.session.published.Modifier;
 import dev.maxenceng.lazyclaude.session.published.Modifiers;
 import dev.maxenceng.lazyclaude.session.published.NamedKey;
 import dev.maxenceng.lazyclaude.session.published.PressedKey;
-import dev.maxenceng.lazyclaude.session.published.TerminalKey;
 import dev.maxenceng.lazyclaude.session.published.TypedCharacter;
 
 /**
@@ -52,7 +51,7 @@ final class KeyBytes {
 
     private KeyBytes() {}
 
-    static byte[] of(TerminalKey key, boolean applicationCursor) {
+    static byte[] of(EmulatorKeyPayload key, boolean applicationCursor) {
         return switch (key.input()) {
             case TypedCharacter typed -> character(typed.codePoint(), key.modifiers());
             case PressedKey pressed -> named(pressed.key(), key.modifiers(), applicationCursor);

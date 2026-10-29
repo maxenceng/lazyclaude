@@ -1,6 +1,8 @@
 package dev.maxenceng.lazyclaude;
 
+import static com.tngtech.archunit.base.DescribedPredicate.not;
 import static com.tngtech.archunit.core.domain.JavaCall.Predicates.target;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
 import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.nameMatching;
 import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
@@ -94,14 +96,23 @@ class ArchitectureTest {
             .resideInAnyPackage("dev.tamboui..", "org.jline..")
             .allowEmptyShould(true);
 
-    // A hosted session's pty and emulator are one adapter's business; their types in the shell or a domain would tie it to the libraries (ADR 0026).
+    // A hosted session's pty is the secondary adapter's, and its emulator the TUI adapter's; each library stays on its side (ADR 0049).
     @ArchTest
-    static final ArchRule pty4j_and_jediterm_stay_in_the_session_secondary_adapter = noClasses()
+    static final ArchRule pty4j_stays_in_the_session_secondary_adapter = noClasses()
             .that()
             .resideOutsideOfPackage(ROOT + ".session.infrastructure.secondary..")
             .should()
             .dependOnClassesThat()
-            .resideInAnyPackage("com.pty4j..", "com.jediterm..")
+            .resideInAPackage("com.pty4j..")
+            .allowEmptyShould(true);
+
+    @ArchTest
+    static final ArchRule jediterm_stays_in_the_session_tui_adapter = noClasses()
+            .that()
+            .resideOutsideOfPackage(ROOT + ".session.infrastructure.primary..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("com.jediterm..")
             .allowEmptyShould(true);
 
     // Processes, files, watches and the network are side effects; they live behind a port, in a secondary adapter.
@@ -200,6 +211,16 @@ class ArchitectureTest {
             .that()
             .resideInAPackage(ROOT + ".*..")
             .should(reachModulesOnlyThroughPrimaryAndPublishedFromTheShell())
+            .allowEmptyShould(true);
+
+    // The shell asks a primary adapter in its roles only: a Query reads, a Command writes, a Payload goes in, a View comes out (ADR 0012, ADR 0049).
+    @ArchTest
+    static final ArchRule the_shell_reads_primary_adapters_only_through_their_roles = noClasses()
+            .that()
+            .resideInAPackage(ROOT + ".shell..")
+            .should()
+            .dependOnClassesThat(resideInAPackage("..infrastructure.primary..")
+                    .and(not(nameMatching(".*(Query|Command|Payload|View)(\\$[A-Za-z]+Builder)?"))))
             .allowEmptyShould(true);
 
     // The shell composes contexts; a context that knew about the shell could not be reused or tested alone.

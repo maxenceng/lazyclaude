@@ -2,6 +2,8 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.leftPressAt;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.wheelUpAt;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedTab;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.pastSessionView;
@@ -9,8 +11,6 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTabNumbered;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.leftPressAt;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.wheelUpAt;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningViewFixture.warningViewOf;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
@@ -23,6 +23,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellInDock;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.startedPayload;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -36,6 +37,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorPastePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
@@ -43,7 +46,6 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPaylo
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
-import dev.maxenceng.lazyclaude.session.published.PastedText;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.tamboui.layout.Position;
@@ -57,12 +59,14 @@ class ShellHostingTest {
     @Mock
     private HostedSessionCommand hosting;
 
+    private final HostedEmulatorCommand emulating = mock(HostedEmulatorCommand.class);
+
     private final SessionQuery screens = blankScreens();
 
     @Test
     void shouldStartAPlainClaudeInTheProjectRootWithNFromAnyPanel() {
         when(hosting.startUnlinked(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
         shell.press(alt('j'));
 
         shell.press(key('N'));
@@ -73,7 +77,7 @@ class ShellHostingTest {
     @Test
     void shouldStartWithNFromTheMainViewToo() {
         when(hosting.startUnlinked(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
         shell.press(alt('l'));
 
         shell.press(key('N'));
@@ -84,7 +88,7 @@ class ShellHostingTest {
     @Test
     void shouldStartAtTheSizeOfThePaneItIsDrawnIn() {
         when(hosting.startUnlinked(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
         Screen.of(shell);
 
         shell.press(key('N'));
@@ -96,7 +100,7 @@ class ShellHostingTest {
     @Test
     void shouldFocusTheNewTabAndReadStartingUntilItsRecordAppears() {
         when(hosting.startUnlinked(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
 
         shell.press(key('N'));
         shell.sessionsChanged(sessionsViewWithTabs(startingTabNumbered(1)));
@@ -108,7 +112,7 @@ class ShellHostingTest {
     @Test
     void shouldFocusTheNewTabAmongTheOpenOnes() {
         when(hosting.startUnlinked(any())).thenReturn(new StartedHost(hostedSessionIdOf(2)));
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "first-one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "first-one", new Busy())), hosting, emulating, screens);
 
         shell.press(key('N'));
         shell.sessionsChanged(sessionsViewWithTabs(hostedTab(1, "first-one", new Busy()), startingTabNumbered(2)));
@@ -120,7 +124,7 @@ class ShellHostingTest {
     @Test
     void shouldOpenNoTabAndKeepFocusWhenSpawningFails() {
         when(hosting.startUnlinked(any())).thenReturn(new NotStartedHost());
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
 
         shell.press(key('N'));
 
@@ -130,7 +134,7 @@ class ShellHostingTest {
 
     @Test
     void shouldListAHostedSessionWithPaneWhereItsAgeWouldBe() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "lazyclaude-3f", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "lazyclaude-3f", new Busy())), hosting, emulating, screens);
         shell.press(alt('j'));
 
         assertThat(Screen.of(shell).boardPanelLines()).anySatisfy(line -> assertThat(line).matches("∼ lazyclaude-3f\\s+pane"));
@@ -140,7 +144,7 @@ class ShellHostingTest {
     void shouldFocusTheTabOfAHostedSessionWithEnter() {
         Shell shell = shellHosting(
                 sessionsViewWithTabs(hostedTab(1, "first-one", new Busy()), hostedTab(2, "second-one", new YourTurn())),
-                hosting,
+                hosting, emulating,
                 screens);
         shell.press(alt('j'));
         shell.press(key('j'));
@@ -155,7 +159,7 @@ class ShellHostingTest {
     @Test
     void shouldResumeAnUnlinkedPastSessionInItsRecordedDirectoryWithEnter() {
         when(hosting.resume(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
-        Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, emulating, screens);
         shell.press(alt('j'));
 
         shell.press(enter());
@@ -171,7 +175,7 @@ class ShellHostingTest {
     void shouldResumeAnInterruptedPastSessionWithEnterLikeAnyOther() {
         when(hosting.resume(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
         Shell shell = shellHosting(
-                sessionsViewOf(List.of(), List.of(pastSessionViewBuilder().interrupted(true).build())), hosting, screens);
+                sessionsViewOf(List.of(), List.of(pastSessionViewBuilder().interrupted(true).build())), hosting, emulating, screens);
         shell.press(alt('j'));
 
         shell.press(enter());
@@ -183,7 +187,7 @@ class ShellHostingTest {
     @Test
     void shouldFocusTheResumedTab() {
         when(hosting.resume(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
-        Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, emulating, screens);
         shell.press(alt('j'));
 
         shell.press(enter());
@@ -194,7 +198,7 @@ class ShellHostingTest {
     @Test
     void shouldKeepFocusWhenResumingFails() {
         when(hosting.resume(any())).thenReturn(new NotStartedHost());
-        Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, emulating, screens);
         shell.press(alt('j'));
 
         shell.press(enter());
@@ -209,7 +213,7 @@ class ShellHostingTest {
                         hostedTab(1, "first-one", new Busy()),
                         hostedTab(2, "second-one", new Busy()),
                         hostedTab(3, "third-one", new Busy())),
-                hosting,
+                hosting, emulating,
                 screens);
         shell.press(alt('l'));
 
@@ -224,7 +228,7 @@ class ShellHostingTest {
     void shouldMoveFocusToThePanelsWhenTheLastTabCloses() {
         Shell shell = shellInDock(
                 sessionsViewWithTabs(hostedTab(1, "first-one", new Busy()), hostedTab(2, "second-one", new Busy())),
-                hosting,
+                hosting, emulating,
                 screens);
         shell.press(alt('l'));
 
@@ -236,7 +240,7 @@ class ShellHostingTest {
 
     @Test
     void shouldMoveFocusToThePanelsWhenTheOnlyTabCloses() {
-        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
 
         shell.sessionsChanged(sessionsViewWithTabs());
         Screen.of(shell);
@@ -246,7 +250,7 @@ class ShellHostingTest {
 
     @Test
     void shouldLeaveFocusAloneWhenATabClosesWhileThePanelsHaveIt() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         shell.press(alt('j'));
 
         shell.sessionsChanged(sessionsViewWithTabs());
@@ -257,7 +261,7 @@ class ShellHostingTest {
 
     @Test
     void shouldQuitAtOnceWhenNoHostedSessionIsBusyOrWaiting() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new YourTurn()), startingTabNumbered(2)), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new YourTurn()), startingTabNumbered(2)), hosting, emulating, screens);
 
         shell.press(key('q'));
 
@@ -266,7 +270,7 @@ class ShellHostingTest {
 
     @Test
     void shouldAskBeforeQuittingWhenAHostedSessionIsBusy() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
 
         shell.press(key('q'));
 
@@ -276,7 +280,7 @@ class ShellHostingTest {
 
     @Test
     void shouldCountTheBusyOrWaitingSessionsInThePrompt() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy()), hostedTab(2, "two", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy()), hostedTab(2, "two", new Busy())), hosting, emulating, screens);
 
         shell.press(key('q'));
 
@@ -285,7 +289,7 @@ class ShellHostingTest {
 
     @Test
     void shouldShowTheQuitPromptOverAWarningRaisedEarlier() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         shell.warningsChanged(warningViewOf("resume: " + "/gone".repeat(40) + " is gone; running in the project root instead.", 1));
 
         shell.press(key('q'));
@@ -297,7 +301,7 @@ class ShellHostingTest {
 
     @Test
     void shouldQuitOnYes() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         shell.press(key('q'));
 
         shell.press(key('y'));
@@ -307,7 +311,7 @@ class ShellHostingTest {
 
     @Test
     void shouldStayOnNoAndClearThePrompt() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         shell.press(key('q'));
 
         shell.press(key('n'));
@@ -318,7 +322,7 @@ class ShellHostingTest {
 
     @Test
     void shouldAskBeforeQuittingWithCtrlCOutsideASessionToo() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
 
         shell.press(ctrl('c'));
 
@@ -328,7 +332,7 @@ class ShellHostingTest {
 
     @Test
     void shouldQuitWithCtrlCOutsideASessionWhenNothingIsBusy() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
 
         shell.press(ctrl('c'));
 
@@ -337,55 +341,55 @@ class ShellHostingTest {
 
     @Test
     void shouldHandAPasteToTheFocusedTab() {
-        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
 
-        shell.paste(new PastedText("one\ntwo"));
+        shell.paste(new EmulatorPastePayload("one\ntwo"));
 
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), new PastedText("one\ntwo")));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), new EmulatorPastePayload("one\ntwo")));
     }
 
     @Test
     void shouldDropAPasteWhileThePanelsHaveFocus() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
 
-        shell.paste(new PastedText("one\ntwo"));
+        shell.paste(new EmulatorPastePayload("one\ntwo"));
 
-        verify(hosting, never()).send(any());
+        verify(emulating, never()).send(any());
     }
 
     @Test
     void shouldHandTheWheelOverThePaneToClaudeAtTheMatchingCell() {
-        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         Position origin = Screen.of(shell).dockContentOrigin();
 
         assertThat(shell.mouse(MouseEvent.scrollUp(origin.x() + 3, origin.y() + 2))).isTrue();
 
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), wheelUpAt(3, 2)));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), wheelUpAt(3, 2)));
     }
 
     @Test
     void shouldHandAClickOverThePaneToClaudeEvenWhileThePanelsHaveFocus() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         Position origin = Screen.of(shell).dockContentOrigin();
 
         shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
 
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), leftPressAt(4, 1)));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), leftPressAt(4, 1)));
     }
 
     @Test
     void shouldLeaveAMouseEventOutsideThePaneUnhandled() {
-        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         Screen.of(shell);
 
         assertThat(shell.mouse(MouseEvent.press(MouseButton.LEFT, 1, 1))).isFalse();
 
-        verify(hosting, never()).send(any());
+        verify(emulating, never()).send(any());
     }
 
     @Test
     void shouldLeaveAMouseEventUnhandledWhenThereIsNoTab() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
         Position origin = Screen.of(shell).dockContentOrigin();
 
         assertThat(shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x(), origin.y()))).isFalse();
@@ -393,12 +397,12 @@ class ShellHostingTest {
 
     @Test
     void shouldResizeATabItDidNotStartToThePaneItIsDrawnIn() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
 
         Screen.of(shell);
 
         ArgumentCaptor<ResizePayload> resized = ArgumentCaptor.forClass(ResizePayload.class);
-        verify(hosting).resize(resized.capture());
+        verify(emulating).resize(resized.capture());
         assertThat(resized.getValue().session()).isEqualTo(hostedSessionIdOf(1));
         assertThat(resized.getValue().size().width().cells()).isEqualTo(50);
         assertThat(resized.getValue().size().height().cells()).isEqualTo(9);
@@ -406,24 +410,24 @@ class ShellHostingTest {
 
     @Test
     void shouldNotResizeAgainWhileThePaneKeepsItsSize() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
 
         Screen.of(shell);
         Screen.of(shell);
 
-        verify(hosting, times(1)).resize(any());
+        verify(emulating, times(1)).resize(any());
     }
 
     @Test
     void shouldResizeWhenThePaneGrowsBecauseTheMainViewIsHidden() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         Screen.of(shell);
 
         shell.press(alt('m'));
         Screen.of(shell);
 
         ArgumentCaptor<ResizePayload> resized = ArgumentCaptor.forClass(ResizePayload.class);
-        verify(hosting, times(2)).resize(resized.capture());
+        verify(emulating, times(2)).resize(resized.capture());
         assertThat(resized.getAllValues().getLast().size().height().cells())
                 .isGreaterThan(resized.getAllValues().getFirst().size().height().cells());
     }
@@ -431,19 +435,19 @@ class ShellHostingTest {
     @Test
     void shouldNotResizeATabItStartedAtThePaneSize() {
         when(hosting.startUnlinked(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
         Screen.of(shell);
         shell.press(key('N'));
         shell.sessionsChanged(sessionsViewWithTabs(startingTabNumbered(1)));
 
         Screen.of(shell);
 
-        verify(hosting, never()).resize(any());
+        verify(emulating, never()).resize(any());
     }
 
     @Test
     void shouldBuildAConfigWithBracketedPasteAndMouseCaptureOn() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
 
         assertThat(shell.config().bracketedPaste()).isTrue();
         assertThat(shell.config().mouseCapture()).isTrue();
@@ -451,7 +455,7 @@ class ShellHostingTest {
 
     @Test
     void shouldLeaveTabAndShiftTabUnboundFromFocusSoTheyReachTheSession() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
         Bindings bindings = shell.config().bindings();
 
         assertThat(bindings.triggersFor("focusNext")).isEmpty();
@@ -460,7 +464,7 @@ class ShellHostingTest {
 
     @Test
     void shouldLeaveQuitUnboundSoOnlyTheShellDecidesWhenToQuit() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
 
         assertThat(shell.config().bindings().triggersFor("quit"))
                 .as("TamboUI's own quit binding takes Q too, and would end busy hosted sessions without asking")
@@ -469,7 +473,7 @@ class ShellHostingTest {
 
     @Test
     void shouldListOnlyTheReservedChordsOverAFocusedTab() {
-        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
 
         String keyBar = Screen.of(shell).lines().getLast();
 
@@ -478,7 +482,7 @@ class ShellHostingTest {
 
     @Test
     void shouldListNAndMOverThePanels() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
 
         assertThat(Screen.of(shell).lines().getLast()).contains("N new", "R refresh");
     }

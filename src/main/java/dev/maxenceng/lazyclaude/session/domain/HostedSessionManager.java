@@ -18,8 +18,6 @@ import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
-import dev.maxenceng.lazyclaude.session.published.TerminalInput;
-import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.Warning;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
@@ -54,6 +52,7 @@ public final class HostedSessionManager {
     private final Map<SessionId, ExitCode> earlyExits = new HashMap<>();
     private final List<OpenSessionsListener> changeListeners = new CopyOnWriteArrayList<>();
     private final List<TicketDoneEndedListener> doneEndedListeners = new CopyOnWriteArrayList<>();
+    private final List<PtyListener> ptyListeners = new CopyOnWriteArrayList<>();
 
     public HostedSessionManager(
             HostPort hosts, LiveSessionPort records, WarningPort warnings, WorktreePort worktrees, LaunchLogPort log, Clock clock) {
@@ -140,16 +139,13 @@ public final class HostedSessionManager {
         }
     }
 
-    public void send(SessionId id, TerminalInput input) {
-        hosts.send(id, input);
+    /** Writes {@code bytes}, already encoded by the frontend, to the session's pty. */
+    public void write(SessionId id, PtyBytes bytes) {
+        hosts.write(id, bytes);
     }
 
     public void resize(SessionId id, PaneSize size) {
         hosts.resize(id, size);
-    }
-
-    public TerminalScreen screenOf(SessionId id) {
-        return hosts.screenOf(id);
     }
 
     /** Ends every open session's {@code claude}: they live and die with lazyclaude. */
@@ -169,9 +165,9 @@ public final class HostedSessionManager {
         doneEndedListeners.add(listener);
     }
 
-    /** Tells {@code listener} whenever a session drew something. */
-    public void onScreenChange(Runnable listener) {
-        hosts.onScreenChange(id -> listener.run());
+    /** Tells {@code listener} what happens to each session's pty from now on. */
+    public void onPty(PtyListener listener) {
+        ptyListeners.add(listener);
     }
 
     private WorkingDirectory ticketDirectory(TicketWorktree worktree) {
@@ -225,7 +221,9 @@ public final class HostedSessionManager {
         }
         StartedAt spawnedAt = new StartedAt(clock.clock().instant().truncatedTo(ChronoUnit.MILLIS));
         try {
-            ProcessId pid = hosts.spawn(launch, code -> exited(project, id, code));
+            ptyListeners.forEach(listener -> listener.launching(id, size));
+            ProcessId pid = hosts.spawn(
+                    launch, bytes -> ptyListeners.forEach(listener -> listener.output(id, bytes)), code -> exited(project, id, code));
             return registered(project, HostedSession.builder()
                     .pid(pid)
                     .directory(directory)
@@ -233,6 +231,7 @@ public final class HostedSessionManager {
                     .spawnedAt(spawnedAt)
                     .build());
         } catch (HostUnavailableException unavailable) {
+            ended(id);
             synchronized (open) {
                 spawning.remove(id);
             }
@@ -271,6 +270,7 @@ public final class HostedSessionManager {
     }
 
     private void exited(Project project, SessionId id, ExitCode code) {
+        ended(id);
         Optional<HostedSession> dropped;
         synchronized (open) {
             dropped = open.stream().filter(session -> session.id().equals(id)).findFirst();
@@ -289,6 +289,10 @@ public final class HostedSessionManager {
         warnOfFailure(code);
         changed();
         dropped.flatMap(HostedSession::doneTicket).ifPresent(this::doneEnded);
+    }
+
+    private void ended(SessionId id) {
+        ptyListeners.forEach(listener -> listener.ended(id));
     }
 
     private static LaunchEntry entryOf(HostedSession session) {

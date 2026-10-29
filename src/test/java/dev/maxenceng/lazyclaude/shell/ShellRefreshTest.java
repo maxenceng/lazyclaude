@@ -7,8 +7,8 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFi
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.secondTitle;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.docsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.typed;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.typed;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
@@ -34,6 +34,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
@@ -145,11 +146,12 @@ class ShellRefreshTest {
     @Test
     void shouldSendRToTheSessionAndRefreshNothingWhileATabHasFocus() {
         HostedSessionCommand hosting = mock(HostedSessionCommand.class);
-        Shell shell = oneTabInDockWithReviews(hosting, screens, reviews);
+        HostedEmulatorCommand emulating = mock(HostedEmulatorCommand.class);
+        Shell shell = oneTabInDockWithReviews(hosting, emulating, screens, reviews);
 
         shell.press(key('R'));
 
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), typed('R', Modifiers.none())));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), typed('R', Modifiers.none())));
         verifyNoInteractions(reviews);
         verify(screens, never()).refresh(any());
     }

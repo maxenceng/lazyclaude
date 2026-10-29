@@ -1,8 +1,7 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.nio.charset.StandardCharsets;
 
-import dev.maxenceng.lazyclaude.session.published.PastedText;
 
 /** A paste as the bytes a terminal sends: bracketed when the child turned bracketed paste on, so its newlines are text and do not submit the prompt. */
 final class PasteBytes {
@@ -16,7 +15,7 @@ final class PasteBytes {
 
     private PasteBytes() {}
 
-    static byte[] of(PastedText paste, boolean bracketed) {
+    static byte[] of(EmulatorPastePayload paste, boolean bracketed) {
         String text = bracketed ? START + paste.value().replace(END, NOTHING) + END : typed(paste.value());
         return text.getBytes(StandardCharsets.UTF_8);
     }

@@ -33,6 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeTicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
@@ -137,6 +138,8 @@ class ShellTicketStartTest {
                 emptySessionsView(),
                 dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView(),
                 hosting,
+                mock(HostedEmulatorCommand.class),
+                ShellFixture.blankEmulators(),
                 mock(dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand.class),
                 mock(dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand.class),
                 blankScreens(),

@@ -1,10 +1,10 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.run;
-import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSaying;
-import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSayingWithCursorAt;
-import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.styled;
-import static dev.maxenceng.lazyclaude.shell.TerminalScreenElementFixture.elementOf;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorScreenViewFixture.run;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorScreenViewFixture.screenSaying;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorScreenViewFixture.screenSayingWithCursorAt;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorScreenViewFixture.styled;
+import static dev.maxenceng.lazyclaude.shell.EmulatorScreenElementFixture.elementOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -14,13 +14,13 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorPastePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorScreenView;
 import dev.maxenceng.lazyclaude.session.published.DefaultColour;
 import dev.maxenceng.lazyclaude.session.published.IndexedColour;
 import dev.maxenceng.lazyclaude.session.published.NoCursor;
-import dev.maxenceng.lazyclaude.session.published.PastedText;
 import dev.maxenceng.lazyclaude.session.published.RgbColour;
 import dev.maxenceng.lazyclaude.session.published.ScreenRow;
-import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.session.published.TextAttribute;
 import dev.tamboui.layout.Position;
 import dev.tamboui.layout.Rect;
@@ -28,10 +28,10 @@ import dev.tamboui.style.Color;
 import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.event.PasteEvent;
 
-class TerminalScreenElementTest {
+class EmulatorScreenElementTest {
 
     @SuppressWarnings("unchecked")
-    private final Consumer<PastedText> onPaste = mock(Consumer.class);
+    private final Consumer<EmulatorPastePayload> onPaste = mock(Consumer.class);
 
     @Test
     void shouldDrawEachRowAtItsLine() {
@@ -42,7 +42,7 @@ class TerminalScreenElementTest {
 
     @Test
     void shouldDrawTheRunsOfARowSideBySide() {
-        TerminalScreen runs = TerminalScreen.builder()
+        EmulatorScreenView runs = EmulatorScreenView.builder()
                 .rows(List.of(new ScreenRow(List.of(
                         run("ab", styled(new DefaultColour())), run("cd", styled(new IndexedColour(1)))))))
                 .build();
@@ -52,7 +52,7 @@ class TerminalScreenElementTest {
 
     @Test
     void shouldDrawAnIndexedColourAsThePaletteEntry() {
-        TerminalScreen red = TerminalScreen.builder()
+        EmulatorScreenView red = EmulatorScreenView.builder()
                 .rows(List.of(new ScreenRow(List.of(run("red", styled(new IndexedColour(1)))))))
                 .build();
 
@@ -61,7 +61,7 @@ class TerminalScreenElementTest {
 
     @Test
     void shouldDrawATruecolorAsItsRgb() {
-        TerminalScreen orange = TerminalScreen.builder()
+        EmulatorScreenView orange = EmulatorScreenView.builder()
                 .rows(List.of(new ScreenRow(List.of(run("orange", styled(new RgbColour(0xFF6400)))))))
                 .build();
 
@@ -71,7 +71,7 @@ class TerminalScreenElementTest {
 
     @Test
     void shouldDrawTheAttributesOfARun() {
-        TerminalScreen dimmed = TerminalScreen.builder()
+        EmulatorScreenView dimmed = EmulatorScreenView.builder()
                 .rows(List.of(new ScreenRow(List.of(run("faint", styled(new DefaultColour(), TextAttribute.DIM))))))
                 .build();
 
@@ -80,7 +80,7 @@ class TerminalScreenElementTest {
 
     @Test
     void shouldDrawReversedAndLeaveThePlainRunAlone() {
-        TerminalScreen mixed = TerminalScreen.builder()
+        EmulatorScreenView mixed = EmulatorScreenView.builder()
                 .rows(List.of(new ScreenRow(List.of(
                         run("plain ", styled(new DefaultColour())),
                         run("picked", styled(new DefaultColour(), TextAttribute.REVERSED))))))
@@ -119,7 +119,7 @@ class TerminalScreenElementTest {
 
     @Test
     void shouldLeaveTheCursorAloneWhenTheSessionHidIt() {
-        TerminalScreen hidden = TerminalScreen.builder()
+        EmulatorScreenView hidden = EmulatorScreenView.builder()
                 .rows(screenSaying("abc").rows())
                 .cursor(new NoCursor())
                 .build();
@@ -135,16 +135,16 @@ class TerminalScreenElementTest {
     }
 
     @Test
-    void shouldHandAPasteOnAsPastedText() {
+    void shouldHandAPasteOnAsAPastePayload() {
         EventResult result = elementOf(screenSaying("x"), true, onPaste).handlePasteEvent(new PasteEvent("one\ntwo"));
 
-        verify(onPaste).accept(new PastedText("one\ntwo"));
+        verify(onPaste).accept(new EmulatorPastePayload("one\ntwo"));
         assertThat(result.isHandled()).isTrue();
     }
 
     @Test
     void shouldBeFocusableSoThatThePasteReachesIt() {
-        TerminalScreenElement element = elementOf(screenSaying("x"), true, onPaste);
+        EmulatorScreenElement element = elementOf(screenSaying("x"), true, onPaste);
 
         assertThat(element.isFocusable()).isTrue();
         assertThat(element.id()).isNotBlank();

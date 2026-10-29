@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.nio.charset.StandardCharsets;
 
@@ -7,7 +7,6 @@ import com.jediterm.terminal.emulator.mouse.MouseMode;
 import dev.maxenceng.lazyclaude.session.published.Modifier;
 import dev.maxenceng.lazyclaude.session.published.MouseAction;
 import dev.maxenceng.lazyclaude.session.published.PointerButton;
-import dev.maxenceng.lazyclaude.session.published.TerminalMouse;
 
 /**
  * A mouse event as the SGR bytes a terminal sends ({@code ESC [ < button ; column ; row M}), only as many kinds of event as
@@ -34,7 +33,7 @@ final class MouseBytes {
 
     private MouseBytes() {}
 
-    static byte[] of(TerminalMouse mouse, MouseMode mode) {
+    static byte[] of(EmulatorMousePayload mouse, MouseMode mode) {
         if (!reports(mouse.action(), mode)) {
             return new byte[0];
         }
@@ -56,11 +55,11 @@ final class MouseBytes {
         };
     }
 
-    private static int code(TerminalMouse mouse) {
+    private static int code(EmulatorMousePayload mouse) {
         return base(mouse) + modifierBits(mouse);
     }
 
-    private static int base(TerminalMouse mouse) {
+    private static int base(EmulatorMousePayload mouse) {
         return switch (mouse.action()) {
             case SCROLL_UP -> WHEEL_UP;
             case SCROLL_DOWN -> WHEEL_DOWN;
@@ -81,7 +80,7 @@ final class MouseBytes {
         };
     }
 
-    private static int modifierBits(TerminalMouse mouse) {
+    private static int modifierBits(EmulatorMousePayload mouse) {
         return (mouse.modifiers().has(Modifier.SHIFT) ? SHIFT : 0)
                 + (mouse.modifiers().has(Modifier.ALT) ? ALT : 0)
                 + (mouse.modifiers().has(Modifier.CTRL) ? CTRL : 0);

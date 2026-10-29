@@ -3,6 +3,8 @@ package dev.maxenceng.lazyclaude.session.domain;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.newLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.idOf;
+import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.ptyBytesOf;
+import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.typedBytes;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.clock;
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.earlierStartedAt;
@@ -13,8 +15,6 @@ import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.proces
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.typedA;
-import static dev.maxenceng.lazyclaude.session.published.TerminalScreenFixture.screenSaying;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.raisedTexts;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
@@ -22,6 +22,8 @@ import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.wor
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -42,6 +44,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -73,10 +76,13 @@ class HostedSessionManagerTest {
     private OpenSessionsListener changed;
 
     @Mock
-    private Runnable screenChanged;
+    private PtyListener pty;
 
     @Captor
     private ArgumentCaptor<HostLaunch> launched;
+
+    @Captor
+    private ArgumentCaptor<Consumer<PtyBytes>> output;
 
     @Captor
     private ArgumentCaptor<Consumer<ExitCode>> exited;
@@ -90,17 +96,17 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldStartAPlainClaudeInTheProjectRootAtThePaneSize() {
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
 
         HostStart start = manager.startUnlinked(project(), paneSize());
 
-        verify(hosts).spawn(launched.capture(), any());
+        verify(hosts).spawn(launched.capture(), any(), any());
         assertThat(launched.getValue()).isEqualTo(newLaunch(idOf(start)));
     }
 
     @Test
     void shouldListTheStartedSessionByItsPidInStartOrder() {
-        when(hosts.spawn(any(), any())).thenReturn(processId(), secondProcessId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
 
         SessionId first = idOf(manager.startUnlinked(project(), paneSize()));
         SessionId second = idOf(manager.startUnlinked(project(), paneSize()));
@@ -114,7 +120,7 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldOpenNoSessionAndWarnWhenSpawningFails() {
-        when(hosts.spawn(any(), any())).thenThrow(new HostUnavailableException("claude is not on the PATH"));
+        when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("claude is not on the PATH"));
 
         HostStart start = manager.startUnlinked(project(), paneSize());
 
@@ -126,11 +132,11 @@ class HostedSessionManagerTest {
     @Test
     void shouldResumeInTheRecordedDirectory() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
 
         HostStart start = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
 
-        verify(hosts).spawn(launched.capture(), any());
+        verify(hosts).spawn(launched.capture(), any(), any());
         assertThat(launched.getValue()).isEqualTo(resumeLaunch(idOf(start), worktreeDirectory()));
         assertThat(raisedTexts(warnings)).isEmpty();
     }
@@ -138,14 +144,14 @@ class HostedSessionManagerTest {
     @Test
     void shouldKeepTheIdOfTheSessionItResumes() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
 
         assertThat(idOf(manager.resume(project(), sessionId(), worktreeDirectory(), paneSize()))).isEqualTo(sessionId());
     }
 
     @Test
     void shouldNameEachNewSessionByAnIdOfItsOwn() {
-        when(hosts.spawn(any(), any())).thenReturn(processId(), secondProcessId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
 
         SessionId first = idOf(manager.startUnlinked(project(), paneSize()));
         SessionId second = idOf(manager.startUnlinked(project(), paneSize()));
@@ -155,7 +161,7 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldAnswerWithTheOpenSessionInsteadOfResumingASessionItStartedItself() {
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         HostStart begun = manager.startUnlinked(project(), paneSize());
 
         HostStart resumed = manager.resume(project(), idOf(begun), projectRootDirectory(), paneSize());
@@ -163,24 +169,24 @@ class HostedSessionManagerTest {
         assertThat(resumed)
                 .as("a claude begun under an id is already running that session, and a second would share its transcript")
                 .isEqualTo(begun);
-        verify(hosts).spawn(any(), any());
+        verify(hosts).spawn(any(), any(), any());
     }
 
     @Test
     void shouldAnswerWithTheOpenSessionInsteadOfResumingTheSameSessionTwice() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         HostStart first = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
 
         HostStart second = manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
 
         assertThat(second).as("two claude resuming one session would both write its transcript").isEqualTo(first);
-        verify(hosts).spawn(any(), any());
+        verify(hosts).spawn(any(), any(), any());
     }
 
     @Test
     void shouldAnswerWithTheOpenSessionInsteadOfResumingTheSessionItRunsSinceAClear() {
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         HostStart first = manager.startUnlinked(project(), paneSize());
         when(records.recordOf(processId()))
                 .thenReturn(Optional.of(reportedSessionBuilder().session(secondSessionId()).startedAt(new StartedAt(now())).build()));
@@ -188,25 +194,25 @@ class HostedSessionManagerTest {
         HostStart second = manager.resume(project(), secondSessionId(), worktreeDirectory(), paneSize());
 
         assertThat(second).as("after /clear the tab writes the record's session, so resuming it would put a second claude on it").isEqualTo(first);
-        verify(hosts).spawn(any(), any());
+        verify(hosts).spawn(any(), any(), any());
     }
 
     @Test
     void shouldResumeASessionThatOnlyARecordLeftByAnEarlierProcessOfTheSamePidNames() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         manager.startUnlinked(project(), paneSize());
         when(records.recordOf(processId()))
                 .thenReturn(Optional.of(reportedSessionBuilder().session(secondSessionId()).startedAt(earlierStartedAt()).build()));
 
         manager.resume(project(), secondSessionId(), worktreeDirectory(), paneSize());
 
-        verify(hosts, times(2)).spawn(any(), any());
+        verify(hosts, times(2)).spawn(any(), any(), any());
     }
 
     @Test
     void shouldKeepTheInstantItSpawnedASessionAtToTheMillisecond() {
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         HostedSessionManager spawning = new HostedSessionManager(
                 hosts, records, warnings, worktrees, log, Clock.fixed(now().plus(Duration.ofNanos(1)), ZoneOffset.UTC));
 
@@ -224,7 +230,7 @@ class HostedSessionManagerTest {
         CountDownLatch spawnBegun = new CountDownLatch(1);
         CountDownLatch spawnMayReturn = new CountDownLatch(1);
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any())).thenAnswer(invocation -> {
+        when(hosts.spawn(any(), any(), any())).thenAnswer(invocation -> {
             spawnBegun.countDown();
             spawnMayReturn.await();
             return processId();
@@ -240,7 +246,7 @@ class HostedSessionManagerTest {
                 .as("the shell resumes on background threads, and two claude resuming one session would both write its transcript")
                 .isInstanceOf(NotStartedHost.class);
         assertThat(first.get()).isInstanceOf(StartedHost.class);
-        verify(hosts).spawn(any(), any());
+        verify(hosts).spawn(any(), any(), any());
     }
 
     @Test
@@ -252,7 +258,7 @@ class HostedSessionManagerTest {
         assertThat(start)
                 .as("claude --resume finds a transcript under its directory's project folder, so anywhere else it exits")
                 .isEqualTo(new NotStartedHost());
-        verify(hosts, never()).spawn(any(), any());
+        verify(hosts, never()).spawn(any(), any(), any());
         assertThat(raisedTexts(warnings))
                 .containsExactly("resume: /work/app.worktrees/PROJ-1-ticket is gone; nothing resumed.");
     }
@@ -260,7 +266,7 @@ class HostedSessionManagerTest {
     @Test
     void shouldOpenNoSessionAndWarnWhenResumingFails() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any())).thenThrow(new HostUnavailableException("no pty"));
+        when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
 
         assertThat(manager.resume(project(), sessionId(), worktreeDirectory(), paneSize()))
                 .isEqualTo(new NotStartedHost());
@@ -270,10 +276,10 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldDropASessionWhoseClaudeExitedZeroWithoutAWarning() {
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         manager.onChange(changed);
         manager.startUnlinked(project(), paneSize());
-        verify(hosts).spawn(any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture());
 
         exited.getValue().accept(new ExitCode(0));
 
@@ -283,9 +289,9 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldDropASessionWhoseClaudeExitedNonZeroAndWarnOfTheCode() {
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         manager.startUnlinked(project(), paneSize());
-        verify(hosts).spawn(any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture());
 
         exited.getValue().accept(new ExitCode(2));
 
@@ -295,10 +301,10 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldKeepTheOthersInOrderWhenTheFirstExits() {
-        when(hosts.spawn(any(), any())).thenReturn(processId(), secondProcessId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
         manager.startUnlinked(project(), paneSize());
         SessionId second = idOf(manager.startUnlinked(project(), paneSize()));
-        verify(hosts, times(2)).spawn(any(), exited.capture());
+        verify(hosts, times(2)).spawn(any(), any(), exited.capture());
 
         exited.getAllValues().getFirst().accept(new ExitCode(0));
 
@@ -307,11 +313,11 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldTellListenersWhenASessionOpensAndWhenItCloses() {
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         manager.onChange(changed);
 
         manager.startUnlinked(project(), paneSize());
-        verify(hosts).spawn(any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture());
         verify(changed, times(1)).changed();
         exited.getValue().accept(new ExitCode(0));
 
@@ -320,7 +326,7 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldNotTellListenersWhenNothingStarted() {
-        when(hosts.spawn(any(), any())).thenThrow(new HostUnavailableException("no pty"));
+        when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
         manager.onChange(changed);
 
         manager.startUnlinked(project(), paneSize());
@@ -330,9 +336,9 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldIgnoreTheExitOfASessionItNoLongerHolds() {
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         manager.startUnlinked(project(), paneSize());
-        verify(hosts).spawn(any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture());
         exited.getValue().accept(new ExitCode(0));
 
         exited.getValue().accept(new ExitCode(1));
@@ -342,8 +348,8 @@ class HostedSessionManagerTest {
 
     @Test
     void shouldNotHoldASessionWhoseClaudeExitedBeforeSpawningReturned() {
-        when(hosts.spawn(any(), any())).thenAnswer(spawn -> {
-            Consumer<ExitCode> onExit = spawn.getArgument(1);
+        when(hosts.spawn(any(), any(), any())).thenAnswer(spawn -> {
+            Consumer<ExitCode> onExit = spawn.getArgument(2);
             onExit.accept(new ExitCode(127));
             return processId();
         });
@@ -358,12 +364,12 @@ class HostedSessionManagerTest {
     }
 
     @Test
-    void shouldHandInputToTheSessionItIsFor() {
+    void shouldWriteBytesToTheSessionItIsFor() {
         SessionId id = SessionId.random();
 
-        manager.send(id, typedA());
+        manager.write(id, typedBytes());
 
-        verify(hosts).send(id, typedA());
+        verify(hosts).write(id, typedBytes());
     }
 
     @Test
@@ -376,16 +382,82 @@ class HostedSessionManagerTest {
     }
 
     @Test
-    void shouldAnswerWithTheScreenTheHostHolds() {
-        SessionId id = SessionId.random();
-        when(hosts.screenOf(id)).thenReturn(screenSaying("hello"));
+    void shouldHandWhatTheSessionWroteToItsListenerAsPtyBytes() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        manager.onPty(pty);
+        SessionId id = idOf(manager.startUnlinked(project(), paneSize()));
+        verify(hosts).spawn(any(), output.capture(), any());
 
-        assertThat(manager.screenOf(id)).isEqualTo(screenSaying("hello"));
+        output.getValue().accept(ptyBytesOf("hello"));
+
+        verify(pty).output(id, ptyBytesOf("hello"));
+    }
+
+    @Test
+    void shouldTellItsListenerOfALaunchBeforeTheProcessIsSpawned() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        manager.onPty(pty);
+
+        SessionId id = idOf(manager.startUnlinked(project(), paneSize()));
+
+        InOrder order = inOrder(pty, hosts);
+        order.verify(pty).launching(id, paneSize());
+        order.verify(hosts).spawn(any(), any(), any());
+    }
+
+    @Test
+    void shouldTellItsListenerASessionEndedWhenItsClaudeExits() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        manager.onPty(pty);
+        SessionId id = idOf(manager.startUnlinked(project(), paneSize()));
+        verify(hosts).spawn(any(), any(), exited.capture());
+
+        exited.getValue().accept(new ExitCode(0));
+
+        verify(pty).ended(id);
+    }
+
+    @Test
+    void shouldTellItsListenerASessionEndedWhenSpawningFails() {
+        when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
+        manager.onPty(pty);
+
+        manager.startUnlinked(project(), paneSize());
+
+        verify(pty).ended(any());
+    }
+
+    @Test
+    void shouldKeepASessionClaimedUntilItsListenerWasToldItsSpawnFailed() {
+        when(hosts.exists(worktreeDirectory())).thenReturn(true);
+        when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
+        manager.onPty(pty);
+        doAnswer(invocation -> manager.resume(project(), sessionId(), worktreeDirectory(), paneSize()))
+                .when(pty)
+                .ended(sessionId());
+
+        manager.resume(project(), sessionId(), worktreeDirectory(), paneSize());
+
+        verify(hosts, times(1)).spawn(any(), any(), any());
+    }
+
+    @Test
+    void shouldTellItsListenerASessionEndedWhenItsClaudeExitedBeforeSpawningReturned() {
+        manager.onPty(pty);
+        when(hosts.spawn(any(), any(), any())).thenAnswer(invocation -> {
+            Consumer<ExitCode> onExit = invocation.getArgument(2);
+            onExit.accept(new ExitCode(1));
+            return processId();
+        });
+
+        manager.startUnlinked(project(), paneSize());
+
+        verify(pty).ended(any());
     }
 
     @Test
     void shouldEndEveryOpenSessionOnQuit() {
-        when(hosts.spawn(any(), any())).thenReturn(processId(), secondProcessId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
         SessionId first = idOf(manager.startUnlinked(project(), paneSize()));
         SessionId second = idOf(manager.startUnlinked(project(), paneSize()));
 
@@ -401,17 +473,6 @@ class HostedSessionManagerTest {
 
         verify(hosts, never()).end(any());
         verifyNoInteractions(warnings);
-    }
-
-    @Test
-    void shouldPassScreenChangesOnToItsListener() {
-        ArgumentCaptor<Consumer<SessionId>> hostListener = ArgumentCaptor.captor();
-        manager.onScreenChange(screenChanged);
-        verify(hosts).onScreenChange(hostListener.capture());
-
-        hostListener.getValue().accept(SessionId.random());
-
-        verify(screenChanged).run();
     }
 
     @Test

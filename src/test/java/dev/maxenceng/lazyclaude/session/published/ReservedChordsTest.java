@@ -9,7 +9,8 @@ import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altW;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altZ;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlAltH;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlC;
-import static dev.maxenceng.lazyclaude.session.published.ChordFixture.pressed;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.held;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.typedKey;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -77,9 +78,9 @@ class ReservedChordsTest {
     void shouldNameTheActionAPressedKeyIsBoundTo() {
         ReservedChords rebound = ReservedChords.defaults().rebinding(Map.of(ReservedAction.FOCUS_LEFT, ctrlAltH()));
 
-        assertThat(rebound.actionOf(pressed('h', Modifier.CTRL, Modifier.ALT)))
+        assertThat(rebound.actionOf(typedKey('h'), held(Modifier.CTRL, Modifier.ALT)))
                 .contains(ReservedAction.FOCUS_LEFT);
-        assertThat(rebound.actionOf(pressed('h', Modifier.ALT)))
+        assertThat(rebound.actionOf(typedKey('h'), held(Modifier.ALT)))
                 .as("the old chord is free again, so it reaches claude")
                 .isEqualTo(Optional.empty());
     }

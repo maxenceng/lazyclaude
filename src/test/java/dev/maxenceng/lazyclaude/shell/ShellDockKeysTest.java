@@ -1,10 +1,10 @@
 package dev.maxenceng.lazyclaude.shell;
 
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.pressed;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.typed;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedTab;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.pressed;
-import static dev.maxenceng.lazyclaude.session.published.TerminalInputFixture.typed;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
@@ -16,6 +16,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellInDock;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shiftTab;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
@@ -40,88 +42,90 @@ class ShellDockKeysTest {
     @Mock
     private HostedSessionCommand hosting;
 
+    private final HostedEmulatorCommand emulating = mock(HostedEmulatorCommand.class);
+
     private final SessionQuery screens = blankScreens();
 
     @Test
     void shouldHandEveryKeyToClaudeWhileATabHasFocus() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         assertThat(shell.press(key('q'))).isTrue();
         assertThat(shell.quitRequested()).as("q is a letter inside a session").isFalse();
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), typed('q', Modifiers.none())));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), typed('q', Modifiers.none())));
     }
 
     @Test
     void shouldHandTabShiftTabEscAndCtrlRToClaude() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         shell.press(namedKey(KeyCode.TAB));
         shell.press(shiftTab());
         shell.press(namedKey(KeyCode.ESCAPE));
         shell.press(ctrl('r'));
 
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), pressed(NamedKey.TAB)));
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), pressed(NamedKey.TAB, Modifiers.of(Modifier.SHIFT))));
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), pressed(NamedKey.ESCAPE)));
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), typed('r', Modifiers.of(Modifier.CTRL))));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), pressed(NamedKey.TAB)));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), pressed(NamedKey.TAB, Modifiers.of(Modifier.SHIFT))));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), pressed(NamedKey.ESCAPE)));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), typed('r', Modifiers.of(Modifier.CTRL))));
     }
 
     @Test
     void shouldHandCtrlCToClaudeAndNeverQuit() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         assertThat(shell.press(ctrl('c'))).as("handled, so TamboUI does not quit on it").isTrue();
 
         assertThat(shell.quitRequested()).isFalse();
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), typed('c', Modifiers.of(Modifier.CTRL))));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), typed('c', Modifiers.of(Modifier.CTRL))));
     }
 
     @Test
     void shouldSwallowCtrlZSoClaudeIsNeverStopped() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         assertThat(shell.press(ctrl('z'))).isTrue();
 
-        verify(hosting, never()).send(any());
+        verify(emulating, never()).send(any());
     }
 
     @Test
     void shouldTakeTheReservedChordsBeforeClaudeSeesThem() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         shell.press(alt('z'));
         shell.press(alt('w'));
         shell.press(alt('j'));
 
-        verify(hosting, never()).send(any());
+        verify(emulating, never()).send(any());
     }
 
     @Test
     void shouldHandAnAltChordClaudeMayUseThatIsNotReserved() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         shell.press(alt('b'));
 
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), typed('b', Modifiers.of(Modifier.ALT))));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), typed('b', Modifiers.of(Modifier.ALT))));
     }
 
     @Test
     void shouldNotHandAKeyThatNeitherNamesACharacterNorAKeyToClaude() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         assertThat(shell.press(namedKey(KeyCode.UNKNOWN))).isTrue();
 
-        verify(hosting, never()).send(any());
+        verify(emulating, never()).send(any());
     }
 
     @Test
     void shouldTreatTheDockAsAPanelWhenItHoldsNoTab() {
-        Shell shell = shellInDock(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellInDock(sessionsViewWithTabs(), hosting, emulating, screens);
 
         shell.press(key('q'));
 
         assertThat(shell.quitRequested()).isTrue();
-        verify(hosting, never()).send(any());
+        verify(emulating, never()).send(any());
     }
 
     @Test
@@ -131,7 +135,7 @@ class ShellDockKeysTest {
                         hostedTab(1, "first-one", new Busy()),
                         hostedTab(2, "second-one", new YourTurn()),
                         hostedTab(3, "third-one", new YourTurn())),
-                hosting,
+                hosting, emulating,
                 screens);
 
         shell.press(alt('l'));
@@ -145,7 +149,7 @@ class ShellDockKeysTest {
     void shouldStayOnTheLastTabWhenAltLHasNoNextOne() {
         Shell shell = shellInDock(
                 sessionsViewWithTabs(hostedTab(1, "first-one", new Busy()), hostedTab(2, "second-one", new YourTurn())),
-                hosting,
+                hosting, emulating,
                 screens);
         shell.press(alt('l'));
 
@@ -159,7 +163,7 @@ class ShellDockKeysTest {
     void shouldGoToThePanelsWithAltHOnTheFirstTab() {
         Shell shell = shellInDock(
                 sessionsViewWithTabs(hostedTab(1, "first-one", new Busy()), hostedTab(2, "second-one", new YourTurn())),
-                hosting,
+                hosting, emulating,
                 screens);
 
         shell.press(alt('h'));
@@ -169,7 +173,7 @@ class ShellDockKeysTest {
 
     @Test
     void shouldGoToTheMainViewWithAltKFromTheDock() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         shell.press(alt('k'));
 
@@ -178,7 +182,7 @@ class ShellDockKeysTest {
 
     @Test
     void shouldShowAHiddenMainViewAndGoToItWithAltK() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
         shell.press(alt('m'));
         assertThat(Screen.of(shell).text()).doesNotContain("╭main view");
 
@@ -190,7 +194,7 @@ class ShellDockKeysTest {
 
     @Test
     void shouldShowAHiddenMainViewWithAltKFromADockWithNoTab() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
         shell.press(key('m'));
         shell.press(alt('l'));
         assertThat(shell.focus()).isEqualTo(Focus.DOCK);
@@ -203,7 +207,7 @@ class ShellDockKeysTest {
 
     @Test
     void shouldGoToTheDockWithAltJFromTheMainView() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         shell.press(alt('l'));
         assertThat(shell.focus()).isEqualTo(Focus.MAIN);
 
@@ -214,7 +218,7 @@ class ShellDockKeysTest {
 
     @Test
     void shouldHideTheMainViewWithMOutsideASessionAndShowItAgainWithM() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
 
         shell.press(key('m'));
         assertThat(Screen.of(shell).text()).doesNotContain("╭main view");
@@ -225,17 +229,17 @@ class ShellDockKeysTest {
 
     @Test
     void shouldHideTheMainViewWithAltMFromInsideASession() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         shell.press(alt('m'));
 
         assertThat(Screen.of(shell).text()).doesNotContain("╭main view");
-        verify(hosting, never()).send(any());
+        verify(emulating, never()).send(any());
     }
 
     @Test
     void shouldKeepTheMainViewHiddenUntilToggledBack() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
         shell.press(alt('m'));
 
         shell.press(key('j'));
@@ -247,17 +251,17 @@ class ShellDockKeysTest {
 
     @Test
     void shouldSendMToClaudeInsteadOfHidingTheMainViewInsideASession() {
-        Shell shell = oneTabInDock(hosting, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         shell.press(key('m'));
 
         assertThat(Screen.of(shell).text()).contains("╭main view");
-        verify(hosting).send(new HostedInputPayload(hostedSessionIdOf(1), typed('m', Modifiers.none())));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), typed('m', Modifiers.none())));
     }
 
     @Test
     void shouldMoveFocusToTheDockWhenHidingTheMainViewFromIt() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         shell.press(alt('l'));
 
         shell.press(alt('m'));
@@ -267,7 +271,7 @@ class ShellDockKeysTest {
 
     @Test
     void shouldReachTheDockWithLFromAPanelWhileTheMainViewIsHidden() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         shell.press(alt('m'));
 
         shell.press(key('l'));

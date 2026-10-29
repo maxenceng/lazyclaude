@@ -40,8 +40,12 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorPastePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.FailedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HeldWorktreeView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
@@ -75,12 +79,10 @@ import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.PaneHeight;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.PaneWidth;
-import dev.maxenceng.lazyclaude.session.published.PastedText;
 import dev.maxenceng.lazyclaude.session.published.ReservedAction;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
-import dev.maxenceng.lazyclaude.session.published.TerminalInput;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
@@ -176,6 +178,8 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private final HostedSessionCommand hosting;
+    private final HostedEmulatorCommand emulating;
+    private final HostedEmulatorQuery emulators;
     private final WatchedSessionCommand watching;
     private final TicketWorktreeCommand removing;
     private final TerminalFocus terminalFocus = new TerminalFocus(this::terminalFocusChanged);
@@ -230,6 +234,8 @@ public final class Shell extends ToolkitApp {
             SessionsView sessions,
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
+            HostedEmulatorCommand emulating,
+            HostedEmulatorQuery emulators,
             WatchedSessionCommand watching,
             TicketWorktreeCommand removing,
             SessionQuery screens,
@@ -244,6 +250,8 @@ public final class Shell extends ToolkitApp {
                 sessions,
                 pullRequests,
                 hosting,
+                emulating,
+                emulators,
                 watching,
                 removing,
                 screens,
@@ -262,6 +270,8 @@ public final class Shell extends ToolkitApp {
             SessionsView sessions,
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
+            HostedEmulatorCommand emulating,
+            HostedEmulatorQuery emulators,
             WatchedSessionCommand watching,
             TicketWorktreeCommand removing,
             SessionQuery screens,
@@ -281,6 +291,8 @@ public final class Shell extends ToolkitApp {
         this.sessions = new SessionRows(sessions);
         this.pullRequests = pullRequests;
         this.hosting = hosting;
+        this.emulating = emulating;
+        this.emulators = emulators;
         this.watching = watching;
         this.removing = removing;
         this.screens = screens;
@@ -601,7 +613,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Optional<ReservedAction> reservedBy(KeyEvent key) {
-        return TerminalInputs.key(key).flatMap(chords::actionOf);
+        return EmulatorInputs.key(key).flatMap(pressed -> chords.actionOf(pressed.input(), pressed.modifiers()));
     }
 
     /** What a reserved chord does outside a hosted session; rebinding {@code nextWaiting} keeps it leaving the zoom. */
@@ -682,7 +694,7 @@ public final class Shell extends ToolkitApp {
 
     private boolean pressUnzoomed(KeyEvent key) {
         if (key.hasCtrl()) {
-            return TerminalInputs.isFixed(key, FixedChord.QUIT) ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
+            return EmulatorInputs.isFixed(key, FixedChord.QUIT) ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
         }
         if (key.hasAlt()) {
             return false;
@@ -750,7 +762,7 @@ public final class Shell extends ToolkitApp {
         if (key.hasCtrl() && key.isChar(SUSPEND)) {
             return true;
         }
-        TerminalInputs.key(key).ifPresent(this::sendToSelectedTab);
+        EmulatorInputs.key(key).ifPresent(this::sendToSelectedTab);
         return true;
     }
 
@@ -772,12 +784,12 @@ public final class Shell extends ToolkitApp {
         };
     }
 
-    private void sendToSelectedTab(TerminalInput input) {
-        dock.selectedTab().ifPresent(tab -> hosting.send(new HostedInputPayload(tab.id(), input)));
+    private void sendToSelectedTab(EmulatorInputPayload input) {
+        dock.selectedTab().ifPresent(tab -> emulating.send(new HostedInputPayload(tab.id(), input)));
     }
 
     /** A paste into the pane, handed to the session whose tab has focus and dropped otherwise. */
-    void paste(PastedText paste) {
+    void paste(EmulatorPastePayload paste) {
         if (inSession()) {
             sendToSelectedTab(paste);
         }
@@ -787,9 +799,9 @@ public final class Shell extends ToolkitApp {
     boolean mouse(MouseEvent event) {
         return dock.selectedTab()
                 .filter(_ -> !zoomed || focus == Focus.DOCK)
-                .flatMap(tab -> paneArea.flatMap(area -> TerminalInputs.mouse(event, area))
+                .flatMap(tab -> paneArea.flatMap(area -> EmulatorInputs.mouse(event, area))
                         .map(input -> {
-                            hosting.send(new HostedInputPayload(tab.id(), input));
+                            emulating.send(new HostedInputPayload(tab.id(), input));
                             return true;
                         }))
                 .orElse(false);
@@ -1030,7 +1042,7 @@ public final class Shell extends ToolkitApp {
                 .map(HostedSessionView::id)
                 .filter(id -> !size.equals(paneSizes.get(id)))
                 .toList();
-        resized.forEach(id -> hosting.resize(new ResizePayload(id, size)));
+        resized.forEach(id -> emulating.resize(new ResizePayload(id, size)));
         sized(resized, size);
     }
 
@@ -1043,11 +1055,11 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean pressWithCtrl(KeyEvent key) {
-        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_DOWN)) {
+        if (EmulatorInputs.isFixed(key, FixedChord.HALF_PAGE_DOWN)) {
             mainViewScroll.halfPageDown();
             return true;
         }
-        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_UP)) {
+        if (EmulatorInputs.isFixed(key, FixedChord.HALF_PAGE_UP)) {
             mainViewScroll.halfPageUp();
             return true;
         }
@@ -1386,7 +1398,7 @@ public final class Shell extends ToolkitApp {
 
     private Element dock() {
         Element body = dock.selectedTab()
-                .<Element>map(tab -> new TerminalScreenElement(screens.screenOf(tab.id()), focus == Focus.DOCK, this::paste))
+                .<Element>map(tab -> new EmulatorScreenElement(emulators.screenOf(tab.id()), focus == Focus.DOCK, this::paste))
                 .orElseGet(() -> text(NO_HOSTED_SESSION));
         Panel panel = panel(DOCK_TITLE, new PaneProbe(body, this::paneDrawn))
                 .title(DockText.title(dock.tabs(), dock.selectedIndex()))

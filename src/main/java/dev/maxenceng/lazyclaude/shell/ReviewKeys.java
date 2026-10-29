@@ -109,7 +109,7 @@ final class ReviewKeys {
             return false;
         }
         if (key.hasCtrl()) {
-            return !TerminalInputs.isFixed(key, FixedChord.QUIT) && host.focus().get() == Focus.MAIN && page(pane, key);
+            return !EmulatorInputs.isFixed(key, FixedChord.QUIT) && host.focus().get() == Focus.MAIN && page(pane, key);
         }
         if (key.isChar(OPEN_REVIEW)) {
             return true;
@@ -191,7 +191,7 @@ final class ReviewKeys {
 
     /** The box takes every key: {@code ctrl+s} saves, {@code esc} throws it away, the rest edit its text; only {@code ctrl+c} still quits. */
     private boolean pressInBox(ReviewPane pane, CommentBox box, KeyEvent key) {
-        if (TerminalInputs.isFixed(key, FixedChord.QUIT)) {
+        if (EmulatorInputs.isFixed(key, FixedChord.QUIT)) {
             return false;
         }
         if (box.saving()) {
@@ -256,11 +256,11 @@ final class ReviewKeys {
     }
 
     private static boolean page(ReviewPane pane, KeyEvent key) {
-        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_DOWN)) {
+        if (EmulatorInputs.isFixed(key, FixedChord.HALF_PAGE_DOWN)) {
             pane.halfPageDown();
             return true;
         }
-        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_UP)) {
+        if (EmulatorInputs.isFixed(key, FixedChord.HALF_PAGE_UP)) {
             pane.halfPageUp();
             return true;
         }

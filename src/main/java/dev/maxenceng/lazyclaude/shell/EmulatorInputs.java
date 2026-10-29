@@ -4,6 +4,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorKeyPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorMousePayload;
 import dev.maxenceng.lazyclaude.session.published.CellColumn;
 import dev.maxenceng.lazyclaude.session.published.CellRow;
 import dev.maxenceng.lazyclaude.session.published.FixedChord;
@@ -14,8 +16,6 @@ import dev.maxenceng.lazyclaude.session.published.MouseAction;
 import dev.maxenceng.lazyclaude.session.published.NamedKey;
 import dev.maxenceng.lazyclaude.session.published.PointerButton;
 import dev.maxenceng.lazyclaude.session.published.PressedKey;
-import dev.maxenceng.lazyclaude.session.published.TerminalKey;
-import dev.maxenceng.lazyclaude.session.published.TerminalMouse;
 import dev.maxenceng.lazyclaude.session.published.TypedCharacter;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.tui.event.KeyCode;
@@ -28,13 +28,13 @@ import dev.tamboui.tui.event.MouseEvent;
  * Maps what TamboUI parsed from the outer terminal to the published values a hosted session is fed, so no TamboUI type
  * crosses into {@code session}.
  */
-final class TerminalInputs {
+final class EmulatorInputs {
 
-    private TerminalInputs() {}
+    private EmulatorInputs() {}
 
     // deferred: Ctrl+J, Shift+Enter, Ctrl+Enter and Alt+Enter are lost inside the pane, since TamboUI collapses them to Enter or an unknown key before the shell sees them — close it when TamboUI supports the kitty keyboard protocol (upstream #446).
-    static Optional<TerminalKey> key(KeyEvent event) {
-        return input(event).map(input -> TerminalKey.builder()
+    static Optional<EmulatorKeyPayload> key(KeyEvent event) {
+        return input(event).map(input -> EmulatorKeyPayload.builder()
                 .input(input)
                 .modifiers(modifiers(event.modifiers()))
                 .build());
@@ -42,17 +42,17 @@ final class TerminalInputs {
 
     /** Whether {@code event} is the fixed chord {@code fixed}. */
     static boolean isFixed(KeyEvent event, FixedChord fixed) {
-        return key(event).filter(fixed::isPressedBy).isPresent();
+        return key(event).filter(key -> fixed.isPressedBy(key.input(), key.modifiers())).isPresent();
     }
 
     /** The mouse event as a cell of {@code pane}, counted from its top left, or nothing when it happened outside the pane. */
-    static Optional<TerminalMouse> mouse(MouseEvent event, Rect pane) {
+    static Optional<EmulatorMousePayload> mouse(MouseEvent event, Rect pane) {
         int column = event.x() - pane.x();
         int row = event.y() - pane.y();
         if (column < 0 || row < 0 || column >= pane.width() || row >= pane.height()) {
             return Optional.empty();
         }
-        return Optional.of(TerminalMouse.builder()
+        return Optional.of(EmulatorMousePayload.builder()
                 .action(action(event))
                 .button(button(event.button()))
                 .column(new CellColumn(column))

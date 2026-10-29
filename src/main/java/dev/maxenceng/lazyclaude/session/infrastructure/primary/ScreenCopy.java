@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
+package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import java.util.List;
 import java.util.Map;
@@ -24,10 +24,9 @@ import dev.maxenceng.lazyclaude.session.published.RunText;
 import dev.maxenceng.lazyclaude.session.published.ScreenCursor;
 import dev.maxenceng.lazyclaude.session.published.ScreenRow;
 import dev.maxenceng.lazyclaude.session.published.StyledRun;
-import dev.maxenceng.lazyclaude.session.published.TerminalScreen;
 import dev.maxenceng.lazyclaude.session.published.TextAttribute;
 
-/** Copies the emulator's cell grid into a {@link TerminalScreen}, so that nothing of jediterm leaves this package. */
+/** Copies the emulator's cell grid into a {@link EmulatorScreenView}, so that nothing of jediterm leaves this package. */
 final class ScreenCopy {
 
     private static final String NOTHING = "";
@@ -43,10 +42,10 @@ final class ScreenCopy {
     private ScreenCopy() {}
 
     /** The screen as the buffer holds it right now, with the cursor at {@code column} and {@code row} when {@code cursorVisible}. */
-    static TerminalScreen of(TerminalTextBuffer buffer, CellColumn column, CellRow row, boolean cursorVisible) {
+    static EmulatorScreenView of(TerminalTextBuffer buffer, CellColumn column, CellRow row, boolean cursorVisible) {
         buffer.lock();
         try {
-            return TerminalScreen.builder()
+            return EmulatorScreenView.builder()
                     .rows(IntStream.range(0, buffer.getHeight())
                             .mapToObj(y -> new ScreenRow(runsOf(buffer.getLine(y))))
                             .toList())

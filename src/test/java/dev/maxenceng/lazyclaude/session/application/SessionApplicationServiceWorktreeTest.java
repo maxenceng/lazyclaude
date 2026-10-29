@@ -137,10 +137,10 @@ class SessionApplicationServiceWorktreeTest {
     @Test
     void shouldTellTheListenerWhichTicketsDoneSessionEnded() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         service.onTicketDoneEnded(doneEnded);
         service.startTicket(ticketStart(Verb.DONE), paneSize());
-        verify(hosts).spawn(any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture());
 
         exited.getValue().accept(new ExitCode(0));
 

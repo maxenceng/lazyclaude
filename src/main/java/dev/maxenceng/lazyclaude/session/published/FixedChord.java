@@ -25,8 +25,8 @@ public enum FixedChord {
                 .build();
     }
 
-    public boolean isPressedBy(TerminalKey pressed) {
-        return chord().isPressedBy(pressed);
+    public boolean isPressedBy(KeyInput pressed, Modifiers held) {
+        return chord().isPressedBy(pressed, held);
     }
 
     /** What it does, as a refusal names it: {@code quit}. */
