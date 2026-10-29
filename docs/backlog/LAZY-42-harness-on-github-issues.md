@@ -1,6 +1,6 @@
 ---
 id: LAZY-42
-status: todo
+status: in-review
 context: cross-context
 type: feature
 tracker_id: 104
@@ -21,7 +21,7 @@ blocked_by: [LAZY-31]
 - [ ] A section write replaces only that `##` section and refuses, changing nothing, when the issue's `updatedAt` moved
       since it was read.
 - [ ] A missing `status:`/`type:` label is created as it is applied; a `context:` label not named in
-      `docs/context-map.md` is refused, except `context:cross-context`, which every project accepts (ADR 0055).
+      `docs/context-map.md` is refused, except `context:cross-context`, which every project accepts (ADR 0053).
 - [ ] `new` captures one issue per line from `.github/ISSUE_TEMPLATE/ticket.md`; the template also ships `map.md` and
       `decision.md`. `refine`, `start` and `design` keep today's refusals, read from labels and sections; `refine` no
       longer calls context the last cheap moment.
