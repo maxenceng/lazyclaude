@@ -45,7 +45,8 @@ final class MouseBytes {
         return sequence.getBytes(StandardCharsets.US_ASCII);
     }
 
-    private static boolean reports(MouseAction action, MouseMode mode) {
+    /** Whether {@code mode} reports {@code action} at all, so an event it does not is dropped before it is encoded. */
+    static boolean reports(MouseAction action, MouseMode mode) {
         return switch (mode) {
             case MOUSE_REPORTING_NONE, MOUSE_REPORTING_FOCUS -> false;
             case MOUSE_REPORTING_NORMAL, MOUSE_REPORTING_HILITE ->

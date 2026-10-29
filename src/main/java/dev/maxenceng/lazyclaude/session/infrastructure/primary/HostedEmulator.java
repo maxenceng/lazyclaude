@@ -13,6 +13,7 @@ import com.jediterm.terminal.model.TerminalTextBuffer;
 import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
 import dev.maxenceng.lazyclaude.session.published.CellColumn;
 import dev.maxenceng.lazyclaude.session.published.CellRow;
+import dev.maxenceng.lazyclaude.session.published.MouseAction;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 
@@ -73,6 +74,11 @@ final class HostedEmulator {
                     case EmulatorPastePayload paste -> PasteBytes.of(paste, display.bracketedPaste());
                     case EmulatorMousePayload mouse -> MouseBytes.of(mouse, display.mouseMode());
                 });
+    }
+
+    /** Whether the session's {@code claude} asked for every pointer move (1003), so a move over its pane changes what it draws. */
+    boolean followsPointer() {
+        return MouseBytes.reports(MouseAction.MOVE, display.mouseMode());
     }
 
     void resize(PaneSize size) {

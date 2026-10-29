@@ -98,4 +98,42 @@ class EmulatorInputsTest {
         assertThat(EmulatorInputs.mouse(MouseEvent.press(MouseButton.LEFT, 40, 9), PANE)).isEmpty();
         assertThat(EmulatorInputs.mouse(MouseEvent.press(MouseButton.LEFT, 40, 19), PANE)).isEmpty();
     }
+
+    @Test
+    void shouldKeepAReleaseOnTheEdgeCellWhereItIs() {
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.release(MouseButton.LEFT, 78, 18), PANE))
+                .isEqualTo(mouse(MouseAction.RELEASE, PointerButton.LEFT, 49, 8));
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.release(MouseButton.LEFT, 29, 10), PANE))
+                .isEqualTo(mouse(MouseAction.RELEASE, PointerButton.LEFT, 0, 0));
+    }
+
+    @Test
+    void shouldPullAReleaseOneCellPastEachSideBackToTheNearestEdgeCell() {
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.release(MouseButton.LEFT, 79, 12), PANE))
+                .isEqualTo(mouse(MouseAction.RELEASE, PointerButton.LEFT, 49, 2));
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.release(MouseButton.LEFT, 28, 12), PANE))
+                .isEqualTo(mouse(MouseAction.RELEASE, PointerButton.LEFT, 0, 2));
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.release(MouseButton.LEFT, 40, 9), PANE))
+                .isEqualTo(mouse(MouseAction.RELEASE, PointerButton.LEFT, 11, 0));
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.release(MouseButton.LEFT, 40, 19), PANE))
+                .isEqualTo(mouse(MouseAction.RELEASE, PointerButton.LEFT, 11, 8));
+    }
+
+    @Test
+    void shouldPullAReleaseFarOutsideACornerBackToThatCorner() {
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.release(MouseButton.LEFT, 0, 0), PANE))
+                .isEqualTo(mouse(MouseAction.RELEASE, PointerButton.LEFT, 0, 0));
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.release(MouseButton.LEFT, 200, 0), PANE))
+                .isEqualTo(mouse(MouseAction.RELEASE, PointerButton.LEFT, 49, 0));
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.release(MouseButton.LEFT, 0, 90), PANE))
+                .isEqualTo(mouse(MouseAction.RELEASE, PointerButton.LEFT, 0, 8));
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.release(MouseButton.LEFT, 200, 90), PANE))
+                .isEqualTo(mouse(MouseAction.RELEASE, PointerButton.LEFT, 49, 8));
+    }
+
+    @Test
+    void shouldPullADragOutsideThePaneBackToItsEdgeToo() {
+        assertThat(EmulatorInputs.clampedMouse(MouseEvent.drag(MouseButton.LEFT, 100, 12), PANE))
+                .isEqualTo(mouse(MouseAction.DRAG, PointerButton.LEFT, 49, 2));
+    }
 }

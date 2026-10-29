@@ -50,6 +50,8 @@ clicks, menu rows and permission prompts included.
 
 - Nothing the mouse does cannot be undone by a key, except a second click, which is exactly an `enter`.
 - A hosted session has no hover while it is unfocused, and a click that focuses it is lost to `claude`.
+- With mouse capture on, motion is on too, so the outer terminal reports every move across the screen and the shell drops
+  each one that does not hover a focused pane following the pointer, before it can cause a render.
 - Every pane the mouse reaches writes to the hit map, so a new pane with no entry is inert to the mouse until it adds
   one.
 - deferred: a review's Files, Comments and diff stay on their keys, the mouse reaching none of them — closes when a ticket gives

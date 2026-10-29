@@ -216,7 +216,21 @@ final class ShellFixture {
     }
 
     static HostedEmulatorQuery blankEmulators() {
-        return mock(HostedEmulatorQuery.class, invocation -> invocation.getMethod().getReturnType() == EmulatorScreenView.class ? EmulatorScreenView.builder().build() : null);
+        return emulatorsFollowingThePointer(false);
+    }
+
+    static HostedEmulatorQuery emulatorsFollowingThePointer() {
+        return emulatorsFollowingThePointer(true);
+    }
+
+    private static HostedEmulatorQuery emulatorsFollowingThePointer(boolean follows) {
+        return mock(HostedEmulatorQuery.class, invocation -> {
+            Class<?> returned = invocation.getMethod().getReturnType();
+            if (returned == EmulatorScreenView.class) {
+                return EmulatorScreenView.builder().build();
+            }
+            return returned == boolean.class ? follows : null;
+        });
     }
 
     static SessionQuery blankScreens() {
@@ -516,6 +530,22 @@ final class ShellFixture {
     static Shell shellInDock(
             SessionsView sessions, HostedSessionCommand hosting, WatchedSessionCommand watching, SessionQuery screens) {
         return shellInDock(sessions, hosting, mock(HostedEmulatorCommand.class), watching, screens);
+    }
+
+    static Shell shellInDockFollowingThePointer(SessionsView sessions, HostedEmulatorCommand emulating) {
+        Shell shell = shellShowing(
+                sessions,
+                mock(HostedSessionCommand.class),
+                emulating,
+                emulatorsFollowingThePointer(),
+                mock(WatchedSessionCommand.class),
+                blankScreens(),
+                Runnable::run,
+                ReservedChords.defaults());
+        Screen.of(shell);
+        shell.press(alt('l'));
+        shell.press(alt('j'));
+        return shell;
     }
 
     static Shell shellInDock(

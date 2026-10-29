@@ -120,6 +120,33 @@ class HostedEmulatorQueryTest {
     }
 
     @Test
+    void shouldFollowThePointerOfASessionThatAskedForAllMotion() throws Exception {
+        RunningSession session = startedOn(hosts, service);
+
+        session.output().accept(ptyBytesOf("\u001b[?1003h\u001b[?1006hready"));
+        screenContaining(emulators, session.id(), "ready");
+
+        assertThat(emulators.followsPointer(session.id())).isTrue();
+    }
+
+    @Test
+    void shouldNotFollowThePointerOfASessionThatAskedOnlyForDrags() throws Exception {
+        RunningSession session = startedOn(hosts, service);
+
+        session.output().accept(ptyBytesOf("\u001b[?1002h\u001b[?1006hready"));
+        screenContaining(emulators, session.id(), "ready");
+
+        assertThat(emulators.followsPointer(session.id()))
+                .as("button-motion reports drags, never a bare move, so a move would change nothing on its screen")
+                .isFalse();
+    }
+
+    @Test
+    void shouldNotFollowThePointerOfASessionItNeverStarted() {
+        assertThat(emulators.followsPointer(sessionId())).isFalse();
+    }
+
+    @Test
     void shouldShowABlankScreenForASessionItNeverStarted() {
         assertThat(emulators.screenOf(sessionId())).isEqualTo(blankScreen());
     }
