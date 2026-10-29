@@ -1,6 +1,6 @@
 ---
 id: LAZY-42
-status: in-review
+status: done
 context: cross-context
 type: feature
 tracker_id: 104
@@ -61,3 +61,9 @@ Issues read (ADR 0052), not here.
 
 Lands before any project upgrades; a project takes 3.0.0 only once LAZY-33 has migrated it, lazyclaude only once its
 board reads Issues.
+
+Landed as claude-tools #55 (ddd-workflow 3.0.0, memory-sync 1.4.0). Decided in review: a ticket `/wayfinder` graduates
+is created `draft`, and moves to `todo` only when the decision settles its sections (template ADR 0017). Not carried:
+`new` defaulting `type:feature`, since ADR 0052 lets a draft lack a type. Also not carried: a conditional section
+write, since `gh issue edit` has none; the `updatedAt` check is read-then-write, accepted for one developer. Also not
+carried: paging past `--limit 1000` on `board`/`notes`.
