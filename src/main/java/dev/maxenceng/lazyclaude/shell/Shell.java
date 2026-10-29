@@ -40,18 +40,20 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorPastePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.FailedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HeldWorktreeView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedTerminals;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastedText;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RefusedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemovedWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
@@ -60,7 +62,6 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeTicketHoste
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInput;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
@@ -177,7 +178,8 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private final HostedSessionCommand hosting;
-    private final HostedTerminals terminals;
+    private final HostedEmulatorCommand emulating;
+    private final HostedEmulatorQuery emulators;
     private final WatchedSessionCommand watching;
     private final TicketWorktreeCommand removing;
     private final TerminalFocus terminalFocus = new TerminalFocus(this::terminalFocusChanged);
@@ -232,7 +234,8 @@ public final class Shell extends ToolkitApp {
             SessionsView sessions,
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
-            HostedTerminals terminals,
+            HostedEmulatorCommand emulating,
+            HostedEmulatorQuery emulators,
             WatchedSessionCommand watching,
             TicketWorktreeCommand removing,
             SessionQuery screens,
@@ -247,7 +250,8 @@ public final class Shell extends ToolkitApp {
                 sessions,
                 pullRequests,
                 hosting,
-                terminals,
+                emulating,
+                emulators,
                 watching,
                 removing,
                 screens,
@@ -266,7 +270,8 @@ public final class Shell extends ToolkitApp {
             SessionsView sessions,
             PullRequestsView pullRequests,
             HostedSessionCommand hosting,
-            HostedTerminals terminals,
+            HostedEmulatorCommand emulating,
+            HostedEmulatorQuery emulators,
             WatchedSessionCommand watching,
             TicketWorktreeCommand removing,
             SessionQuery screens,
@@ -286,7 +291,8 @@ public final class Shell extends ToolkitApp {
         this.sessions = new SessionRows(sessions);
         this.pullRequests = pullRequests;
         this.hosting = hosting;
-        this.terminals = terminals;
+        this.emulating = emulating;
+        this.emulators = emulators;
         this.watching = watching;
         this.removing = removing;
         this.screens = screens;
@@ -607,7 +613,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private Optional<ReservedAction> reservedBy(KeyEvent key) {
-        return TerminalInputs.key(key).flatMap(pressed -> chords.actionOf(pressed.input(), pressed.modifiers()));
+        return EmulatorInputs.key(key).flatMap(pressed -> chords.actionOf(pressed.input(), pressed.modifiers()));
     }
 
     /** What a reserved chord does outside a hosted session; rebinding {@code nextWaiting} keeps it leaving the zoom. */
@@ -688,7 +694,7 @@ public final class Shell extends ToolkitApp {
 
     private boolean pressUnzoomed(KeyEvent key) {
         if (key.hasCtrl()) {
-            return TerminalInputs.isFixed(key, FixedChord.QUIT) ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
+            return EmulatorInputs.isFixed(key, FixedChord.QUIT) ? requestQuit() : focus == Focus.MAIN && pressWithCtrl(key);
         }
         if (key.hasAlt()) {
             return false;
@@ -756,7 +762,7 @@ public final class Shell extends ToolkitApp {
         if (key.hasCtrl() && key.isChar(SUSPEND)) {
             return true;
         }
-        TerminalInputs.key(key).ifPresent(this::sendToSelectedTab);
+        EmulatorInputs.key(key).ifPresent(this::sendToSelectedTab);
         return true;
     }
 
@@ -778,12 +784,12 @@ public final class Shell extends ToolkitApp {
         };
     }
 
-    private void sendToSelectedTab(TerminalInput input) {
-        dock.selectedTab().ifPresent(tab -> terminals.send(new HostedInputPayload(tab.id(), input)));
+    private void sendToSelectedTab(EmulatorInputPayload input) {
+        dock.selectedTab().ifPresent(tab -> emulating.send(new HostedInputPayload(tab.id(), input)));
     }
 
     /** A paste into the pane, handed to the session whose tab has focus and dropped otherwise. */
-    void paste(PastedText paste) {
+    void paste(EmulatorPastePayload paste) {
         if (inSession()) {
             sendToSelectedTab(paste);
         }
@@ -793,9 +799,9 @@ public final class Shell extends ToolkitApp {
     boolean mouse(MouseEvent event) {
         return dock.selectedTab()
                 .filter(_ -> !zoomed || focus == Focus.DOCK)
-                .flatMap(tab -> paneArea.flatMap(area -> TerminalInputs.mouse(event, area))
+                .flatMap(tab -> paneArea.flatMap(area -> EmulatorInputs.mouse(event, area))
                         .map(input -> {
-                            terminals.send(new HostedInputPayload(tab.id(), input));
+                            emulating.send(new HostedInputPayload(tab.id(), input));
                             return true;
                         }))
                 .orElse(false);
@@ -1036,7 +1042,7 @@ public final class Shell extends ToolkitApp {
                 .map(HostedSessionView::id)
                 .filter(id -> !size.equals(paneSizes.get(id)))
                 .toList();
-        resized.forEach(id -> terminals.resize(new ResizePayload(id, size)));
+        resized.forEach(id -> emulating.resize(new ResizePayload(id, size)));
         sized(resized, size);
     }
 
@@ -1049,11 +1055,11 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean pressWithCtrl(KeyEvent key) {
-        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_DOWN)) {
+        if (EmulatorInputs.isFixed(key, FixedChord.HALF_PAGE_DOWN)) {
             mainViewScroll.halfPageDown();
             return true;
         }
-        if (TerminalInputs.isFixed(key, FixedChord.HALF_PAGE_UP)) {
+        if (EmulatorInputs.isFixed(key, FixedChord.HALF_PAGE_UP)) {
             mainViewScroll.halfPageUp();
             return true;
         }
@@ -1392,7 +1398,7 @@ public final class Shell extends ToolkitApp {
 
     private Element dock() {
         Element body = dock.selectedTab()
-                .<Element>map(tab -> new TerminalScreenElement(terminals.screenOf(tab.id()), focus == Focus.DOCK, this::paste))
+                .<Element>map(tab -> new EmulatorScreenElement(emulators.screenOf(tab.id()), focus == Focus.DOCK, this::paste))
                 .orElseGet(() -> text(NO_HOSTED_SESSION));
         Panel panel = panel(DOCK_TITLE, new PaneProbe(body, this::paneDrawn))
                 .title(DockText.title(dock.tabs(), dock.selectedIndex()))

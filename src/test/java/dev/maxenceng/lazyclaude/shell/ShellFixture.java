@@ -39,13 +39,14 @@ import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorScreenView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedTerminals;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalScreen;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
@@ -73,7 +74,8 @@ final class ShellFixture {
                 sessions,
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
+                blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
@@ -87,7 +89,8 @@ final class ShellFixture {
                 emptySessionsView(),
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
+                blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
@@ -102,7 +105,8 @@ final class ShellFixture {
                 emptySessionsView(),
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
+                blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 screens,
@@ -129,7 +133,8 @@ final class ShellFixture {
                 emptySessionsView(),
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
+                blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
@@ -151,7 +156,8 @@ final class ShellFixture {
                 emptySessionsView(),
                 pullRequests,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
+                blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
@@ -167,7 +173,8 @@ final class ShellFixture {
                 sessions,
                 pullRequests,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
+                blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),
@@ -184,8 +191,8 @@ final class ShellFixture {
         return invocation.getMethod().getReturnType() == HostStart.class ? new NotStartedHost() : null;
     }
 
-    static HostedTerminals blankTerminals() {
-        return mock(HostedTerminals.class, invocation -> invocation.getMethod().getReturnType() == TerminalScreen.class ? TerminalScreen.blank() : null);
+    static HostedEmulatorQuery blankEmulators() {
+        return mock(HostedEmulatorQuery.class, invocation -> invocation.getMethod().getReturnType() == EmulatorScreenView.class ? EmulatorScreenView.builder().build() : null);
     }
 
     static SessionQuery blankScreens() {
@@ -204,7 +211,8 @@ final class ShellFixture {
                 sessions,
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
+                blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 screens,
@@ -233,7 +241,8 @@ final class ShellFixture {
                 emptySessionsView(),
                 checkingPullRequestsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
+                blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 removing,
                 screens,
@@ -277,7 +286,7 @@ final class ShellFixture {
         if (invocation.getMethod().getReturnType() == WorktreeView.class) {
             return new NoWorktreeView();
         }
-        return invocation.getMethod().getReturnType() == TerminalScreen.class ? TerminalScreen.blank() : null;
+        return null;
     }
 
     private static Object blankScreenOrFirstVerb(InvocationOnMock invocation) {
@@ -296,7 +305,8 @@ final class ShellFixture {
                 sessions,
                 checkingPullRequestsView(),
                 hosting,
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
+                blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 screens,
@@ -341,33 +351,33 @@ final class ShellFixture {
     }
 
     static Shell shellHosting(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
-        return shellHosting(sessions, hosting, blankTerminals(), screens);
+        return shellHosting(sessions, hosting, mock(HostedEmulatorCommand.class), screens);
     }
 
     static Shell shellHosting(
-            SessionsView sessions, HostedSessionCommand hosting, HostedTerminals terminals, SessionQuery screens) {
-        return shellHosting(sessions, hosting, terminals, mock(WatchedSessionCommand.class), screens);
+            SessionsView sessions, HostedSessionCommand hosting, HostedEmulatorCommand emulating, SessionQuery screens) {
+        return shellHosting(sessions, hosting, emulating, mock(WatchedSessionCommand.class), screens);
     }
 
     static Shell shellHosting(
             SessionsView sessions, HostedSessionCommand hosting, WatchedSessionCommand watching, SessionQuery screens) {
-        return shellHosting(sessions, hosting, blankTerminals(), watching, screens);
+        return shellHosting(sessions, hosting, mock(HostedEmulatorCommand.class), watching, screens);
     }
 
     static Shell shellHosting(
             SessionsView sessions,
             HostedSessionCommand hosting,
-            HostedTerminals terminals,
+            HostedEmulatorCommand emulating,
             WatchedSessionCommand watching,
             SessionQuery screens) {
-        return shellHosting(sessions, hosting, terminals, watching, screens, Runnable::run);
+        return shellHosting(sessions, hosting, emulating, watching, screens, Runnable::run);
     }
 
     static Shell shellInDockRunningOn(SessionsView sessions, WatchedSessionCommand watching, Executor background) {
         Shell shell = shellHosting(
                 sessions,
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
                 watching,
                 blankScreens(),
                 background);
@@ -380,17 +390,41 @@ final class ShellFixture {
     private static Shell shellHosting(
             SessionsView sessions,
             HostedSessionCommand hosting,
-            HostedTerminals terminals,
+            HostedEmulatorCommand emulating,
             WatchedSessionCommand watching,
             SessionQuery screens,
             Executor background) {
-        return shellHosting(sessions, hosting, terminals, watching, screens, background, ReservedChords.defaults());
+        return shellHosting(sessions, hosting, emulating, watching, screens, background, ReservedChords.defaults());
     }
 
     private static Shell shellHosting(
             SessionsView sessions,
             HostedSessionCommand hosting,
-            HostedTerminals terminals,
+            HostedEmulatorCommand emulating,
+            WatchedSessionCommand watching,
+            SessionQuery screens,
+            Executor background,
+            ReservedChords chords) {
+        return shellShowing(sessions, hosting, emulating, blankEmulators(), watching, screens, background, chords);
+    }
+
+    static Shell shellShowing(SessionsView sessions, HostedEmulatorQuery emulators) {
+        return shellShowing(
+                sessions,
+                mock(HostedSessionCommand.class),
+                mock(HostedEmulatorCommand.class),
+                emulators,
+                mock(WatchedSessionCommand.class),
+                blankScreens(),
+                Runnable::run,
+                ReservedChords.defaults());
+    }
+
+    private static Shell shellShowing(
+            SessionsView sessions,
+            HostedSessionCommand hosting,
+            HostedEmulatorCommand emulating,
+            HostedEmulatorQuery emulators,
             WatchedSessionCommand watching,
             SessionQuery screens,
             Executor background,
@@ -401,7 +435,8 @@ final class ShellFixture {
                 sessions,
                 checkingPullRequestsView(),
                 hosting,
-                terminals,
+                emulating,
+                emulators,
                 watching,
                 mock(TicketWorktreeCommand.class),
                 screens,
@@ -413,11 +448,11 @@ final class ShellFixture {
                 background);
     }
 
-    static Shell oneTabInDockWithChords(ReservedChords chords, HostedSessionCommand hosting, HostedTerminals terminals) {
+    static Shell oneTabInDockWithChords(ReservedChords chords, HostedSessionCommand hosting, HostedEmulatorCommand emulating) {
         Shell shell = shellHosting(
                 sessionsViewWithTabs(hostedTab(1, "one", new Busy())),
                 hosting,
-                terminals,
+                emulating,
                 mock(WatchedSessionCommand.class),
                 blankScreens(),
                 Runnable::run,
@@ -432,7 +467,7 @@ final class ShellFixture {
         Shell shell = shellHosting(
                 emptySessionsView(),
                 mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
-                blankTerminals(),
+                mock(HostedEmulatorCommand.class),
                 mock(WatchedSessionCommand.class),
                 blankScreens(),
                 Runnable::run,
@@ -446,26 +481,26 @@ final class ShellFixture {
     }
 
     static Shell shellInDock(SessionsView sessions, HostedSessionCommand hosting, SessionQuery screens) {
-        return shellInDock(sessions, hosting, blankTerminals(), screens);
+        return shellInDock(sessions, hosting, mock(HostedEmulatorCommand.class), screens);
     }
 
     static Shell shellInDock(
-            SessionsView sessions, HostedSessionCommand hosting, HostedTerminals terminals, SessionQuery screens) {
-        return shellInDock(sessions, hosting, terminals, mock(WatchedSessionCommand.class), screens);
+            SessionsView sessions, HostedSessionCommand hosting, HostedEmulatorCommand emulating, SessionQuery screens) {
+        return shellInDock(sessions, hosting, emulating, mock(WatchedSessionCommand.class), screens);
     }
 
     static Shell shellInDock(
             SessionsView sessions, HostedSessionCommand hosting, WatchedSessionCommand watching, SessionQuery screens) {
-        return shellInDock(sessions, hosting, blankTerminals(), watching, screens);
+        return shellInDock(sessions, hosting, mock(HostedEmulatorCommand.class), watching, screens);
     }
 
     static Shell shellInDock(
             SessionsView sessions,
             HostedSessionCommand hosting,
-            HostedTerminals terminals,
+            HostedEmulatorCommand emulating,
             WatchedSessionCommand watching,
             SessionQuery screens) {
-        Shell shell = shellHosting(sessions, hosting, terminals, watching, screens);
+        Shell shell = shellHosting(sessions, hosting, emulating, watching, screens);
         Screen.of(shell);
         shell.press(alt('l'));
         shell.press(alt('j'));
@@ -473,14 +508,15 @@ final class ShellFixture {
     }
 
     static Shell oneTabInDockWithReviews(
-            HostedSessionCommand hosting, HostedTerminals terminals, SessionQuery screens, ReviewQuery reviews) {
+            HostedSessionCommand hosting, HostedEmulatorCommand emulating, SessionQuery screens, ReviewQuery reviews) {
         Shell shell = new Shell(
                 boardViewOf(ticketView()),
                 emptyDocsView(),
                 sessionsViewWithTabs(hostedTab(1, "one", new Busy())),
                 checkingPullRequestsView(),
                 hosting,
-                terminals,
+                emulating,
+                blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 screens,
@@ -496,11 +532,11 @@ final class ShellFixture {
     }
 
     static Shell oneTabInDock(HostedSessionCommand hosting, SessionQuery screens) {
-        return oneTabInDock(hosting, blankTerminals(), screens);
+        return oneTabInDock(hosting, mock(HostedEmulatorCommand.class), screens);
     }
 
-    static Shell oneTabInDock(HostedSessionCommand hosting, HostedTerminals terminals, SessionQuery screens) {
-        return shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, terminals, screens);
+    static Shell oneTabInDock(HostedSessionCommand hosting, HostedEmulatorCommand emulating, SessionQuery screens) {
+        return shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
     }
 
     static Shell shellOn(BoardView board) {

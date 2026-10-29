@@ -13,14 +13,21 @@ import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 
 /** The emulator of each hosted session that is running: made when it is about to spawn, fed what it writes, and dropped when it ends. */
-final class HostedEmulators implements PtyListener {
+public final class HostedEmulators implements PtyListener {
 
     private final SessionApplicationService sessions;
     private final Map<SessionId, HostedEmulator> running = new ConcurrentHashMap<>();
     private final List<Runnable> screenListeners = new CopyOnWriteArrayList<>();
 
-    HostedEmulators(SessionApplicationService sessions) {
+    private HostedEmulators(SessionApplicationService sessions) {
         this.sessions = sessions;
+    }
+
+    /** The emulators of {@code sessions}' hosted sessions, told of each launch, output and end from now on. */
+    public static HostedEmulators listeningTo(SessionApplicationService sessions) {
+        HostedEmulators emulators = new HostedEmulators(sessions);
+        sessions.onPty(emulators);
+        return emulators;
     }
 
     Optional<HostedEmulator> of(SessionId id) {

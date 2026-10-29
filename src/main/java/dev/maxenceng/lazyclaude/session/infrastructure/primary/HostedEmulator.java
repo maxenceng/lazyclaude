@@ -66,12 +66,12 @@ final class HostedEmulator {
     }
 
     /** What the child's modes make of {@code input}. */
-    PtyBytes encode(TerminalInput input) {
+    PtyBytes encode(EmulatorInputPayload input) {
         return new PtyBytes(
                 switch (input) {
-                    case TerminalKey key -> KeyBytes.of(key, terminal.applicationCursor());
-                    case PastedText paste -> PasteBytes.of(paste, display.bracketedPaste());
-                    case TerminalMouse mouse -> MouseBytes.of(mouse, display.mouseMode());
+                    case EmulatorKeyPayload key -> KeyBytes.of(key, terminal.applicationCursor());
+                    case EmulatorPastePayload paste -> PasteBytes.of(paste, display.bracketedPaste());
+                    case EmulatorMousePayload mouse -> MouseBytes.of(mouse, display.mouseMode());
                 });
     }
 
@@ -79,7 +79,7 @@ final class HostedEmulator {
         terminal.resize(new TermSize(size.width().cells(), size.height().cells()), RequestOrigin.User);
     }
 
-    TerminalScreen screen() {
+    EmulatorScreenView screen() {
         return ScreenCopy.of(
                 buffer, new CellColumn(terminal.getX()), new CellRow(terminal.getY() - 1), display.cursorVisible());
     }

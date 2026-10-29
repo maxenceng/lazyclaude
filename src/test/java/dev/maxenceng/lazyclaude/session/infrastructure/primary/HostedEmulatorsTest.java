@@ -1,7 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedTerminalsFixture.emulatorsLeft;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedTerminalsFixture.serviceOver;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorFixture.emulatorsLeft;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorFixture.serviceOver;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 
@@ -20,7 +20,7 @@ class HostedEmulatorsTest {
 
     @Test
     void shouldEndTheEmulatorALaunchOfTheSameSessionReplaces() throws Exception {
-        HostedEmulators emulators = new HostedEmulators(serviceOver(hosts));
+        HostedEmulators emulators = HostedEmulators.listeningTo(serviceOver(hosts));
         emulators.launching(sessionId(), paneSize());
 
         emulators.launching(sessionId(), paneSize());

@@ -12,19 +12,23 @@ import dev.maxenceng.lazyclaude.session.published.ScreenRow;
 import dev.maxenceng.lazyclaude.session.published.StyledRun;
 import dev.maxenceng.lazyclaude.session.published.TextAttribute;
 
-public final class TerminalScreenFixture {
+public final class EmulatorScreenViewFixture {
 
-    private TerminalScreenFixture() {}
+    private EmulatorScreenViewFixture() {}
 
-    public static TerminalScreen screenSaying(String... rows) {
-        return TerminalScreen.builder()
-                .rows(java.util.Arrays.stream(rows).map(TerminalScreenFixture::plainRow).toList())
+    public static EmulatorScreenView blankScreen() {
+        return EmulatorScreenView.builder().build();
+    }
+
+    public static EmulatorScreenView screenSaying(String... rows) {
+        return EmulatorScreenView.builder()
+                .rows(java.util.Arrays.stream(rows).map(EmulatorScreenViewFixture::plainRow).toList())
                 .build();
     }
 
-    public static TerminalScreen screenSayingWithCursorAt(int column, int row, String... rows) {
-        return TerminalScreen.builder()
-                .rows(java.util.Arrays.stream(rows).map(TerminalScreenFixture::plainRow).toList())
+    public static EmulatorScreenView screenSayingWithCursorAt(int column, int row, String... rows) {
+        return EmulatorScreenView.builder()
+                .rows(java.util.Arrays.stream(rows).map(EmulatorScreenViewFixture::plainRow).toList())
                 .cursor(CursorAt.builder()
                         .column(new CellColumn(column))
                         .row(new CellRow(row))

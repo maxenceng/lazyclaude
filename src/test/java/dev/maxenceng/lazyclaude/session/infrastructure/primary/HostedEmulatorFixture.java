@@ -30,12 +30,12 @@ import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
-public final class HostedTerminalsFixture {
+public final class HostedEmulatorFixture {
 
     private static final Duration PATIENCE = Duration.ofSeconds(10);
     private static final Duration POLL = Duration.ofMillis(20);
 
-    private HostedTerminalsFixture() {}
+    private HostedEmulatorFixture() {}
 
     public static SessionApplicationService serviceOver(HostPort hosts) {
         return sessionApplicationService(
@@ -57,7 +57,7 @@ public final class HostedTerminalsFixture {
         return new RunningSession(id, output.getAllValues().getLast(), exit.getAllValues().getLast());
     }
 
-    public static String textOf(TerminalScreen screen) {
+    public static String textOf(EmulatorScreenView screen) {
         return String.join(
                         "\n",
                         screen.rows().stream()
@@ -68,13 +68,13 @@ public final class HostedTerminalsFixture {
                 .stripTrailing();
     }
 
-    public static TerminalScreen screenContaining(HostedTerminals terminals, SessionId id, String fragment)
+    public static EmulatorScreenView screenContaining(HostedEmulatorQuery emulators, SessionId id, String fragment)
             throws Exception {
         Instant until = Instant.now().plus(PATIENCE);
-        TerminalScreen screen = terminals.screenOf(id);
+        EmulatorScreenView screen = emulators.screenOf(id);
         while (!textOf(screen).contains(fragment) && Instant.now().isBefore(until)) {
             Thread.sleep(POLL.toMillis());
-            screen = terminals.screenOf(id);
+            screen = emulators.screenOf(id);
         }
         if (!textOf(screen).contains(fragment)) {
             throw new TimeoutException("the screen never held %s; it showed:%n%s".formatted(fragment, textOf(screen)));

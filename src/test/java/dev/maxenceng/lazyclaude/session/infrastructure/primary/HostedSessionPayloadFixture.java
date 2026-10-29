@@ -1,6 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.typedA;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.typedA;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.resizedPaneSize;

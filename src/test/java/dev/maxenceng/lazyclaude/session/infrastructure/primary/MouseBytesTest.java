@@ -1,9 +1,9 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.leftPressAt;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.mouse;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.wheelUpAt;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SentBytesFixture.sent;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.leftPressAt;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.mouse;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.wheelUpAt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -54,7 +54,7 @@ class MouseBytesTest {
 
     @Test
     void shouldAddTheModifierBits() {
-        TerminalMouse withCtrl = TerminalMouse.builder()
+        EmulatorMousePayload withCtrl = EmulatorMousePayload.builder()
                 .action(MouseAction.PRESS)
                 .button(PointerButton.LEFT)
                 .column(new CellColumn(0))
@@ -67,7 +67,7 @@ class MouseBytesTest {
 
     @Test
     void shouldSendADragOnlyToAChildThatAskedForButtonMotion() {
-        TerminalMouse drag = mouse(MouseAction.DRAG, PointerButton.LEFT, 1, 1);
+        EmulatorMousePayload drag = mouse(MouseAction.DRAG, PointerButton.LEFT, 1, 1);
 
         assertThat(MouseBytes.of(drag, MouseMode.MOUSE_REPORTING_NORMAL))
                 .as("a child that asked only for clicks would read motion as garbage")
@@ -77,7 +77,7 @@ class MouseBytesTest {
 
     @Test
     void shouldSendBareMotionOnlyToAChildThatAskedForAllMotion() {
-        TerminalMouse move = mouse(MouseAction.MOVE, PointerButton.NONE, 1, 1);
+        EmulatorMousePayload move = mouse(MouseAction.MOVE, PointerButton.NONE, 1, 1);
 
         assertThat(MouseBytes.of(move, MouseMode.MOUSE_REPORTING_BUTTON_MOTION)).isEmpty();
         assertThat(sent(MouseBytes.of(move, MouseMode.MOUSE_REPORTING_ALL_MOTION))).isEqualTo("\u001b[<35;2;2M");

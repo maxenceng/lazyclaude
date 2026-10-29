@@ -50,6 +50,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
@@ -103,7 +104,8 @@ final class ShellReviewFixture {
                 emptySessionsView(),
                 pullRequests,
                 hosting,
-                ShellFixture.blankTerminals(),
+                mock(HostedEmulatorCommand.class),
+                ShellFixture.blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
                 blankScreens(),

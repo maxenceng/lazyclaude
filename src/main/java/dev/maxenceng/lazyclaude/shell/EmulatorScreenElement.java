@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastedText;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalScreen;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorPastePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorScreenView;
 import dev.maxenceng.lazyclaude.session.published.CellColour;
 import dev.maxenceng.lazyclaude.session.published.CellColumn;
 import dev.maxenceng.lazyclaude.session.published.CellRow;
@@ -35,18 +35,18 @@ import dev.tamboui.tui.event.PasteEvent;
  * cut at the edge of the area, and the session's cursor when the dock has focus. It is focusable only because TamboUI hands a
  * paste to the focused element alone.
  */
-final class TerminalScreenElement implements Element {
+final class EmulatorScreenElement implements Element {
 
     private static final String ID = "hosted-terminal";
     private static final int RGB_RED_SHIFT = 16;
     private static final int RGB_GREEN_SHIFT = 8;
     private static final int RGB_BYTE = 0xFF;
 
-    private final TerminalScreen screen;
+    private final EmulatorScreenView screen;
     private final boolean focused;
-    private final Consumer<PastedText> onPaste;
+    private final Consumer<EmulatorPastePayload> onPaste;
 
-    TerminalScreenElement(TerminalScreen screen, boolean focused, Consumer<PastedText> onPaste) {
+    EmulatorScreenElement(EmulatorScreenView screen, boolean focused, Consumer<EmulatorPastePayload> onPaste) {
         this.screen = screen;
         this.focused = focused;
         this.onPaste = onPaste;
@@ -111,7 +111,7 @@ final class TerminalScreenElement implements Element {
     }
 
     private static Style withAttributes(Style base, List<TextAttribute> attributes) {
-        return attributes.stream().reduce(base, TerminalScreenElement::with, (first, second) -> second);
+        return attributes.stream().reduce(base, EmulatorScreenElement::with, (first, second) -> second);
     }
 
     private static Style with(Style drawn, TextAttribute attribute) {
@@ -148,7 +148,7 @@ final class TerminalScreenElement implements Element {
 
     @Override
     public EventResult handlePasteEvent(PasteEvent event) {
-        onPaste.accept(new PastedText(event.text()));
+        onPaste.accept(new EmulatorPastePayload(event.text()));
         return EventResult.HANDLED;
     }
 

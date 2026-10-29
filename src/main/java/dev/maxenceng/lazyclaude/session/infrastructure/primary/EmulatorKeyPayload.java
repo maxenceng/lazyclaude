@@ -5,35 +5,35 @@ import dev.maxenceng.lazyclaude.session.published.KeyInput;
 import dev.maxenceng.lazyclaude.session.published.Modifiers;
 
 /** One key press with the modifiers held. */
-public record TerminalKey(KeyInput input, Modifiers modifiers) implements TerminalInput {
+public record EmulatorKeyPayload(KeyInput input, Modifiers modifiers) implements EmulatorInputPayload {
 
-    public TerminalKey {
+    public EmulatorKeyPayload {
         Assert.notNull("key input", input);
         Assert.notNull("modifiers", modifiers);
     }
 
-    public static TerminalKeyBuilder builder() {
-        return new TerminalKeyBuilder();
+    public static EmulatorKeyPayloadBuilder builder() {
+        return new EmulatorKeyPayloadBuilder();
     }
 
-    public static final class TerminalKeyBuilder {
+    public static final class EmulatorKeyPayloadBuilder {
         private KeyInput input;
         private Modifiers modifiers = Modifiers.none();
 
-        private TerminalKeyBuilder() {}
+        private EmulatorKeyPayloadBuilder() {}
 
-        public TerminalKeyBuilder input(KeyInput input) {
+        public EmulatorKeyPayloadBuilder input(KeyInput input) {
             this.input = input;
             return this;
         }
 
-        public TerminalKeyBuilder modifiers(Modifiers modifiers) {
+        public EmulatorKeyPayloadBuilder modifiers(Modifiers modifiers) {
             this.modifiers = modifiers;
             return this;
         }
 
-        public TerminalKey build() {
-            return new TerminalKey(input, modifiers);
+        public EmulatorKeyPayload build() {
+            return new EmulatorKeyPayload(input, modifiers);
         }
     }
 }

@@ -1,16 +1,18 @@
 package dev.maxenceng.lazyclaude.shell;
 
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorScreenViewFixture.screenSaying;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedTab;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTabNumbered;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalScreenFixture.screenSaying;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankEmulators;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
-import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankTerminals;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellHosting;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellInDock;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellShowing;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
@@ -18,8 +20,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedTerminals;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
@@ -31,27 +34,27 @@ class ShellHostedTest {
     @Mock
     private HostedSessionCommand hosting;
 
-    private final HostedTerminals terminals = blankTerminals();
+    private final HostedEmulatorCommand emulating = mock(HostedEmulatorCommand.class);
 
     private final SessionQuery screens = blankScreens();
 
     @Test
     void shouldShowNoHostedSessionInAnEmptyDock() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, terminals, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
 
         assertThat(Screen.of(shell).text()).contains("no hosted session");
     }
 
     @Test
     void shouldLabelAStartingTabStarting() {
-        Shell shell = shellHosting(sessionsViewWithTabs(startingTabNumbered(1)), hosting, terminals, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(startingTabNumbered(1)), hosting, emulating, screens);
 
         assertThat(Screen.of(shell).dockTitle()).contains("dock").contains("starting");
     }
 
     @Test
     void shouldLabelARegisteredTabWithItsMarkerInColourAndItsName() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "lazyclaude-3f", new YourTurn())), hosting, terminals, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "lazyclaude-3f", new YourTurn())), hosting, emulating, screens);
 
         Screen screen = Screen.of(shell);
 
@@ -63,7 +66,7 @@ class ShellHostedTest {
     void shouldLabelEveryTabInStartOrderAndHighlightTheSelectedOne() {
         Shell shell = shellHosting(
                 sessionsViewWithTabs(hostedTab(1, "first-one", new Busy()), hostedTab(2, "second-one", new YourTurn())),
-                hosting, terminals,
+                hosting, emulating,
                 screens);
 
         Screen screen = Screen.of(shell);
@@ -74,15 +77,16 @@ class ShellHostedTest {
 
     @Test
     void shouldDrawTheSelectedTabsScreen() {
-        when(terminals.screenOf(hostedSessionIdOf(1))).thenReturn(screenSaying("claude says hello"));
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, terminals, screens);
+        HostedEmulatorQuery emulators = blankEmulators();
+        when(emulators.screenOf(hostedSessionIdOf(1))).thenReturn(screenSaying("claude says hello"));
+        Shell shell = shellShowing(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), emulators);
 
         assertThat(Screen.of(shell).text()).contains("claude says hello");
     }
 
     @Test
     void shouldAccentTheDockFrameWhileTheDockHasFocus() {
-        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, terminals, screens);
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
 
         Screen screen = Screen.of(shell);
 
@@ -91,7 +95,7 @@ class ShellHostedTest {
 
     @Test
     void shouldGiveTheDockTheWholeRightColumnWhileTheMainViewIsHidden() {
-        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, terminals, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
         int dockLineWithMainView = Screen.of(shell).lineOf("╭dock");
 
         shell.press(alt('m'));

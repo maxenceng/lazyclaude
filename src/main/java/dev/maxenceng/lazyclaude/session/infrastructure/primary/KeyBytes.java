@@ -51,7 +51,7 @@ final class KeyBytes {
 
     private KeyBytes() {}
 
-    static byte[] of(TerminalKey key, boolean applicationCursor) {
+    static byte[] of(EmulatorKeyPayload key, boolean applicationCursor) {
         return switch (key.input()) {
             case TypedCharacter typed -> character(typed.codePoint(), key.modifiers());
             case PressedKey pressed -> named(pressed.key(), key.modifiers(), applicationCursor);

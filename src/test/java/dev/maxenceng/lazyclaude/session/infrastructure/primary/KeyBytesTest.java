@@ -1,8 +1,8 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.pressed;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.typed;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SentBytesFixture.sent;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.pressed;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.TerminalInputFixture.typed;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;

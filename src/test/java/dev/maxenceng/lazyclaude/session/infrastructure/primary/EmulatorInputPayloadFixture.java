@@ -9,38 +9,38 @@ import dev.maxenceng.lazyclaude.session.published.PointerButton;
 import dev.maxenceng.lazyclaude.session.published.PressedKey;
 import dev.maxenceng.lazyclaude.session.published.TypedCharacter;
 
-public final class TerminalInputFixture {
+public final class EmulatorInputPayloadFixture {
 
-    private TerminalInputFixture() {}
+    private EmulatorInputPayloadFixture() {}
 
-    public static TerminalKey typedA() {
+    public static EmulatorKeyPayload typedA() {
         return typed('a', Modifiers.none());
     }
 
-    public static TerminalKey typed(int codePoint, Modifiers modifiers) {
-        return TerminalKey.builder()
+    public static EmulatorKeyPayload typed(int codePoint, Modifiers modifiers) {
+        return EmulatorKeyPayload.builder()
                 .input(new TypedCharacter(codePoint))
                 .modifiers(modifiers)
                 .build();
     }
 
-    public static TerminalKey pressed(NamedKey key) {
+    public static EmulatorKeyPayload pressed(NamedKey key) {
         return pressed(key, Modifiers.none());
     }
 
-    public static TerminalKey pressed(NamedKey key, Modifiers modifiers) {
-        return TerminalKey.builder()
+    public static EmulatorKeyPayload pressed(NamedKey key, Modifiers modifiers) {
+        return EmulatorKeyPayload.builder()
                 .input(new PressedKey(key))
                 .modifiers(modifiers)
                 .build();
     }
 
-    public static PastedText pasted(String text) {
-        return new PastedText(text);
+    public static EmulatorPastePayload pasted(String text) {
+        return new EmulatorPastePayload(text);
     }
 
-    public static TerminalMouse mouse(MouseAction action, PointerButton button, int column, int row) {
-        return TerminalMouse.builder()
+    public static EmulatorMousePayload mouse(MouseAction action, PointerButton button, int column, int row) {
+        return EmulatorMousePayload.builder()
                 .action(action)
                 .button(button)
                 .column(new CellColumn(column))
@@ -48,11 +48,11 @@ public final class TerminalInputFixture {
                 .build();
     }
 
-    public static TerminalMouse wheelUpAt(int column, int row) {
+    public static EmulatorMousePayload wheelUpAt(int column, int row) {
         return mouse(MouseAction.SCROLL_UP, PointerButton.NONE, column, row);
     }
 
-    public static TerminalMouse leftPressAt(int column, int row) {
+    public static EmulatorMousePayload leftPressAt(int column, int row) {
         return mouse(MouseAction.PRESS, PointerButton.LEFT, column, row);
     }
 }

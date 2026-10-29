@@ -7,7 +7,6 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
-import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankTerminals;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.escape;
@@ -21,6 +20,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOn;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellZoomedOnColumns;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -32,8 +32,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedTerminals;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.published.Busy;
@@ -47,7 +47,7 @@ class ShellZoomTest {
     @Mock
     private HostedSessionCommand hosting;
 
-    private final HostedTerminals terminals = blankTerminals();
+    private final HostedEmulatorCommand emulating = mock(HostedEmulatorCommand.class);
 
     private final SessionQuery screens = blankScreens();
 
@@ -384,14 +384,14 @@ class ShellZoomTest {
 
     @Test
     void shouldZoomTheDockWithAltZFromASessionAndResizeItsPtyToTheSpace() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         shell.press(alt('z'));
         String zoomed = Screen.of(shell).text();
 
         assertThat(zoomed).contains("╭dock").doesNotContain("╭Sessions", "╭Board", "╭main view");
         ArgumentCaptor<ResizePayload> resized = ArgumentCaptor.forClass(ResizePayload.class);
-        verify(terminals, times(2)).resize(resized.capture());
+        verify(emulating, times(2)).resize(resized.capture());
         assertThat(resized.getAllValues().getLast().size().height().cells())
                 .isGreaterThan(resized.getAllValues().getFirst().size().height().cells());
         assertThat(resized.getAllValues().getLast().size().width().cells())
@@ -400,7 +400,7 @@ class ShellZoomTest {
 
     @Test
     void shouldResizeTheSessionBackWhenTheZoomEnds() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
         shell.press(alt('z'));
         Screen.of(shell);
 
@@ -408,13 +408,13 @@ class ShellZoomTest {
         Screen.of(shell);
 
         ArgumentCaptor<ResizePayload> resized = ArgumentCaptor.forClass(ResizePayload.class);
-        verify(terminals, times(3)).resize(resized.capture());
+        verify(emulating, times(3)).resize(resized.capture());
         assertThat(resized.getAllValues().getLast().size()).isEqualTo(resized.getAllValues().getFirst().size());
     }
 
     @Test
     void shouldHandAPlainZToTheSessionAndNeverZoomOnIt() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         shell.press(key('z'));
 
@@ -424,7 +424,7 @@ class ShellZoomTest {
     @Test
     void shouldKeepTheDockZoomedWhileAltHAndAltLStepThroughTabs() {
         Shell shell = shellInDock(
-                sessionsViewWithTabs(hostedTab(1, "one", new Busy()), hostedTab(2, "two", new Busy())), hosting, terminals, screens);
+                sessionsViewWithTabs(hostedTab(1, "one", new Busy()), hostedTab(2, "two", new Busy())), hosting, emulating, screens);
         shell.press(alt('z'));
 
         shell.press(alt('l'));
@@ -440,7 +440,7 @@ class ShellZoomTest {
 
     @Test
     void shouldLeaveTheDockZoomBeforeAltHLeavesTheFirstTab() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
         shell.press(alt('z'));
 
         shell.press(alt('h'));
@@ -451,7 +451,7 @@ class ShellZoomTest {
 
     @Test
     void shouldLeaveTheDockZoomBeforeAltKGoesUpToTheMainView() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
         shell.press(alt('z'));
 
         shell.press(alt('k'));
@@ -462,7 +462,7 @@ class ShellZoomTest {
 
     @Test
     void shouldLeaveTheDockZoomBeforeAltMShowsOrHidesTheMainView() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
         shell.press(alt('z'));
 
         shell.press(alt('m'));
@@ -472,18 +472,18 @@ class ShellZoomTest {
 
     @Test
     void shouldLeaveTheDockZoomOnAltWAndKeepTheKeyFromClaude() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
         shell.press(alt('z'));
 
         shell.press(alt('w'));
 
         assertThat(Screen.of(shell).text()).contains("Sessions");
-        verify(terminals, never()).send(any());
+        verify(emulating, never()).send(any());
     }
 
     @Test
     void shouldKeepTheDockZoomedOnAltJBecauseNothingIsBelow() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
         shell.press(alt('z'));
 
         shell.press(alt('j'));
@@ -493,7 +493,7 @@ class ShellZoomTest {
 
     @Test
     void shouldEndTheDockZoomWhenTheLastHostedSessionEnds() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
         shell.press(alt('z'));
 
         shell.sessionsChanged(sessionsViewWithTabs());
@@ -505,7 +505,7 @@ class ShellZoomTest {
     @Test
     void shouldKeepTheDockZoomedWhenAnotherSessionEndsAndATabRemains() {
         Shell shell = shellInDock(
-                sessionsViewWithTabs(hostedTab(1, "one", new Busy()), hostedTab(2, "two", new Busy())), hosting, terminals, screens);
+                sessionsViewWithTabs(hostedTab(1, "one", new Busy()), hostedTab(2, "two", new Busy())), hosting, emulating, screens);
         shell.press(alt('z'));
 
         shell.sessionsChanged(sessionsViewWithTabs(hostedTab(2, "two", new Busy())));
@@ -515,7 +515,7 @@ class ShellZoomTest {
 
     @Test
     void shouldListTheDockZoomKeysInTheKeyBar() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
 
         shell.press(alt('z'));
 
@@ -524,13 +524,13 @@ class ShellZoomTest {
 
     @Test
     void shouldSwallowCtrlZWhileTheDockIsZoomed() {
-        Shell shell = oneTabInDock(hosting, terminals, screens);
+        Shell shell = oneTabInDock(hosting, emulating, screens);
         shell.press(alt('z'));
 
         assertThat(shell.press(ctrl('z'))).isTrue();
 
         assertThat(Screen.of(shell).text()).doesNotContain("Sessions");
-        verify(terminals, never()).send(any());
+        verify(emulating, never()).send(any());
     }
 
     @Test
@@ -544,7 +544,7 @@ class ShellZoomTest {
 
     @Test
     void shouldHandNoMouseEventToTheSessionWhileItsPaneIsHiddenByTheColumns() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, terminals, screens);
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         Position origin = Screen.of(shell).dockContentOrigin();
         shell.press(key('z'));
         Screen.of(shell);
@@ -552,6 +552,6 @@ class ShellZoomTest {
         assertThat(shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1)))
                 .as("the columns cover where the pane was drawn, so a click there is not the session's")
                 .isFalse();
-        verify(terminals, never()).send(any());
+        verify(emulating, never()).send(any());
     }
 }

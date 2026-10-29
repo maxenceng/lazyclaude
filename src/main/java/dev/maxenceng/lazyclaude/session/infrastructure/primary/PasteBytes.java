@@ -15,7 +15,7 @@ final class PasteBytes {
 
     private PasteBytes() {}
 
-    static byte[] of(PastedText paste, boolean bracketed) {
+    static byte[] of(EmulatorPastePayload paste, boolean bracketed) {
         String text = bracketed ? START + paste.value().replace(END, NOTHING) + END : typed(paste.value());
         return text.getBytes(StandardCharsets.UTF_8);
     }

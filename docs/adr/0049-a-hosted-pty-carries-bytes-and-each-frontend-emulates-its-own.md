@@ -4,7 +4,7 @@ Date: 2026-10-27
 
 ## Status
 
-Accepted; amended 2026-10-27 with the repaint's checked facts. Supersedes ADR 0026's host port, encoding boundary and
+Accepted; amended 2026-10-27 with the repaint's checked facts, and 2026-10-29 with the emulator's roles. Supersedes ADR 0026's host port, encoding boundary and
 library rule; ADR 0026's aggregate, chords and lifetime stand. Builds on ADR 0048.
 
 ## Context
@@ -30,7 +30,12 @@ draws it.
   is pushed per read on the host's reader thread, and both directions are *pty bytes* (`PtyBytes`), already encoded by
   the frontend. `screenOf` and the screen-changed signal leave the port for the TUI adapter, and `TerminalKey`,
   `PastedText`, `TerminalMouse` and `TerminalScreen` move from `published` to `infrastructure.primary`, since only the
-  shell reads them.
+  shell reads them, as `EmulatorKeyPayload`, `EmulatorPastePayload`, `EmulatorMousePayload` and `EmulatorScreenView`.
+- **The TUI reaches its emulators through ADR 0011/0012's roles.** `HostedEmulatorQuery` reads a session's screen and
+  signals that one changed. `HostedEmulatorCommand` encodes and writes input, and resizes. Both share one
+  `HostedEmulators`. *Emulator* is the word for one session's emulation; only `HostedTerminal`, jediterm's `Terminal`
+  subclass, keeps the library's word. `ArchitectureTest` holds the shell to `*Query`, `*Command`, `*Payload` and `*View`
+  in any `infrastructure.primary`. Rejected: one facade that reads and writes, recorded as an exception to the roles.
 - **The backend's domain owns a session's lifetime.** A frontend asks to start, resume and end, and is told started,
   output and exited; `HostedSessionManager` keeps ADR 0026's resume refusal, directory check and exit warnings, and the
   TUI's quit and the sidecar's input closing end the sessions through the same path. Rejected: the desktop tracking and
