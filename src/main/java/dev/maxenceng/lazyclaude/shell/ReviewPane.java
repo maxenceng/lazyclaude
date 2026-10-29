@@ -36,6 +36,7 @@ final class ReviewPane {
 
     private static final Summary NO_SUMMARY = new Summary("");
     private static final int HALF = 2;
+    private static final int WHEEL_LINES = 3;
 
     private final PullRequestNumber number;
     private final PullRequestTitle title;
@@ -209,6 +210,16 @@ final class ReviewPane {
                 .count();
     }
 
+    /** The cursor on diff line {@code line}, held within the lines there are. */
+    void cursorTo(int line) {
+        moveTo(line);
+    }
+
+    /** One notch of the wheel over the diff: the cursor, and with it the view, three lines down or up. */
+    void wheel(boolean down) {
+        moveTo(down ? cursor + WHEEL_LINES : cursor - WHEEL_LINES);
+    }
+
     void lineDown() {
         moveTo(cursor + 1);
     }
@@ -242,6 +253,11 @@ final class ReviewPane {
         selectedFile = clamp(selectedFile + 1, rows.files().size());
     }
 
+    /** Selects the file at {@code index}, held within the files there are. */
+    void selectFile(int index) {
+        selectedFile = clamp(index, rows.files().size());
+    }
+
     void selectFileUp() {
         selectedFile = clamp(selectedFile - 1, rows.files().size());
     }
@@ -252,6 +268,11 @@ final class ReviewPane {
 
     void selectCommentDown() {
         selectedComment = clamp(selectedComment + 1, entries().size());
+    }
+
+    /** Selects the comment at {@code index}, held within the entries there are. */
+    void selectComment(int index) {
+        selectedComment = clamp(index, entries().size());
     }
 
     void selectCommentUp() {
@@ -332,8 +353,19 @@ final class ReviewPane {
             rangeEnd = Optional.empty();
             return Optional.empty();
         }
-        return switch (anchor()) {
+        return rangeStart.flatMap(start -> markRange(start, cursor));
+    }
+
+    /**
+     * A drag: the cursor goes to diff line {@code to}, and the range from {@code from} to it is marked when its lines can take a comment.
+     * A range that cannot is refused with the reason, and the range marked before is left as it was.
+     */
+    Optional<Reason> markRange(int from, int to) {
+        moveTo(to);
+        int start = clamp(from, rows.lineCount());
+        return switch (reviews.anchorOf(diff, new DiffLineIndex(Math.min(start, cursor)), new DiffLineIndex(Math.max(start, cursor)))) {
             case OnDiffAnchorView _ -> {
+                rangeStart = Optional.of(start);
                 rangeEnd = Optional.of(cursor);
                 yield Optional.empty();
             }

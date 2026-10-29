@@ -25,15 +25,16 @@ final class ReviewPanels {
 
     private ReviewPanels() {}
 
-    static Element files(ReviewPane pane, Focus focus) {
-        Element body = new RowsElement(ReviewText.fileLines(pane), pane.selectedFile(), true);
+    static Element files(ReviewPane pane, Focus focus, Consumer<RowsDrawn> drawn) {
+        Element body = new RowsElement(ReviewText.fileLines(pane), pane.selectedFile(), true, drawn);
         return Frames.framed(FILES_TITLE, body, focus == Focus.FILES).fill();
     }
 
-    static Element comments(ReviewPane pane, Focus focus) {
+    /** The comments; {@code drawn} is told which row went where, or {@code noticeDrawn} the area its notice was drawn in. */
+    static Element comments(ReviewPane pane, Focus focus, Consumer<RowsDrawn> drawn, Consumer<Rect> noticeDrawn) {
         Element body = ReviewText.commentsNotice(pane.threads())
-                .<Element>map(notice -> richText(notice).wrapWord().dim())
-                .orElseGet(() -> new RowsElement(ReviewText.commentLines(pane), pane.selectedComment(), focus == Focus.COMMENTS));
+                .<Element>map(notice -> new PaneProbe(richText(notice).wrapWord().dim(), noticeDrawn))
+                .orElseGet(() -> new RowsElement(ReviewText.commentLines(pane), pane.selectedComment(), focus == Focus.COMMENTS, drawn));
         return Frames.framed(COMMENTS_TITLE, body, focus == Focus.COMMENTS).fill();
     }
 
@@ -43,11 +44,11 @@ final class ReviewPanels {
                 .length(REVIEW_PANEL_HEIGHT);
     }
 
-    /** The diff, titled with the pull request; {@code drawn} is told the area it was drawn in. */
-    static Element diff(ReviewPane pane, Focus focus, Consumer<Rect> drawn) {
+    /** The diff, titled with the pull request; {@code drawn} is told the area it was drawn in and {@code linesDrawn} which line went where. */
+    static Element diff(ReviewPane pane, Focus focus, Consumer<Rect> drawn, Consumer<DiffDrawn> linesDrawn) {
         Element body = ReviewText.diffNotice(pane.diff())
                 .<Element>map(notice -> richText(notice).wrapWord().dim())
-                .orElseGet(() -> new DiffElement(pane));
+                .orElseGet(() -> new DiffElement(pane, linesDrawn));
         return Frames.framed(REVIEW_TITLE.formatted(pane.number().value(), pane.title().value()), new PaneProbe(body, drawn), focus == Focus.MAIN)
                 .titleEllipsis()
                 .fill();

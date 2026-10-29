@@ -1,7 +1,11 @@
 package dev.maxenceng.lazyclaude.shell;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.layout.Rect;
@@ -17,9 +21,16 @@ import dev.tamboui.toolkit.element.Size;
 final class DiffElement implements Element {
 
     private final ReviewPane pane;
+    private final Consumer<DiffDrawn> drawn;
 
     DiffElement(ReviewPane pane) {
+        this(pane, _ -> {});
+    }
+
+    /** {@code drawn} is told which line was drawn where, for the mouse to resolve a click against. */
+    DiffElement(ReviewPane pane, Consumer<DiffDrawn> drawn) {
         this.pane = pane;
+        this.drawn = drawn;
     }
 
     @Override
@@ -30,14 +41,17 @@ final class DiffElement implements Element {
         }
         pane.observeHeight(area.height());
         pane.top(scrolled(rows, area));
-        drawFrom(frame, area, rows, pane.top(), 0);
+        drawn.accept(new DiffDrawn(area, drawFrom(frame, area, rows, pane.top(), 0)));
     }
 
-    /** Draws rows from {@code row} on, each below the one before, until the area is full or the rows run out. */
-    private void drawFrom(Frame frame, Rect area, DiffRows rows, int row, int y) {
+    /** Draws rows from {@code row} on, each below the one before, until the area is full or the rows run out; answers the diff line on each screen row. */
+    private List<Optional<Integer>> drawFrom(Frame frame, Rect area, DiffRows rows, int row, int y) {
         if (row < rows.size() && y < area.height()) {
-            drawFrom(frame, area, rows, row + 1, y + draw(frame, area, rows, row, y));
+            int height = draw(frame, area, rows, row, y);
+            List<Optional<Integer>> own = Collections.nCopies(Math.min(height, area.height() - y), rows.lineOfRow(row));
+            return Stream.concat(own.stream(), drawFrom(frame, area, rows, row + 1, y + height).stream()).toList();
         }
+        return List.of();
     }
 
     /** Draws a row from screen row {@code y} down, as much of it as fits; answers how many screen rows it takes. */

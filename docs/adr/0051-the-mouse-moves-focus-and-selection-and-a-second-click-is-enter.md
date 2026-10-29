@@ -23,7 +23,8 @@ clicks, menu rows and permission prompts included.
 - **A second click is `enter`.** A press on the row that was already selected, in the pane that already had focus,
   does what `enter` does there: fold, pick, resume, focus a tab, open the picker, go to a line. Rejected: a timed
   double-click, which TamboUI cannot count and which a slow pair misses; and no click action at all, which leaves
-  `enter` the one thing the mouse cannot reach.
+  `enter` the one thing the mouse cannot reach. The click calls the operation the `enter` key calls, never a replayed
+  key event, so the two cannot drift apart.
 - **A click on an unfocused hosted pane only focuses it.** Once the pane has focus, press, drag, release and wheel go
   to `claude` unchanged; the wheel goes through even on the notch that focuses. A focusing click never answers a
   permission prompt.
@@ -31,12 +32,14 @@ clicks, menu rows and permission prompts included.
   loses it, and pointer motion reaches a hosted pane only while it has focus and its session asked for 1003; every other
   move is dropped before a render.
 - **The wheel acts on the pane under the pointer and focuses it.** In a list it moves the selection a row a notch, so
-  the selected row stays visible; in the main view and the diff it scrolls three lines.
+  the selected row stays visible; in the main view it scrolls three lines, and over a review's diff it moves the line
+  cursor three lines, the view following it, since the diff's view always keeps the cursor's line in sight. Rejected: a
+  view the diff scrolls apart from its cursor, a second position the keys would have to reconcile.
 - **Popups are modal.** A click outside the verb picker or a prompt does nothing, and never reaches what is under it.
   One list says which modal is open, in the order they answer, and the keys, the mouse and the render all read it.
   Rejected: a modal entry the render records in the hit map, which leaves the keys a second list to drift from.
 - **Clicks resolve against a per-frame hit map.** Each element records its rectangle, first visible row and tab offsets
-  as it renders; the shell's global mouse handler reads the last frame's map on the render thread. Rejected: recomputing
+  — a review's diff, the diff line on each screen row — as it renders; the shell's global mouse handler reads the last frame's map on the render thread. Rejected: recomputing
   the layout in the handler, which writes the layout twice.
 - **Only the verb picker has rows to click.** The quit, removal, respond and submit prompts and the comment box have none, so
   every mouse event is taken and does nothing; a click on the focused pane's `claude` that only focused it has its drags and
@@ -52,10 +55,10 @@ clicks, menu rows and permission prompts included.
 - A hosted session has no hover while it is unfocused, and a click that focuses it is lost to `claude`.
 - With mouse capture on, motion is on too, so the outer terminal reports every move across the screen and the shell drops
   each one that does not hover a focused pane following the pointer, before it can cause a render.
+- The wheel over a review's diff is a cursor move, not a look ahead: it carries the end of a range being marked with
+  `v`, and the Files selection, along with it.
 - Every pane the mouse reaches writes to the hit map, so a new pane with no entry is inert to the mouse until it adds
   one.
-- deferred: a review's Files, Comments and diff stay on their keys, the mouse reaching none of them — closes when a ticket gives
-  the review the mouse (the diff range ADR 0051 names).
 - deferred: a click lands on the row index the last frame drew, so rows that moved between that frame and the click select their
   neighbour — closes when a mis-click on a board that re-read under the pointer is seen.
 - deferred: a terminal answering in X10 still turns clicks into keys unless `mouse: false` is set — closes when

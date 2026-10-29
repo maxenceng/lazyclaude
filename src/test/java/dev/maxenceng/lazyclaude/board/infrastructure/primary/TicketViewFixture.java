@@ -126,6 +126,10 @@ public final class TicketViewFixture {
         return ticketViewBuilder().body(listOfRows(60)).build();
     }
 
+    public static TicketView longSlugTicketView() {
+        return ticketViewBuilder().branch(slugTicketBranch()).body(listOfRows(60)).build();
+    }
+
     public static TicketView longDoneTicketView() {
         return ticketViewBuilder().status(Status.DONE).verbs(List.of()).body(listOfRows(60)).build();
     }

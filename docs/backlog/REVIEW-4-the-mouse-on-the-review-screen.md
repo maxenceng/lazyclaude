@@ -1,6 +1,6 @@
 ---
 id: REVIEW-4
-status: todo
+status: in-review
 context: review
 type: feature
 tracker_id: 102
@@ -17,8 +17,8 @@ created: 2026-10-27
       pending comment, as `enter` does.
 - [ ] A drag across diff lines selects the range from the press's line to the release's, as `v` does, clamped to the
       diff when the release lands outside it; `c` then comments on that range.
-- [ ] The wheel over Files or Comments moves the selection a row a notch, over the diff it scrolls three lines; either
-      focuses the pane under the pointer.
+- [ ] The wheel over Files or Comments moves the selection a row a notch, over the diff it moves the line cursor three
+      lines, the view following it; either focuses the pane under the pointer.
 - [ ] A click in the comment box or on the Review panel focuses nothing new and submits nothing; `S` stays the only
       submit.
 - [ ] Every key does what it did before.

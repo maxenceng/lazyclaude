@@ -34,6 +34,15 @@ final class HitMap {
         return hits.reversed().stream().filter(hit -> hit.area().contains(x, y)).findFirst();
     }
 
+    /** Where the last frame drew a review's diff lines, none when it drew no diff. */
+    Optional<DiffDrawn> diff() {
+        return hits.stream().<DiffDrawn>mapMulti((hit, found) -> {
+            if (hit instanceof DiffHit drawn) {
+                found.accept(drawn.drawn());
+            }
+        }).reduce((_, later) -> later);
+    }
+
     /** The index of the picker's row at the point, none when the point is not on one. */
     Optional<Integer> pickerRowAt(int x, int y) {
         return picker.filter(rows -> rows.area().contains(x, y)).flatMap(rows -> rows.rowAt(y));

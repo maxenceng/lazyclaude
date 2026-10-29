@@ -130,6 +130,16 @@ final class ReviewKeys {
         };
     }
 
+    /** What {@code enter} does in the focused panel of {@code pane}: goes to a file's or a thread's line, or opens a pending comment in the box. */
+    void enter(ReviewPane pane) {
+        switch (host.focus().get()) {
+            case MAIN -> pane.pendingOnCursorLine().ifPresent(comment -> edit(pane, comment, Optional.of(pane.cursor())));
+            case FILES -> pane.goToSelectedFile();
+            case COMMENTS -> enterOnSelectedComment(pane);
+            default -> {}
+        }
+    }
+
     /** The confirm after the summary is saved: {@code y} submits the pending review as a Comment, any other key leaves it pending; none while no confirm waits. */
     Optional<Boolean> answerSubmitPrompt(KeyEvent key) {
         return submitPrompt.map(pane -> answerSubmitPrompt(pane, key));
@@ -155,8 +165,12 @@ final class ReviewKeys {
             pane.markRange().ifPresent(reason -> host.refuse().accept(reason.value()));
             return true;
         }
-        if (key.isKey(KeyCode.ENTER) || key.isChar(DELETE)) {
-            pane.pendingOnCursorLine().ifPresent(comment -> editOrDelete(pane, key, comment, Optional.of(pane.cursor())));
+        if (key.isKey(KeyCode.ENTER)) {
+            enter(pane);
+            return true;
+        }
+        if (key.isChar(DELETE)) {
+            pane.pendingOnCursorLine().ifPresent(comment -> delete(pane, comment));
             return true;
         }
         if (!key.isChar(COMMENT)) {
@@ -172,21 +186,21 @@ final class ReviewKeys {
         return true;
     }
 
-    /** {@code enter} opens a pending comment in the box, under {@code inlineAt} if it has a line; {@code x} deletes it. */
-    private void editOrDelete(ReviewPane pane, KeyEvent key, PendingCommentView comment, Optional<Integer> inlineAt) {
-        if (key.isKey(KeyCode.ENTER)) {
-            pane.openBox(new CommentBox(new EditCommentTarget(comment), inlineAt, comment.body().value()));
-        } else {
-            inReviewOrder(
-                    pane,
-                    () -> writing.delete(new PendingDeletePayload(root, pane.number(), comment.id())),
-                    answer -> {
-                        switch (answer) {
-                            case WrittenReviewView written -> pane.applyWritten(written.pending());
-                            case RefusedWriteView refused -> host.refuse().accept(NOT_DELETED.formatted(refused.reason().value()));
-                        }
-                    });
-        }
+    /** Opens a pending comment in the box, under {@code inlineAt} if it has a line. */
+    private static void edit(ReviewPane pane, PendingCommentView comment, Optional<Integer> inlineAt) {
+        pane.openBox(new CommentBox(new EditCommentTarget(comment), inlineAt, comment.body().value()));
+    }
+
+    private void delete(ReviewPane pane, PendingCommentView comment) {
+        inReviewOrder(
+                pane,
+                () -> writing.delete(new PendingDeletePayload(root, pane.number(), comment.id())),
+                answer -> {
+                    switch (answer) {
+                        case WrittenReviewView written -> pane.applyWritten(written.pending());
+                        case RefusedWriteView refused -> host.refuse().accept(NOT_DELETED.formatted(refused.reason().value()));
+                    }
+                });
     }
 
     /** The box takes every key: {@code ctrl+s} saves, {@code esc} throws it away, the rest edit its text; only {@code ctrl+c} still quits. */
@@ -300,7 +314,9 @@ final class ReviewKeys {
             pane.selectCommentDown();
         } else if (key.isChar(UP)) {
             pane.selectCommentUp();
-        } else if (key.isKey(KeyCode.ENTER) || key.isChar(DELETE) || key.isChar(COMMENT)) {
+        } else if (key.isKey(KeyCode.ENTER)) {
+            enterOnSelectedComment(pane);
+        } else if (key.isChar(DELETE) || key.isChar(COMMENT)) {
             actOnSelectedComment(pane, key);
         } else {
             return false;
@@ -308,18 +324,28 @@ final class ReviewKeys {
         return true;
     }
 
-    /** {@code enter} goes to a thread's line or opens a pending comment, {@code x} deletes a pending comment and {@code c} replies to a thread. */
+    /** Goes to the selected entry's line and, on a pending comment, opens it in the box. */
+    private static void enterOnSelectedComment(ReviewPane pane) {
+        pane.selectedEntry().ifPresent(entry -> {
+            pane.goToSelectedComment();
+            switch (entry) {
+                case PendingEntry pending -> edit(pane, pending.placed().comment(), pane.lineOf(pending.placed().line()));
+                case ThreadEntry _ -> {}
+            }
+        });
+    }
+
+    /** {@code x} deletes a pending comment and {@code c} replies to a thread. */
     private void actOnSelectedComment(ReviewPane pane, KeyEvent key) {
         pane.selectedEntry().ifPresent(entry -> {
             switch (entry) {
-                case PendingEntry pending when !key.isChar(COMMENT) -> {
+                case PendingEntry pending when key.isChar(DELETE) -> {
                     pane.goToSelectedComment();
-                    editOrDelete(pane, key, pending.placed().comment(), pane.lineOf(pending.placed().line()));
+                    delete(pane, pending.placed().comment());
                 }
                 case ThreadEntry thread when key.isChar(COMMENT) ->
                     pane.openBox(new CommentBox(
                             new ReplyTarget(thread.placed().thread()), pane.lineOfThread(thread.placed().thread())));
-                case ThreadEntry _ when key.isKey(KeyCode.ENTER) -> pane.goToSelectedComment();
                 default -> {}
             }
         });

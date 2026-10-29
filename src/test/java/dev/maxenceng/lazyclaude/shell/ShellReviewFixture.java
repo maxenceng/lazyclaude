@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.longSlugTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.slugTicketView;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.commentOnView;
@@ -156,6 +157,16 @@ final class ShellReviewFixture {
                 openPullRequestsViewOf(pullRequestView()), reviewsAnswering(diff, threads, pending), writing, background);
         shell.press(key('p'));
         return shell;
+    }
+
+    static Shell shellOnALongTicketWithAPullRequest(PullRequestDiffView diff, ThreadsView threads) {
+        return shellOnTheTicket(
+                longSlugTicketView(),
+                openPullRequestsViewOf(pullRequestView()),
+                reviewsAnswering(diff, threads, noPendingReviewView()),
+                mock(PendingReviewCommand.class),
+                mock(HostedSessionCommand.class, ShellFixture::noHostStarted),
+                Runnable::run);
     }
 
     static Shell shellWriting(PendingReviewCommand writing) {
