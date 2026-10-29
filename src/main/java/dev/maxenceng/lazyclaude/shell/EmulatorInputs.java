@@ -52,13 +52,25 @@ final class EmulatorInputs {
         if (column < 0 || row < 0 || column >= pane.width() || row >= pane.height()) {
             return Optional.empty();
         }
-        return Optional.of(EmulatorMousePayload.builder()
+        return Optional.of(payload(event, column, row));
+    }
+
+    /** The mouse event at the cell of {@code pane} nearest to it, so a drag that left the pane still ends on its edge. */
+    static EmulatorMousePayload clampedMouse(MouseEvent event, Rect pane) {
+        return payload(
+                event,
+                Math.clamp(event.x() - pane.x(), 0, pane.width() - 1),
+                Math.clamp(event.y() - pane.y(), 0, pane.height() - 1));
+    }
+
+    private static EmulatorMousePayload payload(MouseEvent event, int column, int row) {
+        return EmulatorMousePayload.builder()
                 .action(action(event))
                 .button(button(event.button()))
                 .column(new CellColumn(column))
                 .row(new CellRow(row))
                 .modifiers(modifiers(event.modifiers()))
-                .build());
+                .build();
     }
 
     private static Optional<KeyInput> input(KeyEvent event) {

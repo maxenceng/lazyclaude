@@ -234,6 +234,9 @@ public final class Shell extends ToolkitApp {
     private boolean zoomed;
     private Optional<WarningView> warning = Optional.empty();
     private boolean quitRequested;
+    /** The drag a press forwarded to a hosted session started, until its release or the next press, whichever comes first. */
+    // deferred: the rectangle is the one drawn at the press, so a layout change mid-drag clamps to the old edge — closes when a drag across a resize is seen to end off the pane
+    private Optional<HostedDrag> drag = Optional.empty();
     /** Whether the press that focused the dock's pane is still held, so that its drags and release are not the session's. */
     private boolean focusingClick;
 
@@ -554,7 +557,7 @@ public final class Shell extends ToolkitApp {
 
     /**
      * Bracketed paste is on, so a paste arrives whole, and so is mouse capture unless the configuration turned it off, so the wheel and
-     * clicks reach the panels and a session; Tab and
+     * clicks reach the panels and a session, and so do pointer moves, which {@link #mouse} drops unless they hover the focused pane of a session that follows the pointer; Tab and
      * Shift+Tab are unbound from focus, so they reach it too. Quit is unbound, since the shell decides when {@code q} and Ctrl+C
      * may quit.
      */
@@ -563,6 +566,7 @@ public final class Shell extends ToolkitApp {
                 .toBuilder()
                 .bracketedPaste(true)
                 .mouseCapture(mouseCapture)
+                .mouseMotion(mouseCapture)
                 .bindings(BindingSets.defaults()
                         .toBuilder()
                         .unbind(Actions.FOCUS_NEXT)
@@ -845,15 +849,30 @@ public final class Shell extends ToolkitApp {
      */
     // deferred: a review's panels and diff are not reached, and a click lands on the row the last frame drew — see ADR 0051.
     boolean mouse(MouseEvent event) {
+        drag = event.kind() == MouseEventKind.PRESS ? Optional.empty() : drag;
         return modal()
                 .map(open -> mouseInModal(open, event))
-                .orElseGet(() -> hits.at(event.x(), event.y()).map(hit -> reached(hit, event)).orElse(false));
+                .orElseGet(() -> continuedDrag(event)
+                        .orElseGet(() -> hits.at(event.x(), event.y()).map(hit -> reached(hit, event)).orElse(false)));
+    }
+
+    /**
+     * A drag keeps the pane it started in: its moves and its release go to that session, clamped to the pane's edge, wherever the pointer
+     * is and whichever tab is selected. A press ends it, so a release the outer terminal never reported does not capture the next drag.
+     */
+    private Optional<Boolean> continuedDrag(MouseEvent event) {
+        boolean released = event.kind() == MouseEventKind.RELEASE;
+        return drag.filter(_ -> released || event.kind() == MouseEventKind.DRAG).map(held -> {
+            emulating.send(new HostedInputPayload(held.session(), EmulatorInputs.clampedMouse(event, held.pane())));
+            drag = released ? Optional.empty() : drag;
+            return true;
+        });
     }
 
     private boolean mouseInModal(Modal open, MouseEvent event) {
         picker.filter(_ -> open == Modal.VERB_PICKER && leftPress(event))
                 .ifPresent(asked -> hits.pickerRowAt(event.x(), event.y()).ifPresent(row -> clickPickerRow(asked, row)));
-        return true;
+        return event.kind() != MouseEventKind.MOVE;
     }
 
     private void clickPickerRow(VerbPicker open, int row) {
@@ -980,8 +999,10 @@ public final class Shell extends ToolkitApp {
 
     private boolean toSession(Rect pane, MouseEvent event) {
         return dock.selectedTab()
+                .filter(tab -> event.kind() != MouseEventKind.MOVE || emulators.followsPointer(tab.id()))
                 .flatMap(tab -> EmulatorInputs.mouse(event, pane).map(input -> {
                     emulating.send(new HostedInputPayload(tab.id(), input));
+                    drag = event.kind() == MouseEventKind.PRESS ? Optional.of(new HostedDrag(tab.id(), pane)) : drag;
                     return true;
                 }))
                 .orElse(false);

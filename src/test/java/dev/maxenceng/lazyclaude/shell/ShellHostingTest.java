@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.shell;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.leftPressAt;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.mouse;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.wheelUpAt;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedTab;
@@ -20,10 +21,14 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellHosting;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellInDock;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellInDockFollowingThePointer;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellWithThePickerOpenOnAnInReviewTicket;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellWithoutMouse;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.startedPayload;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.description;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -35,6 +40,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -46,7 +52,9 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.published.Busy;
+import dev.maxenceng.lazyclaude.session.published.MouseAction;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
+import dev.maxenceng.lazyclaude.session.published.PointerButton;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 import dev.tamboui.layout.Position;
@@ -406,6 +414,157 @@ class ShellHostingTest {
     }
 
     @Test
+    void shouldHandAPointerMoveOverTheFocusedPaneToClaudeAtTheMatchingCell() {
+        Shell shell = shellInDockFollowingThePointer(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), emulating);
+        Position origin = Screen.of(shell).dockContentOrigin();
+
+        assertThat(shell.mouse(MouseEvent.move(origin.x() + 3, origin.y() + 2))).isTrue();
+
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), mouse(MouseAction.MOVE, PointerButton.NONE, 3, 2)));
+    }
+
+    @Test
+    void shouldDropAPointerMoveOverTheFocusedPaneOfASessionThatDoesNotFollowThePointer() {
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
+        Position origin = Screen.of(shell).dockContentOrigin();
+
+        assertThat(shell.mouse(MouseEvent.move(origin.x() + 3, origin.y() + 2)))
+                .as("a move the session never asked for changes nothing on its screen, so it causes no render")
+                .isFalse();
+
+        verify(emulating, never()).send(any());
+    }
+
+    @Test
+    void shouldDropAPointerMoveOverThePaneWhileThePanelsHaveFocus() {
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
+        Position origin = Screen.of(shell).dockContentOrigin();
+
+        assertThat(shell.mouse(MouseEvent.move(origin.x() + 3, origin.y() + 2)))
+                .as("a dropped move is unhandled, so it causes no render")
+                .isFalse();
+
+        assertThat(shell.focus()).isEqualTo(Focus.BOARD);
+        verify(emulating, never()).send(any());
+    }
+
+    @Test
+    void shouldDropAPointerMoveOutsideTheFocusedPane() {
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
+        Screen.of(shell);
+
+        assertThat(shell.mouse(MouseEvent.move(1, 1))).isFalse();
+
+        verify(emulating, never()).send(any());
+    }
+
+    @Test
+    void shouldDropAPointerMoveWhileAPopupIsOpen() {
+        Shell shell = shellWithThePickerOpenOnAnInReviewTicket(hosting);
+        Screen.of(shell);
+
+        assertThat(shell.mouse(MouseEvent.move(1, 1))).isFalse();
+
+        verify(emulating, never()).send(any());
+    }
+
+    @Test
+    void shouldSendTheReleaseOfADragLeftOutsideThePaneAtItsNearestEdgeCell() {
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
+        Position origin = Screen.of(shell).dockContentOrigin();
+        shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
+        shell.mouse(MouseEvent.drag(MouseButton.LEFT, origin.x() - 1, origin.y() + 2));
+
+        assertThat(shell.mouse(MouseEvent.release(MouseButton.LEFT, origin.x() - 1, origin.y() + 2))).isTrue();
+
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), mouse(MouseAction.DRAG, PointerButton.LEFT, 0, 2)));
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), mouse(MouseAction.RELEASE, PointerButton.LEFT, 0, 2)));
+    }
+
+    @Test
+    void shouldHandPressDragAndReleaseInsideThePaneToClaudeInOrder() {
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
+        Position origin = Screen.of(shell).dockContentOrigin();
+
+        shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
+        shell.mouse(MouseEvent.drag(MouseButton.LEFT, origin.x() + 5, origin.y() + 1));
+        shell.mouse(MouseEvent.release(MouseButton.LEFT, origin.x() + 6, origin.y() + 1));
+
+        InOrder sent = inOrder(emulating);
+        sent.verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), leftPressAt(4, 1)));
+        sent.verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), mouse(MouseAction.DRAG, PointerButton.LEFT, 5, 1)));
+        sent.verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), mouse(MouseAction.RELEASE, PointerButton.LEFT, 6, 1)));
+    }
+
+    @Test
+    void shouldDropAReleaseOutsideThePaneOnceTheDragHasEnded() {
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
+        Position origin = Screen.of(shell).dockContentOrigin();
+        shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
+        shell.mouse(MouseEvent.release(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
+
+        assertThat(shell.mouse(MouseEvent.release(MouseButton.LEFT, origin.x() - 1, origin.y() + 1))).isFalse();
+
+        verify(emulating, times(2)).send(any());
+    }
+
+    @Test
+    void shouldEndADragWhoseReleaseNeverCameAtTheNextPress() {
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy()), hostedTab(2, "two", new Busy())), hosting, emulating, screens);
+        Screen screen = Screen.of(shell);
+        Position origin = screen.dockContentOrigin();
+        Position tab = screen.dockTabLabel("two");
+        shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
+        shell.mouse(MouseEvent.press(MouseButton.LEFT, tab.x(), tab.y()));
+        shell.mouse(MouseEvent.drag(MouseButton.LEFT, origin.x() - 1, origin.y() + 1));
+
+        assertThat(shell.mouse(MouseEvent.release(MouseButton.LEFT, origin.x() - 1, origin.y() + 1)))
+                .as("the outer terminal lost the first drag's release, so the press on the tab ended it and this drag is nobody's")
+                .isFalse();
+
+        verify(emulating, times(1)).send(any());
+    }
+
+    @Test
+    void shouldSendTheReleaseOfADragToTheSessionItStartedInEvenOnceItsTabHasClosed() {
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy()), hostedTab(2, "two", new Busy())), hosting, emulating, screens);
+        Position origin = Screen.of(shell).dockContentOrigin();
+        shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
+        shell.sessionsChanged(sessionsViewWithTabs(hostedTab(2, "two", new Busy())));
+        Screen.of(shell);
+
+        shell.mouse(MouseEvent.release(MouseButton.LEFT, origin.x() - 1, origin.y() + 1));
+
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), leftPressAt(4, 1)));
+        verify(emulating, description("the session selected now never saw the press, so the release goes to the one the drag started in"))
+                .send(new HostedInputPayload(hostedSessionIdOf(1), mouse(MouseAction.RELEASE, PointerButton.LEFT, 0, 1)));
+        verify(emulating, times(2)).send(any());
+    }
+
+    @Test
+    void shouldSendTheReleaseOfARightButtonDragLeftOutsideThePaneAtItsNearestEdgeCell() {
+        Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
+        Position origin = Screen.of(shell).dockContentOrigin();
+        shell.mouse(MouseEvent.press(MouseButton.RIGHT, origin.x() + 4, origin.y() + 1));
+
+        assertThat(shell.mouse(MouseEvent.release(MouseButton.RIGHT, origin.x() - 1, origin.y() + 2))).isTrue();
+
+        verify(emulating).send(new HostedInputPayload(hostedSessionIdOf(1), mouse(MouseAction.RELEASE, PointerButton.RIGHT, 0, 2)));
+    }
+
+    @Test
+    void shouldDropADragAndReleaseOutsideThePaneThatStartedWithTheClickThatOnlyFocusedIt() {
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
+        Position origin = Screen.of(shell).dockContentOrigin();
+        shell.mouse(MouseEvent.press(MouseButton.LEFT, origin.x() + 4, origin.y() + 1));
+
+        shell.mouse(MouseEvent.drag(MouseButton.LEFT, origin.x() - 1, origin.y() + 1));
+        shell.mouse(MouseEvent.release(MouseButton.LEFT, origin.x() - 1, origin.y() + 1));
+
+        verify(emulating, never()).send(any());
+    }
+
+    @Test
     void shouldLeaveAMouseEventOutsideThePaneUnhandled() {
         Shell shell = shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
         Screen.of(shell);
@@ -484,6 +643,18 @@ class ShellHostingTest {
 
         assertThat(shell.config().bracketedPaste()).isTrue();
         assertThat(shell.config().mouseCapture()).isTrue();
+    }
+
+    @Test
+    void shouldAskTheTerminalForPointerMovesWhenTheMouseIsOn() {
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
+
+        assertThat(shell.config().mouseMotion()).isTrue();
+    }
+
+    @Test
+    void shouldNotAskTheTerminalForPointerMovesWhenTheMouseIsOff() {
+        assertThat(shellWithoutMouse().config().mouseMotion()).isFalse();
     }
 
     @Test
