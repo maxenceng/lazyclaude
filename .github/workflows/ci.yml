@@ -26,9 +26,15 @@ jobs:
           java-version: '25'
           cache: maven
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+
       # The Makefile holds the list, so a guard added to `ci` runs here with no second edit.
       - name: Lint, guards, tests and duplication
         run: make ci
+
+      - name: Docs build with no broken link
+        run: make docs
 
       - name: Nothing was skipped
         run: make no-skipped-tests

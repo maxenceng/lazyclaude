@@ -5,6 +5,10 @@ SHELL := /bin/bash
 MVN   := ./mvnw -B
 JAR   := target/lazyclaude.jar
 
+# Zensical is 0.x and ignores an unknown plugin silently, so a bump is a deliberate edit (ADR 0069).
+ZENSICAL_VERSION := 0.0.73
+ZENSICAL := uvx zensical==$(ZENSICAL_VERSION)
+
 # Keep an already-correct JAVA_HOME (CI sets one), else find a local JDK 25. A JRE is
 # skipped because it looks fine until compilation starts.
 JAVAC_OK := $(shell [ -x "$(JAVA_HOME)/bin/javac" ] && "$(JAVA_HOME)/bin/javac" -version 2>&1 | grep -q '^javac 25' && echo yes)
@@ -19,7 +23,7 @@ JAVA := $(if $(JAVA_HOME),$(JAVA_HOME)/bin/java,java)
 .DEFAULT_GOAL := help
 
 .PHONY: help doctor build test contract test-one arch fmt lint dup config-check adr-check
-.PHONY: ticket-check guard-fixtures guard-harness no-skipped-tests test-comment-check var-check
+.PHONY: docs docs-serve ticket-check guard-fixtures guard-harness no-skipped-tests test-comment-check var-check
 .PHONY: package run ci verify verify-report pr-checks clean
 
 help: ## Show available targets
@@ -81,6 +85,12 @@ guard-harness: ## Fail if guard-fixtures.py stops detecting a fixture that prove
 no-skipped-tests: ## Fail if the last test run skipped anything
 	@python3 scripts/check-no-skipped-tests.py
 
+docs: ## Build the docs into site/, failing on a broken link or anchor
+	$(ZENSICAL) build
+
+docs-serve: ## Serve the docs on localhost with reload
+	$(ZENSICAL) serve
+
 package: ## Build the runnable jar into target/lazyclaude.jar
 	$(MVN) -q package -DskipTests
 
@@ -93,6 +103,7 @@ ci: lint config-check adr-check ticket-check test-comment-check var-check guard-
 # makes "it passed locally" stop meaning anything.
 verify: ## Everything CI runs, in the order CI runs it
 	$(MAKE) ci
+	$(MAKE) docs
 	$(MAKE) no-skipped-tests
 	$(MAKE) package
 

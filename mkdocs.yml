@@ -1,0 +1,20 @@
+# Only settings and plugins both Zensical and MkDocs 1.x + Material read (ADR 0069).
+site_name: lazyclaude
+docs_dir: docs
+site_dir: site
+strict: true
+exclude_docs: |
+  backlog/
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
