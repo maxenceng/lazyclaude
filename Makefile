@@ -22,7 +22,7 @@ JAVA := $(if $(JAVA_HOME),$(JAVA_HOME)/bin/java,java)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help doctor build test contract test-one arch fmt lint dup config-check adr-check
+.PHONY: help doctor build test contract test-one arch fmt lint dup config-check adr-check adr-index
 .PHONY: docs docs-serve ticket-check guard-fixtures guard-harness no-skipped-tests test-comment-check var-check
 .PHONY: package run ci verify verify-report pr-checks clean
 
@@ -64,8 +64,11 @@ rules: ## Fail on a source rule ArchUnit cannot see: a for loop, a magic number
 config-check: ## Fail on a config comment that explains the tool rather than the choice
 	@python3 scripts/check-config-comments.py
 
-adr-check: ## Fail on a duplicate or missing ADR number
+adr-check: ## Fail on a duplicate or missing ADR number, or a stale docs/adr/README.md
 	@python3 scripts/check-adr-numbers.py
+
+adr-index: ## Write docs/adr/README.md, the index of every ADR
+	@python3 scripts/write-adr-index.py
 
 test-comment-check: ## Fail on a comment under src/test, where the test name is the explanation
 	@python3 scripts/check-test-comments.py

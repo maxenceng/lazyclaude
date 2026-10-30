@@ -1,0 +1,74 @@
+# Decisions
+
+<!-- Written by `make adr-index`; `make adr-check` fails when it is stale. -->
+
+- 0001 [Record architecture decisions](0001-record-architecture-decisions.md) — Accepted.
+- 0002 [Enforce architecture with executable rules, not prose](0002-enforce-architecture-with-executable-rules.md) — Accepted.
+- 0003 [Architecture rule holders are the one exemption from the no-comment rule](0003-architecture-rule-holders-are-the-one-exemption-from-the-no-comment-rule.md) — Accepted.
+- 0004 [A guard is proven by a fixture that trips it](0004-a-guard-is-proven-by-a-fixture-that-trips-it.md) — Accepted.
+- 0005 [A landed ticket is not named outside the record](0005-a-landed-ticket-is-not-named-outside-the-record.md) — Superseded by 0053.
+- 0006 [The TUI is plain Java 25 on TamboUI, without an application framework](0006-the-tui-is-plain-java-on-tamboui.md) — Accepted.
+- 0007 [Sessions run embedded, as the real `claude` on a pty](0007-sessions-run-embedded-as-the-real-claude-on-a-pty.md) — Accepted.
+- 0008 [One screen with a session dock, and `alt+hjkl` to move focus](0008-one-screen-with-a-session-dock-and-alt-hjkl-focus.md) — Accepted.
+- 0009 [Unsent review comments live in GitHub's pending review](0009-unsent-review-comments-live-in-githubs-pending-review.md) — Accepted.
+- 0010 [The shared kernel's types live in `shared.domain`](0010-the-shared-kernel-is-a-domain-package.md) — Accepted.
+- 0011 [Modules declare their kind, and each layer has one naming convention](0011-modules-declare-their-kind-and-layers-follow-the-template.md) — Accepted.
+- 0012 [Absence is a type, and the shell asks a context through a query](0012-absence-is-a-type-and-the-shell-asks-through-a-query.md) — Accepted.
+- 0013 [Tests build their values from fixtures and mock ports with Mockito](0013-tests-build-from-fixtures-and-mock-ports.md) — Accepted.
+- 0014 [The ticket detail rides the board read](0014-the-ticket-detail-rides-the-board-read.md) — Accepted.
+- 0015 [The shell joins contexts by handing over the project root](0015-the-shell-joins-contexts-by-handing-over-the-project-root.md) — Accepted.
+- 0016 [`docs` owns the `docs/**` watcher, and a watcher is a side effect behind a port](0016-docs-owns-the-docs-watcher.md) — Accepted.
+- 0017 [The shared kernel has an adapter package, `shared.infrastructure.secondary`](0017-the-shared-kernel-has-an-adapter-package.md) — Accepted.
+- 0018 [The docs adapter hands paths over in tree order; the domain keeps that order](0018-the-docs-adapter-orders-the-tree.md) — Accepted.
+- 0019 [Locating a project moves to the shared kernel](0019-locating-a-project-moves-to-the-shared-kernel.md) — Accepted.
+- 0020 [JSON is parsed with Jackson 3, in secondary adapters only](0020-json-is-parsed-with-jackson-in-secondary-adapters.md) — Accepted.
+- 0021 [Sessions come from the registry after a liveness check, with `claude agents --json` as fallback](0021-sessions-come-from-the-registry-checked-for-liveness-with-claude-agents-as-fallback.md) — Accepted.
+- 0022 [Warnings go through the shared kernel and never to stderr](0022-warnings-go-through-the-shared-kernel-and-never-to-stderr.md) — Accepted.
+- 0023 [Past sessions come from transcripts through a cache, and a grown transcript is read from an offset](0023-past-sessions-come-from-transcripts-through-a-cache-read-from-an-offset.md) — Accepted.
+- 0024 [Sessions are linked to tickets by args, then branch, against ids the shell hands over](0024-sessions-are-linked-to-tickets-by-args-then-branch-against-ids-the-shell-hands-over.md) — Accepted.
+- 0025 [Review corrections that recur are build rules](0025-review-corrections-that-recur-are-build-rules.md) — Accepted.
+- 0026 [A hosted session is an aggregate behind a host port, with the encoding in the adapter](0026-a-hosted-session-is-an-aggregate-behind-a-host-port-with-encoding-in-the-adapter.md) — Accepted.
+- 0027 [A manager holds ports and the clock, and the application service composes managers](0027-a-manager-holds-ports-and-the-clock-and-the-application-service-composes-managers.md) — Accepted.
+- 0028 [A root copy reading `done` wins over any branch copy](0028-a-root-copy-reading-done-wins-over-any-branch-copy.md) — Superseded by 0052.
+- 0029 [A published type is read outside its module](0029-a-published-type-is-read-outside-its-module.md) — Accepted.
+- 0030 [Allowed verbs live in `board`; the pick and the ticket worktree live in `session`](0030-allowed-verbs-live-in-board-the-pick-and-the-worktree-in-session.md) — Accepted.
+- 0031 [One tree watcher in the shared kernel serves `docs` and `board`](0031-one-tree-watcher-in-the-shared-kernel-serves-docs-and-board.md) — Accepted.
+- 0032 [Collections are built by streams, not by mutation](0032-collections-are-built-by-streams-not-by-mutation.md) — Accepted.
+- 0033 [A notification fires on the transition into waiting, and closes over D-Bus](0033-a-notification-fires-on-the-transition-into-waiting-and-closes-over-d-bus.md) — Accepted.
+- 0034 [Focus reports are stripped below TamboUI's parser](0034-focus-reports-are-stripped-below-tamboui-s-parser.md) — Accepted.
+- 0035 [Where a session lives is read from its own environment, tmux first](0035-where-a-session-lives-is-read-from-its-own-environment-tmux-first.md) — Superseded by 0047.
+- 0036 [kitty.conf is edited only on a yes, and never over a conflict](0036-kitty-conf-is-edited-only-on-a-yes-and-never-over-a-conflict.md) — Superseded by 0047.
+- 0037 [The transcript view shows prompts, replies and tool calls](0037-the-transcript-view-shows-prompts-replies-and-tool-calls.md) — Superseded by 0047.
+- 0038 [A ticket worktree is removed on a yes, judged by its worktree state](0038-a-ticket-worktree-is-removed-on-a-yes-judged-by-its-worktree-state.md) — Accepted.
+- 0039 [A review swaps the left column for its own Files and Comments panels](0039-a-review-swaps-the-left-column-for-its-own-files-and-comments-panels.md) — Accepted.
+- 0040 [The review screen's left column holds a third panel, Review](0040-the-review-screens-left-column-holds-a-third-panel-review.md) — Accepted.
+- 0041 [The pending review is one query, and its comments stay out of threads](0041-the-pending-review-is-one-query-and-its-comments-stay-out-of-threads.md) — Accepted.
+- 0042 [The summary travels with the submit](0042-the-summary-travels-with-the-submit.md) — Accepted.
+- 0043 [An adapter checks what a tool wrote before building from it](0043-an-adapter-checks-what-a-tool-wrote-before-building-from-it.md) — Accepted.
+- 0044 [A string is named, and a count is not compared to zero](0044-a-string-is-named-and-a-count-is-not-compared-to-zero.md) — Accepted.
+- 0045 [The build fails on a compiler warning, and an Optional is unwrapped where it is checked](0045-the-build-fails-on-a-compiler-warning-and-an-optional-is-unwrapped-where-it-is-checked.md) — Accepted.
+- 0046 [A zoom ends when focus moves, and the status columns' cursor is the board's selection](0046-a-zoom-ends-when-focus-moves-and-the-columns-cursor-is-the-selection.md) — Accepted.
+- 0047 [Only the sessions lazyclaude started count, and a launch log lists them](0047-only-the-sessions-lazyclaude-started-count-and-a-launch-log-lists-them.md) — Accepted.
+- 0048 [A hosted session ends with its frontend, and the launch log marks the ones it cut off](0048-a-hosted-session-ends-with-its-frontend-and-the-launch-log-marks-the-ones-it-cut-off.md) — Accepted.
+- 0049 [A hosted pty carries bytes, and each frontend emulates its own](0049-a-hosted-pty-carries-bytes-and-each-frontend-emulates-its-own.md) — Accepted.
+- 0050 [The sidecar speaks JSON-RPC over JSON Lines and serializes the primary adapters' Views](0050-the-sidecar-speaks-json-rpc-over-json-lines-and-serializes-the-primary-adapters-views.md) — Accepted.
+- 0051 [The mouse moves focus and selection, and a second click is `enter`](0051-the-mouse-moves-focus-and-selection-and-a-second-click-is-enter.md) — Accepted.
+- 0052 [A ticket is a GitHub issue, named by its number, with labels for status, context and type](0052-a-ticket-is-a-github-issue-named-by-its-number-with-labels-for-status-context-and-type.md) — Accepted.
+- 0053 [The harness works tickets on Issues through one script, and no issue is named outside the record](0053-the-harness-works-tickets-on-issues-through-one-script-and-no-issue-is-named-outside-the-record.md) — Accepted.
+- 0054 [lazyclaude captures a draft ticket, and every other ticket write goes through a `/ticket` verb](0054-lazyclaude-captures-a-draft-ticket-and-every-other-ticket-write-goes-through-a-ticket-verb.md) — Accepted.
+- 0055 [A backlog moves to Issues once, from main, by a resumable script, and a tag keeps the files](0055-a-backlog-moves-to-issues-once-from-main-by-a-resumable-script-and-a-tag-keeps-the-files.md) — Accepted.
+- 0056 [Linux x86_64 is the only platform until a later discussion takes on another](0056-linux-x86-64-is-the-only-platform-until-a-later-discussion-takes-on-another.md) — Accepted.
+- 0057 [The desktop frontend lives in `frontend/`, behind a dumb relay and a TypeScript protocol client](0057-the-desktop-frontend-lives-in-frontend-a-dumb-relay-and-a-typescript-protocol-client.md) — Accepted.
+- 0058 [The sidecar fires notifications, and the desktop frontend takes the TUI's keys and its terminal's](0058-the-sidecar-fires-notifications-and-the-desktop-frontend-owns-its-keys.md) — Accepted.
+- 0059 [The desktop frontend ships as a deb and an AppImage, built by `make bundle` and smoke-tested in CI](0059-the-desktop-frontend-ships-as-a-deb-and-an-appimage-smoke-tested-in-ci.md) — Accepted.
+- 0060 [A composite or sealed type declares no static factory](0060-a-composite-or-sealed-type-declares-no-static-factory.md) — Accepted.
+- 0061 [A hosted session follows its record's session, dated from its spawn, and refuses a status it does not know](0061-a-hosted-session-follows-its-records-session-dated-from-its-spawn.md) — Accepted.
+- 0062 [The launch log is JSON Lines, one file per project named by its root](0062-the-launch-log-is-json-lines-one-file-per-project-named-by-its-root.md) — Accepted.
+- 0063 [The launch log holds launches only, written by one lazyclaude per project](0063-the-launch-log-holds-launches-only-written-by-one-lazyclaude-per-project.md) — Accepted.
+- 0064 [A decision belongs to the map whose body links it](0064-a-decision-belongs-to-the-map-whose-body-links-it.md) — Accepted.
+- 0065 [The board polls the newest updated issue with an ETag and says why when it cannot read issues](0065-the-board-polls-the-newest-updated-issue-with-an-etag-and-says-why-when-it-cannot-read-issues.md) — Accepted.
+- 0066 [A warning is withdrawn when its cause goes away](0066-a-warning-is-withdrawn-when-its-cause-goes-away.md) — Accepted.
+- 0067 [A decision's blocked_by map wins over a map body that mentions it](0067-a-decision-s-blocked-by-map-wins-over-a-map-body-that-mentions-it.md) — Accepted.
+- 0068 [A roadmap is a dated document in docs/roadmap/, part of the record](0068-a-roadmap-is-a-dated-document-in-docs-roadmap-part-of-the-record.md) — Accepted.
+- 0069 [The docs build on a pinned Zensical from a mkdocs.yml both tools read, and deploy only when enabled](0069-the-docs-build-on-a-pinned-zensical-from-a-mkdocs-yml-both-tools-read-and-deploy-only-when-enabled.md) — Accepted.
+- 0070 [The ADR index is written by a script, and a stale one fails the build](0070-the-adr-index-is-written-by-a-script-and-a-stale-one-fails-the-build.md) — Accepted.

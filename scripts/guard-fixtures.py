@@ -8,7 +8,8 @@ a message that drifts all leave it green while it checks nothing -- ADR 0004.
 This is a check on the checks: it globs scripts/check-*, and for each one either runs it
 against the fixture tree registered for it below and asserts the exit code *and* message of
 the branch it targets, or -- for a guard whose failure case is a running application --
-checks that what proves it is still in the tree. A `scripts/check-*` with neither is the
+checks that what proves it is still in the tree. A guard with several branches worth proving
+lists one fixture tree per branch. A `scripts/check-*` with neither is the
 defect this file exists to catch.
 
 A guard runs with its working directory *and* CHECK_ROOT set to the fixture tree: some
@@ -55,31 +56,51 @@ class ProvenByItsOwnBoot:
 
 
 REGISTRY = {
-    "check-adr-numbers.py": FixtureTree(
-        "adr-numbers",
-        "0001 used 2 times: 0001-first-decision.md, 0001-second-decision.md",
-    ),
-    "check-config-comments.py": FixtureTree(
-        "config-comments",
-        "2 comment(s) over the limit",
-    ),
-    "check-no-var.py": FixtureTree(
-        "no-var",
-        "Thing.java:6: var instead of a type",
-    ),
-    "check-no-skipped-tests.py": FixtureTree(
-        "no-skipped-tests",
-        "1 test(s) skipped",
-        synthesize=surefire_report_with_a_skip,
-    ),
-    "check-test-comments.py": FixtureTree(
-        "test-comments",
-        "ThingTest.java:7: comment in a test",
-    ),
-    "check-ticket-references.py": FixtureTree(
-        "ticket-references",
-        "3 reference(s) to an issue outside the record",
-    ),
+    "check-adr-numbers.py": [
+        FixtureTree(
+            "adr-numbers",
+            "0001 used 2 times: 0001-first-decision.md, 0001-second-decision.md",
+        ),
+        FixtureTree(
+            "adr-numbers-unnumbered",
+            "notes.md is not named NNNN-kebab-case-title.md",
+        ),
+        FixtureTree(
+            "adr-numbers-stale-index",
+            "docs/adr/README.md is stale at line 6",
+        ),
+    ],
+    "check-config-comments.py": [
+        FixtureTree(
+            "config-comments",
+            "2 comment(s) over the limit",
+        ),
+    ],
+    "check-no-var.py": [
+        FixtureTree(
+            "no-var",
+            "Thing.java:6: var instead of a type",
+        ),
+    ],
+    "check-no-skipped-tests.py": [
+        FixtureTree(
+            "no-skipped-tests",
+            "1 test(s) skipped",
+            synthesize=surefire_report_with_a_skip,
+        ),
+    ],
+    "check-test-comments.py": [
+        FixtureTree(
+            "test-comments",
+            "ThingTest.java:7: comment in a test",
+        ),
+    ],
+    "check-ticket-references.py": [
+        FixtureTree(
+            "ticket-references",
+            "3 reference(s) to an issue outside the record",
+        ),
+    ],
 }
 
 
@@ -136,12 +157,12 @@ def main():
         case = REGISTRY.get(name)
         if case is None:
             problems.append(f"{name} has no fixture registered in scripts/guard-fixtures.py")
-        elif isinstance(case, FixtureTree):
-            failure = run_fixture(name, case)
-            if failure:
-                problems.append(failure)
-        else:
+        elif isinstance(case, ProvenByItsOwnBoot):
             problems.extend(missing_proof(name, case))
+        else:
+            problems.extend(
+                failure for failure in (run_fixture(name, fixture) for fixture in case) if failure
+            )
 
     for name in REGISTRY:
         if name not in guards:
@@ -153,9 +174,12 @@ def main():
             print(f"  {problem}")
         return 1
 
-    fixtures = sum(1 for case in REGISTRY.values() if isinstance(case, FixtureTree))
     boots = sum(1 for case in REGISTRY.values() if isinstance(case, ProvenByItsOwnBoot))
-    print(f"ok: {fixtures} guard(s) tripped by their fixture, {boots} proven by their own boot")
+    trees = [case for case in REGISTRY.values() if not isinstance(case, ProvenByItsOwnBoot)]
+    fixtures = sum(len(case) for case in trees)
+    print(
+        f"ok: {len(trees)} guard(s) tripped by {fixtures} fixture(s), {boots} proven by their own boot"
+    )
     return 0
 
 
