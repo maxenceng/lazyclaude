@@ -30,7 +30,8 @@ Use `make`, never `mvn` directly — the Makefile selects the Java 25 toolchain.
 - `make contract` — the `@Tag("contract")` tests `make test` and CI exclude; run after a Claude Code upgrade
 - `make fmt` / `make lint` — apply / verify formatting
 - `make rules` — PMD and Checkstyle: no `for` loop, no magic number (ADR 0025)
-- `make adr-check` — fail on a duplicate or missing ADR number; run it before choosing one
+- `make adr-check` — fail on a duplicate or missing ADR number, or a stale ADR index; run it before choosing one
+- `make adr-index` — rewrite `docs/adr/README.md` after adding or superseding an ADR
 - `make verify` — everything CI runs, in CI's order; `make ci` is its first step
 - `make verify-report` — the same run, into a log, printing the exit code and the totals
 - `make pr-checks` — wait for CI on this branch's PR and exit on its verdict
