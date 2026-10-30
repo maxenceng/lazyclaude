@@ -8,10 +8,9 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 public interface BacklogPort {
 
     /**
-     * Every open issue and every one closed as completed or as not planned, ordered by number.
+     * Every ticket, open or closed, in no particular order: the board orders them.
      *
-     * @throws BacklogNotFoundException when the project has no GitHub remote
-     * @throws BacklogUnavailableException when GitHub cannot be reached or {@code gh} cannot be used
+     * @throws BacklogUnavailableException when the project has no GitHub remote, GitHub cannot be reached or {@code gh} cannot be used
      */
     List<BacklogEntry> entries(Project project);
 }

@@ -27,7 +27,7 @@ public final class TicketFixture {
                 .context(contextName())
                 .type(typeName())
                 .title(title())
-                .labels(List.of())
+                .otherLabels(List.of())
                 .body(body());
     }
 

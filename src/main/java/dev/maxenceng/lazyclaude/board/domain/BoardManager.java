@@ -16,7 +16,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * Builds the board of the project a working directory belongs to. It owns the board's rules: one group per status in lifecycle
- * order, tickets in id order, and the issues the backlog refused listed beside them, in id order.
+ * order, tickets in id order, and the unreadable tickets listed beside them, in id order.
  */
 public final class BoardManager {
 
@@ -57,7 +57,7 @@ public final class BoardManager {
 
     public Board boardFor(WorkingDirectory from) {
         Project project = locator.locate(from);
-        Board read = board(project, backlog.entries(project));
+        Board read = board(project, entries(project));
         unreadable.withdraw(warnings);
         return read;
     }
@@ -65,6 +65,16 @@ public final class BoardManager {
     /** The project without tickets, saying why there are none, for a project whose issues cannot be read. */
     public UnavailableBoard unavailableBoard(WorkingDirectory from, Reason why) {
         return UnavailableBoard.builder().project(locator.locate(from)).reason(why).build();
+    }
+
+    /** A read that fails is told to the watch, which would otherwise take the next answer as the one the board was read at. */
+    private List<BacklogEntry> entries(Project project) {
+        try {
+            return backlog.entries(project);
+        } catch (BacklogUnavailableException cannotRead) {
+            watch.forget();
+            throw cannotRead;
+        }
     }
 
     private Board board(Project project, List<BacklogEntry> entries) {

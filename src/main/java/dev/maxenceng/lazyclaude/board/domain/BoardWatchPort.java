@@ -10,4 +10,7 @@ public interface BoardWatchPort {
      * issues changed, or cannot tell. A call does not say what changed.
      */
     void watch(Project project, Runnable changed);
+
+    /** The board could not be read, so the next check that can tell counts as a change, and the board catches up. */
+    void forget();
 }

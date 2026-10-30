@@ -24,9 +24,12 @@ answers 304 costs no rate limit, and `gh` is the only client lazyclaude uses (CL
   answer's `ETag`. Any change to any issue moves it to the top and changes the answer; a 304 changes nothing and costs no
   rate limit. `gh` exits non-zero on a 304, so the adapter reads the status line, not the exit code. Rejected: polling
   `gh issue list` itself, which re-downloads every body each time; GraphQL, which has no conditional request.
-- **The first check only takes the `ETag`.** The board was just read; saying "changed" would read it twice at start.
+- **The first check only takes the `ETag`.** The board was just read; saying "changed" would read it twice at start. A read
+  of the board that fails tells the poll to forget its `ETag`, so after a start that could not read the issues, or a
+  re-read the poll asked for that failed, the next good check counts as a change and the board catches up.
 - **A check that fails is a change.** `changed` runs, the shell reads the board, and that read fails the same way, which
-  raises the warning and keeps the board on screen. The `ETag` is forgotten, so the first good check afterwards also
+  raises the warning and keeps the board on screen. A board that was never read has nothing to keep: the shell reads it
+  whole, so the reason it shows is the latest and no warning claims a board as last read. The `ETag` is forgotten, so the first good check afterwards also
   counts as a change and the board catches up on what it missed; that good read withdraws the warning (ADR 0066), and a
   later failure is named again. A failed poll that said nothing would leave a stale board
   with no warning until `R`.
@@ -46,7 +49,8 @@ answers 304 costs no rate limit, and `gh` is the only client lazyclaude uses (CL
 
 - A deleted or transferred issue that is not the newest updated one does not move the poll's answer, so the board shows it
   until another issue changes or `R` is pressed.
-- deferred: the 1000 most recent issues are read, so older closed ones show nowhere — close it when a project has that many.
+- deferred: the 1000 most recently created issues are read, so older ones, open or closed, show nowhere — close it when a
+  project has that many.
 - deferred: the ticket branch name is guessed, so a branch made under another name is not matched to its ticket — close it
   when the board reads `linkedBranches`.
 - `TreeWatcher` and `Utf8Text` in the shared kernel have `docs` as their only user in `board`'s absence; moving them there

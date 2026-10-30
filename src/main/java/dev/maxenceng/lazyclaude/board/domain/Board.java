@@ -5,7 +5,7 @@ import java.util.List;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
-/** A project's tickets, one group per status in lifecycle order, plus the issues that could not be read as tickets, and the project they were read from. */
+/** A project's tickets, one group per status in lifecycle order, plus the unreadable tickets, and the project they were read from. */
 public record Board(List<StatusGroup> groups, List<UnreadableTicket> unreadable, Project project) implements BoardReading {
 
     public Board {

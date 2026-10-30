@@ -54,6 +54,40 @@ class IssuesWatchRepositoryTest {
     }
 
     @Test
+    void shouldReportAChangeOnTheFirstCheckWhenTheBoardCouldNotBeRead() {
+        when(gh.run(eq(project()), any())).thenReturn(answeredWith(firstEtag()));
+        watcher.forget();
+
+        assertThat(watcher.changedSinceLastCheck(project()))
+                .as("a board that failed to read at start must be read again once GitHub answers")
+                .isTrue();
+    }
+
+    @Test
+    void shouldReportAChangeWhenTheBoardCouldNotBeReadAfterTheEtagMoved() {
+        when(gh.run(eq(project()), any())).thenReturn(answeredWith(firstEtag())).thenReturn(answeredWith(secondEtag()));
+        watcher.changedSinceLastCheck(project());
+        watcher.changedSinceLastCheck(project());
+        watcher.forget();
+
+        assertThat(watcher.changedSinceLastCheck(project()))
+                .as("the read the moved ETag asked for failed, so the board is still behind it")
+                .isTrue();
+    }
+
+    @Test
+    void shouldAskWithoutAConditionAfterTheBoardCouldNotBeRead() {
+        when(gh.run(eq(project()), any())).thenReturn(answeredWith(firstEtag()));
+        watcher.changedSinceLastCheck(project());
+        watcher.forget();
+
+        watcher.changedSinceLastCheck(project());
+
+        verify(gh, times(2))
+                .run(project(), List.of("api", "--include", "--silent", "repos/{owner}/{repo}/issues?state=all&per_page=1&sort=updated&direction=desc"));
+    }
+
+    @Test
     void shouldAskWithoutAConditionOnTheFirstCheck() {
         when(gh.run(eq(project()), any())).thenReturn(answeredWith(firstEtag()));
 

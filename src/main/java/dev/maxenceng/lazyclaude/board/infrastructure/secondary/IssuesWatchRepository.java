@@ -15,7 +15,8 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 /**
  * Polls the most recently updated issue of the project's repository on one daemon thread, with the {@code ETag} of the last answer in
  * an {@code If-None-Match}: GitHub answers 304 and charges nothing while no issue changed. The first check only takes the {@code ETag}
- * the board was read at; a check that fails forgets it, so the next good one counts as a change and the board is read again.
+ * the board was read at; a check that fails, or a read of the board that fails, forgets it, so the next good check counts as a change
+ * and the board is read again.
  */
 public final class IssuesWatchRepository implements BoardWatchPort, AutoCloseable {
 
@@ -48,6 +49,12 @@ public final class IssuesWatchRepository implements BoardWatchPort, AutoCloseabl
     @Override
     public void watch(Project project, Runnable changed) {
         workers.add(Thread.ofPlatform().daemon().name(WORKER_NAME).start(() -> loop(project, changed)));
+    }
+
+    @Override
+    public synchronized void forget() {
+        known = Optional.empty();
+        taken = true;
     }
 
     @Override

@@ -1,6 +1,6 @@
 ---
 id: BOARD-8
-status: in-progress
+status: in-review
 context: board
 type: feature
 tracker_id: 105

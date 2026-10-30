@@ -106,7 +106,7 @@ record IssueRecord(Integer number, String title, String body, List<LabelRecord> 
                 .context(context())
                 .type(type())
                 .title(new Title(title))
-                .labels(otherLabels())
+                .otherLabels(otherLabels())
                 .body(textBody())
                 .build();
     }

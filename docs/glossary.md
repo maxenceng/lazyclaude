@@ -29,7 +29,7 @@ words mean.
 | Dock tab | One hosted session's pane in the dock, labelled with its marker and name, or `starting`. | `shell` |
 | Refresh | `R`: reads the board, the docs tree, the open and merged pull requests, and the sessions and transcripts again at once, off the render thread. It shows only as the rows that changed; nothing flashes and nothing says "refreshed". | `shell` |
 | Zoom | `z` on the Board or the main view, or `alt+z` from those and from a hosted session: on the Board, the status columns; on the main view, that pane over the panels with the dock strip under it; on the dock, the dock alone between the status line and the key bar. Any other panel has no zoom. Moving focus ends it; in a review, `esc` ends the zoom before the review. | `shell` |
-| Status columns | The Board zoomed: one column per status across the screen, the finished one narrow with only its header and count, then one for the unreadable issues when there are any, or one saying why the issues could not be read. Their cursor is the Board's selection, never a second one, and skips the narrow column. | `shell` |
+| Status columns | The Board zoomed: one column per status across the screen, the finished one narrow with only its header and count, then one for the unreadable tickets when there are any, or one saying why the issues could not be read. Their cursor is the Board's selection, never a second one, and skips the narrow column. | `shell` |
 | Dock strip | The dock folded to one line of its tabs and markers, under the status columns or the zoomed main view. | `shell` |
 | Ticket detail | What the main view shows for a ticket: its facts line (`#<number>`, status, context, type), a `labels` row for its other labels, a rule, then the issue body's `##` sections rendered as markdown. It scrolls as one unit. | `shell` |
 | Review panel | The review screen's third left panel, under Files and Comments: the summary's first line, the pending count, and the moved-head warning. | `shell`, read from `review` |
@@ -57,10 +57,10 @@ words mean.
 | GitHub issue | What stores a ticket: its number is the ticket's id, its `status:`, `context:` and `type:` labels and its open or closed state carry the ticket's status, context and type, its body the ticket's `##` sections (ADR 0052). Read through `gh issue list`. The only meaning *issue* has here. | `board` |
 | Title | A ticket's issue title; an issue always has one. | `board` |
 | Board | A project's tickets grouped by status, as the Board panel shows them. | `board` |
-| Unreadable ticket | An issue the board refuses as a ticket: closed as not planned (or any reason but completed), carrying two `status:` labels or one the lifecycle has no word for, or, from `todo` on, not exactly one `context:` and one `type:` label. Listed under its number with its reason, never dropped silently. | `board` |
+| Unreadable ticket | An issue the board refuses as a ticket: closed as not planned (or any reason but completed), carrying two `status:` labels or one the lifecycle has no word for, or, from `todo` on, not exactly one `context:` and one `type:` label; a `draft` may lack them, but not carry two of either. Listed under its number with its reason, never dropped silently. | `board` |
 | Ticket branch | The branch `<number>-<title slug>` a ticket's work happens on, as `gh issue develop` names it by default (ADR 0052). The board derives the name from the number and title rather than reading `linkedBranches` back (ADR 0065). | `board` |
 | Status | A ticket's place in its lifecycle: the issue's one `status:` label while it is open (a `draft` when it has none), and `done` once it is closed as completed, whatever labels it still carries. Nothing else is a source: no copy rides on the ticket branch (ADR 0052). | `board` |
-| Board unavailable | A Board that has no tickets because the issues could not be read at start: the project has no GitHub remote, GitHub is unreachable, or `gh` is not logged in (the reason names `gh auth login`). The Board shows the reason in place of the groups; the next read, `R` or the poll, replaces it. | `board` |
+| Unavailable board | A Board that has no tickets because the issues could not be read: the project has no GitHub remote, GitHub is unreachable, or `gh` is not logged in (the reason names `gh auth login`). The Board shows the reason in place of the groups; the next read, `R` or the poll, replaces it. | `board` |
 | Issues poll | The board's watch: every 30 s a conditional request for the most recently updated issue with the last answer's `ETag`; a 304 costs nothing and the board stays, anything else reads it again. A check that fails counts as a change, so the board is read and says why it cannot be. | `board` |
 | Capture | `c` on the Board: a title typed into a popup becomes a GitHub issue with no labels, read as an unassigned `draft`. lazyclaude's one ticket write; every other goes through a `/ticket` verb in a session (ADR 0054). | `board` (expected) |
 | Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` |
@@ -135,7 +135,7 @@ words mean.
 | Avoid | Use instead | Why |
 |---|---|---|
 | Helper, Util, Processor | A name describing what it does | These names hide missing concepts. *Manager* is reserved for a context's domain service (ADR 0011). |
-| Issue, card, task | Ticket | The backlog's own word; `/ticket` and the files already use it. *Issue* names only the GitHub issue that stores a ticket. |
+| Issue, card, task | Ticket | The backlog's own word; `/ticket` and the code already use it. *Issue* names only the GitHub issue that stores a ticket. |
 | Chat, conversation | Session | What Claude Code calls it, and what `claude --resume` resumes. |
 | Idle (of a session) | Your turn | Claude Code's registry word; lazyclaude's states are its own. |
 | Project (for `~/.claude/projects/*`) | Transcript folder | Those folders are keyed by `cwd`, so one project has one per worktree. |

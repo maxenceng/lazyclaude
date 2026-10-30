@@ -4,7 +4,7 @@ import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** An issue whose labels or state the board refused as a ticket. */
+/** A ticket whose labels or state the board refused to read. */
 public record UnreadableTicket(TicketId id, Reason reason) implements BacklogEntry {
 
     public UnreadableTicket {

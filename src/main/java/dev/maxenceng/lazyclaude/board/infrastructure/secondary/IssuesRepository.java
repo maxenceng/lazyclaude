@@ -1,6 +1,5 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
-import java.util.Comparator;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
@@ -14,7 +13,7 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
  */
 public final class IssuesRepository implements BacklogPort {
 
-    // deferred: only the 1000 most recent issues are asked for, so older closed ones show nowhere — close it when a project has that many.
+    // deferred: only the 1000 most recently created issues are asked for, so older ones, open or closed, show nowhere — close it when a project has that many.
     static final List<String> ARGUMENTS = List.of(
             "issue", "list", "--state", "all", "--limit", "1000", "--json", "number,title,body,labels,state,stateReason");
 
@@ -34,6 +33,6 @@ public final class IssuesRepository implements BacklogPort {
         if (!listed.succeeded()) {
             throw GhFailure.of(listed);
         }
-        return IssueRecords.entries(listed.output()).stream().sorted(Comparator.comparing(BacklogEntry::id)).toList();
+        return IssueRecords.entries(listed.output());
     }
 }

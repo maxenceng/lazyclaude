@@ -40,7 +40,7 @@ public final class TicketViewFixture {
                 .status(Status.DRAFT)
                 .context(contextName())
                 .type(typeName())
-                .labels(List.of())
+                .otherLabels(List.of())
                 .body(body())
                 .verbs(List.of(Verb.REFINE));
     }
@@ -109,11 +109,11 @@ public final class TicketViewFixture {
     }
 
     public static TicketView labelledTicketView() {
-        return ticketViewBuilder().labels(labelNames()).build();
+        return ticketViewBuilder().otherLabels(labelNames()).build();
     }
 
     public static TicketView labelledSlugTicketView() {
-        return ticketViewBuilder().branch(slugTicketBranch()).labels(labelNames()).build();
+        return ticketViewBuilder().branch(slugTicketBranch()).otherLabels(labelNames()).build();
     }
 
     public static TicketView longTicketView() {

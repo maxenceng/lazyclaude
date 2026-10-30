@@ -22,7 +22,7 @@ public record Ticket(
         TicketContext context,
         TicketType type,
         Title title,
-        List<LabelName> labels,
+        List<LabelName> otherLabels,
         TicketBody body,
         BranchChanges changes)
         implements BacklogEntry {
@@ -34,7 +34,7 @@ public record Ticket(
         Assert.notNull("context", context);
         Assert.notNull("type", type);
         Assert.notNull("title", title);
-        Assert.notNull("labels", labels);
+        Assert.notNull("otherLabels", otherLabels);
         Assert.notNull("body", body);
         Assert.notNull("changes", changes);
     }
@@ -52,7 +52,7 @@ public record Ticket(
     }
 
     public Ticket withChanges(BranchChanges changes) {
-        return new Ticket(id, branch, status, context, type, title, labels, body, changes);
+        return new Ticket(id, branch, status, context, type, title, otherLabels, body, changes);
     }
 
     public static TicketBuilder builder() {
@@ -66,7 +66,7 @@ public record Ticket(
         private TicketContext context;
         private TicketType type;
         private Title title;
-        private List<LabelName> labels = List.of();
+        private List<LabelName> otherLabels = List.of();
         private TicketBody body;
         private BranchChanges changes = new UnreadChanges();
 
@@ -102,8 +102,8 @@ public record Ticket(
             return this;
         }
 
-        public TicketBuilder labels(List<LabelName> labels) {
-            this.labels = labels;
+        public TicketBuilder otherLabels(List<LabelName> otherLabels) {
+            this.otherLabels = otherLabels;
             return this;
         }
 
@@ -118,7 +118,7 @@ public record Ticket(
         }
 
         public Ticket build() {
-            return new Ticket(id, branch, status, context, type, title, labels, body, changes);
+            return new Ticket(id, branch, status, context, type, title, otherLabels, body, changes);
         }
     }
 }

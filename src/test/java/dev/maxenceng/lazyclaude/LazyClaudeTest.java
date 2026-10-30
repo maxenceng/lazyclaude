@@ -61,7 +61,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import dev.maxenceng.lazyclaude.board.domain.BacklogNotFoundException;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.BoardWatchPort;
@@ -158,7 +157,7 @@ class LazyClaudeTest {
     @Test
     void shouldOpenTheShellSayingWhyWhenTheProjectHasNoGitHubRemote() throws Exception {
         Path repository = repositoryWithoutACommit(sandbox.resolve("app"));
-        when(backlog.entries(any())).thenThrow(new BacklogNotFoundException());
+        when(backlog.entries(any())).thenThrow(new BacklogUnavailableException("this project has no GitHub remote, so it has no backlog"));
 
         int exit = LazyClaude.start(repository, boardQuery(new ProjectLocatorRepository(), backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, emptyLaunchLogPort(), sessionWatch, raised), err, (view, docsView, sessionsView) -> opened.add(view));
 

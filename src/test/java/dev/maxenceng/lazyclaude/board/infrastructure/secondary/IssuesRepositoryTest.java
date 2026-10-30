@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
-import dev.maxenceng.lazyclaude.board.domain.BacklogNotFoundException;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.Ticket;
 import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
@@ -43,14 +42,7 @@ class IssuesRepositoryTest {
 
         assertThat(repositoryOver(gh).entries(projectAt(root)))
                 .extracting(entry -> entry.id().value())
-                .containsExactly("1", "2");
-    }
-
-    @Test
-    void shouldListTheIssuesInNumberOrderNotTheOrderGhPrintsThem() throws IOException {
-        Path gh = ghPrinting(root, listOfIssues(issueJson(10, "t", "OPEN", ""), issueJson(9, "t", "OPEN", "")));
-
-        assertThat(repositoryOver(gh).entries(projectAt(root))).extracting(entry -> entry.id().value()).containsExactly("9", "10");
+                .containsExactlyInAnyOrder("1", "2");
     }
 
     @Test
@@ -92,7 +84,7 @@ class IssuesRepositoryTest {
         Path gh = ghFailing(root, 1, "no git remotes found");
 
         assertThatThrownBy(() -> repositoryOver(gh).entries(projectAt(root)))
-                .isExactlyInstanceOf(BacklogNotFoundException.class)
+                .isExactlyInstanceOf(BacklogUnavailableException.class)
                 .hasMessage("this project has no GitHub remote, so it has no backlog");
     }
 
@@ -103,7 +95,8 @@ class IssuesRepositoryTest {
                 1,
                 "none of the git remotes configured for this repository point to a known GitHub host. To tell gh about a new GitHub host, please use `gh auth login`");
 
-        assertThatThrownBy(() -> repositoryOver(gh).entries(projectAt(root))).isExactlyInstanceOf(BacklogNotFoundException.class);
+        assertThatThrownBy(() -> repositoryOver(gh).entries(projectAt(root)))
+                .hasMessage("this project has no GitHub remote, so it has no backlog");
     }
 
     @Test

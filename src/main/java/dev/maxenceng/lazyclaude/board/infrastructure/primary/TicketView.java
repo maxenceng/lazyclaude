@@ -21,7 +21,7 @@ public record TicketView(
         Status status,
         TicketContext context,
         TicketType type,
-        List<LabelName> labels,
+        List<LabelName> otherLabels,
         TicketBody body,
         List<Verb> verbs) {
 
@@ -33,7 +33,7 @@ public record TicketView(
                 .status(ticket.status())
                 .context(ticket.context())
                 .type(ticket.type())
-                .labels(ticket.labels())
+                .otherLabels(ticket.otherLabels())
                 .body(ticket.body())
                 .verbs(ticket.verbs())
                 .build();
@@ -50,7 +50,7 @@ public record TicketView(
         private Status status;
         private TicketContext context;
         private TicketType type;
-        private List<LabelName> labels;
+        private List<LabelName> otherLabels;
         private TicketBody body;
         private List<Verb> verbs = List.of();
 
@@ -86,8 +86,8 @@ public record TicketView(
             return this;
         }
 
-        public TicketViewBuilder labels(List<LabelName> labels) {
-            this.labels = labels;
+        public TicketViewBuilder otherLabels(List<LabelName> otherLabels) {
+            this.otherLabels = otherLabels;
             return this;
         }
 
@@ -102,7 +102,7 @@ public record TicketView(
         }
 
         public TicketView build() {
-            return new TicketView(id, branch, title, status, context, type, labels, body, verbs);
+            return new TicketView(id, branch, title, status, context, type, otherLabels, body, verbs);
         }
     }
 }

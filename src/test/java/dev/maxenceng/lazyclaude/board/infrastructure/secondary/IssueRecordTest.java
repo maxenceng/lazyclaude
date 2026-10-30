@@ -143,7 +143,7 @@ class IssueRecordTest {
     @Test
     void shouldKeepTheLabelsTheBoardDoesNotModelInTheOrderGitHubListsThem() {
         assertThat(openIssue("help wanted", "status:todo", "context:board", "type:feature", "bug").entry())
-                .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.labels())
+                .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.otherLabels())
                         .containsExactly(new LabelName("help wanted"), new LabelName("bug")));
     }
 

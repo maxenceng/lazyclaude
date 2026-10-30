@@ -70,7 +70,7 @@ class TicketTest {
 
     @Test
     void shouldRefuseATicketWithoutLabels() {
-        assertThatThrownBy(() -> ticketBuilder().labels(null).build())
+        assertThatThrownBy(() -> ticketBuilder().otherLabels(null).build())
                 .as("no labels is an empty list, never null")
                 .isExactlyInstanceOf(MissingMandatoryValueException.class);
     }

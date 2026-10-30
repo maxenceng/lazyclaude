@@ -2,7 +2,6 @@ package dev.maxenceng.lazyclaude.board.application;
 
 import java.util.Optional;
 
-import dev.maxenceng.lazyclaude.board.domain.BacklogNotFoundException;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.Board;
@@ -34,7 +33,7 @@ public final class BoardApplicationService {
     public BoardReading boardFor(WorkingDirectory from) {
         try {
             return manager.boardFor(from);
-        } catch (BacklogNotFoundException | BacklogUnavailableException cannotRead) {
+        } catch (BacklogUnavailableException cannotRead) {
             return manager.unavailableBoard(from, new Reason(cannotRead.getMessage()));
         }
     }

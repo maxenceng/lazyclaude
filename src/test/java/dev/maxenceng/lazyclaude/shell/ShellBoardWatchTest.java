@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.projectRoot;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.unreachableBoardView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.longTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
@@ -260,7 +261,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldReplaceTheReasonWithTheTicketsWhenTheBoardIsReadAtLast() {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketView())));
+        when(boards.boardFor(readingBoard())).thenReturn(boardViewOf(ticketView()));
         Shell shell = shellReadingUnavailableBoard(boards, screens);
         assertThat(Screen.of(shell).mainViewRows()).anySatisfy(row -> assertThat(row).contains("gh is not logged in; run gh auth login"));
 
@@ -268,5 +269,28 @@ class ShellBoardWatchTest {
 
         assertThat(Screen.of(shell).boardPanelText()).contains("▾ draft (1)", "#1");
         assertThat(Screen.of(shell).mainViewRows()).noneSatisfy(row -> assertThat(row).contains("gh auth login"));
+    }
+
+    @Test
+    void shouldReplaceTheReasonWithTheNewOneWhenTheBoardStillCannotBeRead() {
+        when(boards.boardFor(readingBoard())).thenReturn(unreachableBoardView());
+        Shell shell = shellReadingUnavailableBoard(boards, screens);
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .as("the reason on screen is the one the latest read gave, not the one at start")
+                .anySatisfy(row -> assertThat(row).contains("connecting to api.github.com"))
+                .noneSatisfy(row -> assertThat(row).contains("gh auth login"));
+    }
+
+    @Test
+    void shouldNotAskForTheBoardAsLastReadWhenNoneWasEverRead() {
+        when(boards.boardFor(readingBoard())).thenReturn(unreachableBoardView());
+        Shell shell = shellReadingUnavailableBoard(boards, screens);
+
+        shell.boardChanged();
+
+        verify(boards, never()).boardReadAgainFor(any());
     }
 }

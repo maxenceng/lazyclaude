@@ -156,6 +156,25 @@ class BoardManagerTest {
     }
 
     @Test
+    void shouldTellTheWatchWhenTheBoardCannotBeRead() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenThrow(new BacklogUnavailableException(reason().value()));
+
+        assertThatThrownBy(() -> manager.boardFor(workingDirectory())).isExactlyInstanceOf(BacklogUnavailableException.class);
+        verify(watch).forget();
+    }
+
+    @Test
+    void shouldTellTheWatchNothingWhenTheBoardIsRead() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of());
+
+        manager.boardFor(workingDirectory());
+
+        verifyNoInteractions(watch);
+    }
+
+    @Test
     void shouldWatchTheProjectTheWorkingDirectoryBelongsTo() {
         Runnable changed = () -> {};
         when(locator.locate(workingDirectory())).thenReturn(project());

@@ -426,7 +426,7 @@ public final class Shell extends ToolkitApp {
 
     /** One read at a time, so a slow read that started first never lands after a newer one. */
     private synchronized void reread() {
-        boards.boardReadAgainFor(new BoardPayload(root)).ifPresent(read -> {
+        readAgain().ifPresent(read -> {
             lastRead = read;
             pendingBoard.set(read);
             ToolkitRunner running = runner();
@@ -435,6 +435,15 @@ public final class Shell extends ToolkitApp {
             }
             followTickets(read);
         });
+    }
+
+    /**
+     * A board that was never read is read whole, so its reason stays current and no warning claims a board is kept; one on screen is
+     * kept when the read fails.
+     */
+    private Optional<BoardView> readAgain() {
+        BoardPayload payload = new BoardPayload(root);
+        return lastRead.unavailable().isPresent() ? Optional.of(boards.boardFor(payload)) : boards.boardReadAgainFor(payload);
     }
 
     /** Sessions are linked against the tickets of the board as last read, so a ticket created while running links them. */

@@ -103,14 +103,14 @@ final class TicketText {
     }
 
     private static Optional<String> labelsRow(TicketView ticket, int keyWidth) {
-        return Optional.of(ticket.labels().stream().map(LabelName::value).collect(Collectors.joining(LABEL_SEPARATOR)))
+        return Optional.of(ticket.otherLabels().stream().map(LabelName::value).collect(Collectors.joining(LABEL_SEPARATOR)))
                 .filter(labels -> !labels.isEmpty())
                 .map(labels -> keyed(LABELS_KEY, labels, keyWidth));
     }
 
     /** The width of the key column: the longest of the labels, worktree and pull request keys. */
     private static int keyWidth(TicketView ticket, Optional<WorktreeFacts> worktree) {
-        int labelsKey = ticket.labels().isEmpty() ? 0 : LABELS_KEY.length();
+        int labelsKey = ticket.otherLabels().isEmpty() ? 0 : LABELS_KEY.length();
         int worktreeKey = worktree.isPresent() ? WORKTREE_KEY.length() : 0;
         return Math.max(Math.max(labelsKey, worktreeKey), PullRequestText.keyWidth());
     }

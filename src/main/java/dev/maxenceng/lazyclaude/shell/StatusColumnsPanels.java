@@ -17,7 +17,7 @@ import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.tamboui.toolkit.element.Element;
 
-/** The Board's status columns across the screen: one panel per status, a narrow one for a finished status, then one for the unreadable issues, or for why there are no tickets. */
+/** The Board's status columns across the screen: one panel per status, a narrow one for a finished status, then one for the unreadable tickets, or for why there are no tickets. */
 final class StatusColumnsPanels {
 
     private static final String COLUMN_TITLE = "%s (%d)";
@@ -77,11 +77,11 @@ final class StatusColumnsPanels {
                 .fill();
     }
 
-    private static Element unreadable(List<UnreadableTicketView> files) {
-        List<RowLine> lines = files.stream()
-                .map(file -> RowLine.plain(UNREADABLE_LINE.formatted(TicketText.number(file.id()), file.reason().value())))
+    private static Element unreadable(List<UnreadableTicketView> tickets) {
+        List<RowLine> lines = tickets.stream()
+                .map(ticket -> RowLine.plain(UNREADABLE_LINE.formatted(TicketText.number(ticket.id()), ticket.reason().value())))
                 .toList();
-        return Frames.framed(COLUMN_TITLE.formatted(BoardRows.UNREADABLE_GROUP, files.size()), new MoreBelowElement(lines, NO_SELECTION, false), false)
+        return Frames.framed(COLUMN_TITLE.formatted(BoardRows.UNREADABLE_GROUP, tickets.size()), new MoreBelowElement(lines, NO_SELECTION, false), false)
                 .titleEllipsis()
                 .fill();
     }

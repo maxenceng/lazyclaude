@@ -12,7 +12,7 @@ import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
 
 /**
- * A board as the shell reads it: one group per status in lifecycle order, then the unreadable issues, and the project root it was read
+ * A board as the shell reads it: one group per status in lifecycle order, then the unreadable tickets, and the project root it was read
  * from. When the issues could not be read there are no tickets, and {@code unavailable} says why.
  */
 public record BoardView(
