@@ -61,7 +61,7 @@ class ShellCaptureTest {
     void shouldShowCInTheKeyBarOnTheBoard() {
         Shell shell = shellCapturing(capturing, boards, Runnable::run, ticketView());
 
-        assertThat(Screen.of(shell.render(), WIDE, HEIGHT).lines().getLast()).contains("R refresh  c capture  m main view");
+        assertThat(Screen.of(shell).lines().getLast()).contains("N new  c capture");
     }
 
     @Test

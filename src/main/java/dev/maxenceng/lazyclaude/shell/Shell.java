@@ -1916,9 +1916,9 @@ public final class Shell extends ToolkitApp {
                                 (focus == Focus.BOARD || focus == Focus.SESSIONS) && selectedTicket().isPresent(),
                                 NEW_TICKET_KEY),
                         Included.when(reviewablePullRequest().isPresent(), REVIEW_KEY),
-                        Stream.of(NEW_KEY, REFRESH_KEY),
+                        Stream.of(NEW_KEY),
                         Included.when(focus == Focus.BOARD, CAPTURE_KEY),
-                        Stream.of(MAIN_VIEW_KEY),
+                        Stream.of(REFRESH_KEY, MAIN_VIEW_KEY),
                         Included.when(focus == Focus.BOARD || focus == Focus.MAIN, ZOOM_KEY))
                 .flatMap(Function.identity())
                 .toList();
