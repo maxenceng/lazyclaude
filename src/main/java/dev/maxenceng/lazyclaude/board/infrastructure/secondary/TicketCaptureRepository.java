@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.TicketCapturePort;
@@ -24,6 +25,9 @@ public final class TicketCaptureRepository implements TicketCapturePort {
     private static final Pattern ISSUE_ADDRESS = Pattern.compile("/issues/(\\d+)\\s*\\z");
     private static final String NO_NUMBER = "gh issue create printed no issue number: %s";
     private static final String NO_BODY = "";
+    private static final List<String> CREATE = List.of("issue", "create");
+    private static final String TITLE = "--title";
+    private static final String BODY = "--body";
 
     private final GhCommand gh;
 
@@ -37,7 +41,7 @@ public final class TicketCaptureRepository implements TicketCapturePort {
 
     @Override
     public TicketId create(Project project, Title title, TicketBody body) {
-        GhResult created = run(project, List.of("issue", "create", "--title", title.value(), "--body", text(body)));
+        GhResult created = run(project, Stream.concat(CREATE.stream(), Stream.of(TITLE, title.value(), BODY, text(body))).toList());
         if (!created.succeeded()) {
             throw GhFailure.refusing(created);
         }

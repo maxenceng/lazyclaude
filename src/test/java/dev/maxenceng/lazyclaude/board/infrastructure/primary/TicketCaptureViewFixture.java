@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.board.published.ReasonFixture.reason;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
+import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketIdNumbered;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 
@@ -15,6 +16,10 @@ public final class TicketCaptureViewFixture {
 
     public static TicketCapturePayload blankTitlePayload() {
         return new TicketCapturePayload(project().root(), "   ");
+    }
+
+    public static TicketCaptureView capturedTicketViewNumbered(int number) {
+        return new CapturedTicketView(ticketIdNumbered(number));
     }
 
     public static TicketCaptureView capturedTicketView() {

@@ -31,6 +31,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
@@ -146,7 +147,7 @@ class ShellTicketStartTest {
                 mock(dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery.class),
                 mock(dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery.class),
                 mock(dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery.class),
-                mock(PendingReviewCommand.class), ReservedChords.defaults(), true,
+                mock(PendingReviewCommand.class), mock(TicketCaptureCommand.class), ReservedChords.defaults(), true,
                 queued::add);
         shell.press(key('j'));
         shell.press(key('j'));

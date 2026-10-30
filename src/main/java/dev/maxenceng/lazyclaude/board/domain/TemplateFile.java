@@ -11,6 +11,7 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 public record TemplateFile(String text) implements TicketTemplate {
 
     private static final Pattern FRONT_MATTER = Pattern.compile("\\A---[ \\t]*\\R.*?\\R---[ \\t]*(?:\\R|\\z)", Pattern.DOTALL);
+    private static final String NOTHING = "";
 
     public TemplateFile {
         Assert.notNull("template text", text);
@@ -18,7 +19,7 @@ public record TemplateFile(String text) implements TicketTemplate {
 
     @Override
     public TicketBody sections() {
-        String sections = FRONT_MATTER.matcher(text).replaceFirst("").strip();
+        String sections = FRONT_MATTER.matcher(text).replaceFirst(NOTHING).strip();
         return sections.isEmpty() ? new NoBody() : new Body(sections);
     }
 }

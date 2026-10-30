@@ -8,15 +8,19 @@ import java.util.List;
 import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
+import dev.maxenceng.lazyclaude.board.application.TicketCaptureApplicationService;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardWatchPayload;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchChangesRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesWatchRepository;
+import dev.maxenceng.lazyclaude.board.infrastructure.secondary.TicketCaptureRepository;
+import dev.maxenceng.lazyclaude.board.infrastructure.secondary.TicketTemplateRepository;
 import dev.maxenceng.lazyclaude.docs.application.DocsApplicationService;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
@@ -141,13 +145,15 @@ public final class LazyClaude {
                         new GhPullRequestDiffRepository(GH, GH_PATIENCE), new GhThreadRepository(GH, GH_PATIENCE)),
                 pendingReview);
         PendingReviewCommand writing = new PendingReviewCommand(pendingReview);
+        TicketCaptureCommand capturing =
+                new TicketCaptureCommand(new TicketCaptureApplicationService(new TicketCaptureRepository(), new TicketTemplateRepository()));
         int exit = start(
                 Path.of(HERE).toAbsolutePath(),
                 board,
                 docs,
                 sessions,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, writing, configuration.reservedChords(), configuration.mouse(), hosting, emulating, emulators, watching, removing, warnings));
+                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, writing, capturing, configuration.reservedChords(), configuration.mouse(), hosting, emulating, emulators, watching, removing, warnings));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -268,6 +274,7 @@ public final class LazyClaude {
             SessionQuery sessions,
             ReviewQuery reviews,
             PendingReviewCommand writing,
+            TicketCaptureCommand capturing,
             ReservedChords chords,
             boolean mouse,
             HostedSessionCommand hosting,
@@ -277,7 +284,7 @@ public final class LazyClaude {
             TicketWorktreeCommand removing,
             WarningQuery warnings)
             throws Exception {
-        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, writing, chords, mouse, hosting, emulating, emulators, watching, removing, warnings)::run, hosting);
+        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, writing, capturing, chords, mouse, hosting, emulating, emulators, watching, removing, warnings)::run, hosting);
     }
 
     /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
@@ -304,6 +311,7 @@ public final class LazyClaude {
             SessionQuery sessions,
             ReviewQuery reviews,
             PendingReviewCommand writing,
+            TicketCaptureCommand capturing,
             ReservedChords chords,
             boolean mouse,
             HostedSessionCommand hosting,
@@ -312,7 +320,7 @@ public final class LazyClaude {
             WatchedSessionCommand watching,
             TicketWorktreeCommand removing,
             WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, emulating, emulators, watching, removing, sessions, board, docs, reviews, writing, chords, mouse);
+        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, emulating, emulators, watching, removing, sessions, board, docs, reviews, writing, capturing, chords, mouse);
         docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
         board.subscribe(new BoardWatchPayload(view.root().value()), shell::boardChanged);
         sessions.subscribe(sessionPayload(view), shell::sessionsChanged);

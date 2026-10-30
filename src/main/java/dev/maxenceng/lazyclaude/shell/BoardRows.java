@@ -84,6 +84,14 @@ final class BoardRows {
         selectedTicketId().flatMap(id -> move.apply(columns, id)).or(columns::first).ifPresent(this::moveTo);
     }
 
+    /** The ticket on the board as last read with {@code id}, if it has one. */
+    Optional<TicketView> ticketNumbered(TicketId id) {
+        return groupsOf(board).stream()
+                .flatMap(group -> group.tickets().stream())
+                .filter(ticket -> ticket.id().equals(id))
+                .findFirst();
+    }
+
     /** Puts the selection on {@code ticket}, unfolding its group. */
     void selectTicket(TicketView ticket) {
         moveTo(ticket);

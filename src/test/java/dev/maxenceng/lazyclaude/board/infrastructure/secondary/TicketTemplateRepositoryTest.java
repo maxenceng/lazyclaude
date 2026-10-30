@@ -1,7 +1,7 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
-import static dev.maxenceng.lazyclaude.board.domain.TicketTemplateFixture.templateWithFrontMatter;
 import static dev.maxenceng.lazyclaude.board.domain.TicketTemplateFixture.noTemplate;
+import static dev.maxenceng.lazyclaude.board.domain.TicketTemplateFixture.templateWithFrontMatter;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.projectAt;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

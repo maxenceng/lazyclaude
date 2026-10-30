@@ -1,11 +1,11 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.board.domain.TicketCaptureFixture.captureRefused;
 import static dev.maxenceng.lazyclaude.board.domain.TicketTemplateFixture.noTemplate;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureViewFixture.blankTitlePayload;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureViewFixture.capturePayload;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureViewFixture.capturedTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureViewFixture.refusedTicketCaptureView;
-import static dev.maxenceng.lazyclaude.board.domain.TicketCaptureFixture.captureRefused;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;

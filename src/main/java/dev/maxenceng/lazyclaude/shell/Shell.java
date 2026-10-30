@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
@@ -136,6 +137,7 @@ public final class Shell extends ToolkitApp {
     private static final char QUIT = 'q';
     private static final char NEW_SESSION = 'N';
     private static final char REFRESH = 'R';
+    private static final char CAPTURE = 'c';
     private static final char NEW_TICKET_SESSION = 'n';
     private static final char TOGGLE_MAIN_VIEW = 'm';
     private static final char SUSPEND = 'z';
@@ -162,6 +164,7 @@ public final class Shell extends ToolkitApp {
     private static final String FOCUS_KEYS = "%s focus";
     private static final String QUIT_KEY = "q quit";
     private static final String REFRESH_KEY = "R refresh";
+    private static final String CAPTURE_KEY = "c capture";
     private static final String REVIEW_KEY = "p review";
     private static final List<String> RESPOND_KEYS = List.of("y start  esc back");
     private static final String REMOVE_WORKTREE_KEY = "d remove worktree";
@@ -182,6 +185,7 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
     private final AtomicReference<PullRequestsView> pendingPullRequests = new AtomicReference<>();
     private final AtomicReference<BoardReadingView> pendingBoard = new AtomicReference<>();
+    private final AtomicReference<TicketId> selectOnNextBoard = new AtomicReference<>();
     private final AtomicReference<Optional<WarningView>> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private final HostedSessionCommand hosting;
@@ -189,6 +193,7 @@ public final class Shell extends ToolkitApp {
     private final HostedEmulatorQuery emulators;
     private final WatchedSessionCommand watching;
     private final TicketWorktreeCommand removing;
+    private final CaptureKeys captureKeys;
     private final TerminalFocus terminalFocus = new TerminalFocus(this::terminalFocusChanged);
     private WatchedPayload lastWatched = new NoWatchedSessionPayload();
     private CompletableFuture<Void> watchUpdates = CompletableFuture.completedFuture(null);
@@ -257,6 +262,7 @@ public final class Shell extends ToolkitApp {
             DocsQuery docsQuery,
             ReviewQuery reviews,
             PendingReviewCommand writing,
+            TicketCaptureCommand capturing,
             ReservedChords chords,
             boolean mouseCapture) {
         this(
@@ -274,6 +280,7 @@ public final class Shell extends ToolkitApp {
                 docsQuery,
                 reviews,
                 writing,
+                capturing,
                 chords,
                 mouseCapture,
                 Executors.newVirtualThreadPerTaskExecutor());
@@ -295,6 +302,7 @@ public final class Shell extends ToolkitApp {
             DocsQuery docsQuery,
             ReviewQuery reviews,
             PendingReviewCommand writing,
+            TicketCaptureCommand capturing,
             ReservedChords chords,
             boolean mouseCapture,
             Executor background) {
@@ -313,6 +321,7 @@ public final class Shell extends ToolkitApp {
         this.emulators = emulators;
         this.watching = watching;
         this.removing = removing;
+        this.captureKeys = new CaptureKeys(capturing, board.root().value(), background, this::onRenderThread, this::captured);
         this.screens = screens;
         this.boards = boards;
         this.docsQuery = docsQuery;
@@ -425,6 +434,12 @@ public final class Shell extends ToolkitApp {
         reread();
     }
 
+    /** GitHub numbered a captured ticket: the board is read at once, and its selection goes to the new draft by that number. No row is added before the read. */
+    private void captured(TicketId id) {
+        selectOnNextBoard.set(id);
+        background.execute(this::reread);
+    }
+
     /** One read at a time, so a slow read that started first never lands after a newer one. */
     private synchronized void reread() {
         readAgain().ifPresent(read -> {
@@ -481,6 +496,12 @@ public final class Shell extends ToolkitApp {
             } else {
                 board.replace(next);
             }
+            Optional.ofNullable(selectOnNextBoard.get())
+                    .flatMap(board::ticketNumbered)
+                    .ifPresent(ticket -> {
+                        board.selectTicket(ticket);
+                        selectOnNextBoard.compareAndSet(ticket.id(), null);
+                    });
             if (!board.selected().key().equals(before) && mainViewOwner == Focus.BOARD) {
                 mainViewScroll.reset();
             }
@@ -626,6 +647,7 @@ public final class Shell extends ToolkitApp {
             case RESPOND_PROMPT -> respondPrompt.map(asked -> answerRespondPrompt(asked, key));
             case VERB_PICKER -> picker.map(asked -> pressInPicker(asked, key));
             case COMMENT_BOX -> review.map(pane -> reviewKeys.press(pane, key)).filter(taken -> taken);
+            case TICKET_CAPTURE -> captureKeys.press(key);
         };
     }
 
@@ -642,6 +664,7 @@ public final class Shell extends ToolkitApp {
             case RESPOND_PROMPT -> respondPrompt.isPresent();
             case VERB_PICKER -> picker.isPresent();
             case COMMENT_BOX -> review.flatMap(ReviewPane::box).isPresent();
+            case TICKET_CAPTURE -> captureKeys.box().isPresent();
         };
     }
 
@@ -758,6 +781,10 @@ public final class Shell extends ToolkitApp {
         }
         if (key.isChar(REFRESH)) {
             return refresh();
+        }
+        if (key.isChar(CAPTURE) && focus == Focus.BOARD) {
+            captureKeys.open();
+            return true;
         }
         if (key.isChar(REMOVE_WORKTREE)) {
             return removableTicket().map(this::checkRemoval).orElse(false);
@@ -1608,7 +1635,7 @@ public final class Shell extends ToolkitApp {
             case QUIT_PROMPT -> quitPrompt.map(SessionText::quitPrompt);
             case REMOVAL_PROMPT -> removalPrompt.map(asked -> WorktreeText.prompt(root, asked.worktree()));
             case SUBMIT_PROMPT -> reviewKeys.prompt();
-            case RESPOND_PROMPT, VERB_PICKER, COMMENT_BOX -> Optional.empty();
+            case RESPOND_PROMPT, VERB_PICKER, COMMENT_BOX, TICKET_CAPTURE -> Optional.empty();
         };
     }
 
@@ -1633,6 +1660,13 @@ public final class Shell extends ToolkitApp {
             case COMMENT_BOX -> review.flatMap(ReviewPane::box)
                     .filter(box -> box.inlineAt().isEmpty())
                     .map(box -> ReviewPanels.boxPopup(box, () -> mainViewArea));
+            case TICKET_CAPTURE -> captureKeys.box().<Element>map(asked -> new PopupElement(
+                    CaptureText.TITLE,
+                    CaptureText.rows(asked),
+                    Optional.empty(),
+                    CaptureText.HINT,
+                    () -> mainViewArea,
+                    CaptureText.caret(asked)));
         };
         return popup.<Element>map(drawn -> stack(screen, drawn)).orElse(screen);
     }
@@ -1834,6 +1868,7 @@ public final class Shell extends ToolkitApp {
         return refusal
                 .map(List::of)
                 .or(() -> picker.map(_ -> List.of(VerbPickerText.keys())))
+                .or(() -> captureKeys.box().map(_ -> CaptureText.keys()))
                 .or(() -> Optional.of(zoomKeys()).filter(_ -> inSession() && zoomed))
                 .or(() -> Optional.of(sessionKeys(SESSION_KEYS)).filter(_ -> inSession()).map(List::of))
                 .or(() -> respondPrompt.map(_ -> RESPOND_KEYS))
@@ -1881,7 +1916,9 @@ public final class Shell extends ToolkitApp {
                                 (focus == Focus.BOARD || focus == Focus.SESSIONS) && selectedTicket().isPresent(),
                                 NEW_TICKET_KEY),
                         Included.when(reviewablePullRequest().isPresent(), REVIEW_KEY),
-                        Stream.of(NEW_KEY, REFRESH_KEY, MAIN_VIEW_KEY),
+                        Stream.of(NEW_KEY, REFRESH_KEY),
+                        Included.when(focus == Focus.BOARD, CAPTURE_KEY),
+                        Stream.of(MAIN_VIEW_KEY),
                         Included.when(focus == Focus.BOARD || focus == Focus.MAIN, ZOOM_KEY))
                 .flatMap(Function.identity())
                 .toList();

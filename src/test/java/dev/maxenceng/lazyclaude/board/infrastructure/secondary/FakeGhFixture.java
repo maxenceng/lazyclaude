@@ -47,7 +47,7 @@ public final class FakeGhFixture {
     }
 
     static String createdIssueAddress() {
-        return "https://github.com/acme/app/issues/12";
+        return "https://github.example/acme/app/issues/12";
     }
 
     static Path ghRecordingItsArguments(Path directory, Path record, String output) throws IOException {
