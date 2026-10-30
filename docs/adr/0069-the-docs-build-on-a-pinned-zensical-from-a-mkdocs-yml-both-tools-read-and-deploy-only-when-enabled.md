@@ -23,12 +23,14 @@ silently ignores a plugin it does not know.
 - **`mkdocs.yml` holds only what both Zensical and MkDocs 1.x with Material read.** Zensical reads `mkdocs.yml` as it is,
   so the file also builds with the older pair as a fallback while Zensical is 0.x. That means settings only (`docs_dir`,
   `exclude_docs`, `strict`, `validation`, the `mermaid` fence through `pymdownx.superfences`) and no plugin, because an
-  unlisted plugin is dropped without an error. There is no `nav:`: the filesystem is the one source, for the site and for
+  unlisted plugin is dropped without an error. `validation` is read by MkDocs alone; Zensical checks links and anchors
+  without it, and `strict` makes both tools fail on them. There is no `nav:`: the filesystem is the one source, for the site and for
   the Docs panel. Rejected: `zensical.toml`, which MkDocs cannot read.
 - **The build is strict.** `strict: true` turns a link to a missing page, or to a missing anchor, into a failed build.
   `make verify` runs `make docs` after `make ci`, and CI runs the same step. Links to a directory are not checked, so the
   landing page links pages.
-- **`docs/README.md` is the home page.** Zensical takes a `README.md` as a section index, so GitHub shows the same file.
+- **`docs/README.md` is the home page.** Zensical takes a `README.md` as a section index, so GitHub shows the same file. As a
+  document like any other, it is also the first entry in the Docs panel.
 - **Deploying to GitHub Pages is a separate workflow that runs on a push to `main` only when the repository variable
   `DOCS_PAGES` is `true`.** Without it the site is built and checked on every pull request and published nowhere. This
   keeps a repository that has not enabled Pages from failing on every merge. Rejected: deploying unconditionally.
