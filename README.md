@@ -1,7 +1,7 @@
 # lazyclaude
 
 A terminal IDE for [Claude Code](https://claude.com/claude-code): a project's
-`docs/backlog/` as a board, and from a ticket, a jump into a live Claude Code session or a new
+GitHub Issues as a board of tickets, and from a ticket, a jump into a live Claude Code session or a new
 one.
 
 Built on the [claude-tools](https://github.com/maxenceng/claude-tools) harness — the backlog

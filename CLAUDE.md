@@ -5,7 +5,7 @@ application framework (ADR 0006).
 
 ## What this is
 
-A terminal IDE for Claude Code. It shows a project's `docs/backlog/` as a board and, from a
+A terminal IDE for Claude Code. It shows a project's GitHub Issues as a board of tickets and, from a
 ticket, lets you jump into a live Claude Code session or start a new one — the `/ticket` loop
 of the claude-tools harness, without leaving one screen.
 
@@ -15,7 +15,7 @@ board, session — not issue, card, or chat.
 Out of scope until an ADR says otherwise: editing anything (every view is read-only except the pending review on GitHub, the one write, by ADR 0009; edit
 files in your own editor or through a session), talking to
 the Claude API directly rather than through the `claude` CLI, and any tracker other than the
-markdown in `docs/backlog/`.
+project's GitHub Issues, read through `gh` (ADR 0052).
 
 Greenfield: nothing is built yet, and there are no users to keep compatible with.
 
@@ -58,8 +58,8 @@ an ADR.
 2. The domain is plain Java — no TamboUI, no JLine, nothing outside `java.*` and other domains.
 3. Only `shell` and `infrastructure.primary` touch the terminal (TamboUI, JLine).
 4. Side effects — `ProcessBuilder`/`Process`, `java.nio.file.Files`, `java.net.http` — live in
-   `infrastructure.secondary`, behind a port the domain declares. Running `claude` or `git`,
-   and reading the backlog, are all side effects.
+   `infrastructure.secondary`, behind a port the domain declares. Running `claude`, `git` or `gh`,
+   and reading the issues, are all side effects.
 5. Contexts reach each other only through the other's `published` package.
 6. Nothing depends on `shell`; it composes contexts, never the reverse.
 7. The shell reaches a context only through its `infrastructure.primary` and `published`.
