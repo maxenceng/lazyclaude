@@ -4,7 +4,8 @@ Date: 2026-10-29
 
 ## Status
 
-Accepted. Amends ADR 0055, which finds a decision's map through `blocked_by` alone.
+Accepted. Amends ADR 0055, which finds a decision's map through `blocked_by` alone. Amended by ADR 0067, under
+which a decision's `blocked_by` map wins over a map body that mentions it.
 
 ## Context
 

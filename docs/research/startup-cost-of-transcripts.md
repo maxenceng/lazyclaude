@@ -1,6 +1,6 @@
 # What reading every past session costs at startup
 
-Researched 2026-10-10 for [LAZY-16](../backlog/LAZY-16-startup-cost-of-transcripts.md),
+Researched 2026-10-10 for [LAZY-16](https://github.com/maxenceng/lazyclaude/issues/95),
 against Claude Code 2.1.294's transcripts on this machine (CachyOS, kernel 7.2.9, 16 cores,
 23 GB RAM, NVMe, `/home` on btrfs with `compress=zstd:1`).
 

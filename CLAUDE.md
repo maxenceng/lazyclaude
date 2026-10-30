@@ -105,8 +105,11 @@ Settled. Act on these rather than asking.
   exists for. A guard under `scripts/check-*` has a fixture that trips it (ADR 0004).
 - A build result is read from a captured exit code — `make verify-report`, or
   `make verify > log 2>&1; echo $?` — never from a pipeline. `Skipped: 0` is part of the result.
-- Outside `docs/backlog/` and `docs/adr/`, name the behaviour rather than a landed ticket
-  (ADR 0005). `make ticket-check` enforces it.
+- A ticket is a GitHub issue, and the pull request that merges it closes it. No `#n` or issue
+  URL appears outside `docs/adr/`, `docs/research/`, `docs/endpoints/`, `docs/roadmap/` and
+  `scripts/`, open or closed: name the behaviour, and let git and the ADRs remember which issue
+  added it. A commit subject says the change in words, with no ticket id. `make ticket-check`
+  enforces it with no network (ADR 0053).
 
 Ask when the choice is a genuine trade-off rather than a default: a review that contradicts
 something asked for explicitly, a change to how sessions are launched or attached, or a rule
@@ -114,7 +117,7 @@ that would have to carve out an exception to hold.
 
 ## Where to look
 
-- `docs/backlog/` — what to build and its status; driven by `/ticket`
+- GitHub Issues — what to build and its status; driven by `/ticket` (ADR 0052)
 - `docs/glossary.md` — ubiquitous language; use these words in code
 - `docs/context-map.md` — contexts and their relationships
 - `docs/adr/` — why things are the way they are

@@ -78,7 +78,7 @@ REGISTRY = {
     ),
     "check-ticket-references.py": FixtureTree(
         "ticket-references",
-        "reference(s) to a landed ticket",
+        "3 reference(s) to an issue outside the record",
     ),
 }
 

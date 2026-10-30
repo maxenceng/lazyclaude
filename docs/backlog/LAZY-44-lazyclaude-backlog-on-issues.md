@@ -1,6 +1,6 @@
 ---
 id: LAZY-44
-status: todo
+status: in-progress
 context: cross-context
 type: chore
 tracker_id: 108
@@ -14,12 +14,12 @@ blocked_by: [LAZY-43, BOARD-8]
 
 - [ ] With no ticket branch open, the migration script's dry run on lazyclaude's `main` refuses nothing, and its run
       leaves `verify` passing (ADR 0055).
-- [ ] The `LAZY-24` map is an open `status:in-progress` issue whose open decisions are its sub-issues, and `/wayfinder`'s
-      frontier on it lists the same tickets the markdown did.
+- [ ] The `LAZY-24` map, `done` on `main` since its decisions were resolved, is a closed issue whose decisions are its
+      sub-issues, and `/wayfinder`'s frontier on it lists the same tickets the markdown did: none.
 - [ ] The two links into `docs/backlog/` in `docs/adr/` and `docs/research/` point at their issues; bare old ids stay.
 - [ ] `docs/backlog/` is deleted in a PR quoting `verify`'s output, and `backlog-archive` tags the last commit holding it.
-- [ ] Before `docs/backlog/` is deleted, the unbuilt steps of `ROADMAP-v1.1.md` are a pinned *Roadmap v1.1* issue,
-      in the same order, each step a checklist item naming its issue number.
+- [ ] Before `docs/backlog/` is deleted, the unbuilt steps of `ROADMAP-v1.1.md` are `docs/roadmap/v1.1.md`, in the
+      same order, each step linking its issue; `docs/roadmap/` is part of the record (ADR 0068).
 - [ ] lazyclaude is on plugin 3.0.0, its board lists the migrated tickets, and the migration script is deleted from
       claude-tools.
 

@@ -32,7 +32,7 @@ final class EmulatorInputs {
 
     private EmulatorInputs() {}
 
-    // deferred: Ctrl+J, Shift+Enter, Ctrl+Enter and Alt+Enter are lost inside the pane, since TamboUI collapses them to Enter or an unknown key before the shell sees them — close it when TamboUI supports the kitty keyboard protocol (upstream #446).
+    // deferred: Ctrl+J, Shift+Enter, Ctrl+Enter and Alt+Enter are lost inside the pane, since TamboUI collapses them to Enter or an unknown key before the shell sees them — close it when TamboUI supports the kitty keyboard protocol, an open TamboUI issue.
     static Optional<EmulatorKeyPayload> key(KeyEvent event) {
         return input(event).map(input -> EmulatorKeyPayload.builder()
                 .input(input)

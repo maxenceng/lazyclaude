@@ -39,7 +39,7 @@ final class ChordDelivery {
 
     private ChordDelivery() {}
 
-    // deferred: a chord the terminal sends as another key, or that TamboUI 0.5.0 cannot parse, is refused rather than bound — close it when TamboUI supports the kitty keyboard protocol (upstream #446).
+    // deferred: a chord the terminal sends as another key, or that TamboUI 0.5.0 cannot parse, is refused rather than bound — close it when TamboUI supports the kitty keyboard protocol, an open TamboUI issue.
     /** @throws InvalidChordException when the terminal never delivers {@code chord} as itself */
     static Chord delivered(Chord chord) {
         undeliveredBecause(chord).ifPresent(reason -> {
