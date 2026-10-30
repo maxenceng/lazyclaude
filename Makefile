@@ -69,7 +69,7 @@ test-comment-check: ## Fail on a comment under src/test, where the test name is 
 var-check: ## Fail on `var` where a type should be written out
 	@python3 scripts/check-no-var.py
 
-ticket-check: ## Fail on a reference to a ticket that has already landed
+ticket-check: ## Fail on an issue number or URL named outside the record, with no network
 	@python3 scripts/check-ticket-references.py
 
 guard-fixtures: ## Fail if a scripts/check-* guard has no fixture proven to trip it

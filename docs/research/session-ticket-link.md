@@ -1,6 +1,6 @@
 # Linking a Claude Code session to a backlog ticket
 
-Research for [LAZY-3](../backlog/LAZY-3-session-ticket-link.md), 2026-10-09, Claude Code 2.1.294,
+Research for [LAZY-3](https://github.com/maxenceng/lazyclaude/issues/110), 2026-10-09, Claude Code 2.1.294,
 ddd-workflow plugin 2.2.2.
 
 Question: how does lazyclaude know which ticket a session belongs to without the user

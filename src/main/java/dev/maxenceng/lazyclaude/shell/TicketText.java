@@ -20,7 +20,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.tamboui.style.Style;
 
 /**
- * How the shell words a ticket: its number as {@code #42}, a missing field left out, and the issue's other labels in a row of the key
+ * How the shell words a ticket: its number after a number sign, a missing field left out, and the issue's other labels in a row of the key
  * column beside the pull request's and the worktree's.
  */
 final class TicketText {
