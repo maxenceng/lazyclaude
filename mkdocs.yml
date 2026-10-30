@@ -1,0 +1,21 @@
+# No plugin, only settings Zensical reads or skips harmlessly, so MkDocs 1.x stays a fallback (ADR 0069).
+# `validation` is for MkDocs alone: Zensical checks links and anchors by default.
+site_name: lazyclaude
+docs_dir: docs
+site_dir: site
+strict: true
+exclude_docs: |
+  backlog/
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

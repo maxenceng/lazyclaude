@@ -36,7 +36,7 @@ ROOT = os.environ.get("CHECK_ROOT") or os.path.dirname(os.path.dirname(os.path.a
 ISSUE_URL = re.compile(r"https?://github\.com/[^/\s]+/[^/\s]+/issues/[0-9]+")
 BARE_NUMBER = re.compile(r"(?<![\w/&#-])#[0-9]+(?![\w-])")
 EXEMPT = ("docs/adr/", "docs/research/", "docs/endpoints/", "docs/roadmap/", "scripts/")
-SKIPPED_DIRECTORIES = {"node_modules", "target", "dist", ".git", ".mvn", ".idea"}
+SKIPPED_DIRECTORIES = {"node_modules", "target", "dist", "site", ".cache", ".git", ".mvn", ".idea"}
 COMMENT_START = re.compile(r"(?<!:)//|/\*|^\s*\*")
 
 
