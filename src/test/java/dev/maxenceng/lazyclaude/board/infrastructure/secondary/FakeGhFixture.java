@@ -34,6 +34,26 @@ public final class FakeGhFixture {
         return new IssuesRepository(new GhCommand(missingCommand(), PATIENCE));
     }
 
+    static TicketCaptureRepository captureRepositoryOver(Path gh) {
+        return new TicketCaptureRepository(new GhCommand(gh.toString(), PATIENCE));
+    }
+
+    static TicketCaptureRepository impatientCaptureRepositoryOver(Path gh) {
+        return new TicketCaptureRepository(new GhCommand(gh.toString(), IMPATIENCE));
+    }
+
+    static TicketCaptureRepository captureRepositoryOverMissingGh() {
+        return new TicketCaptureRepository(new GhCommand(missingCommand(), PATIENCE));
+    }
+
+    static String createdIssueAddress() {
+        return "https://github.com/acme/app/issues/12";
+    }
+
+    static Path ghRecordingItsArguments(Path directory, Path record, String output) throws IOException {
+        return script(directory, "printf '%%s\\n' \"$@\" > '%s'\necho '%s'\n".formatted(record, output));
+    }
+
     static String missingCommand() {
         return "lazyclaude-no-such-gh";
     }
