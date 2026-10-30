@@ -5,6 +5,7 @@ import static dev.maxenceng.lazyclaude.shared.domain.WarningsFixture.warnings;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningViewFixture.twoWarningsView;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningViewFixture.warningView;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
@@ -40,6 +41,18 @@ class WarningQueryTest {
         listener().accept(twoWarnings());
 
         assertThat(received).containsExactly(warningView(), twoWarningsView());
+    }
+
+    @Test
+    void shouldTellTheListenerWhenNoWarningIsHeldAnyMore() {
+        Runnable listener = mock(Runnable.class);
+        new WarningQuery(new WarningApplicationService(watch, warnings)).onNoneHeld(listener);
+        ArgumentCaptor<Runnable> watched = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).onNoneHeld(watched.capture());
+
+        watched.getValue().run();
+
+        verify(listener).run();
     }
 
     Consumer<Warnings> listener() {

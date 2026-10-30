@@ -246,7 +246,7 @@ final class SessionText {
     }
 
     private static DetailRow ticketLine(TicketLink link) {
-        return new DetailRow(TICKET_FORMAT.formatted(link.ticket().value(), link.verb().value()), Style.EMPTY);
+        return new DetailRow(TICKET_FORMAT.formatted(TicketText.number(link.ticket().value()), link.verb().value()), Style.EMPTY);
     }
 
     private static DetailRow fact(String name, String value) {

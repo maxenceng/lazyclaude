@@ -32,7 +32,7 @@ class ShellPastSessionsTest {
     void shouldListAPastSessionAsADimCircleItsTitleAndTheTimeSinceItsLastActivityFlushRight() {
         Screen screen = Screen.of(shellOnSessions(pastSessionsViewOf(List.of(pastSessionView()))));
 
-        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("○ Refine PROJ-1\\s+10m"));
+        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("○ Refine 1\\s+10m"));
         assertThat(screen.dimText()).anySatisfy(line -> assertThat(line).contains("○").doesNotContain("Refine"));
     }
 
@@ -40,7 +40,7 @@ class ShellPastSessionsTest {
     void shouldMarkAnInterruptedPastSessionWithTheResumeArrowInPlaceOfTheCircle() {
         Screen screen = Screen.of(shellOnSessions(pastSessionsViewOf(List.of(pastSessionViewBuilder().interrupted(true).build()))));
 
-        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("↺ Refine PROJ-1\\s+10m"));
+        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("↺ Refine 1\\s+10m"));
     }
 
     @Test
@@ -180,7 +180,7 @@ class ShellPastSessionsTest {
     void shouldTitleARowByTheFirstPromptWhenTheSessionHasNoTitle() {
         Shell shell = shellOnSessions(pastSessionsViewOf(List.of(pastSessionViewTitled(firstPrompt()))));
 
-        assertThat(Screen.of(shell).boardPanelText()).contains("○ /ticket start PROJ-1");
+        assertThat(Screen.of(shell).boardPanelText()).contains("○ /ticket start 1");
     }
 
     @Test
@@ -214,7 +214,7 @@ class ShellPastSessionsTest {
                 .as("the selection follows the session id from the live block into the past one")
                 .singleElement()
                 .asString()
-                .contains("/ticket start PROJ-1");
+                .contains("/ticket start 1");
     }
 
     @Test
@@ -229,7 +229,7 @@ class ShellPastSessionsTest {
                 .as("a session idle longer than the five newest past ones dies into the fold, and the selection follows it there")
                 .singleElement()
                 .asString()
-                .contains("/ticket start PROJ-1");
+                .contains("/ticket start 1");
     }
 
     @Test

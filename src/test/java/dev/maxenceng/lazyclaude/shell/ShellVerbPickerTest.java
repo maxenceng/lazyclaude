@@ -39,7 +39,7 @@ import dev.maxenceng.lazyclaude.session.published.StartedHost;
 @ExtendWith(MockitoExtension.class)
 class ShellVerbPickerTest {
 
-    private static final String IN_REVIEW_TITLE = "╭ PROJ-1 · in-review";
+    private static final String IN_REVIEW_TITLE = "╭ #1 · in-review";
 
     @Mock
     private HostedSessionCommand hosting;
@@ -51,7 +51,7 @@ class ShellVerbPickerTest {
         shell.press(key('n'));
 
         assertThat(Screen.of(shell).text())
-                .contains("╭ PROJ-1 · in-review ── checking PR… ╮")
+                .contains("╭ #1 · in-review ── checking PR… ╮")
                 .contains("│ › respond")
                 .contains("│   done")
                 .contains("╰ enter start · esc cancel");
@@ -84,7 +84,7 @@ class ShellVerbPickerTest {
 
         shell.press(key('n'));
 
-        assertThat(Screen.of(shell).text()).contains("╭ PROJ-1 · in-progress ─").doesNotContain("checking PR");
+        assertThat(Screen.of(shell).text()).contains("╭ #1 · in-progress ─").doesNotContain("checking PR");
     }
 
     @Test
@@ -199,7 +199,7 @@ class ShellVerbPickerTest {
         shell.press(key('n'));
 
         verify(hosting).startUnlinked(any());
-        assertThat(Screen.of(shell).text()).doesNotContain("╭ PROJ-1 ·");
+        assertThat(Screen.of(shell).text()).doesNotContain("╭ #1 ·");
     }
 
     @Test

@@ -1,9 +1,8 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryViewFixture.datedFrontmatterViews;
-import static dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryViewFixture.frontmatterViews;
 import static dev.maxenceng.lazyclaude.board.published.BodyFixture.body;
 import static dev.maxenceng.lazyclaude.board.published.ContextNameFixture.contextName;
+import static dev.maxenceng.lazyclaude.board.published.LabelNameFixture.labelNames;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.secondTicketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.slugTicketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
@@ -22,7 +21,6 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView.TicketVi
 import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoContext;
-import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.NoType;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.TicketBranch;
@@ -42,7 +40,7 @@ public final class TicketViewFixture {
                 .status(Status.DRAFT)
                 .context(contextName())
                 .type(typeName())
-                .frontmatter(frontmatterViews())
+                .otherLabels(List.of())
                 .body(body())
                 .verbs(List.of(Verb.REFINE));
     }
@@ -59,10 +57,6 @@ public final class TicketViewFixture {
         return ticketViewBuilder().branch(slugTicketBranch()).build();
     }
 
-    public static TicketView datedSlugTicketView() {
-        return ticketViewBuilder().branch(slugTicketBranch()).frontmatter(datedFrontmatterViews()).build();
-    }
-
     public static TicketView inReviewSlugTicketView() {
         return ticketViewBuilder()
                 .branch(slugTicketBranch())
@@ -77,7 +71,7 @@ public final class TicketViewFixture {
 
     public static TicketView ticketViewNumbered(int number, Status status) {
         return ticketViewBuilder()
-                .id(new TicketId("PROJ-" + number))
+                .id(new TicketId(String.valueOf(number)))
                 .branch(new TicketBranch("PROJ-" + number))
                 .title(new Title("Ticket number " + number))
                 .status(status)
@@ -106,10 +100,6 @@ public final class TicketViewFixture {
                 .build();
     }
 
-    public static TicketView untitledTicketView() {
-        return ticketViewBuilder().title(new NoTitle()).build();
-    }
-
     public static TicketView bareTicketView() {
         return ticketViewBuilder().context(new NoContext()).type(new NoType()).build();
     }
@@ -118,8 +108,12 @@ public final class TicketViewFixture {
         return ticketViewBuilder().body(new NoBody()).build();
     }
 
-    public static TicketView datedTicketView() {
-        return ticketViewBuilder().frontmatter(datedFrontmatterViews()).build();
+    public static TicketView labelledTicketView() {
+        return ticketViewBuilder().otherLabels(labelNames()).build();
+    }
+
+    public static TicketView labelledSlugTicketView() {
+        return ticketViewBuilder().branch(slugTicketBranch()).otherLabels(labelNames()).build();
     }
 
     public static TicketView longTicketView() {

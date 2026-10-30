@@ -110,7 +110,7 @@ class HostedSessionTest {
 
     @Test
     void shouldBeNamedForTheTicketAndVerbItWasStartedFor() {
-        assertThat(hostedSessionRunning(Verb.START).name()).isEqualTo(new SessionName("PROJ-1 start"));
+        assertThat(hostedSessionRunning(Verb.START).name()).isEqualTo(new SessionName("1 start"));
     }
 
     @Test

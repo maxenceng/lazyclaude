@@ -6,17 +6,17 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardWatchPayload;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogRepository;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BoardWatchRepository;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchChangesRepository;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchCopyRepository;
+import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesRepository;
+import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesWatchRepository;
 import dev.maxenceng.lazyclaude.docs.application.DocsApplicationService;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
@@ -112,10 +112,9 @@ public final class LazyClaude {
     private static void open(ConfigurationView configuration, WarningRepository warningRepository) throws Exception {
         BoardQuery board = new BoardQuery(new BoardApplicationService(
                 new ProjectLocatorRepository(),
-                new BacklogRepository(),
-                new BranchCopyRepository(),
+                new IssuesRepository(),
                 new BranchChangesRepository(),
-                new BoardWatchRepository(),
+                new IssuesWatchRepository(),
                 warningRepository));
         WarningApplicationService warningService = new WarningApplicationService(warningRepository, warningRepository);
         WarningQuery warnings = new WarningQuery(warningService);
@@ -227,17 +226,17 @@ public final class LazyClaude {
 
     /**
      * Opens the shell on the board of the project {@code from} belongs to and that project's docs and
-     * live and past sessions, or says why there is no board and returns non-zero without opening it. Docs that
-     * cannot be listed do not stop it: their panel says why.
+     * live and past sessions, or says why there is no project and returns non-zero without opening it. Docs that
+     * cannot be listed and issues that cannot be read do not stop it: their panel says why.
      */
     static int start(
             Path from, BoardQuery board, DocsQuery docs, SessionQuery sessions, PrintStream err, ShellOpener shell)
             throws Exception {
-        BoardView view;
+        BoardReadingView view;
         DocsView tree;
         SessionsView live;
         try {
-            view = board.boardFor(new BoardPayload(from, Set.of()));
+            view = board.boardFor(new BoardPayload(from));
             tree = docs.docsFor(new DocsPayload(view.root().value()));
             live = sessions.sessionsFor(sessionPayload(view));
         } catch (DomainException e) {
@@ -249,17 +248,19 @@ public final class LazyClaude {
     }
 
     /** The project's root and the id of every ticket on its board, which {@code session} links its sessions against (ADR 0015). */
-    static SessionPayload sessionPayload(BoardView view) {
-        return new SessionPayload(
-                view.root().value(),
-                view.groups().stream()
-                        .flatMap(group -> group.tickets().stream())
-                        .map(ticket -> new LinkedTicketId(ticket.id().value()))
-                        .toList());
+    static SessionPayload sessionPayload(BoardReadingView view) {
+        List<LinkedTicketId> ids = switch (view) {
+            case BoardView read -> read.groups().stream()
+                    .flatMap(group -> group.tickets().stream())
+                    .map(ticket -> new LinkedTicketId(ticket.id().value()))
+                    .toList();
+            case UnavailableBoardView _ -> List.of();
+        };
+        return new SessionPayload(view.root().value(), ids);
     }
 
     private static void run(
-            BoardView view,
+            BoardReadingView view,
             DocsView tree,
             SessionsView live,
             BoardQuery board,
@@ -295,7 +296,7 @@ public final class LazyClaude {
      */
     // deferred: a change between the first read and the watch starting is shown only at the next change — close it when a doc edited during start-up is seen stale.
     static Shell shellOn(
-            BoardView view,
+            BoardReadingView view,
             DocsView tree,
             SessionsView live,
             BoardQuery board,
@@ -320,6 +321,7 @@ public final class LazyClaude {
         reviews.subscribe(
                 new ReviewPayload(view.root().value()), shell::pullRequestsChanged, shell::mergedPullRequestsChanged);
         warnings.subscribe(shell::warningsChanged);
+        warnings.onNoneHeld(shell::warningsCleared);
         return shell;
     }
 }

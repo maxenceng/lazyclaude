@@ -1,14 +1,14 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
-import dev.maxenceng.lazyclaude.board.published.FileName;
 import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** A backlog file with an `id` whose frontmatter or status was refused, or whose `id` was already claimed. */
-public record UnreadableTicket(FileName file, Reason reason) implements BacklogEntry {
+/** A ticket whose labels or state the board refused to read. */
+public record UnreadableTicket(TicketId id, Reason reason) implements BacklogEntry {
 
     public UnreadableTicket {
-        Assert.notNull("file", file);
+        Assert.notNull("id", id);
         Assert.notNull("reason", reason);
     }
 
@@ -17,13 +17,13 @@ public record UnreadableTicket(FileName file, Reason reason) implements BacklogE
     }
 
     public static final class UnreadableTicketBuilder {
-        private FileName file;
+        private TicketId id;
         private Reason reason;
 
         private UnreadableTicketBuilder() {}
 
-        public UnreadableTicketBuilder file(FileName file) {
-            this.file = file;
+        public UnreadableTicketBuilder id(TicketId id) {
+            this.id = id;
             return this;
         }
 
@@ -33,7 +33,7 @@ public record UnreadableTicket(FileName file, Reason reason) implements BacklogE
         }
 
         public UnreadableTicket build() {
-            return new UnreadableTicket(file, reason);
+            return new UnreadableTicket(id, reason);
         }
     }
 }

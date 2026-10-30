@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shared.application;
 
 import static dev.maxenceng.lazyclaude.shared.domain.WarningsFixture.twoWarnings;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
@@ -43,6 +44,18 @@ class WarningApplicationServiceTest {
         listener.getValue().accept(twoWarnings());
 
         assertThat(received).containsExactly(twoWarnings());
+    }
+
+    @Test
+    void shouldTellTheListenerWhenNoWarningIsHeldAnyMore() {
+        Runnable listener = mock(Runnable.class);
+
+        service.onNoneHeld(listener);
+        ArgumentCaptor<Runnable> watched = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).onNoneHeld(watched.capture());
+        watched.getValue().run();
+
+        verify(listener).run();
     }
 
     @Test

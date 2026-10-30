@@ -229,12 +229,12 @@ class TranscriptRepositoryTest {
                 sessionId(),
                 userLine(cwd(), started(), "Refine the ticket"),
                 assistantLine(cwd(), later()),
-                aiTitleLine("Refine PROJ-1"));
+                aiTitleLine("Refine 1"));
 
         TranscriptRepository repository = scanned(projects, cacheFile, unwritable, unlistable);
 
         assertThat(readOf(repository))
-                .containsExactly(factsOf(new AiTitle("Refine PROJ-1"), new FirstPrompt("Refine the ticket"), later()));
+                .containsExactly(factsOf(new AiTitle("Refine 1"), new FirstPrompt("Refine the ticket"), later()));
     }
 
     @Test
@@ -318,15 +318,15 @@ class TranscriptRepositoryTest {
                 projects,
                 folder(),
                 sessionId(),
-                userLine(cwd(), started(), "/ticket start PROJ-1"),
+                userLine(cwd(), started(), "/ticket start 1"),
                 assistantLine(cwd(), later()),
-                aiTitleLine("Refine PROJ-1"));
+                aiTitleLine("Refine 1"));
 
         assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
                 .singleElement()
                 .satisfies(session -> assertThat(session)
                         .extracting(TranscriptFacts::title, TranscriptFacts::opening)
-                        .containsExactly(new AiTitle("Refine PROJ-1"), new FirstPrompt("/ticket start PROJ-1")));
+                        .containsExactly(new AiTitle("Refine 1"), new FirstPrompt("/ticket start 1")));
     }
 
     @Test

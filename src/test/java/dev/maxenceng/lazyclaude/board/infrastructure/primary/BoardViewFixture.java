@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.published.ProjectRoot;
+import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectFixture;
 
@@ -13,6 +14,18 @@ public final class BoardViewFixture {
 
     public static ProjectRoot projectRoot() {
         return new ProjectRoot(ProjectFixture.project().root());
+    }
+
+    public static UnavailableBoardView unavailableBoardView() {
+        return unavailableBoardViewFor(new Reason("gh is not logged in; run gh auth login"));
+    }
+
+    public static UnavailableBoardView unreachableBoardView() {
+        return unavailableBoardViewFor(new Reason("cannot read the issues from GitHub: error connecting to api.github.com"));
+    }
+
+    private static UnavailableBoardView unavailableBoardViewFor(Reason reason) {
+        return UnavailableBoardView.builder().root(projectRoot()).reason(reason).build();
     }
 
     public static BoardView boardViewOf(TicketView... tickets) {

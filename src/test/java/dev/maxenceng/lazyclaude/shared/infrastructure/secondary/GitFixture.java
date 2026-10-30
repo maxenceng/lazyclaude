@@ -1,7 +1,5 @@
 package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.backlogIn;
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.BacklogFixture.ticketMarkdown;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
@@ -17,15 +15,17 @@ public final class GitFixture {
 
     private GitFixture() {}
 
-    public static Path repositoryWithoutBacklog(Path directory) throws Exception {
+    public static Path repositoryWithoutACommit(Path directory) throws Exception {
         Path repository = Files.createDirectories(directory).toRealPath();
         git(repository, "init", "-q", "-b", "main");
         return repository;
     }
 
-    public static Path repositoryWithBacklog(Path directory) throws Exception {
-        Path repository = repositoryWithoutBacklog(directory);
-        Files.writeString(backlogIn(repository).resolve("PROJ-1.md"), ticketMarkdown());
+    public static Path repositoryWithACommit(Path directory) throws Exception {
+        Path repository = repositoryWithoutACommit(directory);
+        Path file = repository.resolve("docs").resolve("backlog").resolve("PROJ-1.md");
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, "A file to commit.");
         git(repository, "add", ".");
         git(repository, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init");
         return repository;
@@ -58,14 +58,6 @@ public final class GitFixture {
     public static Path detachedWorktree(Path repository, Path at) throws Exception {
         git(repository, "worktree", "add", "-q", "--detach", at.toString());
         return at.toRealPath();
-    }
-
-    public static void branchWithBacklogFile(Path repository, String branch, String file, String content) throws Exception {
-        git(repository, "checkout", "-q", "-b", branch);
-        Files.writeString(backlogIn(repository).resolve(file), content);
-        git(repository, "add", ".");
-        git(repository, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "on " + branch);
-        git(repository, "checkout", "-q", "main");
     }
 
     public static void branchWithFile(Path repository, String branch, String file, String content) throws Exception {
@@ -114,16 +106,6 @@ public final class GitFixture {
 
     public static void branchPointingNowhere(Path repository, String branch) throws IOException {
         Files.writeString(repository.resolve(".git").resolve("refs").resolve("heads").resolve(branch), "1".repeat(40) + "\n");
-    }
-
-    public static void removeBacklog(Path repository) throws IOException {
-        Path backlog = repository.resolve("docs").resolve("backlog");
-        try (Stream<Path> files = Files.list(backlog)) {
-            for (Path file : files.toList()) {
-                Files.delete(file);
-            }
-        }
-        Files.delete(backlog);
     }
 
     public static String headOf(Path in) throws Exception {

@@ -38,8 +38,8 @@ class ShellPullRequestsTest {
     void shouldShowAGreenTickAtTheRightEdgeOfTheRowForAPassedCiResult() {
         Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(passedPullRequestView()), slugTicketView()));
 
-        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).startsWith("  PROJ-1 ").hasSize(26).endsWith(" ✓"));
-        assertThat(screen.foregroundTextOnLine(screen.lineOf("PROJ-1 A board"), Color.GREEN)).isEqualTo("✓");
+        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).startsWith("  #1 ").hasSize(26).endsWith(" ✓"));
+        assertThat(screen.foregroundTextOnLine(screen.lineOf("#1 A board"), Color.GREEN)).isEqualTo("✓");
     }
 
     @Test
@@ -47,7 +47,7 @@ class ShellPullRequestsTest {
         Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(failedPullRequestView()), slugTicketView()));
 
         assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).endsWith(" ✗"));
-        assertThat(screen.foregroundTextOnLine(screen.lineOf("PROJ-1 A board"), Color.RED)).isEqualTo("✗");
+        assertThat(screen.foregroundTextOnLine(screen.lineOf("#1 A board"), Color.RED)).isEqualTo("✗");
     }
 
     @Test
@@ -55,7 +55,7 @@ class ShellPullRequestsTest {
         Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(pendingPullRequestView()), slugTicketView()));
 
         assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).endsWith(" ◌"));
-        assertThat(screen.foregroundTextOnLine(screen.lineOf("PROJ-1 A board"), Color.YELLOW)).isEqualTo("◌");
+        assertThat(screen.foregroundTextOnLine(screen.lineOf("#1 A board"), Color.YELLOW)).isEqualTo("◌");
     }
 
     @Test
@@ -85,7 +85,7 @@ class ShellPullRequestsTest {
     void shouldShowTheGlyphWhateverTheTicketsStatus() {
         Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(passedPullRequestView()), inReviewSlugTicketView()));
 
-        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).startsWith("  PROJ-1 ").endsWith("✓"));
+        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).startsWith("  #1 ").endsWith("✓"));
     }
 
     @Test
@@ -147,7 +147,7 @@ class ShellPullRequestsTest {
         Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(draftFailedPullRequestView()), longTitledSlugTicketView()));
 
         assertThat(screen.boardPanelLines())
-                .anySatisfy(line -> assertThat(line).startsWith("  PROJ-1 PR and CI").contains("…").hasSize(26).endsWith("⊙✗"));
+                .anySatisfy(line -> assertThat(line).startsWith("  #1 PR and CI").contains("…").hasSize(26).endsWith("⊙✗"));
     }
 
     @Test
@@ -157,7 +157,7 @@ class ShellPullRequestsTest {
                 yourTurnOnTheFirstTicket(),
                 slugTicketView()));
 
-        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).startsWith("• PROJ-1 ").endsWith("✗"));
+        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).startsWith("• #1 ").endsWith("✗"));
     }
 
     @Test
@@ -183,6 +183,6 @@ class ShellPullRequestsTest {
     void shouldReverseTheGlyphsOfTheSelectedRowWithTheRestOfIt() {
         Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(draftFailedPullRequestView()), slugTicketView()));
 
-        assertThat(screen.reversedText()).anySatisfy(text -> assertThat(text).contains("PROJ-1").endsWith("⊙✗"));
+        assertThat(screen.reversedText()).anySatisfy(text -> assertThat(text).contains("#1").endsWith("⊙✗"));
     }
 }

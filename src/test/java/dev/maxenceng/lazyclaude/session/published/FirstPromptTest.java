@@ -16,7 +16,7 @@ class FirstPromptTest {
 
     @Test
     void shouldKeepAPromptThatIsAlreadyOneLine() {
-        assertThat(new FirstPrompt("/ticket start PROJ-1").value()).isEqualTo("/ticket start PROJ-1");
+        assertThat(new FirstPrompt("/ticket start 1").value()).isEqualTo("/ticket start 1");
     }
 
     @Test

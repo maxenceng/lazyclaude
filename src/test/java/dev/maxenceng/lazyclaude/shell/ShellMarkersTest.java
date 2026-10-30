@@ -24,56 +24,56 @@ class ShellMarkersTest {
     @Test
     void shouldShowTheStrongestMarkerOfATicketsLiveSessionsInItsGutterAndItsColour() {
         Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(List.of(
-                linkedNamedSessionView(1, "calm-one", new YourTurn(), ticketLink("PROJ-1", "start")),
-                linkedNamedSessionView(2, "stuck-one", waitingForPermission(), ticketLink("PROJ-1", "start"))))));
+                linkedNamedSessionView(1, "calm-one", new YourTurn(), ticketLink("1", "start")),
+                linkedNamedSessionView(2, "stuck-one", waitingForPermission(), ticketLink("1", "start"))))));
 
-        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("! PROJ-1 .*"));
-        assertThat(screen.foregroundTextOnLine(screen.lineOf("PROJ-1 A board"), Color.RED)).isEqualTo("!");
+        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("! #1 .*"));
+        assertThat(screen.foregroundTextOnLine(screen.lineOf("#1 A board"), Color.RED)).isEqualTo("!");
     }
 
     @Test
     void shouldShowAQuestionMarkInYellowForASessionWaitingForInput() {
         Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(List.of(
-                linkedNamedSessionView(1, "asking-one", waitingForInput(), ticketLink("PROJ-1", "start"))))));
+                linkedNamedSessionView(1, "asking-one", waitingForInput(), ticketLink("1", "start"))))));
 
-        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("\\? PROJ-1 .*"));
-        assertThat(screen.foregroundTextOnLine(screen.lineOf("PROJ-1 A board"), Color.YELLOW)).isEqualTo("?");
+        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("\\? #1 .*"));
+        assertThat(screen.foregroundTextOnLine(screen.lineOf("#1 A board"), Color.YELLOW)).isEqualTo("?");
     }
 
     @Test
     void shouldShowABulletInCyanForASessionWhoseTurnItIs() {
         Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(List.of(
-                linkedNamedSessionView(1, "done-one", new YourTurn(), ticketLink("PROJ-1", "start"))))));
+                linkedNamedSessionView(1, "done-one", new YourTurn(), ticketLink("1", "start"))))));
 
-        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("• PROJ-1 .*"));
-        assertThat(screen.foregroundTextOnLine(screen.lineOf("PROJ-1 A board"), Color.CYAN)).contains("•");
+        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).matches("• #1 .*"));
+        assertThat(screen.foregroundTextOnLine(screen.lineOf("#1 A board"), Color.CYAN)).contains("•");
     }
 
     @Test
     void shouldShowNoMarkerForATicketWhoseSessionsAreAllBusyUnknownOrPast() {
         Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(
                 List.of(
-                        linkedNamedSessionView(1, "busy-one", new Busy(), ticketLink("PROJ-1", "start")),
-                        linkedNamedSessionView(2, "unknown-one", new Unknown(), ticketLink("PROJ-1", "start"))),
-                List.of(linkedPastSessionView(1, ticketLink("PROJ-1", "start"))))));
+                        linkedNamedSessionView(1, "busy-one", new Busy(), ticketLink("1", "start")),
+                        linkedNamedSessionView(2, "unknown-one", new Unknown(), ticketLink("1", "start"))),
+                List.of(linkedPastSessionView(1, ticketLink("1", "start"))))));
 
-        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).startsWith("  PROJ-1 "));
+        assertThat(screen.boardPanelLines()).anySatisfy(line -> assertThat(line).startsWith("  #1 "));
     }
 
     @Test
     void shouldShowNoMarkerForATicketWhenTheSessionWaitingIsLinkedToAnotherOne() {
         Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(List.of(
-                linkedNamedSessionView(1, "stuck-one", waitingForPermission(), ticketLink("PROJ-2", "start"))))));
+                linkedNamedSessionView(1, "stuck-one", waitingForPermission(), ticketLink("2", "start"))))));
 
         assertThat(screen.boardPanelLines())
-                .anySatisfy(line -> assertThat(line).startsWith("  PROJ-1 "))
-                .anySatisfy(line -> assertThat(line).startsWith("! PROJ-2 "));
+                .anySatisfy(line -> assertThat(line).startsWith("  #1 "))
+                .anySatisfy(line -> assertThat(line).startsWith("! #2 "));
     }
 
     @Test
     void shouldCountEachMarkerOfTheProjectsLiveSessionsOnTheLeftOfTheStatusLine() {
         Screen screen = Screen.of(shellOnTicketSessions(sessionsViewOf(List.of(
-                linkedNamedSessionView(1, "calm-one", new YourTurn(), ticketLink("PROJ-1", "start")),
+                linkedNamedSessionView(1, "calm-one", new YourTurn(), ticketLink("1", "start")),
                 linkedNamedSessionView(2, "loose-one", waitingForInput()),
                 linkedNamedSessionView(3, "asking-one", waitingForInput()),
                 linkedNamedSessionView(4, "stuck-one", waitingForPermission()),

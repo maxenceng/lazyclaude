@@ -172,8 +172,8 @@ class PtyHostRepositoryTest {
 
         host.spawn(ticketLaunch(id), output, code -> {});
 
-        assertThat(output.textContaining("[/ticket review PROJ-1]"))
-                .contains("args:[--session-id][" + id.value() + "][-n][PROJ-1 review][/ticket review PROJ-1]");
+        assertThat(output.textContaining("[/ticket review 1]"))
+                .contains("args:[--session-id][" + id.value() + "][-n][1 review][/ticket review 1]");
         host.end(id);
     }
 

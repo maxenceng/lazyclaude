@@ -24,17 +24,17 @@ class ShellMouseColumnsTest {
     void shouldMoveTheCursorToTheTicketClickedInAnotherColumn() {
         Shell shell = shellZoomedOnColumns(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.TODO));
 
-        assertThat(shell.mouse(leftPress(Screen.of(shell).positionOf("PROJ-2")))).isTrue();
+        assertThat(shell.mouse(leftPress(Screen.of(shell).positionOf("#2")))).isTrue();
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-2");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#2");
     }
 
     @Test
     void shouldPickTheTicketOnASecondClickAndLeaveTheZoom() {
         Shell shell = shellZoomedOnColumns(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.TODO));
-        shell.mouse(leftPress(Screen.of(shell).positionOf("PROJ-2")));
+        shell.mouse(leftPress(Screen.of(shell).positionOf("#2")));
 
-        shell.mouse(leftPress(Screen.of(shell).positionOf("PROJ-2")));
+        shell.mouse(leftPress(Screen.of(shell).positionOf("#2")));
 
         assertThat(shell.focus()).isEqualTo(Focus.SESSIONS);
         assertThat(Screen.of(shell).text()).contains("╭Board", "╭Sessions");
@@ -44,7 +44,7 @@ class ShellMouseColumnsTest {
     void shouldNotPickTheTicketOnTheClickThatMovesTheCursorToIt() {
         Shell shell = shellZoomedOnColumns(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.TODO));
 
-        shell.mouse(leftPress(Screen.of(shell).positionOf("PROJ-2")));
+        shell.mouse(leftPress(Screen.of(shell).positionOf("#2")));
 
         assertThat(shell.focus()).isEqualTo(Focus.BOARD);
         assertThat(Screen.of(shell).text()).doesNotContain("╭Sessions");
@@ -54,13 +54,13 @@ class ShellMouseColumnsTest {
     void shouldSelectTheRowsDrawnFromTheTopOfAColumn() {
         Shell shell = shellZoomedOnColumns(ticketViewsIn(Status.TODO, 30));
         Screen drawn = Screen.of(shell);
-        Position first = drawn.positionOf("PROJ-1 ");
+        Position first = drawn.positionOf("#1 ");
 
         shell.mouse(leftPress(new Position(first.x(), first.y() + 4)));
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-5");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#5");
         shell.mouse(leftPress(first));
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1 ");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#1 ");
     }
 
     @Test
@@ -68,7 +68,7 @@ class ShellMouseColumnsTest {
         Shell shell = pressed(shellZoomedOnColumns(ticketViewsIn(Status.TODO, 30)), key('j'), 29);
         Screen scrolled = Screen.of(shell);
         int line = scrolled.lineOf("todo (30)") + 1;
-        Matcher firstDrawn = Pattern.compile("PROJ-\\d+").matcher(scrolled.lines().get(line));
+        Matcher firstDrawn = Pattern.compile("#\\d+").matcher(scrolled.lines().get(line));
         assertThat(firstDrawn.find()).isTrue();
 
         shell.mouse(leftPress(new Position(firstDrawn.start(), line)));
@@ -83,7 +83,7 @@ class ShellMouseColumnsTest {
 
         assertThat(shell.mouse(leftPress(drawn.positionOf("↓")))).isFalse();
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1 ");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#1 ");
     }
 
     @Test
@@ -94,30 +94,30 @@ class ShellMouseColumnsTest {
         assertThat(shell.mouse(leftPress(new Position(title.x() + 1, title.y() + 1)))).isFalse();
         assertThat(shell.mouse(leftPress(title))).isFalse();
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1 ");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#1 ");
     }
 
     @Test
     void shouldMoveTheCursorOneTicketPerWheelNotchWithinTheColumn() {
         Shell shell = shellZoomedOnColumns(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT));
-        Position first = Screen.of(shell).positionOf("PROJ-1 ");
+        Position first = Screen.of(shell).positionOf("#1 ");
 
         shell.mouse(MouseEvent.scrollDown(first.x(), first.y()));
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-2");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#2");
     }
 
     @Test
     void shouldMoveTheCursorIntoTheColumnUnderThePointerOnTheFirstWheelNotch() {
         Shell shell = shellZoomedOnColumns(
                 ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.TODO), ticketViewNumbered(3, Status.TODO));
-        Position other = Screen.of(shell).positionOf("PROJ-3");
+        Position other = Screen.of(shell).positionOf("#3");
 
         shell.mouse(MouseEvent.scrollDown(other.x(), other.y()));
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-2");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#2");
         shell.mouse(MouseEvent.scrollDown(other.x(), other.y()));
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-3");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#3");
     }
 
     @Test
@@ -127,16 +127,16 @@ class ShellMouseColumnsTest {
 
         shell.mouse(MouseEvent.scrollDown(empty.x(), empty.y() + 1));
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1 ");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#1 ");
     }
 
     @Test
     void shouldIgnoreARightClickOnATicket() {
         Shell shell = shellZoomedOnColumns(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.TODO));
-        Position row = Screen.of(shell).positionOf("PROJ-2");
+        Position row = Screen.of(shell).positionOf("#2");
 
         assertThat(shell.mouse(MouseEvent.press(MouseButton.RIGHT, row.x(), row.y()))).isFalse();
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1 ");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#1 ");
     }
 }

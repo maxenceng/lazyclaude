@@ -1,4 +1,4 @@
 package dev.maxenceng.lazyclaude.board.published;
 
-/** The ticket's frontmatter has no `type`. */
+/** The ticket has no `type:` label, as a draft may. */
 public record NoType() implements TicketType {}

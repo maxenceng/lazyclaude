@@ -13,7 +13,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.oneTabInDockWithReviews;
-import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoardWithMerged;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoard;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellRefreshing;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -59,13 +59,13 @@ class ShellRefreshTest {
 
     @Test
     void shouldReadTheBoardAgainOnR() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged()))
+        when(boards.boardReadAgainFor(readingBoard()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().title(secondTitle()).build())));
         Shell shell = shellRefreshing(boards, docs, reviews, screens, ticketView());
 
         shell.press(key('R'));
 
-        assertThat(Screen.of(shell).boardPanelText()).contains("PROJ-1 Plan the next").doesNotContain("PROJ-1 A board");
+        assertThat(Screen.of(shell).boardPanelText()).contains("#1 Plan the next").doesNotContain("#1 A board");
     }
 
     @Test
@@ -97,7 +97,7 @@ class ShellRefreshTest {
 
         verify(screens)
                 .refresh(new SessionPayload(
-                        projectRoot().value(), List.of(new LinkedTicketId("PROJ-1"), new LinkedTicketId("PROJ-2"))));
+                        projectRoot().value(), List.of(new LinkedTicketId("1"), new LinkedTicketId("2"))));
     }
 
     @Test
@@ -123,7 +123,7 @@ class ShellRefreshTest {
 
     @Test
     void shouldNotFlashOrSayItRefreshed() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged())).thenReturn(Optional.of(boardViewOf(ticketView())));
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketView())));
         Shell shell = shellRefreshing(boards, docs, reviews, screens, ticketView());
         String before = Screen.of(shell).text();
 

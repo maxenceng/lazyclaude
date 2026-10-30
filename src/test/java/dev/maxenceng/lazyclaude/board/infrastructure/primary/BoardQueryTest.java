@@ -1,19 +1,15 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.board.domain.BranchChangesFixture.frontendChanges;
-import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.datedFrontmatter;
-import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.inReviewTicketFile;
-import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFile;
-import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFileOf;
+import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticket;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicket;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.boardQuery;
-import static dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryViewFixture.datedFrontmatterViews;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.read;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketViewFixture.unreadableTicketView;
-import static dev.maxenceng.lazyclaude.board.published.FileNameFixture.fileName;
+import static dev.maxenceng.lazyclaude.board.published.LabelNameFixture.labelNames;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
-import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,8 +18,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,11 +26,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
+import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.BoardWatchPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
-import dev.maxenceng.lazyclaude.board.domain.BranchCopyPort;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
-import dev.maxenceng.lazyclaude.board.published.NoTitle;
+import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
@@ -46,16 +40,13 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 @ExtendWith(MockitoExtension.class)
 class BoardQueryTest {
 
-    private static final BoardPayload FROM_THE_PROJECT = new BoardPayload(workingDirectory().path(), Set.of());
+    private static final BoardPayload FROM_THE_PROJECT = new BoardPayload(workingDirectory().path());
 
     @Mock
     private ProjectLocatorPort locator;
 
     @Mock
     private BacklogPort backlog;
-
-    @Mock
-    private BranchCopyPort copies;
 
     @Mock
     private BranchChangesPort changes;
@@ -74,7 +65,7 @@ class BoardQueryTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups())
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups())
                 .extracting(StatusGroupView::status)
                 .containsExactly(Status.values());
     }
@@ -92,11 +83,10 @@ class BoardQueryTest {
     @Test
     void shouldViewTheVerbsAnInProgressTicketIsAllowedWithDesignWhenItsBranchTouchesTheFrontend() {
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticketBuilder().status(Status.IN_PROGRESS).build())));
+        when(backlog.entries(project())).thenReturn(List.of(ticketBuilder().status(Status.IN_PROGRESS).build()));
         when(changes.changesOf(project(), ticketBranch())).thenReturn(frontendChanges());
 
-        assertThat(boardQuery(locator, backlog, copies, changes)
-                        .boardFor(FROM_THE_PROJECT)
+        assertThat(read(boardQuery(locator, backlog, changes).boardFor(FROM_THE_PROJECT))
                         .groups()
                         .get(Status.IN_PROGRESS.ordinal())
                         .tickets())
@@ -107,75 +97,68 @@ class BoardQueryTest {
     @Test
     void shouldViewATicketsFields() {
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
+        when(backlog.entries(project())).thenReturn(List.of(ticket()));
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets())
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups().get(Status.TODO.ordinal()).tickets())
                 .containsExactly(ticketViewBuilder().status(Status.TODO).verbs(List.of(Verb.START)).build());
     }
 
     @Test
-    void shouldViewEveryFrontmatterKeyInFileOrderWithItsText() {
+    void shouldViewTheOtherLabelsOfATicket() {
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticketBuilder().frontmatter(datedFrontmatter()).build())));
+        when(backlog.entries(project())).thenReturn(List.of(ticketBuilder().otherLabels(labelNames()).build()));
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets())
-                .containsExactly(ticketViewBuilder()
-                        .status(Status.TODO)
-                        .frontmatter(datedFrontmatterViews())
-                        .verbs(List.of(Verb.START))
-                        .build());
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups().get(Status.TODO.ordinal()).tickets())
+                .containsExactly(ticketViewBuilder().status(Status.TODO).otherLabels(labelNames()).verbs(List.of(Verb.START)).build());
     }
 
     @Test
     void shouldViewATicketWithNoBodyAsHavingNoBody() {
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticketBuilder().body(new NoBody()).build())));
+        when(backlog.entries(project())).thenReturn(List.of(ticketBuilder().body(new NoBody()).build()));
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets())
-                .as("a ticket with no body has no title to derive")
-                .containsExactly(ticketViewBuilder().status(Status.TODO).title(new NoTitle()).body(new NoBody()).verbs(List.of(Verb.START)).build());
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups().get(Status.TODO.ordinal()).tickets())
+                .containsExactly(ticketViewBuilder().status(Status.TODO).body(new NoBody()).verbs(List.of(Verb.START)).build());
     }
 
     @Test
-    void shouldViewAnUnreadableFileWithItsReason() {
+    void shouldViewWhyThereAreNoTicketsWhenTheProjectHasNoGitHubRemote() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenThrow(new BacklogUnavailableException("this project has no GitHub remote, so it has no backlog"));
+
+        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT))
+                .isEqualTo(UnavailableBoardView.builder()
+                        .root(BoardViewFixture.projectRoot())
+                        .reason(new Reason("this project has no GitHub remote, so it has no backlog"))
+                        .build());
+    }
+
+    @Test
+    void shouldViewTheTicketsWhenTheIssuesAreRead() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of());
+
+        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).isInstanceOf(BoardView.class);
+    }
+
+    @Test
+    void shouldViewAnUnreadableIssueWithItsReason() {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(unreadableTicket()));
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).unreadable())
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).unreadable())
                 .containsExactly(unreadableTicketView());
-    }
-
-    @Test
-    void shouldViewTheBranchCopyOfATicketWhoseBranchIsNotMerged() {
-        when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
-        when(copies.onBranch(project(), ticketBranch(), fileName())).thenReturn(Optional.of(inReviewTicketFile()));
-
-        assertThat(boardQuery(locator, backlog, copies).boardFor(FROM_THE_PROJECT).groups().get(Status.IN_REVIEW.ordinal()).tickets())
-                .extracting(TicketView::id)
-                .containsExactly(ticketId());
-    }
-
-    @Test
-    void shouldViewTheRootCopyOfATicketWhoseBranchIsNamedAsMerged() {
-        when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
-        BoardPayload merged = new BoardPayload(workingDirectory().path(), Set.of(ticketBranch().value()));
-
-        assertThat(boardQuery(locator, backlog, copies).boardFor(merged).groups().get(Status.TODO.ordinal()).tickets())
-                .extracting(TicketView::id)
-                .containsExactly(ticketId());
     }
 
     @Test
     void shouldViewTheBoardReadAgain() {
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFile()));
+        when(backlog.entries(project())).thenReturn(List.of(ticket()));
 
         assertThat(boardQuery(locator, backlog).boardReadAgainFor(FROM_THE_PROJECT))
                 .get()
-                .extracting(board -> board.groups().get(Status.TODO.ordinal()).tickets())
-                .isEqualTo(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets());
+                .extracting(board -> read(board).groups().get(Status.TODO.ordinal()).tickets())
+                .isEqualTo(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups().get(Status.TODO.ordinal()).tickets());
     }
 
     @Test
@@ -190,10 +173,10 @@ class BoardQueryTest {
     @Test
     void shouldRunTheListenerWhenTheWatchReportsAChange() {
         when(locator.locate(workingDirectory())).thenReturn(project());
-        boardQuery(locator, backlog, copies, changes, watch, warnings)
+        boardQuery(locator, backlog, changes, watch, warnings)
                 .subscribe(new BoardWatchPayload(workingDirectory().path()), changed);
         ArgumentCaptor<Runnable> reported = ArgumentCaptor.forClass(Runnable.class);
-        verify(watch).watch(any(), reported.capture(), any());
+        verify(watch).watch(any(), reported.capture());
 
         reported.getValue().run();
 

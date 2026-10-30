@@ -17,4 +17,9 @@ public final class WarningQuery {
     public void subscribe(Consumer<WarningView> listener) {
         warnings.subscribe(held -> listener.accept(WarningView.from(held)));
     }
+
+    /** Runs {@code listener} each time the last warning held is withdrawn, on the thread that withdrew it: the status line has nothing to show. */
+    public void onNoneHeld(Runnable listener) {
+        warnings.onNoneHeld(listener);
+    }
 }

@@ -14,13 +14,13 @@ class TicketLinkTest {
 
     @Test
     void shouldFindTheLinkToATicketAmongSeveral() {
-        assertThat(TicketLink.to(List.of(ticketLink("PROJ-1", "start"), ticketLink("PROJ-2", "review")), new LinkedTicketId("PROJ-2")))
-                .contains(ticketLink("PROJ-2", "review"));
+        assertThat(TicketLink.to(List.of(ticketLink("1", "start"), ticketLink("2", "review")), new LinkedTicketId("2")))
+                .contains(ticketLink("2", "review"));
     }
 
     @Test
     void shouldFindNoLinkToATicketItIsNotLinkedTo() {
-        assertThat(TicketLink.to(List.of(ticketLink("PROJ-1", "start")), new LinkedTicketId("PROJ-2"))).isEmpty();
+        assertThat(TicketLink.to(List.of(ticketLink("1", "start")), new LinkedTicketId("2"))).isEmpty();
     }
 
     @Test

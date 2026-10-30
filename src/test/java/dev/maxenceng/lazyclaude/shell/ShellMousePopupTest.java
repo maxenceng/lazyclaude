@@ -70,7 +70,7 @@ class ShellMousePopupTest {
     @Test
     void shouldDoNothingForAClickOutsideThePickerAndReachNothingUnderIt() {
         Shell shell = shellWithThePickerOpenOnAnInReviewTicket(hosting);
-        Position underneath = Screen.of(shell).positionInLeftColumn("PROJ-1");
+        Position underneath = Screen.of(shell).positionInLeftColumn("#1");
 
         assertThat(shell.mouse(leftPress(underneath))).isTrue();
 
@@ -84,7 +84,7 @@ class ShellMousePopupTest {
         Shell shell = shellWithThePickerOpenOnAnInReviewTicket(hosting);
         Screen drawn = Screen.of(shell);
 
-        shell.mouse(leftPress(drawn.positionOf("PROJ-1 · in-review")));
+        shell.mouse(leftPress(drawn.positionOf("#1 · in-review")));
         shell.mouse(leftPress(drawn.positionOf("enter start")));
 
         assertThat(Screen.of(shell).text()).contains("│ › respond");
@@ -94,7 +94,7 @@ class ShellMousePopupTest {
     @Test
     void shouldKeepThePickerOpenWhenTheWheelTurnsOutsideIt() {
         Shell shell = shellWithThePickerOpenOnAnInReviewTicket(hosting);
-        Position underneath = Screen.of(shell).positionInLeftColumn("PROJ-1");
+        Position underneath = Screen.of(shell).positionInLeftColumn("#1");
 
         shell.mouse(MouseEvent.scrollDown(underneath.x(), underneath.y()));
 

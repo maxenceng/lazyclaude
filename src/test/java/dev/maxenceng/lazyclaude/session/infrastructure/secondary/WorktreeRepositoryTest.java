@@ -12,7 +12,7 @@ import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixtur
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.pushHeadAs;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.remoteBeside;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.removedWorktreeOn;
-import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithBacklog;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithACommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -44,7 +44,7 @@ class WorktreeRepositoryTest {
 
     @BeforeEach
     void createRepository() throws Exception {
-        root = repositoryWithBacklog(temp.resolve("app"));
+        root = repositoryWithACommit(temp.resolve("app"));
         project = new Project(root);
     }
 

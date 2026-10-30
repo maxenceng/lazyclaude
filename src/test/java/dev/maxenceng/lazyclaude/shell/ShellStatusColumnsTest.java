@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.unavailableBoardView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.slugTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewNumbered;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewsIn;
@@ -37,8 +38,20 @@ class ShellStatusColumnsTest {
         shell.press(key('z'));
 
         assertThat(Screen.of(shell).text())
-                .contains("draft (1)", "todo (1)", "in-progress (0)", "in-review (0)", "PROJ-1", "PROJ-2")
+                .contains("draft (1)", "todo (1)", "in-progress (0)", "in-review (0)", "#1", "#2")
                 .doesNotContain("Sessions", "Docs", "main view");
+    }
+
+    @Test
+    void shouldShowOnlyWhyTheIssuesCannotBeReadWhenZoomingAnUnavailableBoard() {
+        Shell shell = shellOn(unavailableBoardView());
+
+        shell.press(key('z'));
+
+        assertThat(Screen.of(shell).text())
+                .as("an unavailable board has no status groups, so no empty column stands beside the reason")
+                .contains("unavailable", "gh is not logged in")
+                .doesNotContain("draft (0)", "todo (0)", "done 0");
     }
 
     @Test
@@ -47,7 +60,7 @@ class ShellStatusColumnsTest {
 
         shell.press(key('z'));
 
-        assertThat(Screen.of(shell).text()).contains("done 1").doesNotContain("PROJ-9");
+        assertThat(Screen.of(shell).text()).contains("done 1").doesNotContain("#9");
     }
 
     @Test
@@ -56,7 +69,7 @@ class ShellStatusColumnsTest {
 
         shell.press(key('z'));
 
-        assertThat(Screen.of(shell).text()).contains("• PROJ-1 ").contains("…");
+        assertThat(Screen.of(shell).text()).contains("• #1 ").contains("…");
     }
 
     @Test
@@ -75,7 +88,7 @@ class ShellStatusColumnsTest {
         shell.press(key('z'));
 
         String text = Screen.of(shell.render(), 200, 24).text();
-        assertThat(text).contains("unreadable (1)", "PROJ-2.md — ");
+        assertThat(text).contains("unreadable (1)", "#2 — ");
         assertThat(text.indexOf("done 0")).isLessThan(text.indexOf("unreadable (1)"));
     }
 
@@ -104,7 +117,7 @@ class ShellStatusColumnsTest {
         shell.press(key('z'));
         shell.press(key('l'));
 
-        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("PROJ-2"));
+        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("#2"));
     }
 
     @Test
@@ -115,7 +128,7 @@ class ShellStatusColumnsTest {
 
         pressed(shell, key('j'), 25);
 
-        assertThat(Screen.of(shell).text()).contains("PROJ-26 ", "↓ 4 more");
+        assertThat(Screen.of(shell).text()).contains("#26 ", "↓ 4 more");
     }
 
     @Test
@@ -125,7 +138,7 @@ class ShellStatusColumnsTest {
 
         pressed(shell, key('j'), 29);
 
-        assertThat(Screen.of(shell).text()).contains("PROJ-30 ").doesNotContain("more");
+        assertThat(Screen.of(shell).text()).contains("#30 ").doesNotContain("more");
     }
 
     @Test
@@ -133,8 +146,8 @@ class ShellStatusColumnsTest {
         Shell shell = shellOn(ticketViewNumbered(1, Status.DRAFT));
         shell.press(key('z'));
 
-        assertThat(Screen.of(shell.render(), 60, 12).text()).contains("PROJ-1 ").contains("…");
-        assertThat(Screen.of(shell.render(), 40, 12).text()).contains("PR…").doesNotContain("PROJ-1");
+        assertThat(Screen.of(shell.render(), 60, 12).text()).contains("#1 ").contains("…");
+        assertThat(Screen.of(shell.render(), 40, 12).text()).contains("#1…").doesNotContain("#1 ");
         assertThatCode(() -> Screen.of(shell.render(), 10, 5)).doesNotThrowAnyException();
     }
 

@@ -63,7 +63,7 @@ class ShellZoomTest {
         shell.press(key('j'));
         shell.press(key('z'));
 
-        assertThat(Screen.of(shell).text()).contains("PROJ-2 · draft");
+        assertThat(Screen.of(shell).text()).contains("#2 · draft");
     }
 
     @Test
@@ -79,7 +79,7 @@ class ShellZoomTest {
         shell.press(key('l'));
         shell.press(key('z'));
 
-        assertThat(Screen.of(shell).text()).contains("PROJ-4 · todo");
+        assertThat(Screen.of(shell).text()).contains("#4 · todo");
     }
 
     @Test
@@ -95,7 +95,7 @@ class ShellZoomTest {
         shell.press(key('h'));
         shell.press(key('z'));
 
-        assertThat(Screen.of(shell).text()).contains("PROJ-1 · draft");
+        assertThat(Screen.of(shell).text()).contains("#1 · draft");
     }
 
     @Test
@@ -110,7 +110,7 @@ class ShellZoomTest {
         pressed(shell, key('l'), 4);
         shell.press(key('z'));
 
-        assertThat(Screen.of(shell).text()).contains("PROJ-4 · todo").doesNotContain("PROJ-9");
+        assertThat(Screen.of(shell).text()).contains("#4 · todo").doesNotContain("#9");
     }
 
     @Test
@@ -126,8 +126,8 @@ class ShellZoomTest {
         shell.press(key('z'));
 
         assertThat(shell.focus()).isEqualTo(Focus.BOARD);
-        assertThat(Screen.of(shell).text()).contains("Sessions", "PROJ-4 · todo");
-        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("PROJ-4"));
+        assertThat(Screen.of(shell).text()).contains("Sessions", "#4 · todo");
+        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("#4"));
     }
 
     @Test
@@ -142,7 +142,7 @@ class ShellZoomTest {
 
         shell.press(escape());
 
-        assertThat(Screen.of(shell).text()).contains("Sessions", "PROJ-2 · draft");
+        assertThat(Screen.of(shell).text()).contains("Sessions", "#2 · draft");
     }
 
     @Test
@@ -179,7 +179,7 @@ class ShellZoomTest {
         shell.press(key('z'));
         shell.press(key('z'));
 
-        assertThat(Screen.of(shell).text()).contains("PROJ-2 · todo");
+        assertThat(Screen.of(shell).text()).contains("#2 · todo");
     }
 
     @Test
@@ -192,8 +192,8 @@ class ShellZoomTest {
         shell.press(key('l'));
         shell.press(key('z'));
 
-        assertThat(Screen.of(shell).text()).contains("PROJ-2 · todo");
-        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("PROJ-2"));
+        assertThat(Screen.of(shell).text()).contains("#2 · todo");
+        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("#2"));
     }
 
     @Test
@@ -349,7 +349,7 @@ class ShellZoomTest {
         assertThat(Screen.of(shell).text())
                 .as("the verb picker sits over the Sessions panel, so the columns that hid it give way first")
                 .contains("Sessions")
-                .contains("PROJ-1 · todo")
+                .contains("#1 · todo")
                 .contains("Docs");
     }
 

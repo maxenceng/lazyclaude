@@ -4,8 +4,8 @@ Date: 2026-10-27
 
 ## Status
 
-Accepted. Supersedes ADR 0028 and the status source decided in LAZY-9 and amended in LAZY-17, once the backlog moves to
-GitHub Issues. Until then they stand.
+Accepted. Supersedes ADR 0028 and the status source decided in LAZY-9 and amended in LAZY-17. The board reads issues
+since BOARD-8 (ADR 0065); `docs/backlog/` is no longer read.
 
 ## Context
 

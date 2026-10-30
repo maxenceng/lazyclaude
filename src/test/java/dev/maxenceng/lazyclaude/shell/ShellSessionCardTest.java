@@ -46,8 +46,8 @@ class ShellSessionCardTest {
 
         assertThat(Screen.of(shell).mainViewRows())
                 .containsSubsequence(
-                        "Refine PROJ-1",
-                        "› /ticket start PROJ-1",
+                        "Refine 1",
+                        "› /ticket start 1",
                         "",
                         "/work/app",
                         "started 2026-10-10 12:40 · last active 10m ago");
@@ -56,10 +56,10 @@ class ShellSessionCardTest {
     @Test
     void shouldNameTheLinkedTicketsWithTheirLastVerb() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
-                List.of(), List.of(pastSessionViewBuilder().links(List.of(ticketLink("PROJ-1", "start"))).build())));
+                List.of(), List.of(pastSessionViewBuilder().links(List.of(ticketLink("1", "start"))).build())));
 
         assertThat(Screen.of(shell).mainViewRows())
-                .containsSubsequence("› /ticket start PROJ-1", "", "PROJ-1  start", "/work/app");
+                .containsSubsequence("› /ticket start 1", "", "#1  start", "/work/app");
     }
 
     @Test
@@ -75,7 +75,7 @@ class ShellSessionCardTest {
                 pastSessionsViewOf(List.of(pastSessionViewBuilder().title(firstPrompt()).opening(openingUnder(firstPrompt())).build())));
 
         assertThat(Screen.of(shell).mainViewRows())
-                .containsOnlyOnce("/ticket start PROJ-1")
+                .containsOnlyOnce("/ticket start 1")
                 .noneMatch(row -> row.startsWith("›"));
     }
 
@@ -92,8 +92,8 @@ class ShellSessionCardTest {
 
         assertThat(Screen.of(shell).mainViewRows())
                 .containsSubsequence(
-                        "Refine PROJ-1",
-                        "› /ticket start PROJ-1",
+                        "Refine 1",
+                        "› /ticket start 1",
                         "transcript unreadable: no registry and no claude",
                         "/work/app",
                         "started 2026-10-10 12:40 · last active 10m ago");

@@ -4,6 +4,7 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFix
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewNumbered;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.boardReadAgainAs;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellReading;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellZoomedOnTheSecondDraft;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -30,21 +31,22 @@ class ShellStatusColumnsRereadTest {
 
         shell.boardChanged();
 
-        assertThat(Screen.of(shell).text()).contains("todo (1)", "PROJ-7").doesNotContain("Sessions");
+        assertThat(Screen.of(shell).text()).contains("todo (1)", "#7").doesNotContain("Sessions");
     }
 
     @Test
     void shouldKeepTheCursorOnItsTicketWhenARowAppearsAboveIt() {
         boardReadAgainAs(boards, boardViewOf(
-                ticketViewNumbered(0, Status.DRAFT),
                 ticketViewNumbered(1, Status.DRAFT),
                 ticketViewNumbered(2, Status.DRAFT),
                 ticketViewNumbered(3, Status.DRAFT)));
-        Shell shell = shellZoomedOnTheSecondDraft(boards);
+        Shell shell = shellReading(boards, ticketViewNumbered(2, Status.DRAFT), ticketViewNumbered(3, Status.DRAFT));
+        shell.press(key('z'));
+        shell.press(key('j'));
 
         shell.boardChanged();
 
-        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("PROJ-2"));
+        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("#3"));
     }
 
     @Test
@@ -54,7 +56,7 @@ class ShellStatusColumnsRereadTest {
 
         shell.boardChanged();
 
-        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("PROJ-2"));
+        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("#2"));
     }
 
     @Test
@@ -64,7 +66,7 @@ class ShellStatusColumnsRereadTest {
 
         shell.boardChanged();
 
-        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("PROJ-3"));
+        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("#3"));
     }
 
     @Test
@@ -74,7 +76,7 @@ class ShellStatusColumnsRereadTest {
 
         shell.boardChanged();
 
-        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("PROJ-1"));
+        assertThat(Screen.of(shell).reversedText()).anySatisfy(text -> assertThat(text).contains("#1"));
     }
 
     @Test
@@ -85,7 +87,7 @@ class ShellStatusColumnsRereadTest {
         shell.boardChanged();
         shell.press(key('z'));
 
-        assertThat(Screen.of(shell).text()).contains("PROJ-8 · in-progress");
+        assertThat(Screen.of(shell).text()).contains("#8 · in-progress");
     }
 
     @Test

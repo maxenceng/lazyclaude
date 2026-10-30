@@ -4,7 +4,8 @@ Date: 2026-10-16
 
 ## Status
 
-Accepted. The "new decision" ADR 0016's Consequences asked for; it moves the loop that ADR describes out of `docs`.
+Accepted. The "new decision" ADR 0016's Consequences asked for; it moves the loop that ADR describes out of `docs`. `board` no longer
+watches a tree (ADR 0065); `docs` is the watcher's only user.
 
 ## Context
 

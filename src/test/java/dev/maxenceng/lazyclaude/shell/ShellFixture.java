@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.projectRoot;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.unavailableBoardView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
@@ -22,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Executor;
 
 import org.mockito.ArgumentCaptor;
@@ -30,7 +30,7 @@ import org.mockito.invocation.InvocationOnMock;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.Verb;
@@ -87,11 +87,11 @@ final class ShellFixture {
         return newShell(boardViewOf(ticketView()), emptyDocsView(), emptySessionsView(), false);
     }
 
-    static Shell newShell(BoardView board, DocsView docs, SessionsView sessions) {
+    static Shell newShell(BoardReadingView board, DocsView docs, SessionsView sessions) {
         return newShell(board, docs, sessions, true);
     }
 
-    private static Shell newShell(BoardView board, DocsView docs, SessionsView sessions, boolean mouse) {
+    private static Shell newShell(BoardReadingView board, DocsView docs, SessionsView sessions, boolean mouse) {
         return new Shell(
                 board,
                 docs,
@@ -122,7 +122,7 @@ final class ShellFixture {
     }
 
     static Shell shellRefreshing(
-            BoardQuery boards, DocsQuery docs, ReviewQuery reviews, SessionQuery screens, Executor background, BoardView board) {
+            BoardQuery boards, DocsQuery docs, ReviewQuery reviews, SessionQuery screens, Executor background, BoardReadingView board) {
         return new Shell(
                 board,
                 emptyDocsView(),
@@ -139,6 +139,10 @@ final class ShellFixture {
                 reviews,
                 mock(PendingReviewCommand.class), ReservedChords.defaults(), true,
                 background);
+    }
+
+    static Shell shellReadingUnavailableBoard(BoardQuery boards, SessionQuery screens) {
+        return shellRefreshing(boards, mock(DocsQuery.class), mock(ReviewQuery.class), screens, Runnable::run, unavailableBoardView());
     }
 
     static Shell shellReadingBoardWith(BoardQuery boards, SessionQuery screens, TicketView... tickets) {
@@ -169,8 +173,8 @@ final class ShellFixture {
                 Runnable::run);
     }
 
-    static BoardPayload readingBoardWithMerged(String... branches) {
-        return new BoardPayload(projectRoot().value(), Set.of(branches));
+    static BoardPayload readingBoard() {
+        return new BoardPayload(projectRoot().value());
     }
 
     static Shell shellOnPullRequests(PullRequestsView pullRequests, TicketView... tickets) {
@@ -208,7 +212,7 @@ final class ShellFixture {
     }
 
     static SessionsView yourTurnOnTheFirstTicket() {
-        return sessionsViewOf(List.of(linkedNamedSessionView(1, "calm-one", new YourTurn(), ticketLink("PROJ-1", "start"))));
+        return sessionsViewOf(List.of(linkedNamedSessionView(1, "calm-one", new YourTurn(), ticketLink("1", "start"))));
     }
 
     static Object noHostStarted(InvocationOnMock invocation) {
@@ -374,8 +378,8 @@ final class ShellFixture {
         return shell;
     }
 
-    static void boardReadAgainAs(BoardQuery boards, BoardView board) {
-        when(boards.boardReadAgainFor(readingBoardWithMerged())).thenReturn(Optional.of(board));
+    static void boardReadAgainAs(BoardQuery boards, BoardReadingView board) {
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(board));
     }
 
     static KeyEvent escape() {
@@ -593,7 +597,7 @@ final class ShellFixture {
         return shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
     }
 
-    static Shell shellOn(BoardView board) {
+    static Shell shellOn(BoardReadingView board) {
         return newShell(board, emptyDocsView(), emptySessionsView());
     }
 

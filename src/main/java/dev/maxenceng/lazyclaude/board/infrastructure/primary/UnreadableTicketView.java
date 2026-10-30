@@ -1,14 +1,14 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
 import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
-import dev.maxenceng.lazyclaude.board.published.FileName;
 import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
 
-/** A backlog file that could not be read as a ticket, and why. */
-public record UnreadableTicketView(FileName file, Reason reason) {
+/** An issue that could not be read as a ticket, and why. */
+public record UnreadableTicketView(TicketId id, Reason reason) {
 
     static UnreadableTicketView from(UnreadableTicket unreadable) {
-        return builder().file(unreadable.file()).reason(unreadable.reason()).build();
+        return builder().id(unreadable.id()).reason(unreadable.reason()).build();
     }
 
     public static UnreadableTicketViewBuilder builder() {
@@ -16,13 +16,13 @@ public record UnreadableTicketView(FileName file, Reason reason) {
     }
 
     public static final class UnreadableTicketViewBuilder {
-        private FileName file;
+        private TicketId id;
         private Reason reason;
 
         private UnreadableTicketViewBuilder() {}
 
-        public UnreadableTicketViewBuilder file(FileName file) {
-            this.file = file;
+        public UnreadableTicketViewBuilder id(TicketId id) {
+            this.id = id;
             return this;
         }
 
@@ -32,7 +32,7 @@ public record UnreadableTicketView(FileName file, Reason reason) {
         }
 
         public UnreadableTicketView build() {
-            return new UnreadableTicketView(file, reason);
+            return new UnreadableTicketView(id, reason);
         }
     }
 }

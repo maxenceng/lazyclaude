@@ -3,24 +3,25 @@ package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.domain.Ticket;
+import dev.maxenceng.lazyclaude.board.published.LabelName;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
 import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.board.published.TicketContext;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
-import dev.maxenceng.lazyclaude.board.published.TicketTitle;
 import dev.maxenceng.lazyclaude.board.published.TicketType;
+import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 
-/** One ticket as the shell reads it: the fields the board models, then the other frontmatter keys in file order, then the body, and the verbs {@code /ticket} accepts for it. */
+/** One ticket as the shell reads it: the fields the board models, then the issue's other labels, then the body, and the verbs {@code /ticket} accepts for it. */
 public record TicketView(
         TicketId id,
         TicketBranch branch,
-        TicketTitle title,
+        Title title,
         Status status,
         TicketContext context,
         TicketType type,
-        List<FrontmatterEntryView> frontmatter,
+        List<LabelName> otherLabels,
         TicketBody body,
         List<Verb> verbs) {
 
@@ -32,9 +33,7 @@ public record TicketView(
                 .status(ticket.status())
                 .context(ticket.context())
                 .type(ticket.type())
-                .frontmatter(ticket.frontmatter().entries().stream()
-                        .map(FrontmatterEntryView::from)
-                        .toList())
+                .otherLabels(ticket.otherLabels())
                 .body(ticket.body())
                 .verbs(ticket.verbs())
                 .build();
@@ -47,11 +46,11 @@ public record TicketView(
     public static final class TicketViewBuilder {
         private TicketId id;
         private TicketBranch branch;
-        private TicketTitle title;
+        private Title title;
         private Status status;
         private TicketContext context;
         private TicketType type;
-        private List<FrontmatterEntryView> frontmatter;
+        private List<LabelName> otherLabels;
         private TicketBody body;
         private List<Verb> verbs = List.of();
 
@@ -67,7 +66,7 @@ public record TicketView(
             return this;
         }
 
-        public TicketViewBuilder title(TicketTitle title) {
+        public TicketViewBuilder title(Title title) {
             this.title = title;
             return this;
         }
@@ -87,8 +86,8 @@ public record TicketView(
             return this;
         }
 
-        public TicketViewBuilder frontmatter(List<FrontmatterEntryView> frontmatter) {
-            this.frontmatter = frontmatter;
+        public TicketViewBuilder otherLabels(List<LabelName> otherLabels) {
+            this.otherLabels = otherLabels;
             return this;
         }
 
@@ -103,7 +102,7 @@ public record TicketView(
         }
 
         public TicketView build() {
-            return new TicketView(id, branch, title, status, context, type, frontmatter, body, verbs);
+            return new TicketView(id, branch, title, status, context, type, otherLabels, body, verbs);
         }
     }
 }

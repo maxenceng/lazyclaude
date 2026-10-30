@@ -90,14 +90,14 @@ class ShellMouseMainViewTest {
         shell.mouse(MouseEvent.scrollDown(board.x(), board.y()));
 
         assertThat(shell.focus()).isEqualTo(Focus.BOARD);
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#1");
     }
 
     @Test
     void shouldMoveTheSelectionBackUpOneRowPerWheelNotch() {
         Shell shell = shellOn(ticketView());
         shell.press(key('j'));
-        Position board = Screen.of(shell).positionInLeftColumn("PROJ-1");
+        Position board = Screen.of(shell).positionInLeftColumn("#1");
 
         shell.mouse(MouseEvent.scrollUp(board.x(), board.y()));
 

@@ -81,7 +81,7 @@ class ShellTicketStartTest {
 
         shell.press(enter());
 
-        assertThat(Screen.of(shell).text()).contains("╭ PROJ-1 · todo").contains("│ › start");
+        assertThat(Screen.of(shell).text()).contains("╭ #1 · todo").contains("│ › start");
     }
 
     @Test
@@ -93,7 +93,7 @@ class ShellTicketStartTest {
                 blankScreens());
         shell.press(alt('j'));
 
-        assertThat(Screen.of(shell).boardPanelText()).containsSubsequence("PROJ-1", "starting", "n new: /ticket start");
+        assertThat(Screen.of(shell).boardPanelText()).containsSubsequence("#1", "starting", "n new: /ticket start");
     }
 
     @Test
@@ -116,7 +116,7 @@ class ShellTicketStartTest {
         when(hosting.resumeInTicketWorktree(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
         Shell shell = shellOnTicket(
                 ticketViewIn(Status.TODO),
-                sessionsViewOf(List.of(), List.of(linkedPastSessionView(1, ticketLink("PROJ-1", "start")))),
+                sessionsViewOf(List.of(), List.of(linkedPastSessionView(1, ticketLink("1", "start")))),
                 hosting,
                 blankScreens());
         shell.press(alt('j'));

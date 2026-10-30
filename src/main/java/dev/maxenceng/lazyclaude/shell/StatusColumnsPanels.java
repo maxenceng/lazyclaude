@@ -10,17 +10,21 @@ import java.util.function.ObjIntConsumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketView;
+import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.tamboui.toolkit.element.Element;
 
-/** The Board's status columns across the screen: one panel per status, a narrow one for a finished status, then one for the unreadable files. */
+/** The Board's status columns across the screen: one panel per status, a narrow one for a finished status, then one for the unreadable tickets; or, when the issues could not be read, one panel saying why. */
 final class StatusColumnsPanels {
 
     private static final String COLUMN_TITLE = "%s (%d)";
     private static final String NARROW_TITLE = "%s %d";
+    private static final String UNAVAILABLE_TITLE = "unavailable";
     private static final String UNREADABLE_LINE = "%s — %s";
     private static final int NARROW_WIDTH = 12;
     private static final int NO_SELECTION = -1;
@@ -36,12 +40,24 @@ final class StatusColumnsPanels {
             Optional<TicketId> cursor,
             Function<TicketView, RowLine> line,
             ObjIntConsumer<RowsDrawn> drawn) {
+        return switch (columns.board()) {
+            case BoardView read -> read(columns, read.unreadable(), cursor, line, drawn);
+            case UnavailableBoardView unavailable -> row(unavailable(unavailable.reason())).fill();
+        };
+    }
+
+    private static Element read(
+            StatusColumns columns,
+            List<UnreadableTicketView> unreadableTickets,
+            Optional<TicketId> cursor,
+            Function<TicketView, RowLine> line,
+            ObjIntConsumer<RowsDrawn> drawn) {
         Optional<StatusColumnsPlace> at = cursor.flatMap(columns::locate);
         List<StatusGroupView> shared = columns.shared();
         Stream<Element> sharing = IntStream.range(0, shared.size()).mapToObj(index -> sharing(shared.get(index), at, index, line, drawn));
         Stream<Element> narrow = columns.narrow().stream().map(StatusColumnsPanels::narrow);
-        Stream<Element> unreadable = Optional.of(columns.board().unreadable())
-                .filter(files -> !files.isEmpty())
+        Stream<Element> unreadable = Optional.of(unreadableTickets)
+                .filter(tickets -> !tickets.isEmpty())
                 .stream()
                 .map(StatusColumnsPanels::unreadable);
         return row(Stream.of(sharing, narrow, unreadable).flatMap(Function.identity()).toArray(Element[]::new))
@@ -68,11 +84,17 @@ final class StatusColumnsPanels {
                 .length(NARROW_WIDTH);
     }
 
-    private static Element unreadable(List<UnreadableTicketView> files) {
-        List<RowLine> lines = files.stream()
-                .map(file -> RowLine.plain(UNREADABLE_LINE.formatted(file.file().value(), file.reason().value())))
+    private static Element unavailable(Reason why) {
+        return Frames.framed(UNAVAILABLE_TITLE, new MoreBelowElement(List.of(RowLine.plain(why.value())), NO_SELECTION, false), false)
+                .titleEllipsis()
+                .fill();
+    }
+
+    private static Element unreadable(List<UnreadableTicketView> tickets) {
+        List<RowLine> lines = tickets.stream()
+                .map(ticket -> RowLine.plain(UNREADABLE_LINE.formatted(TicketText.number(ticket.id()), ticket.reason().value())))
                 .toList();
-        return Frames.framed(COLUMN_TITLE.formatted(BoardRows.UNREADABLE_GROUP, files.size()), new MoreBelowElement(lines, NO_SELECTION, false), false)
+        return Frames.framed(COLUMN_TITLE.formatted(BoardRows.UNREADABLE_GROUP, tickets.size()), new MoreBelowElement(lines, NO_SELECTION, false), false)
                 .titleEllipsis()
                 .fill();
     }

@@ -20,6 +20,10 @@ public final class WarningApplicationService {
         manager.subscribe(listener);
     }
 
+    public void onNoneHeld(Runnable listener) {
+        manager.onNoneHeld(listener);
+    }
+
     public void threadStopped(String thread, String failure) {
         manager.threadStopped(thread, failure);
     }

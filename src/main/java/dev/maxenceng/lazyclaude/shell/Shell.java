@@ -26,8 +26,9 @@ import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
@@ -87,6 +88,7 @@ import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
 import dev.tamboui.terminal.BackendFactory;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.app.ToolkitApp;
@@ -179,8 +181,8 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<DocsView> pendingDocs = new AtomicReference<>();
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
     private final AtomicReference<PullRequestsView> pendingPullRequests = new AtomicReference<>();
-    private final AtomicReference<BoardView> pendingBoard = new AtomicReference<>();
-    private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
+    private final AtomicReference<BoardReadingView> pendingBoard = new AtomicReference<>();
+    private final AtomicReference<Optional<WarningView>> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private final HostedSessionCommand hosting;
     private final HostedEmulatorCommand emulating;
@@ -201,9 +203,7 @@ public final class Shell extends ToolkitApp {
     private Map<SessionId, PaneSize> paneSizes = Map.of();
     private final AtomicBoolean repaintPending = new AtomicBoolean();
     private PullRequestsView pullRequests;
-    private volatile BoardView lastRead;
-    private volatile Set<String> mergedTicketBranches = Set.of();
-    private volatile Set<String> latestMergedHeads = Set.of();
+    private volatile BoardReadingView lastRead;
     private volatile List<LinkedTicketId> linkedTicketIds;
     private volatile Set<String> mergedHeads = Set.of();
     private final AtomicReference<Set<String>> pendingMergedHeads = new AtomicReference<>();
@@ -243,7 +243,7 @@ public final class Shell extends ToolkitApp {
     private boolean focusingClick;
 
     public Shell(
-            BoardView board,
+            BoardReadingView board,
             DocsView docs,
             SessionsView sessions,
             PullRequestsView pullRequests,
@@ -281,7 +281,7 @@ public final class Shell extends ToolkitApp {
 
     /** {@code background} runs what must not hold up the frame: adding a worktree, the start of a session in it, and a refresh. */
     Shell(
-            BoardView board,
+            BoardReadingView board,
             DocsView docs,
             SessionsView sessions,
             PullRequestsView pullRequests,
@@ -405,9 +405,8 @@ public final class Shell extends ToolkitApp {
     }
 
     /**
-     * The merged pull requests have been fetched again. Called on the fetch's thread: when the merged ticket branches differ from the
-     * last ones the board was read with, the board is read again there, so git never runs on the UI thread, and the read board is
-     * applied on the UI thread, at the next render or key press, so no row changes under a frame being drawn.
+     * The merged pull requests have been fetched again. Called on the fetch's thread: the heads are applied on the UI thread, at the
+     * next render or key press, so no row changes under a frame being drawn.
      */
     public void mergedPullRequestsChanged(MergedPullRequestsView view) {
         pendingMergedHeads.set(view.headBranches());
@@ -415,36 +414,21 @@ public final class Shell extends ToolkitApp {
         if (reading != null) {
             reading.runOnRenderThread(this::applyPendingMergedHeads);
         }
-        latestMergedHeads = view.headBranches();
         latestMerged = view;
-        if (mergedTicketBranches().equals(mergedTicketBranches)) {
-            return;
-        }
-        reread();
     }
 
     /**
-     * Something the board is read from changed: the backlog, a ticket worktree's copy of a ticket, or the refs. Callable from any
-     * thread; the board is read again on the caller's, with the branches known merged, and applied on the UI thread.
+     * The project's issues changed on GitHub, or could not be checked. Callable from any thread; the board is read again on the
+     * caller's and applied on the UI thread.
      */
     public void boardChanged() {
         reread();
     }
 
-    private Set<String> mergedTicketBranches() {
-        Set<String> branches = BoardRows.ticketBranchesOf(lastRead);
-        return latestMergedHeads.stream().filter(branches::contains).collect(Collectors.toUnmodifiableSet());
-    }
-
-    /**
-     * One read at a time, so a slow read that started first never lands after a newer one; the merged branches are taken under
-     * the same lock, so a read never goes ahead with heads older than the last one applied.
-     */
+    /** One read at a time, so a slow read that started first never lands after a newer one. */
     private synchronized void reread() {
-        Set<String> merged = mergedTicketBranches();
-        boards.boardReadAgainFor(new BoardPayload(root, merged)).ifPresent(read -> {
+        readAgain().ifPresent(read -> {
             lastRead = read;
-            mergedTicketBranches = merged;
             pendingBoard.set(read);
             ToolkitRunner running = runner();
             if (running != null) {
@@ -454,8 +438,17 @@ public final class Shell extends ToolkitApp {
         });
     }
 
+    /**
+     * A board that was never read is read whole, so its reason stays current and no warning claims a board is kept; one on screen is
+     * kept when the read fails.
+     */
+    private Optional<BoardReadingView> readAgain() {
+        BoardPayload payload = new BoardPayload(root);
+        return lastRead instanceof UnavailableBoardView ? Optional.of(boards.boardFor(payload)) : boards.boardReadAgainFor(payload);
+    }
+
     /** Sessions are linked against the tickets of the board as last read, so a ticket created while running links them. */
-    private void followTickets(BoardView read) {
+    private void followTickets(BoardReadingView read) {
         List<LinkedTicketId> ids = BoardRows.ticketIdsOf(read);
         if (!ids.equals(linkedTicketIds)) {
             linkedTicketIds = ids;
@@ -479,7 +472,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private void applyPendingBoard() {
-        BoardView next = pendingBoard.getAndSet(null);
+        BoardReadingView next = pendingBoard.getAndSet(null);
         if (next != null) {
             worktree.markStale();
             RowKey before = board.selected().key();
@@ -500,7 +493,17 @@ public final class Shell extends ToolkitApp {
      * at the next render or key press, so the status line never changes under a frame being drawn.
      */
     public void warningsChanged(WarningView view) {
-        pendingWarning.set(view);
+        pendingWarning.set(Optional.of(view));
+        applyPendingWarningOnRenderThread();
+    }
+
+    /** The last warning held was withdrawn. Callable from any thread, applied like {@link #warningsChanged}. */
+    public void warningsCleared() {
+        pendingWarning.set(Optional.empty());
+        applyPendingWarningOnRenderThread();
+    }
+
+    private void applyPendingWarningOnRenderThread() {
         ToolkitRunner running = runner();
         if (running != null) {
             running.runOnRenderThread(this::applyPendingWarning);
@@ -508,9 +511,9 @@ public final class Shell extends ToolkitApp {
     }
 
     private void applyPendingWarning() {
-        WarningView next = pendingWarning.getAndSet(null);
+        Optional<WarningView> next = pendingWarning.getAndSet(null);
         if (next != null) {
-            warning = Optional.of(next);
+            warning = next;
         }
     }
 
@@ -1797,7 +1800,11 @@ public final class Shell extends ToolkitApp {
             case HeaderRow _ -> column();
             case TicketRow row -> ticketDetail(row.ticket());
             case UnreadableRow row ->
-                column(text(row.unreadable().file().value()).bold(), text(row.unreadable().reason().value()));
+                new DetailElement(
+                        _ -> List.of(new DetailRow(TicketText.number(row.unreadable().id()), Style.EMPTY.bold())),
+                        Optional.of(row.unreadable().reason().value()),
+                        mainViewScroll);
+            case UnavailableRow row -> new DetailElement(_ -> List.of(), Optional.of(row.reason().value()), mainViewScroll);
         };
     }
 

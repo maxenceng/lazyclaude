@@ -4,7 +4,7 @@ Date: 2026-10-11
 
 ## Status
 
-Accepted. Extends ADR 0017.
+Accepted. Extends ADR 0017. Amended by ADR 0066: a warning is withdrawn when its cause goes away.
 
 ## Context
 

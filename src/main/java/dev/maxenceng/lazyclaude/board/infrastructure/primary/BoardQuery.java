@@ -13,22 +13,26 @@ public final class BoardQuery {
         this.boards = boards;
     }
 
-    /** @throws dev.maxenceng.lazyclaude.error.domain.DomainException when there is no board to show, saying why */
-    public BoardView boardFor(BoardPayload payload) {
-        return BoardView.from(boards.boardFor(payload.toDomain(), payload.merged()));
+    /**
+     * The board of the project, or a view without tickets that says why its issues cannot be read.
+     *
+     * @throws dev.maxenceng.lazyclaude.error.domain.DomainException when the directory belongs to no project
+     */
+    public BoardReadingView boardFor(BoardPayload payload) {
+        return BoardReadingView.from(boards.boardFor(payload.toDomain()));
     }
 
     /**
      * The board read again, or nothing when it cannot be, so a board already on screen stays; a read that fails after a good one
      * raises a warning saying why.
      */
-    public Optional<BoardView> boardReadAgainFor(BoardPayload payload) {
-        return boards.boardReadAgainFor(payload.toDomain(), payload.merged()).map(BoardView::from);
+    public Optional<BoardReadingView> boardReadAgainFor(BoardPayload payload) {
+        return boards.boardReadAgainFor(payload.toDomain()).map(BoardReadingView::from);
     }
 
     /**
-     * Runs {@code changed} after each batch of changes to the backlog, the ticket worktrees' copies and the refs, on a thread of the
-     * watcher's own. A call does not say what changed.
+     * Runs {@code changed} on a thread of the watcher's own whenever the project's issues changed, or could not be checked. A call
+     * does not say what changed.
      */
     public void subscribe(BoardWatchPayload payload, Runnable changed) {
         boards.subscribe(payload.toDomain(), changed);

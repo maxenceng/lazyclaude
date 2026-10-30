@@ -100,7 +100,7 @@ class ShellDocsTest {
 
         pressed(shell, key('j'), 3);
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().doesNotContain("PROJ-1");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().doesNotContain("#1");
     }
 
     @Test
@@ -179,7 +179,7 @@ class ShellDocsTest {
         shell.press(key('j'));
 
         assertThat(Screen.of(shell).mainViewRows())
-                .anySatisfy(row -> assertThat(row).startsWith("PROJ-1 · draft"))
+                .anySatisfy(row -> assertThat(row).startsWith("#1 · draft"))
                 .noneSatisfy(row -> assertThat(row).contains("Context map"));
     }
 
@@ -218,7 +218,7 @@ class ShellDocsTest {
 
         pressed(shell, alt('k'), 2);
 
-        assertThat(Screen.of(shell).boardPanelText()).contains("▾ draft (1)", "PROJ-1").doesNotContain("0002-enforce.md");
+        assertThat(Screen.of(shell).boardPanelText()).contains("▾ draft (1)", "#1").doesNotContain("0002-enforce.md");
     }
 
     @Test

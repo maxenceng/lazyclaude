@@ -6,23 +6,22 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.ContextName;
+import dev.maxenceng.lazyclaude.board.published.LabelName;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoContext;
-import dev.maxenceng.lazyclaude.board.published.NoTitle;
 import dev.maxenceng.lazyclaude.board.published.NoType;
-import dev.maxenceng.lazyclaude.board.published.Title;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.TypeName;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.tamboui.style.Style;
 
 /**
- * How the shell words a ticket: a ticket with no title is shown under its id, a missing field is left
- * out, and the other frontmatter keys line up under their longest name.
+ * How the shell words a ticket: its number as {@code #42}, a missing field left out, and the issue's other labels in a row of the key
+ * column beside the pull request's and the worktree's.
  */
 final class TicketText {
 
@@ -32,19 +31,29 @@ final class TicketText {
     private static final String RULE = "─";
     private static final String NO_BODY = "no body";
     private static final String WORKTREE_KEY = "worktree";
+    private static final String LABELS_KEY = "labels";
+    private static final String LABEL_SEPARATOR = ", ";
+    private static final String NUMBER_SIGN = "#";
     private static final String NO_KEY = "";
 
     private TicketText() {}
 
     static String title(TicketView ticket) {
-        return switch (ticket.title()) {
-            case Title title -> title.value();
-            case NoTitle _ -> ticket.id().value();
-        };
+        return ticket.title().value();
+    }
+
+    /** A ticket's id as GitHub writes an issue's number. */
+    static String number(TicketId id) {
+        return number(id.value());
+    }
+
+    /** A ticket's id, as the sessions name it, written as GitHub writes an issue's number. */
+    static String number(String id) {
+        return NUMBER_SIGN + id;
     }
 
     /**
-     * The rows above a ticket's body: the facts line, the other frontmatter keys, the rows about its pull request in the same key
+     * The rows above a ticket's body: the facts line, the labels, the rows about its pull request in the same key
      * column, a rule across {@code width}, and "no body" when it has none.
      */
     static List<DetailRow> head(
@@ -79,28 +88,31 @@ final class TicketText {
             case TypeName name -> Stream.of(name.value());
             case NoType _ -> Stream.empty();
         };
-        return Stream.of(Stream.of(ticket.id().value(), ticket.status().label()), context, type)
+        return Stream.of(Stream.of(number(ticket.id()), ticket.status().label()), context, type)
                 .flatMap(Function.identity())
                 .collect(Collectors.joining(FACT_SEPARATOR));
     }
 
-    /** The frontmatter rows, then the worktree's under them when the ticket has one to show. */
+    /** The labels row when the ticket has labels to show, then the worktree's under it when the ticket has one to show. */
     private static List<String> keyRows(TicketView ticket, Optional<WorktreeFacts> worktree, int width) {
         int keyWidth = keyWidth(ticket, worktree);
         return Stream.concat(
-                        ticket.frontmatter().stream().map(entry -> keyRow(entry, keyWidth)),
+                        labelsRow(ticket, keyWidth).stream(),
                         worktree.stream().flatMap(facts -> worktreeRows(facts, keyWidth, width).stream()))
                 .toList();
     }
 
-    /** The width of the key column: the longest frontmatter key, or the longest key of the pull request rows when that is wider. */
+    private static Optional<String> labelsRow(TicketView ticket, int keyWidth) {
+        return Optional.of(ticket.otherLabels().stream().map(LabelName::value).collect(Collectors.joining(LABEL_SEPARATOR)))
+                .filter(labels -> !labels.isEmpty())
+                .map(labels -> keyed(LABELS_KEY, labels, keyWidth));
+    }
+
+    /** The width of the key column: the longest of the labels, worktree and pull request keys. */
     private static int keyWidth(TicketView ticket, Optional<WorktreeFacts> worktree) {
-        int longest = ticket.frontmatter().stream()
-                .mapToInt(entry -> entry.key().name().length())
-                .max()
-                .orElse(0);
+        int labelsKey = ticket.otherLabels().isEmpty() ? 0 : LABELS_KEY.length();
         int worktreeKey = worktree.isPresent() ? WORKTREE_KEY.length() : 0;
-        return Math.max(Math.max(longest, worktreeKey), PullRequestText.keyWidth());
+        return Math.max(Math.max(labelsKey, worktreeKey), PullRequestText.keyWidth());
     }
 
     /** The worktree's place and state on one row when they fit, else the state on a row under the place, so a narrow view never cuts it off. */
@@ -112,10 +124,6 @@ final class TicketText {
         return whole.length() <= width
                 ? List.of(whole)
                 : List.of(keyed(WORKTREE_KEY, facts.place(), keyWidth), keyed(NO_KEY, facts.state(), keyWidth));
-    }
-
-    private static String keyRow(FrontmatterEntryView entry, int keyWidth) {
-        return keyed(entry.key().name(), entry.value().text(), keyWidth);
     }
 
     private static String keyed(String key, String value, int keyWidth) {

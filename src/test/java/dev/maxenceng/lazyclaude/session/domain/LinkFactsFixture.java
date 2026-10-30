@@ -25,7 +25,7 @@ public final class LinkFactsFixture {
     }
 
     public static KnownTickets boardTickets() {
-        return knownTickets("PROJ-1", "PROJ-2");
+        return knownTickets("1", "2");
     }
 
     public static TicketRun ticketRun(String verb, String... ids) {

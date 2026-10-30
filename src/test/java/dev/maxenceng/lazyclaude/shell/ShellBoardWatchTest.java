@@ -2,26 +2,28 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.projectRoot;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.unreachableBoardView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.longTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewNumbered;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.secondTitle;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.docsViewOfDocuments;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.longDocumentView;
-import static dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsViewFixture.mergedPullRequestsViewOn;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.pressed;
-import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoardWithMerged;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoard;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellReadingBoardOnDocs;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellReadingBoardWith;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellReadingUnavailableBoard;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,6 +34,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
+import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
@@ -51,60 +54,49 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldReadTheBoardAgainWhenTheBoardChanges() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged()))
+        when(boards.boardReadAgainFor(readingBoard()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().title(secondTitle()).build())));
         Shell shell = shellReadingBoardWith(boards, screens, ticketView());
 
         shell.boardChanged();
 
-        assertThat(Screen.of(shell).boardPanelText()).contains("PROJ-1 Plan the next").doesNotContain("PROJ-1 A board");
-    }
-
-    @Test
-    void shouldReadTheBoardAgainWithTheBranchesKnownMergedAtTheTime() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged("PROJ-1"))).thenReturn(Optional.of(boardViewOf(ticketView())));
-        Shell shell = shellReadingBoardWith(boards, screens, ticketView());
-        shell.mergedPullRequestsChanged(mergedPullRequestsViewOn("PROJ-1", "other"));
-
-        shell.boardChanged();
-
-        verify(boards, times(2)).boardReadAgainFor(readingBoardWithMerged("PROJ-1"));
+        assertThat(Screen.of(shell).boardPanelText()).contains("#1 Plan the next").doesNotContain("#1 A board");
     }
 
     @Test
     void shouldKeepTheBoardOnScreenWhenItCannotBeReadAgain() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged())).thenReturn(Optional.empty());
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.empty());
         Shell shell = shellReadingBoardWith(boards, screens, ticketView());
 
         shell.boardChanged();
 
-        assertThat(Screen.of(shell).boardPanelText()).contains("PROJ-1 A board");
+        assertThat(Screen.of(shell).boardPanelText()).contains("#1 A board");
     }
 
     @Test
     void shouldKeepTheSelectionOnTheTicketWhenARowAppearsAboveIt() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged()))
+        when(boards.boardReadAgainFor(readingBoard()))
                 .thenReturn(Optional.of(boardViewOf(ticketView(), secondTicketView())));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, secondTicketView()), key('j'), 1);
 
         shell.boardChanged();
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-2");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#2");
     }
 
     @Test
     void shouldLeaveTheCursorOnTheRowThatTookThePlaceOfATicketThatVanished() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged())).thenReturn(Optional.of(boardViewOf(secondTicketView())));
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(secondTicketView())));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketView(), secondTicketView()), key('j'), 1);
 
         shell.boardChanged();
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-2");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#2");
     }
 
     @Test
     void shouldLeaveTheCursorOnTheRowThatTookThePlaceOfATicketMovedIntoAFoldedGroup() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged()))
+        when(boards.boardReadAgainFor(readingBoard()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().status(Status.DONE).build(), secondTicketView())));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketView(), secondTicketView()), key('j'), 1);
 
@@ -114,13 +106,13 @@ class ShellBoardWatchTest {
                 .singleElement()
                 .asString()
                 .as("the done group is folded, and unfolding it to follow the ticket would change a fold nobody asked to change")
-                .contains("PROJ-2");
-        assertThat(Screen.of(shell).boardPanelText()).doesNotContain("PROJ-1 A board");
+                .contains("#2");
+        assertThat(Screen.of(shell).boardPanelText()).doesNotContain("#1 A board");
     }
 
     @Test
     void shouldRedrawTheOpenTicketDetailAndKeepItsScrollPosition() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged()))
+        when(boards.boardReadAgainFor(readingBoard()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder()
                         .title(secondTitle())
                         .body(longTicketView().body())
@@ -140,7 +132,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldKeepTheScrollPositionOfAnOpenDocumentWhenTheBoardCursorMoves() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged())).thenReturn(Optional.of(boardViewOf(secondTicketView())));
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(secondTicketView())));
         Shell shell = pressed(
                 shellReadingBoardOnDocs(boards, docsViewOfDocuments(longDocumentView()), ticketView(), secondTicketView()),
                 key('j'),
@@ -160,7 +152,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldHandSessionsTheTicketIdsOfTheBoardJustRead() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged()))
+        when(boards.boardReadAgainFor(readingBoard()))
                 .thenReturn(Optional.of(boardViewOf(ticketView(), secondTicketView())));
         Shell shell = shellReadingBoardWith(boards, screens, ticketView());
 
@@ -168,16 +160,137 @@ class ShellBoardWatchTest {
 
         verify(screens)
                 .knowTickets(new SessionPayload(
-                        projectRoot().value(), List.of(new LinkedTicketId("PROJ-1"), new LinkedTicketId("PROJ-2"))));
+                        projectRoot().value(), List.of(new LinkedTicketId("1"), new LinkedTicketId("2"))));
     }
 
     @Test
     void shouldNotHandSessionsTheTicketIdsAgainWhenTheyAreTheSame() {
-        when(boards.boardReadAgainFor(readingBoardWithMerged())).thenReturn(Optional.of(boardViewOf(ticketView())));
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketView())));
         Shell shell = shellReadingBoardWith(boards, screens, ticketView());
 
         shell.boardChanged();
 
         verify(screens, never()).knowTickets(any());
+    }
+
+    @Test
+    void shouldFollowTheSelectedTicketIntoTheStatusGroupItMovedTo() {
+        when(boards.boardReadAgainFor(readingBoard()))
+                .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().status(Status.TODO).build(), secondTicketView())));
+        Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketView(), secondTicketView()), key('j'), 1);
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#1");
+        assertThat(Screen.of(shell).boardPanelText()).containsSubsequence("▾ draft (1)", "#2", "▾ todo (1)", "#1");
+    }
+
+    @Test
+    void shouldLeaveTheCursorOnTheNextRowOfTheOldGroupWhenTheSelectedTicketIsGone() {
+        when(boards.boardReadAgainFor(readingBoard()))
+                .thenReturn(Optional.of(boardViewOf(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(3, Status.DRAFT), ticketViewNumbered(4, Status.TODO))));
+        Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT), ticketViewNumbered(3, Status.DRAFT), ticketViewNumbered(4, Status.TODO)), key('j'), 2);
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#3");
+    }
+
+    @Test
+    void shouldLeaveTheCursorOnThePreviousRowOfTheOldGroupWhenTheSelectedTicketWasItsLast() {
+        when(boards.boardReadAgainFor(readingBoard()))
+                .thenReturn(Optional.of(boardViewOf(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(4, Status.TODO))));
+        Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT), ticketViewNumbered(4, Status.TODO)), key('j'), 2);
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).reversedText())
+                .as("the next row on the board is the todo header, which is not a row of the group the ticket left")
+                .singleElement()
+                .asString()
+                .contains("#1");
+    }
+
+    @Test
+    void shouldLeaveTheCursorOnTheHeaderOfTheOldGroupWhenTheSelectedTicketWasItsOnlyOne() {
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketViewNumbered(4, Status.TODO))));
+        Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(4, Status.TODO)), key('j'), 1);
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).boardPanelLines()).anySatisfy(line -> assertThat(line).contains("▾ draft (0)"));
+        assertThat(Screen.of(shell).reversedText()).noneSatisfy(text -> assertThat(text).contains("#4"));
+    }
+
+    @Test
+    void shouldClampTheScrollOfTheOpenTicketDetailWhenTheBodyShrank() {
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketViewBuilder().body(new Body("Short.")).build())));
+        Shell shell = pressed(shellReadingBoardWith(boards, screens, longTicketView()), key('j'), 1);
+        Screen.of(shell);
+        shell.press(key('l'));
+        shell.press(key('G'));
+        Screen.of(shell);
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).as("the whole shorter ticket shows from its facts line").startsWith("#1 · draft");
+        assertThat(Screen.of(shell).mainViewRows()).anySatisfy(row -> assertThat(row).contains("Short."));
+    }
+
+    @Test
+    void shouldLeaveAFoldedGroupFoldedWhenTheBoardIsReadAgain() {
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketView(), secondTicketView())));
+        Shell shell = shellReadingBoardWith(boards, screens, ticketView());
+        shell.press(enter());
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).boardPanelText()).contains("▸ draft (2)").doesNotContain("#1 A board", "#2");
+    }
+
+    @Test
+    void shouldKeepTheZoomWhenTheBoardIsReadAgain() {
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketView(), secondTicketView())));
+        Shell shell = shellReadingBoardWith(boards, screens, ticketView());
+        shell.press(key('z'));
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).text()).as("the status columns are still across the screen").contains("draft (2)", "todo (0)").doesNotContain("Sessions");
+    }
+
+    @Test
+    void shouldReplaceTheReasonWithTheTicketsWhenTheBoardIsReadAtLast() {
+        when(boards.boardFor(readingBoard())).thenReturn(boardViewOf(ticketView()));
+        Shell shell = shellReadingUnavailableBoard(boards, screens);
+        assertThat(Screen.of(shell).mainViewRows()).anySatisfy(row -> assertThat(row).contains("gh is not logged in; run gh auth login"));
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).boardPanelText()).contains("▾ draft (1)", "#1");
+        assertThat(Screen.of(shell).mainViewRows()).noneSatisfy(row -> assertThat(row).contains("gh auth login"));
+    }
+
+    @Test
+    void shouldReplaceTheReasonWithTheNewOneWhenTheBoardStillCannotBeRead() {
+        when(boards.boardFor(readingBoard())).thenReturn(unreachableBoardView());
+        Shell shell = shellReadingUnavailableBoard(boards, screens);
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .as("the reason on screen is the one the latest read gave, not the one at start")
+                .anySatisfy(row -> assertThat(row).contains("connecting to api.github.com"))
+                .noneSatisfy(row -> assertThat(row).contains("gh auth login"));
+    }
+
+    @Test
+    void shouldNotAskForTheBoardAsLastReadWhenNoneWasEverRead() {
+        when(boards.boardFor(readingBoard())).thenReturn(unreachableBoardView());
+        Shell shell = shellReadingUnavailableBoard(boards, screens);
+
+        shell.boardChanged();
+
+        verify(boards, never()).boardReadAgainFor(any());
     }
 }
