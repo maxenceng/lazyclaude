@@ -15,6 +15,14 @@ import sys
 import adr_folder
 
 
+def shown(lines, number):
+    """Line `number` as written, with a missing final newline said rather than invisible."""
+    if number > len(lines):
+        return "(end of file)"
+    line = lines[number - 1]
+    return line[:-1] if line.endswith("\n") else f"{line} (no newline at end of file)"
+
+
 def stale_index(numbered):
     expected, problems = adr_folder.index(numbered)
     if problems:
@@ -26,16 +34,16 @@ def stale_index(numbered):
         actual = handle.read()
     if actual == expected:
         return []
-    wanted = expected.splitlines()
-    found = actual.splitlines()
+    wanted = expected.splitlines(keepends=True)
+    found = actual.splitlines(keepends=True)
     line = next(
         (number for number, pair in enumerate(zip(wanted, found), start=1) if pair[0] != pair[1]),
         min(len(wanted), len(found)) + 1,
     )
     return [
         f"{index} is stale at line {line}; run make adr-index",
-        f"    expected: {wanted[line - 1] if line <= len(wanted) else '(end of file)'}",
-        f"    found:    {found[line - 1] if line <= len(found) else '(end of file)'}",
+        f"    expected: {shown(wanted, line)}",
+        f"    found:    {shown(found, line)}",
     ]
 
 

@@ -1,7 +1,8 @@
 """The ADR folder as check-adr-numbers.py and write-adr-index.py both read it.
 
-One reading, so the index lists exactly the files the numbering check accepted: two copies
-of the file-name rule would drift, and the index would list an ADR the check refuses.
+One reading, so the index lists exactly the files the numbering check reads as numbered: two
+copies of the file-name rule would drift. Duplicates and gaps are listed too; the check, not
+the index, says whether the numbering is clean.
 """
 import glob
 import os
@@ -23,7 +24,9 @@ NUMBERED = re.compile(r"^(\d{4})-[a-z0-9-]+\.md$")
 
 HEADING = re.compile(r"^# (\d+)\. (.+)$")
 
-SUPERSEDED = re.compile(r"(?:^|\. )Superseded by ADR (\d{4})")
+# A sentence opens a line or follows a full stop: `Accepted` on one line and
+# `Superseded by ADR 0003.` on the next is still superseded.
+SUPERSEDED = re.compile(r"(?:^|\. )Superseded by ADR (\d{4})", re.MULTILINE)
 
 STATUS_WORDS = ("Proposed", "Accepted", "Rejected", "Deprecated")
 
@@ -71,10 +74,10 @@ def status_section(lines):
         return None
     rest = lines[start:]
     end = next((offset for offset, line in enumerate(rest) if line.startswith("## ")), len(rest))
-    return " ".join(line.strip() for line in rest[:end] if line.strip())
+    return "\n".join(line.strip() for line in rest[:end] if line.strip())
 
 
-def status_line(paragraph):
+def derived_status(paragraph):
     """`Superseded by NNNN.` when a sentence opens with it, else the paragraph's first word."""
     superseded = SUPERSEDED.search(paragraph)
     if superseded:
@@ -85,8 +88,11 @@ def status_line(paragraph):
 
 def read(number, name):
     """The ADR in `name`, or the reason the index cannot list it."""
-    with open(os.path.join(ADR_DIR, name), encoding="utf-8") as handle:
-        lines = handle.read().splitlines()
+    try:
+        with open(os.path.join(ADR_DIR, name), encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+    except (OSError, UnicodeDecodeError) as error:
+        return None, f"{name}: cannot be read ({error})"
     heading = HEADING.match(lines[0]) if lines else None
     if not heading:
         return None, f"{name}: its first line is not `# {number}. Title`"
@@ -95,7 +101,7 @@ def read(number, name):
     paragraph = status_section(lines)
     if not paragraph:
         return None, f"{name}: no `## Status` section, or an empty one"
-    status = status_line(paragraph)
+    status = derived_status(paragraph)
     if not status:
         return None, f"{name}: its status opens with none of {', '.join(STATUS_WORDS)}"
     return Adr(number, name, heading.group(2), status), None

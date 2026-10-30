@@ -69,6 +69,22 @@ REGISTRY = {
             "adr-numbers-stale-index",
             "docs/adr/README.md is stale at line 6",
         ),
+        FixtureTree(
+            "adr-numbers-superseded",
+            "docs/adr/README.md is stale at line 5",
+        ),
+        FixtureTree(
+            "adr-numbers-unreadable",
+            "0001-heading-says-two.md: its heading says 2, its file name 0001",
+        ),
+        FixtureTree(
+            "adr-numbers-unreadable",
+            "0002-no-status.md: no `## Status` section, or an empty one",
+        ),
+        FixtureTree(
+            "adr-numbers-unreadable",
+            "0003-unknown-word.md: its status opens with none of",
+        ),
     ],
     "check-config-comments.py": [
         FixtureTree(
@@ -159,6 +175,8 @@ def main():
             problems.append(f"{name} has no fixture registered in scripts/guard-fixtures.py")
         elif isinstance(case, ProvenByItsOwnBoot):
             problems.extend(missing_proof(name, case))
+        elif not case:
+            problems.append(f"{name} is registered with no fixture tree, so nothing trips it")
         else:
             problems.extend(
                 failure for failure in (run_fixture(name, fixture) for fixture in case) if failure

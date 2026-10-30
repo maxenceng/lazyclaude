@@ -72,6 +72,11 @@ def a_second_fixture_that_does_not_trip(module, adr_dir):
     }
 
 
+def a_guard_with_no_fixture_tree(module):
+    module.discovered_guards = lambda: ["check-adr-numbers.py"]
+    module.REGISTRY = {"check-adr-numbers.py": []}
+
+
 def a_guard_nobody_registered(module):
     module.discovered_guards = lambda: ["check-adr-numbers.py", "check-brand-new.py"]
     module.REGISTRY = {
@@ -128,6 +133,7 @@ def main():
             ("a message no branch prints", a_message_no_branch_prints, (), "did not contain"),
             ("a fixture that does not trip its guard", a_fixture_that_does_not_trip, (passing,), "did not fail it (exit 0)"),
             ("a second fixture that does not trip its guard", a_second_fixture_that_does_not_trip, (passing,), "did not fail it (exit 0)"),
+            ("a guard with no fixture tree", a_guard_with_no_fixture_tree, (), "registered with no fixture tree"),
             ("a guard nobody registered", a_guard_nobody_registered, (), "has no fixture registered"),
             ("a registration whose guard is gone", a_registration_whose_guard_is_gone, (), "no longer has it"),
             ("a proof that is not there", a_proof_that_is_not_there, (), "is what proves it, and is not there"),

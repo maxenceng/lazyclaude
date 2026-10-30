@@ -5,12 +5,16 @@ A hand-kept index goes stale the first time a branch adds an ADR and forgets it,
 site shows it as complete. check-adr-numbers.py fails when this file is not what this
 script would write, so the index is regenerated rather than edited.
 """
+import os
 import sys
 
 import adr_folder
 
 
 def main():
+    if not os.path.isdir(adr_folder.ADR_DIR):
+        print(f"no ADR directory at {adr_folder.relative(adr_folder.ADR_DIR)}")
+        return 1
     numbered, _ = adr_folder.files()
     content, problems = adr_folder.index(numbered)
     if problems:
