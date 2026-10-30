@@ -2,7 +2,9 @@ package dev.maxenceng.lazyclaude.shared.domain;
 
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.otherWarning;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.warning;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import org.junit.jupiter.api.Test;
@@ -25,5 +27,44 @@ class WarnOnceTest {
 
         verify(warnings).raise(warning());
         verifyNoMoreInteractions(warnings);
+    }
+
+    @Test
+    void shouldWithdrawTheWarningItRaised() {
+        WarnOnce once = new WarnOnce();
+        once.raise(warnings, warning());
+
+        once.withdraw(warnings);
+
+        verify(warnings).withdraw(warning());
+    }
+
+    @Test
+    void shouldWithdrawNothingWhenNothingWasRaised() {
+        new WarnOnce().withdraw(warnings);
+
+        verifyNoInteractions(warnings);
+    }
+
+    @Test
+    void shouldWithdrawTheWarningOnlyOnce() {
+        WarnOnce once = new WarnOnce();
+        once.raise(warnings, warning());
+        once.withdraw(warnings);
+
+        once.withdraw(warnings);
+
+        verify(warnings, times(1)).withdraw(warning());
+    }
+
+    @Test
+    void shouldRaiseAgainAfterTheWarningWasWithdrawn() {
+        WarnOnce once = new WarnOnce();
+        once.raise(warnings, warning());
+        once.withdraw(warnings);
+
+        once.raise(warnings, otherWarning());
+
+        verify(warnings).raise(otherWarning());
     }
 }

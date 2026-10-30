@@ -17,7 +17,7 @@ words mean.
 |---|---|---|
 | Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; a session belongs to the one its `cwd` belongs to, so a ticket worktree's sessions sit under its project. | `shared` |
 | Working directory | The directory lazyclaude was started in, or a session's `cwd`; the project is located from it. | `shared` |
-| Warning | A degraded mode lazyclaude carries on in (the docs watch fell back to polling, the board on screen kept because it could not be read again, the sessions watch left to its sweep), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, and is never printed over the screen. | `shared` |
+| Warning | A degraded mode lazyclaude carries on in (the docs watch fell back to polling, the board on screen kept because it could not be read again, the sessions watch left to its sweep), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, or until its cause goes away and the manager withdraws it (the board's failed read, withdrawn by the next good one, ADR 0066), and is never printed over the screen. | `shared` |
 
 ## shell
 

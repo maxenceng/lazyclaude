@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -83,5 +84,74 @@ class WarningRepositoryTest {
 
         assertThat(received).containsExactly(warnings());
         assertThat(other).containsExactly(warnings());
+    }
+
+    @Test
+    void shouldHandASubscriberTheWarningsLeftWhenOneIsWithdrawn() {
+        repository.raise(warning());
+        repository.raise(otherWarning());
+        repository.subscribe(received::add);
+
+        repository.withdraw(warning());
+
+        assertThat(received).containsExactly(twoWarnings(), new Warnings(List.of(otherWarning())));
+    }
+
+    @Test
+    void shouldTellAListenerWhenTheLastWarningIsWithdrawn() {
+        repository.raise(warning());
+        repository.subscribe(received::add);
+        AtomicInteger told = new AtomicInteger();
+        repository.onNoneHeld(told::incrementAndGet);
+
+        repository.withdraw(warning());
+
+        assertThat(told).hasValue(1);
+        assertThat(received).as("no warning left is not a warning to show").containsExactly(warnings());
+    }
+
+    @Test
+    void shouldSayNothingWhenAWarningThatIsNotHeldIsWithdrawn() {
+        repository.raise(warning());
+        repository.subscribe(received::add);
+        AtomicInteger told = new AtomicInteger();
+        repository.onNoneHeld(told::incrementAndGet);
+
+        repository.withdraw(otherWarning());
+
+        assertThat(received).containsExactly(warnings());
+        assertThat(told).hasValue(0);
+    }
+
+    @Test
+    void shouldTakeBackOnlyOneOfTwoEqualWarnings() {
+        repository.raise(warning());
+        repository.raise(warning());
+        repository.subscribe(received::add);
+
+        repository.withdraw(warning());
+
+        assertThat(received.getLast().count()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldReplayNothingToASubscriberAfterTheLastWarningWasWithdrawn() {
+        repository.raise(warning());
+        repository.withdraw(warning());
+
+        repository.subscribe(received::add);
+
+        assertThat(received).isEmpty();
+    }
+
+    @Test
+    void shouldHandASubscriberAWarningRaisedAfterTheLastWasWithdrawn() {
+        repository.raise(warning());
+        repository.withdraw(warning());
+        repository.subscribe(received::add);
+
+        repository.raise(otherWarning());
+
+        assertThat(received).containsExactly(new Warnings(List.of(otherWarning())));
     }
 }

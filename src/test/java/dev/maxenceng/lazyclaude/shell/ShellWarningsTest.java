@@ -102,4 +102,13 @@ class ShellWarningsTest {
 
         assertThat(Screen.of(shell).statusLine()).endsWith(warningView().text());
     }
+
+    @Test
+    void shouldLeaveTheStatusLineBlankOnceTheLastWarningIsWithdrawn() {
+        Shell shell = shellWarning(warningView());
+
+        shell.warningsCleared();
+
+        assertThat(Screen.of(shell).statusLine()).isBlank();
+    }
 }

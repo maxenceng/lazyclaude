@@ -27,7 +27,8 @@ answers 304 costs no rate limit, and `gh` is the only client lazyclaude uses (CL
 - **The first check only takes the `ETag`.** The board was just read; saying "changed" would read it twice at start.
 - **A check that fails is a change.** `changed` runs, the shell reads the board, and that read fails the same way, which
   raises the warning and keeps the board on screen. The `ETag` is forgotten, so the first good check afterwards also
-  counts as a change and the board catches up on what it missed. A failed poll that said nothing would leave a stale board
+  counts as a change and the board catches up on what it missed; that good read withdraws the warning (ADR 0066), and a
+  later failure is named again. A failed poll that said nothing would leave a stale board
   with no warning until `R`.
 - **A board that cannot be read at start still opens.** `BoardReading` is a `Board` or an `UnavailableBoard` with the
   reason (as `Docs` is a tree or `UnavailableDocs`), so the shell opens on the docs and sessions with the Board saying why.
@@ -48,7 +49,5 @@ answers 304 costs no rate limit, and `gh` is the only client lazyclaude uses (CL
 - deferred: the 1000 most recent issues are read, so older closed ones show nowhere — close it when a project has that many.
 - deferred: the ticket branch name is guessed, so a branch made under another name is not matched to its ticket — close it
   when the board reads `linkedBranches`.
-- A warning is never withdrawn (ADR 0022): a failed read stays on the status line until quit after the board recovers. The
-  ticket's wish that a good read clears it needs a withdrawing warning in the shared kernel, which is its own decision.
 - `TreeWatcher` and `Utf8Text` in the shared kernel have `docs` as their only user in `board`'s absence; moving them there
   is a follow-up.

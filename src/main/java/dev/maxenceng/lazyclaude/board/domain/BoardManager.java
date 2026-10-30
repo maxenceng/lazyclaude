@@ -48,8 +48,8 @@ public final class BoardManager {
     }
 
     /**
-     * A re-read of the board failed and the one on screen stays. Saying why is raised once for the run: a warning is never withdrawn,
-     * so a board that keeps failing and recovering would otherwise pile up copies of it.
+     * A re-read of the board failed and the one on screen stays. Saying why is raised once while it keeps failing, and withdrawn by the
+     * next good read; a failure after that is named again.
      */
     public void boardUnreadable(Reason cause) {
         unreadable.raise(warnings, new Warning(UNREADABLE_WARNING.formatted(cause.value())));
@@ -57,7 +57,9 @@ public final class BoardManager {
 
     public Board boardFor(WorkingDirectory from) {
         Project project = locator.locate(from);
-        return board(project, backlog.entries(project));
+        Board read = board(project, backlog.entries(project));
+        unreadable.withdraw(warnings);
+        return read;
     }
 
     /** The project without tickets, saying why there are none, for a project whose issues cannot be read. */

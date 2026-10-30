@@ -5,4 +5,7 @@ public interface WarningPort {
 
     /** Keeps {@code warning} until lazyclaude quits; callable from any thread. */
     void raise(Warning warning);
+
+    /** Takes back one raised {@code warning}, equal to it, whose cause is gone; callable from any thread. */
+    void withdraw(Warning warning);
 }

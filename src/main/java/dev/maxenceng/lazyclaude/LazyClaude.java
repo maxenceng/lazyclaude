@@ -317,6 +317,7 @@ public final class LazyClaude {
         reviews.subscribe(
                 new ReviewPayload(view.root().value()), shell::pullRequestsChanged, shell::mergedPullRequestsChanged);
         warnings.subscribe(shell::warningsChanged);
+        warnings.onNoneHeld(shell::warningsCleared);
         return shell;
     }
 }

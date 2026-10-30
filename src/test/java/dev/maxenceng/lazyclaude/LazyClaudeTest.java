@@ -242,6 +242,21 @@ class LazyClaudeTest {
     }
 
     @Test
+    void shouldClearTheWarningOfAFailedBoardReadOnTheStatusLineWhenTheNextReadIsGood() {
+        when(locator.locate(any())).thenReturn(project());
+        when(backlog.entries(project())).thenThrow(new BacklogUnavailableException("gh is not logged in; run gh auth login")).thenReturn(List.of());
+        Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog, unreadChanges(), boardWatch, raised), docsQuery(docs, watch, raised), sessionQuery(sessions, quietPastSessions(), emptyLaunchLogPort(), sessionWatch, mock(TranscriptWatchPort.class), raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(PendingReviewCommand.class), ReservedChords.defaults(), true, mock(HostedSessionCommand.class), mock(HostedEmulatorCommand.class), mock(HostedEmulatorQuery.class), mock(WatchedSessionCommand.class), mock(TicketWorktreeCommand.class), warningQuery(raised));
+        ArgumentCaptor<Runnable> changed = ArgumentCaptor.forClass(Runnable.class);
+        verify(boardWatch).watch(eq(project()), changed.capture());
+        changed.getValue().run();
+        assertThat(Screen.of(shell).statusLine()).contains("⚠ board: gh is not logged in; run gh auth login");
+
+        changed.getValue().run();
+
+        assertThat(Screen.of(shell).statusLine()).as("the next good read withdraws it").isBlank();
+    }
+
+    @Test
     void shouldHandTheShellTheDocsAgainWhenTheWatcherReportsAChange() {
         when(docs.paths(project())).thenReturn(List.of());
         Shell shell = LazyClaude.shellOn(boardViewOf(), emptyDocsView(), emptySessionsView(), boardQuery(locator, backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, emptyLaunchLogPort(), sessionWatch, raised), reviewQuery(pullRequests, mergedPullRequests, pullRequestWatch), mock(PendingReviewCommand.class), ReservedChords.defaults(), true, mock(HostedSessionCommand.class), mock(HostedEmulatorCommand.class), mock(HostedEmulatorQuery.class), mock(WatchedSessionCommand.class), mock(TicketWorktreeCommand.class), warningQuery(raised));

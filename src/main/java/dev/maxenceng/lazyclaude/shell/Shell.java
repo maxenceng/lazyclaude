@@ -181,7 +181,7 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
     private final AtomicReference<PullRequestsView> pendingPullRequests = new AtomicReference<>();
     private final AtomicReference<BoardView> pendingBoard = new AtomicReference<>();
-    private final AtomicReference<WarningView> pendingWarning = new AtomicReference<>();
+    private final AtomicReference<Optional<WarningView>> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private final HostedSessionCommand hosting;
     private final HostedEmulatorCommand emulating;
@@ -483,7 +483,17 @@ public final class Shell extends ToolkitApp {
      * at the next render or key press, so the status line never changes under a frame being drawn.
      */
     public void warningsChanged(WarningView view) {
-        pendingWarning.set(view);
+        pendingWarning.set(Optional.of(view));
+        applyPendingWarningOnRenderThread();
+    }
+
+    /** The last warning held was withdrawn. Callable from any thread, applied like {@link #warningsChanged}. */
+    public void warningsCleared() {
+        pendingWarning.set(Optional.empty());
+        applyPendingWarningOnRenderThread();
+    }
+
+    private void applyPendingWarningOnRenderThread() {
         ToolkitRunner running = runner();
         if (running != null) {
             running.runOnRenderThread(this::applyPendingWarning);
@@ -491,9 +501,9 @@ public final class Shell extends ToolkitApp {
     }
 
     private void applyPendingWarning() {
-        WarningView next = pendingWarning.getAndSet(null);
+        Optional<WarningView> next = pendingWarning.getAndSet(null);
         if (next != null) {
-            warning = Optional.of(next);
+            warning = next;
         }
     }
 

@@ -10,4 +10,7 @@ public interface WarningWatchPort {
      * on the thread that raised it, for as long as the process lives.
      */
     void subscribe(Consumer<Warnings> listener);
+
+    /** Runs {@code listener} each time the last warning held is withdrawn, on the thread that withdrew it, for as long as the process lives. */
+    void onNoneHeld(Runnable listener);
 }

@@ -7,6 +7,8 @@ import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.wor
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -32,6 +34,7 @@ import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
+import dev.maxenceng.lazyclaude.shared.domain.Warning;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 @ExtendWith(MockitoExtension.class)
@@ -132,19 +135,16 @@ class BoardApplicationServiceTest {
     }
 
     @Test
-    void shouldNotRaiseTheWarningAgainWhenTheBoardFailsAfterHavingBeenReadAgain() {
+    void shouldNotRaiseTheWarningAgainWhileTheBoardKeepsFailing() {
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project()))
-                .thenThrow(new BacklogNotFoundException())
-                .thenReturn(List.of())
-                .thenThrow(new BacklogNotFoundException());
+        when(backlog.entries(project())).thenThrow(new BacklogNotFoundException());
 
         service.boardReadAgainFor(workingDirectory());
         service.boardReadAgainFor(workingDirectory());
         service.boardReadAgainFor(workingDirectory());
 
         assertThat(raisedTexts(warnings))
-                .as("a warning is never withdrawn, so naming the mode again would only pile up copies of it")
+                .as("naming the mode again would only pile up copies of it")
                 .hasSize(1);
     }
 
@@ -158,5 +158,66 @@ class BoardApplicationServiceTest {
         reported.getValue().run();
 
         verify(changed).run();
+    }
+
+    @Test
+    void shouldWithdrawTheWarningWhenTheBoardIsReadAgainAfterAFailedRead() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenThrow(new BacklogNotFoundException()).thenReturn(List.of());
+        service.boardReadAgainFor(workingDirectory());
+
+        service.boardReadAgainFor(workingDirectory());
+
+        verify(warnings)
+                .withdraw(new Warning("board: this project has no GitHub remote, so it has no backlog; showing the board as last read"));
+    }
+
+    @Test
+    void shouldWithdrawNothingWhenTheBoardIsReadAgainWithNoEarlierFailure() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of());
+
+        service.boardReadAgainFor(workingDirectory());
+        service.boardReadAgainFor(workingDirectory());
+
+        verifyNoInteractions(warnings);
+    }
+
+    @Test
+    void shouldWithdrawTheWarningOnlyOnceHoweverManyGoodReadsFollow() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenThrow(new BacklogNotFoundException()).thenReturn(List.of());
+        service.boardReadAgainFor(workingDirectory());
+        service.boardReadAgainFor(workingDirectory());
+
+        service.boardReadAgainFor(workingDirectory());
+
+        verify(warnings, times(1)).withdraw(any());
+    }
+
+    @Test
+    void shouldRaiseAgainWhenTheBoardFailsAfterTheWarningWasWithdrawn() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project()))
+                .thenThrow(new BacklogNotFoundException())
+                .thenReturn(List.of())
+                .thenThrow(new BacklogNotFoundException());
+        service.boardReadAgainFor(workingDirectory());
+        service.boardReadAgainFor(workingDirectory());
+
+        service.boardReadAgainFor(workingDirectory());
+
+        assertThat(raisedTexts(warnings)).as("a new failure is a new warning once the old one is gone").hasSize(2);
+    }
+
+    @Test
+    void shouldKeepTheWarningWhenTheBoardIsStillUnreadable() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenThrow(new BacklogNotFoundException());
+
+        service.boardReadAgainFor(workingDirectory());
+        service.boardReadAgainFor(workingDirectory());
+
+        verify(warnings, never()).withdraw(any());
     }
 }
