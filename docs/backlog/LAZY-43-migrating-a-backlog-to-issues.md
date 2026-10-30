@@ -1,6 +1,6 @@
 ---
 id: LAZY-43
-status: in-progress
+status: done
 context: cross-context
 type: chore
 tracker_id: 107
@@ -46,3 +46,8 @@ None.
 Charted on the [LAZY-24](LAZY-24-desktop-evolution.md) map; decided in
 [LAZY-33](LAZY-33-migrating-the-backlog.md). The script is deleted in the PR that migrates the last project
 ([LAZY-44](LAZY-44-lazyclaude-backlog-on-issues.md)).
+
+Landed as claude-tools #57 (the script, 84 tests against a fake `gh`) and next-suggestions #209 (88 issues, `verify`
+ok, `docs/backlog/` deleted, ddd-workflow 3.0.0); `backlog-archive` is on next-suggestions' dbd3c49. Found on the way:
+no decision in either backlog had its map in `blocked_by`, so the map is also read from the map's body (ADR 0064).
+lazyclaude's own dry run refuses LAZY-14, reaching both LAZY-1 and LAZY-24; LAZY-44 settles it before migrating.
