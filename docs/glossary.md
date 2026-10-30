@@ -17,21 +17,21 @@ words mean.
 |---|---|---|
 | Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; a session belongs to the one its `cwd` belongs to, so a ticket worktree's sessions sit under its project. | `shared` |
 | Working directory | The directory lazyclaude was started in, or a session's `cwd`; the project is located from it. | `shared` |
-| Warning | A degraded mode lazyclaude carries on in (the docs or board watch fell back to polling, the board on screen kept because it could not be read again, the sessions watch left to its sweep), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, and is never printed over the screen. | `shared` |
+| Warning | A degraded mode lazyclaude carries on in (the docs watch fell back to polling, the board on screen kept because it could not be read again, the sessions watch left to its sweep), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, and is never printed over the screen. | `shared` |
 
 ## shell
 
 | Term | Meaning | Where it lives |
 |---|---|---|
 | Status line | The top row of the screen. On the left, how many of the project's live sessions carry each marker (`! 1  ? 2  • 1`, only those present); cut with `…` before the warning. On the right, the newest warning (`⚠ <text>`, or `⚠ 2 · <text>` once there are two), cut with `…` rather than wrapped. | `shell` |
-| Main view | The right column's top pane, which shows the selection of whichever left panel last had focus; for a ticket, its frontmatter and its body rendered as markdown, for a document, its markdown rendered. | `shell` |
+| Main view | The right column's top pane, which shows the selection of whichever left panel last had focus; for a ticket, its facts line, labels and body rendered as markdown, for a document, its markdown rendered. | `shell` |
 | Dock | The bottom of the right column, holding every hosted session as a tab. With the main view hidden it fills the column. | `shell` |
 | Dock tab | One hosted session's pane in the dock, labelled with its marker and name, or `starting`. | `shell` |
 | Refresh | `R`: reads the board, the docs tree, the open and merged pull requests, and the sessions and transcripts again at once, off the render thread. It shows only as the rows that changed; nothing flashes and nothing says "refreshed". | `shell` |
 | Zoom | `z` on the Board or the main view, or `alt+z` from those and from a hosted session: on the Board, the status columns; on the main view, that pane over the panels with the dock strip under it; on the dock, the dock alone between the status line and the key bar. Any other panel has no zoom. Moving focus ends it; in a review, `esc` ends the zoom before the review. | `shell` |
-| Status columns | The Board zoomed: one column per status across the screen, the finished one narrow with only its header and count, then one for the unreadable files when there are any. Their cursor is the Board's selection, never a second one, and skips the narrow column. | `shell` |
+| Status columns | The Board zoomed: one column per status across the screen, the finished one narrow with only its header and count, then one for the unreadable issues when there are any, or one saying why the issues could not be read. Their cursor is the Board's selection, never a second one, and skips the narrow column. | `shell` |
 | Dock strip | The dock folded to one line of its tabs and markers, under the status columns or the zoomed main view. | `shell` |
-| Ticket detail | What the main view shows for a ticket: its facts line, its other frontmatter keys, a rule, then its body rendered as markdown. It scrolls as one unit. | `shell` |
+| Ticket detail | What the main view shows for a ticket: its facts line (`#<number>`, status, context, type), a `labels` row for its other labels, a rule, then the issue body's `##` sections rendered as markdown. It scrolls as one unit. | `shell` |
 | Review panel | The review screen's third left panel, under Files and Comments: the summary's first line, the pending count, and the moved-head warning. | `shell`, read from `review` |
 | Second click | A press on the row that was already selected, in the pane that already had focus: it does what `enter` does there. A first click only focuses and selects; there is no timed double-click. | `shell` |
 | Mouse setting | `mouse` in `config.yml`: `false` turns mouse capture off, for a terminal that answers in X10 and would type a click as keys. Off by default when `TERM` is `linux`. | `session` (the setting), `shell` (the capture) |
@@ -53,15 +53,15 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Ticket | One `docs/backlog/*.md` file: frontmatter plus body. | `board` |
-| GitHub issue | What stores a ticket once the backlog moves to GitHub Issues: its number is the ticket's id, its `status:`, `context:` and `type:` labels and its open or closed state carry what the frontmatter did, its body the ticket's sections (ADR 0052). The only meaning *issue* has here. | `board` (expected) |
-| Title | The first `# ` line of a ticket's body outside a code fence, stripped; a ticket without one is shown under its id. | `board` |
+| Ticket | An issue of the project's GitHub remote: its number (the ticket's id), title, labels and body. Open issues and the ones closed as completed are read; the board is not cached (ADR 0052). | `board` |
+| GitHub issue | What stores a ticket: its number is the ticket's id, its `status:`, `context:` and `type:` labels and its open or closed state carry the ticket's status, context and type, its body the ticket's `##` sections (ADR 0052). Read through `gh issue list`. The only meaning *issue* has here. | `board` |
+| Title | A ticket's issue title; an issue always has one. | `board` |
 | Board | A project's tickets grouped by status, as the Board panel shows them. | `board` |
-| Unreadable ticket | A backlog file with an `id` whose frontmatter or status is refused, or whose `id` another file already claims; listed with its reason, never dropped silently. | `board` |
-| Ticket branch | The branch `<id>-<slug>` a ticket's work happens on, the ticket file's name without `.md`. | `board` |
-| Branch copy | The ticket's file as its ticket branch has it: the file in a worktree checked out on the ticket branch, the root checkout included, or in the ticket worktree whatever branch it is on, uncommitted edits shown; else `git show <branch>:<file>` while the branch's pull request is not merged. | `board` |
-| Root copy | The ticket's file in the root checkout, as the backlog read finds it. | `board` |
-| Status | A ticket's `status`, read from its branch copy whenever there is one, and from the root checkout otherwise: no ticket branch, or a ticket branch whose pull request is merged and no worktree. A root copy reading `done` wins over any branch copy. There is no separate root status. | `board` |
+| Unreadable ticket | An issue the board refuses as a ticket: closed as not planned (or any reason but completed), carrying two `status:` labels or one the lifecycle has no word for, or, from `todo` on, not exactly one `context:` and one `type:` label. Listed under its number with its reason, never dropped silently. | `board` |
+| Ticket branch | The branch `<number>-<title slug>` a ticket's work happens on, as `gh issue develop` names it by default (ADR 0052). The board derives the name from the number and title rather than reading `linkedBranches` back (ADR 0065). | `board` |
+| Status | A ticket's place in its lifecycle: the issue's one `status:` label while it is open (a `draft` when it has none), and `done` once it is closed as completed, whatever labels it still carries. Nothing else is a source: no copy rides on the ticket branch (ADR 0052). | `board` |
+| Board unavailable | A Board that has no tickets because the issues could not be read at start: the project has no GitHub remote, GitHub is unreachable, or `gh` is not logged in (the reason names `gh auth login`). The Board shows the reason in place of the groups; the next read, `R` or the poll, replaces it. | `board` |
+| Issues poll | The board's watch: every 30 s a conditional request for the most recently updated issue with the last answer's `ETag`; a 304 costs nothing and the board stays, anything else reads it again. A check that fails counts as a change, so the board is read and says why it cannot be. | `board` |
 | Capture | `c` on the Board: a title typed into a popup becomes a GitHub issue with no labels, read as an unassigned `draft`. lazyclaude's one ticket write; every other goes through a `/ticket` verb in a session (ADR 0054). | `board` (expected) |
 | Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` |
 
@@ -128,7 +128,7 @@ words mean.
 | Document | One markdown file under the project's `docs/`, outside `docs/backlog/`, shown read-only. | `docs` |
 | Docs tree | The project's documents grouped by folder, as the Docs panel shows them: the files directly under `docs/` first, then one header per folder with the count of documents beneath it, each level sorted by name. | `docs` |
 | Site | The project's docs built into HTML by Zensical from `docs/`, `docs/backlog/` left out. lazyclaude never reads it: the Docs panel reads the markdown sources. *Expected.* | `docs` |
-| Polling | Checking the docs, the transcripts, or the backlog, the worktrees' backlogs and the refs the board is read from, on a timer (every 5 s) in place of the watch, only when the watch cannot be set up or kept; each tree that cannot be watched is polled and warned of by itself. Not a sweep: none has polling while its watch holds. | `docs`, `session`, `board` |
+| Polling | Checking the docs or the transcripts on a timer (every 5 s) in place of the watch, only when the watch cannot be set up or kept; each tree that cannot be watched is polled and warned of by itself. Not a sweep: none has polling while its watch holds. The board's *Issues poll* is its watch, not a fallback. | `docs`, `session` |
 
 ## Words we deliberately avoid
 
