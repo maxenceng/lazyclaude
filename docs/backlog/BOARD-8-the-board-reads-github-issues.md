@@ -1,6 +1,6 @@
 ---
 id: BOARD-8
-status: todo
+status: in-progress
 context: board
 type: feature
 tracker_id: 105
