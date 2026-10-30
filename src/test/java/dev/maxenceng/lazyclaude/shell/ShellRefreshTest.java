@@ -44,6 +44,9 @@ import dev.maxenceng.lazyclaude.session.published.Modifiers;
 
 class ShellRefreshTest {
 
+    private static final int WIDE = 120;
+    private static final int HEIGHT = 24;
+
     private BoardQuery boards;
     private DocsQuery docs;
     private ReviewQuery reviews;
@@ -118,7 +121,7 @@ class ShellRefreshTest {
     void shouldAnswerRInTheKeyBar() {
         Shell shell = shellRefreshing(boards, docs, reviews, screens, ticketView());
 
-        assertThat(Screen.of(shell).lines().getLast()).contains("q quit", "R refresh");
+        assertThat(Screen.of(shell.render(), WIDE, HEIGHT).lines().getLast()).contains("q quit", "R refresh");
     }
 
     @Test

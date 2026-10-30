@@ -62,7 +62,7 @@ words mean.
 | Status | A ticket's place in its lifecycle: the issue's one `status:` label while it is open (a `draft` when it has none), and `done` once it is closed as completed, whatever labels it still carries. Nothing else is a source: no copy rides on the ticket branch (ADR 0052). | `board` |
 | Unavailable board | A Board that has no tickets because the issues could not be read: the project has no GitHub remote, GitHub is unreachable, or `gh` is not logged in (the reason names `gh auth login`). The Board shows the reason in place of the groups; the next read, `R` or the poll, replaces it. | `board` |
 | Issues poll | The board's watch: every 30 s a conditional request for the most recently updated issue with the last answer's `ETag`; a 304 costs nothing and the board stays, anything else reads it again. A check that fails counts as a change, so the board is read and says why it cannot be. | `board` |
-| Capture | `c` on the Board: a title typed into a popup becomes a GitHub issue with no labels, read as an unassigned `draft`. lazyclaude's one ticket write; every other goes through a `/ticket` verb in a session (ADR 0054). | `board` (expected) |
+| Capture | `c` on the Board: a title typed into a popup becomes a GitHub issue with no labels, read as an unassigned `draft`, its body the sections of the project's ticket template, or empty without one. lazyclaude's one ticket write; every other goes through a `/ticket` verb in a session (ADR 0054). | `board` |
 | Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` |
 
 ## session
