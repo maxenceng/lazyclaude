@@ -5,6 +5,7 @@ import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
+import dev.maxenceng.lazyclaude.board.domain.GitHubIssue;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
@@ -19,7 +20,7 @@ final class IssueRecords {
 
     /** @throws BacklogUnavailableException saying what {@code gh issue list} printed that does not parse, or the field it left out */
     static List<BacklogEntry> entries(byte[] json) {
-        return Arrays.stream(records(json)).map(IssueRecords::complete).map(IssueRecord::entry).toList();
+        return Arrays.stream(records(json)).map(IssueRecords::complete).map(IssueRecord::issue).map(GitHubIssue::entry).toList();
     }
 
     private static IssueRecord[] records(byte[] json) {

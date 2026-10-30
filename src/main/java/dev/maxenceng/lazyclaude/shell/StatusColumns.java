@@ -6,7 +6,7 @@ import java.util.function.IntUnaryOperator;
 import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
@@ -15,19 +15,19 @@ import dev.maxenceng.lazyclaude.board.published.TicketId;
  * The Board as status columns, the zoom's view of it: where a cursor can stand and where it moves. A finished status is a narrow column
  * the cursor skips, so the cursor stands only on the tickets of the columns that share the width.
  */
-record StatusColumns(BoardView board) {
+record StatusColumns(BoardReadingView board) {
 
     private static final int NEXT = 1;
     private static final int PREVIOUS = -1;
 
     /** The columns that share the width, in lifecycle order. */
     List<StatusGroupView> shared() {
-        return board.groups().stream().filter(group -> !group.status().finished()).toList();
+        return BoardRows.groupsOf(board).stream().filter(group -> !group.status().finished()).toList();
     }
 
     /** The narrow columns, a header and a count each, in lifecycle order. */
     List<StatusGroupView> narrow() {
-        return board.groups().stream().filter(group -> group.status().finished()).toList();
+        return BoardRows.groupsOf(board).stream().filter(group -> group.status().finished()).toList();
     }
 
     Optional<TicketView> first() {

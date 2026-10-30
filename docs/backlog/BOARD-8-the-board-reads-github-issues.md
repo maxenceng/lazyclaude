@@ -15,9 +15,9 @@ blocked_by: [LAZY-33]
 - [ ] The board lists the open issues of the project's GitHub remote and the ones closed as completed, read through
       `gh`, grouped by their `status:` label, with `done` for closed as completed (ADR 0052); `docs/backlog/` is no
       longer read and its file watch goes, in the same change.
-- [ ] An open issue with no status label is a `draft`, unassigned without context and type labels; from `todo` on, a
-      ticket without exactly one `context:` and one `type:` label is unreadable, as is one with two status labels or
-      closed as not planned — each listed with its reason.
+- [ ] An open issue with no status label is a `draft`, unassigned without context and type labels; from `todo` until
+      `done`, a ticket without exactly one `context:` and one `type:` label is unreadable, as is one with two status
+      labels or closed as not planned — each listed with its reason. A `done` one, like a `draft`, may lack them.
 - [ ] The ticket detail shows the issue number, title, labels as facts, and the body's `##` sections as markdown.
 - [ ] A project without a GitHub remote, an unreachable GitHub at start, and `gh` not logged in each show on the Board
       as the reason, the last naming `gh auth login`; nothing is cached.

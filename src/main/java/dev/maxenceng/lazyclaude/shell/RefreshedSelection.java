@@ -5,7 +5,7 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 
@@ -18,7 +18,7 @@ final class RefreshedSelection {
     private RefreshedSelection() {}
 
     /** Nothing when the selection is not a ticket, or is still visible; those keep the panel's own rule. */
-    static Optional<RowKey> of(RowKey was, BoardView before, List<RowKey> visible) {
+    static Optional<RowKey> of(RowKey was, BoardReadingView before, List<RowKey> visible) {
         if (was.kind() != RowKind.TICKET || visible.contains(was)) {
             return Optional.empty();
         }
@@ -38,8 +38,8 @@ final class RefreshedSelection {
         });
     }
 
-    private static Optional<StatusGroupView> groupHolding(BoardView board, RowKey ticket) {
-        return board.groups().stream()
+    private static Optional<StatusGroupView> groupHolding(BoardReadingView board, RowKey ticket) {
+        return BoardRows.groupsOf(board).stream()
                 .filter(group -> group.tickets().stream().anyMatch(held -> keyOf(held).equals(ticket)))
                 .findFirst();
     }

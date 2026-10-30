@@ -26,8 +26,9 @@ import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
@@ -180,7 +181,7 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<DocsView> pendingDocs = new AtomicReference<>();
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
     private final AtomicReference<PullRequestsView> pendingPullRequests = new AtomicReference<>();
-    private final AtomicReference<BoardView> pendingBoard = new AtomicReference<>();
+    private final AtomicReference<BoardReadingView> pendingBoard = new AtomicReference<>();
     private final AtomicReference<Optional<WarningView>> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private final HostedSessionCommand hosting;
@@ -202,7 +203,7 @@ public final class Shell extends ToolkitApp {
     private Map<SessionId, PaneSize> paneSizes = Map.of();
     private final AtomicBoolean repaintPending = new AtomicBoolean();
     private PullRequestsView pullRequests;
-    private volatile BoardView lastRead;
+    private volatile BoardReadingView lastRead;
     private volatile List<LinkedTicketId> linkedTicketIds;
     private volatile Set<String> mergedHeads = Set.of();
     private final AtomicReference<Set<String>> pendingMergedHeads = new AtomicReference<>();
@@ -242,7 +243,7 @@ public final class Shell extends ToolkitApp {
     private boolean focusingClick;
 
     public Shell(
-            BoardView board,
+            BoardReadingView board,
             DocsView docs,
             SessionsView sessions,
             PullRequestsView pullRequests,
@@ -280,7 +281,7 @@ public final class Shell extends ToolkitApp {
 
     /** {@code background} runs what must not hold up the frame: adding a worktree, the start of a session in it, and a refresh. */
     Shell(
-            BoardView board,
+            BoardReadingView board,
             DocsView docs,
             SessionsView sessions,
             PullRequestsView pullRequests,
@@ -441,13 +442,13 @@ public final class Shell extends ToolkitApp {
      * A board that was never read is read whole, so its reason stays current and no warning claims a board is kept; one on screen is
      * kept when the read fails.
      */
-    private Optional<BoardView> readAgain() {
+    private Optional<BoardReadingView> readAgain() {
         BoardPayload payload = new BoardPayload(root);
-        return lastRead.unavailable().isPresent() ? Optional.of(boards.boardFor(payload)) : boards.boardReadAgainFor(payload);
+        return lastRead instanceof UnavailableBoardView ? Optional.of(boards.boardFor(payload)) : boards.boardReadAgainFor(payload);
     }
 
     /** Sessions are linked against the tickets of the board as last read, so a ticket created while running links them. */
-    private void followTickets(BoardView read) {
+    private void followTickets(BoardReadingView read) {
         List<LinkedTicketId> ids = BoardRows.ticketIdsOf(read);
         if (!ids.equals(linkedTicketIds)) {
             linkedTicketIds = ids;
@@ -471,7 +472,7 @@ public final class Shell extends ToolkitApp {
     }
 
     private void applyPendingBoard() {
-        BoardView next = pendingBoard.getAndSet(null);
+        BoardReadingView next = pendingBoard.getAndSet(null);
         if (next != null) {
             worktree.markStale();
             RowKey before = board.selected().key();

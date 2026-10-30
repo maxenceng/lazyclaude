@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.unavailableBoardView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.slugTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewNumbered;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewsIn;
@@ -39,6 +40,18 @@ class ShellStatusColumnsTest {
         assertThat(Screen.of(shell).text())
                 .contains("draft (1)", "todo (1)", "in-progress (0)", "in-review (0)", "#1", "#2")
                 .doesNotContain("Sessions", "Docs", "main view");
+    }
+
+    @Test
+    void shouldShowOnlyWhyTheIssuesCannotBeReadWhenZoomingAnUnavailableBoard() {
+        Shell shell = shellOn(unavailableBoardView());
+
+        shell.press(key('z'));
+
+        assertThat(Screen.of(shell).text())
+                .as("an unavailable board has no status groups, so no empty column stands beside the reason")
+                .contains("unavailable", "gh is not logged in")
+                .doesNotContain("draft (0)", "todo (0)", "done 0");
     }
 
     @Test

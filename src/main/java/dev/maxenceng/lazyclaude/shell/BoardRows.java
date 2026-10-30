@@ -8,9 +8,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketView;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 
@@ -21,13 +24,13 @@ final class BoardRows {
     private static final int DOWN = 1;
     private static final int UP = -1;
 
-    private BoardView board;
+    private BoardReadingView board;
     private Set<RowKey> folded;
     private RowKey selected;
 
-    BoardRows(BoardView board) {
+    BoardRows(BoardReadingView board) {
         this.board = board;
-        this.folded = board.groups().stream()
+        this.folded = groupsOf(board).stream()
                 .filter(group -> group.status().finished())
                 .map(group -> groupKey(group.status().label()))
                 .collect(Collectors.toUnmodifiableSet());
@@ -35,26 +38,26 @@ final class BoardRows {
     }
 
     /** The ids of the tickets on the board, which {@code session} links its sessions against. */
-    static List<LinkedTicketId> ticketIdsOf(BoardView board) {
-        return board.groups().stream()
+    static List<LinkedTicketId> ticketIdsOf(BoardReadingView board) {
+        return groupsOf(board).stream()
                 .flatMap(group -> group.tickets().stream())
                 .map(ticket -> new LinkedTicketId(ticket.id().value()))
                 .toList();
     }
 
     /** The ticket on {@code board} with {@code id}, if it has one. */
-    static Optional<TicketView> ticketOf(BoardView board, LinkedTicketId id) {
-        return board.groups().stream()
+    static Optional<TicketView> ticketOf(BoardReadingView board, LinkedTicketId id) {
+        return groupsOf(board).stream()
                 .flatMap(group -> group.tickets().stream())
                 .filter(ticket -> ticket.id().value().equals(id.value()))
                 .findFirst();
     }
 
     /** Swaps in a freshly read board; the selection stays on its ticket id, following it into its new status group (see {@link RefreshedSelection}). */
-    void replace(BoardView next) {
+    void replace(BoardReadingView next) {
         RowKey was = selected;
         int index = selectedIndex();
-        BoardView before = board;
+        BoardReadingView before = board;
         board = next;
         List<RowKey> keys = visible().stream().map(Row::key).toList();
         selected = RefreshedSelection.of(was, before, keys)
@@ -63,7 +66,7 @@ final class BoardRows {
     }
 
     /** Swaps in a freshly read board while the status columns are open: the cursor follows its ticket, else the row that took its place. */
-    void replaceInStatusColumns(BoardView next) {
+    void replaceInStatusColumns(BoardReadingView next) {
         Optional<TicketId> was = selectedTicketId();
         Optional<StatusColumnsPlace> at = was.flatMap(statusColumns()::locate);
         replace(next);
@@ -101,21 +104,29 @@ final class BoardRows {
         selected = new TicketRow(ticket).key();
     }
 
-    List<Row> visible() {
-        if (board.unavailable().isPresent()) {
-            return board.unavailable().stream().<Row>map(UnavailableRow::new).toList();
-        }
-        return Stream.concat(board.groups().stream().flatMap(this::groupRows), unreadableRows())
-                .toList();
+    /** The status groups of a board read; one whose issues could not be read has none. */
+    static List<StatusGroupView> groupsOf(BoardReadingView board) {
+        return switch (board) {
+            case BoardView read -> read.groups();
+            case UnavailableBoardView _ -> List.of();
+        };
     }
 
-    private Stream<Row> unreadableRows() {
-        if (board.unreadable().isEmpty()) {
+    List<Row> visible() {
+        return switch (board) {
+            case BoardView read -> Stream.concat(read.groups().stream().flatMap(this::groupRows), unreadableRows(read.unreadable()))
+                    .toList();
+            case UnavailableBoardView unavailable -> List.of(new UnavailableRow(unavailable.reason()));
+        };
+    }
+
+    private Stream<Row> unreadableRows(List<UnreadableTicketView> unreadable) {
+        if (unreadable.isEmpty()) {
             return Stream.empty();
         }
         boolean isFolded = folded.contains(groupKey(UNREADABLE_GROUP));
-        Stream<Row> header = Stream.of(new HeaderRow(UNREADABLE_GROUP, board.unreadable().size(), isFolded));
-        return isFolded ? header : Stream.concat(header, board.unreadable().stream().map(UnreadableRow::new));
+        Stream<Row> header = Stream.of(new HeaderRow(UNREADABLE_GROUP, unreadable.size(), isFolded));
+        return isFolded ? header : Stream.concat(header, unreadable.stream().map(UnreadableRow::new));
     }
 
     Row selected() {

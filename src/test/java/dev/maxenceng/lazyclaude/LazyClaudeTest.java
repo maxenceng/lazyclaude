@@ -64,7 +64,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.BoardWatchPort;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.docs.domain.DocsPort;
 import dev.maxenceng.lazyclaude.docs.domain.DocsWatchPort;
@@ -103,7 +105,7 @@ class LazyClaudeTest {
     private final ByteArrayOutputStream said = new ByteArrayOutputStream();
     private final PrintStream err = new PrintStream(said, true, StandardCharsets.UTF_8);
     private final WarningRepository raised = new WarningRepository();
-    private final List<BoardView> opened = new ArrayList<>();
+    private final List<BoardReadingView> opened = new ArrayList<>();
     private final List<DocsView> openedDocs = new ArrayList<>();
     private final List<SessionsView> openedSessions = new ArrayList<>();
 
@@ -162,7 +164,7 @@ class LazyClaudeTest {
         int exit = LazyClaude.start(repository, boardQuery(new ProjectLocatorRepository(), backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, emptyLaunchLogPort(), sessionWatch, raised), err, (view, docsView, sessionsView) -> opened.add(view));
 
         assertThat(exit).as("the Board says why; the docs and sessions still open").isZero();
-        assertThat(opened).singleElement().satisfies(view -> assertThat(view.unavailable()).contains(new Reason("this project has no GitHub remote, so it has no backlog")));
+        assertThat(opened).singleElement().satisfies(view -> assertThat(view).isInstanceOfSatisfying(UnavailableBoardView.class, unavailable -> assertThat(unavailable.reason()).isEqualTo(new Reason("this project has no GitHub remote, so it has no backlog"))));
         assertThat(said.size()).as("the Board panel says why, not the terminal").isZero();
     }
 
@@ -187,7 +189,7 @@ class LazyClaudeTest {
         int exit = LazyClaude.start(project().root(), boardQuery(locator, backlog), docsQuery(docs, watch, raised), sessionQuery(sessions, emptyLaunchLogPort(), sessionWatch, raised), err, (view, docsView, sessionsView) -> opened.add(view));
 
         assertThat(exit).isZero();
-        assertThat(opened).singleElement().satisfies(view -> assertThat(view.unavailable()).contains(new Reason("gh is not logged in; run gh auth login")));
+        assertThat(opened).singleElement().satisfies(view -> assertThat(view).isInstanceOfSatisfying(UnavailableBoardView.class, unavailable -> assertThat(unavailable.reason()).isEqualTo(new Reason("gh is not logged in; run gh auth login"))));
         assertThat(said.size()).as("the Board panel says why, not the terminal").isZero();
     }
 
@@ -203,7 +205,7 @@ class LazyClaudeTest {
                 });
 
         assertThat(exit).isZero();
-        assertThat(opened).singleElement().satisfies(view -> assertThat(view.groups()).hasSize(5));
+        assertThat(opened).singleElement().satisfies(view -> assertThat(view).isInstanceOfSatisfying(BoardView.class, read -> assertThat(read.groups()).hasSize(5)));
         assertThat(openedDocs).as("the docs of the same project").containsExactly(emptyDocsView());
         assertThat(said.size()).as("a found project prints nothing").isZero();
     }

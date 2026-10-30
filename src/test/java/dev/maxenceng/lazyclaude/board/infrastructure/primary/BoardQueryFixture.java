@@ -34,4 +34,8 @@ public final class BoardQueryFixture {
     public static BranchChangesPort unreadChanges() {
         return mock(BranchChangesPort.class, invocation -> new UnreadChanges());
     }
+
+    public static BoardView read(BoardReadingView reading) {
+        return (BoardView) reading;
+    }
 }

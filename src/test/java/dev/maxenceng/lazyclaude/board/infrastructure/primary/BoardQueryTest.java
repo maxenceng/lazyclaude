@@ -5,6 +5,7 @@ import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticket;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicket;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.boardQuery;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQueryFixture.read;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketViewFixture.unreadableTicketView;
 import static dev.maxenceng.lazyclaude.board.published.LabelNameFixture.labelNames;
@@ -64,7 +65,7 @@ class BoardQueryTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups())
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups())
                 .extracting(StatusGroupView::status)
                 .containsExactly(Status.values());
     }
@@ -85,8 +86,7 @@ class BoardQueryTest {
         when(backlog.entries(project())).thenReturn(List.of(ticketBuilder().status(Status.IN_PROGRESS).build()));
         when(changes.changesOf(project(), ticketBranch())).thenReturn(frontendChanges());
 
-        assertThat(boardQuery(locator, backlog, changes)
-                        .boardFor(FROM_THE_PROJECT)
+        assertThat(read(boardQuery(locator, backlog, changes).boardFor(FROM_THE_PROJECT))
                         .groups()
                         .get(Status.IN_PROGRESS.ordinal())
                         .tickets())
@@ -99,7 +99,7 @@ class BoardQueryTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticket()));
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets())
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups().get(Status.TODO.ordinal()).tickets())
                 .containsExactly(ticketViewBuilder().status(Status.TODO).verbs(List.of(Verb.START)).build());
     }
 
@@ -108,7 +108,7 @@ class BoardQueryTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketBuilder().otherLabels(labelNames()).build()));
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets())
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups().get(Status.TODO.ordinal()).tickets())
                 .containsExactly(ticketViewBuilder().status(Status.TODO).otherLabels(labelNames()).verbs(List.of(Verb.START)).build());
     }
 
@@ -117,7 +117,7 @@ class BoardQueryTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketBuilder().body(new NoBody()).build()));
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets())
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups().get(Status.TODO.ordinal()).tickets())
                 .containsExactly(ticketViewBuilder().status(Status.TODO).body(new NoBody()).verbs(List.of(Verb.START)).build());
     }
 
@@ -126,16 +126,19 @@ class BoardQueryTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenThrow(new BacklogUnavailableException("this project has no GitHub remote, so it has no backlog"));
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).unavailable())
-                .contains(new Reason("this project has no GitHub remote, so it has no backlog"));
+        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT))
+                .isEqualTo(UnavailableBoardView.builder()
+                        .root(BoardViewFixture.projectRoot())
+                        .reason(new Reason("this project has no GitHub remote, so it has no backlog"))
+                        .build());
     }
 
     @Test
-    void shouldViewNoReasonWhenTheIssuesAreRead() {
+    void shouldViewTheTicketsWhenTheIssuesAreRead() {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).unavailable()).isEmpty();
+        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).isInstanceOf(BoardView.class);
     }
 
     @Test
@@ -143,7 +146,7 @@ class BoardQueryTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(unreadableTicket()));
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).unreadable())
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).unreadable())
                 .containsExactly(unreadableTicketView());
     }
 
@@ -154,8 +157,8 @@ class BoardQueryTest {
 
         assertThat(boardQuery(locator, backlog).boardReadAgainFor(FROM_THE_PROJECT))
                 .get()
-                .extracting(board -> board.groups().get(Status.TODO.ordinal()).tickets())
-                .isEqualTo(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).groups().get(Status.TODO.ordinal()).tickets());
+                .extracting(board -> read(board).groups().get(Status.TODO.ordinal()).tickets())
+                .isEqualTo(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups().get(Status.TODO.ordinal()).tickets());
     }
 
     @Test

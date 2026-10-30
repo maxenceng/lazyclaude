@@ -18,16 +18,16 @@ public final class BoardQuery {
      *
      * @throws dev.maxenceng.lazyclaude.error.domain.DomainException when the directory belongs to no project
      */
-    public BoardView boardFor(BoardPayload payload) {
-        return BoardView.from(boards.boardFor(payload.toDomain()));
+    public BoardReadingView boardFor(BoardPayload payload) {
+        return BoardReadingView.from(boards.boardFor(payload.toDomain()));
     }
 
     /**
      * The board read again, or nothing when it cannot be, so a board already on screen stays; a read that fails after a good one
      * raises a warning saying why.
      */
-    public Optional<BoardView> boardReadAgainFor(BoardPayload payload) {
-        return boards.boardReadAgainFor(payload.toDomain()).map(BoardView::from);
+    public Optional<BoardReadingView> boardReadAgainFor(BoardPayload payload) {
+        return boards.boardReadAgainFor(payload.toDomain()).map(BoardReadingView::from);
     }
 
     /**

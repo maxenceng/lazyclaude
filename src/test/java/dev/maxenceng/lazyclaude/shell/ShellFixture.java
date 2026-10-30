@@ -30,7 +30,7 @@ import org.mockito.invocation.InvocationOnMock;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.Verb;
@@ -87,11 +87,11 @@ final class ShellFixture {
         return newShell(boardViewOf(ticketView()), emptyDocsView(), emptySessionsView(), false);
     }
 
-    static Shell newShell(BoardView board, DocsView docs, SessionsView sessions) {
+    static Shell newShell(BoardReadingView board, DocsView docs, SessionsView sessions) {
         return newShell(board, docs, sessions, true);
     }
 
-    private static Shell newShell(BoardView board, DocsView docs, SessionsView sessions, boolean mouse) {
+    private static Shell newShell(BoardReadingView board, DocsView docs, SessionsView sessions, boolean mouse) {
         return new Shell(
                 board,
                 docs,
@@ -122,7 +122,7 @@ final class ShellFixture {
     }
 
     static Shell shellRefreshing(
-            BoardQuery boards, DocsQuery docs, ReviewQuery reviews, SessionQuery screens, Executor background, BoardView board) {
+            BoardQuery boards, DocsQuery docs, ReviewQuery reviews, SessionQuery screens, Executor background, BoardReadingView board) {
         return new Shell(
                 board,
                 emptyDocsView(),
@@ -378,7 +378,7 @@ final class ShellFixture {
         return shell;
     }
 
-    static void boardReadAgainAs(BoardQuery boards, BoardView board) {
+    static void boardReadAgainAs(BoardQuery boards, BoardReadingView board) {
         when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(board));
     }
 
@@ -597,7 +597,7 @@ final class ShellFixture {
         return shellInDock(sessionsViewWithTabs(hostedTab(1, "one", new Busy())), hosting, emulating, screens);
     }
 
-    static Shell shellOn(BoardView board) {
+    static Shell shellOn(BoardReadingView board) {
         return newShell(board, emptyDocsView(), emptySessionsView());
     }
 

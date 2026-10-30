@@ -2,7 +2,6 @@ package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.published.ProjectRoot;
 import dev.maxenceng.lazyclaude.board.published.Reason;
@@ -17,23 +16,16 @@ public final class BoardViewFixture {
         return new ProjectRoot(ProjectFixture.project().root());
     }
 
-    public static BoardView unavailableBoardView() {
+    public static UnavailableBoardView unavailableBoardView() {
         return unavailableBoardViewFor(new Reason("gh is not logged in; run gh auth login"));
     }
 
-    public static BoardView unreachableBoardView() {
+    public static UnavailableBoardView unreachableBoardView() {
         return unavailableBoardViewFor(new Reason("cannot read the issues from GitHub: error connecting to api.github.com"));
     }
 
-    private static BoardView unavailableBoardViewFor(Reason reason) {
-        return BoardView.builder()
-                .groups(Arrays.stream(Status.values())
-                        .map(status -> StatusGroupView.builder().status(status).tickets(List.of()).build())
-                        .toList())
-                .unreadable(List.of())
-                .root(projectRoot())
-                .unavailable(Optional.of(reason))
-                .build();
+    private static UnavailableBoardView unavailableBoardViewFor(Reason reason) {
+        return UnavailableBoardView.builder().root(projectRoot()).reason(reason).build();
     }
 
     public static BoardView boardViewOf(TicketView... tickets) {

@@ -10,8 +10,10 @@ import java.util.Optional;
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardWatchPayload;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchChangesRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesWatchRepository;
@@ -230,7 +232,7 @@ public final class LazyClaude {
     static int start(
             Path from, BoardQuery board, DocsQuery docs, SessionQuery sessions, PrintStream err, ShellOpener shell)
             throws Exception {
-        BoardView view;
+        BoardReadingView view;
         DocsView tree;
         SessionsView live;
         try {
@@ -246,17 +248,19 @@ public final class LazyClaude {
     }
 
     /** The project's root and the id of every ticket on its board, which {@code session} links its sessions against (ADR 0015). */
-    static SessionPayload sessionPayload(BoardView view) {
-        return new SessionPayload(
-                view.root().value(),
-                view.groups().stream()
-                        .flatMap(group -> group.tickets().stream())
-                        .map(ticket -> new LinkedTicketId(ticket.id().value()))
-                        .toList());
+    static SessionPayload sessionPayload(BoardReadingView view) {
+        List<LinkedTicketId> ids = switch (view) {
+            case BoardView read -> read.groups().stream()
+                    .flatMap(group -> group.tickets().stream())
+                    .map(ticket -> new LinkedTicketId(ticket.id().value()))
+                    .toList();
+            case UnavailableBoardView _ -> List.of();
+        };
+        return new SessionPayload(view.root().value(), ids);
     }
 
     private static void run(
-            BoardView view,
+            BoardReadingView view,
             DocsView tree,
             SessionsView live,
             BoardQuery board,
@@ -292,7 +296,7 @@ public final class LazyClaude {
      */
     // deferred: a change between the first read and the watch starting is shown only at the next change — close it when a doc edited during start-up is seen stale.
     static Shell shellOn(
-            BoardView view,
+            BoardReadingView view,
             DocsView tree,
             SessionsView live,
             BoardQuery board,

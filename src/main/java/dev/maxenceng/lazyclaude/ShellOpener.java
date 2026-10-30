@@ -1,6 +1,6 @@
 package dev.maxenceng.lazyclaude;
 
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 
@@ -8,5 +8,5 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 @FunctionalInterface
 interface ShellOpener {
 
-    void open(BoardView board, DocsView docs, SessionsView sessions) throws Exception;
+    void open(BoardReadingView board, DocsView docs, SessionsView sessions) throws Exception;
 }
