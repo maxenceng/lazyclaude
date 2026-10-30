@@ -8,11 +8,11 @@ public final class LinkedTicketIdFixture {
     private LinkedTicketIdFixture() {}
 
     public static LinkedTicketId linkedTicketId() {
-        return new LinkedTicketId("PROJ-1");
+        return new LinkedTicketId("1");
     }
 
     public static LinkedTicketId secondLinkedTicketId() {
-        return new LinkedTicketId("PROJ-2");
+        return new LinkedTicketId("2");
     }
 
     public static LinkedTicketId linkedTicketId(String value) {

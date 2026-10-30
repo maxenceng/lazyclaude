@@ -13,14 +13,16 @@ import java.util.stream.Stream;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.StatusGroupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketView;
+import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.tamboui.toolkit.element.Element;
 
-/** The Board's status columns across the screen: one panel per status, a narrow one for a finished status, then one for the unreadable files. */
+/** The Board's status columns across the screen: one panel per status, a narrow one for a finished status, then one for the unreadable issues, or for why there are no tickets. */
 final class StatusColumnsPanels {
 
     private static final String COLUMN_TITLE = "%s (%d)";
     private static final String NARROW_TITLE = "%s %d";
+    private static final String UNAVAILABLE_TITLE = "unavailable";
     private static final String UNREADABLE_LINE = "%s — %s";
     private static final int NARROW_WIDTH = 12;
     private static final int NO_SELECTION = -1;
@@ -44,7 +46,8 @@ final class StatusColumnsPanels {
                 .filter(files -> !files.isEmpty())
                 .stream()
                 .map(StatusColumnsPanels::unreadable);
-        return row(Stream.of(sharing, narrow, unreadable).flatMap(Function.identity()).toArray(Element[]::new))
+        Stream<Element> unavailable = columns.board().unavailable().stream().map(StatusColumnsPanels::unavailable);
+        return row(Stream.of(sharing, narrow, unreadable, unavailable).flatMap(Function.identity()).toArray(Element[]::new))
                 .fill();
     }
 
@@ -68,9 +71,15 @@ final class StatusColumnsPanels {
                 .length(NARROW_WIDTH);
     }
 
+    private static Element unavailable(Reason why) {
+        return Frames.framed(UNAVAILABLE_TITLE, new MoreBelowElement(List.of(RowLine.plain(why.value())), NO_SELECTION, false), false)
+                .titleEllipsis()
+                .fill();
+    }
+
     private static Element unreadable(List<UnreadableTicketView> files) {
         List<RowLine> lines = files.stream()
-                .map(file -> RowLine.plain(UNREADABLE_LINE.formatted(file.file().value(), file.reason().value())))
+                .map(file -> RowLine.plain(UNREADABLE_LINE.formatted(TicketText.number(file.id()), file.reason().value())))
                 .toList();
         return Frames.framed(COLUMN_TITLE.formatted(BoardRows.UNREADABLE_GROUP, files.size()), new MoreBelowElement(lines, NO_SELECTION, false), false)
                 .titleEllipsis()

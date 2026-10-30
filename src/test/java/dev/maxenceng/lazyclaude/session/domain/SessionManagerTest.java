@@ -233,7 +233,7 @@ class SessionManagerTest {
 
         assertThat(read.live()).singleElement().extracting(LiveSession::links)
                 .asInstanceOf(InstanceOfAssertFactories.LIST)
-                .containsExactly(ticketLink("PROJ-1", "design"));
+                .containsExactly(ticketLink("1", "design"));
     }
 
     @Test
@@ -556,7 +556,7 @@ class SessionManagerTest {
                 .singleElement()
                 .extracting(PastSession::links)
                 .asInstanceOf(InstanceOfAssertFactories.LIST)
-                .containsExactly(ticketLink("PROJ-1", "design"));
+                .containsExactly(ticketLink("1", "design"));
     }
 
     @Test
@@ -569,14 +569,14 @@ class SessionManagerTest {
                                 .opening(firstPrompt())
                                 .reading(readable())
                                 .lastActivity(new LastActivity(now()))
-                                .links(ran(ticketRun("start", "PROJ-1")))
+                                .links(ran(ticketRun("start", "1")))
                                 .build()));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), boardTickets(), noneHosted()).past())
                 .singleElement()
                 .extracting(PastSession::links)
                 .asInstanceOf(InstanceOfAssertFactories.LIST)
-                .containsExactly(ticketLink("PROJ-1", "start"));
+                .containsExactly(ticketLink("1", "start"));
     }
 
     @Test
@@ -598,7 +598,7 @@ class SessionManagerTest {
 
         assertThat(read.live()).singleElement().extracting(LiveSession::links)
                 .asInstanceOf(InstanceOfAssertFactories.LIST)
-                .containsExactly(ticketLink("PROJ-1", "design"));
+                .containsExactly(ticketLink("1", "design"));
     }
 
     @Test
@@ -709,10 +709,10 @@ class SessionManagerTest {
     void shouldLinkALiveSessionThroughItsTranscriptFoundBySessionId() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "PROJ-1"))));
+                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "1"))));
 
         assertThat(sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), boardTickets(), oneHosted()))
-                .isEqualTo(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(ticketLink("PROJ-1", "start"))).build())));
+                .isEqualTo(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(ticketLink("1", "start"))).build())));
     }
 
     @Test
@@ -727,13 +727,13 @@ class SessionManagerTest {
     void shouldListALiveSessionLinkedToTwoTicketsWithBothLinks() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("review", "PROJ-1", "PROJ-2"))));
+                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("review", "1", "2"))));
 
         AvailableSessions read = sessionManager(sessions, past, log, watch, transcriptWatch, warnings).sessionsFor(project(), boardTickets(), oneHosted());
 
         assertThat(read.live()).singleElement().extracting(LiveSession::links)
                 .asInstanceOf(InstanceOfAssertFactories.LIST)
-                .containsExactlyInAnyOrder(ticketLink("PROJ-1", "review"), ticketLink("PROJ-2", "review"));
+                .containsExactlyInAnyOrder(ticketLink("1", "review"), ticketLink("2", "review"));
     }
 
     @Test
@@ -741,7 +741,7 @@ class SessionManagerTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.transcriptsOf(any()))
                 .thenReturn(noTranscripts())
-                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "PROJ-1"))));
+                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "1"))));
         sessionManager(sessions, past, log, watch, transcriptWatch, warnings).watch(project(), boardTickets(), HostedSessionFixture::oneHosted, listener);
         ArgumentCaptor<Runnable> registryChanged = ArgumentCaptor.forClass(Runnable.class);
         verify(watch).watch(any(), registryChanged.capture(), any());
@@ -752,7 +752,7 @@ class SessionManagerTest {
         transcriptsChanged.getValue().run();
 
         verify(listener).accept(liveSessionsOf(List.of(liveSession())));
-        verify(listener).accept(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(ticketLink("PROJ-1", "start"))).build())));
+        verify(listener).accept(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(ticketLink("1", "start"))).build())));
     }
 
     @Test
@@ -766,21 +766,21 @@ class SessionManagerTest {
     void shouldLinkASessionToATicketLearnedAfterTheWatchStarted() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "PROJ-1"))));
+                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "1"))));
         SessionManager manager = sessionManager(sessions, past, log, watch, transcriptWatch, warnings);
         manager.watch(project(), noTickets(), HostedSessionFixture::oneHosted, listener);
 
         manager.know(project(), boardTickets(), oneHosted(), listener);
 
         verify(listener)
-                .accept(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(ticketLink("PROJ-1", "start"))).build())));
+                .accept(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(ticketLink("1", "start"))).build())));
     }
 
     @Test
     void shouldKeepLinkingAgainstTheTicketsLearnedOnLaterChangesOfTheRegistry() {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "PROJ-1"))));
+                .thenReturn(transcriptsRead(factsRunning(liveSession().id(), ticketRun("start", "1"))));
         SessionManager manager = sessionManager(sessions, past, log, watch, transcriptWatch, warnings);
         manager.watch(project(), noTickets(), HostedSessionFixture::oneHosted, listener);
         ArgumentCaptor<Runnable> registryChanged = ArgumentCaptor.forClass(Runnable.class);
@@ -790,7 +790,7 @@ class SessionManagerTest {
         registryChanged.getValue().run();
 
         verify(listener, times(2))
-                .accept(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(ticketLink("PROJ-1", "start"))).build())));
+                .accept(liveSessionsOf(List.of(liveSessionBuilder().links(List.of(ticketLink("1", "start"))).build())));
     }
 
     @Test

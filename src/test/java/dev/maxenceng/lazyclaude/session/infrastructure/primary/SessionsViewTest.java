@@ -43,7 +43,7 @@ class SessionsViewTest {
     void shouldCountEachMarkerAmongEveryLiveSessionLinkedOrNot() {
         SessionsView view = sessionsViewOf(List.of(
                 linkedSessionView(sessionIdOf(1), new YourTurn()),
-                linkedSessionView(sessionIdOf(2), waitingForPermission(), ticketLink("PROJ-1", "start")),
+                linkedSessionView(sessionIdOf(2), waitingForPermission(), ticketLink("1", "start")),
                 linkedSessionView(sessionIdOf(3), waitingForPermission())));
 
         assertThat(view.markerCounts())
@@ -60,49 +60,49 @@ class SessionsViewTest {
     @Test
     void shouldAnswerTheStrongestMarkerAmongTheLiveSessionsLinkedToATicket() {
         SessionsView view = sessionsViewOf(List.of(
-                linkedSessionView(sessionIdOf(1), waitingForPermission(), ticketLink("PROJ-2", "start")),
-                linkedSessionView(sessionIdOf(2), new YourTurn(), ticketLink("PROJ-1", "start")),
-                linkedSessionView(sessionIdOf(3), waitingForInput(), ticketLink("PROJ-1", "review"))));
+                linkedSessionView(sessionIdOf(1), waitingForPermission(), ticketLink("2", "start")),
+                linkedSessionView(sessionIdOf(2), new YourTurn(), ticketLink("1", "start")),
+                linkedSessionView(sessionIdOf(3), waitingForInput(), ticketLink("1", "review"))));
 
-        assertThat(view.strongestMarkerOf(linkedTicketId("PROJ-1"))).contains(Marker.WAITING_FOR_INPUT);
-        assertThat(view.strongestMarkerOf(linkedTicketId("PROJ-2"))).contains(Marker.WAITING_FOR_PERMISSION);
+        assertThat(view.strongestMarkerOf(linkedTicketId("1"))).contains(Marker.WAITING_FOR_INPUT);
+        assertThat(view.strongestMarkerOf(linkedTicketId("2"))).contains(Marker.WAITING_FOR_PERMISSION);
     }
 
     @Test
     void shouldAnswerNoMarkerForATicketWhoseSessionsAreAllBusyOrHaveNone() {
         SessionsView view = sessionsViewOf(List.of(
-                linkedSessionView(sessionIdOf(1), new Busy(), ticketLink("PROJ-1", "start")),
+                linkedSessionView(sessionIdOf(1), new Busy(), ticketLink("1", "start")),
                 linkedSessionView(sessionIdOf(2), new YourTurn())));
 
-        assertThat(view.strongestMarkerOf(linkedTicketId("PROJ-1"))).isEmpty();
-        assertThat(view.strongestMarkerOf(linkedTicketId("PROJ-3"))).isEmpty();
+        assertThat(view.strongestMarkerOf(linkedTicketId("1"))).isEmpty();
+        assertThat(view.strongestMarkerOf(linkedTicketId("3"))).isEmpty();
     }
 
     @Test
     void shouldAnswerTheTicketsSessionWithTheStrongestMarker() {
-        LiveSessionView strongest = linkedSessionView(sessionIdOf(2), waitingForPermission(), ticketLink("PROJ-1", "review"));
+        LiveSessionView strongest = linkedSessionView(sessionIdOf(2), waitingForPermission(), ticketLink("1", "review"));
         SessionsView view = sessionsViewOf(List.of(
-                linkedSessionView(sessionIdOf(1), new YourTurn(), ticketLink("PROJ-1", "start")),
+                linkedSessionView(sessionIdOf(1), new YourTurn(), ticketLink("1", "start")),
                 strongest,
-                linkedSessionView(sessionIdOf(3), waitingForPermission(), ticketLink("PROJ-2", "start"))));
+                linkedSessionView(sessionIdOf(3), waitingForPermission(), ticketLink("2", "start"))));
 
-        assertThat(view.strongestSessionOf(linkedTicketId("PROJ-1"))).contains(strongest);
+        assertThat(view.strongestSessionOf(linkedTicketId("1"))).contains(strongest);
     }
 
     @Test
     void shouldAnswerTheFirstOfTheTicketsSessionsTiedOnTheStrongestMarker() {
-        LiveSessionView first = linkedSessionView(sessionIdOf(1), waitingForInput(), ticketLink("PROJ-1", "start"));
+        LiveSessionView first = linkedSessionView(sessionIdOf(1), waitingForInput(), ticketLink("1", "start"));
         SessionsView view = sessionsViewOf(List.of(
-                first, linkedSessionView(sessionIdOf(2), waitingForInput(), ticketLink("PROJ-1", "review"))));
+                first, linkedSessionView(sessionIdOf(2), waitingForInput(), ticketLink("1", "review"))));
 
-        assertThat(view.strongestSessionOf(linkedTicketId("PROJ-1"))).as("the Sessions panel lists them in this order, so enter lands on the top one").contains(first);
+        assertThat(view.strongestSessionOf(linkedTicketId("1"))).as("the Sessions panel lists them in this order, so enter lands on the top one").contains(first);
     }
 
     @Test
     void shouldAnswerNoSessionForATicketWhoseSessionsCarryNoMarker() {
-        SessionsView view = sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new Busy(), ticketLink("PROJ-1", "start"))));
+        SessionsView view = sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new Busy(), ticketLink("1", "start"))));
 
-        assertThat(view.strongestSessionOf(linkedTicketId("PROJ-1"))).isEmpty();
+        assertThat(view.strongestSessionOf(linkedTicketId("1"))).isEmpty();
     }
 
     @Test
@@ -110,8 +110,8 @@ class SessionsViewTest {
         LiveSessionView unlinkedLive = linkedSessionView(sessionIdOf(1), new YourTurn());
         PastSessionView unlinkedPast = linkedPastSessionView(1);
         SessionsView view = sessionsViewOf(
-                List.of(unlinkedLive, linkedSessionView(sessionIdOf(2), new YourTurn(), ticketLink("PROJ-1", "review"))),
-                List.of(linkedPastSessionView(2, ticketLink("PROJ-1", "start")), unlinkedPast));
+                List.of(unlinkedLive, linkedSessionView(sessionIdOf(2), new YourTurn(), ticketLink("1", "review"))),
+                List.of(linkedPastSessionView(2, ticketLink("1", "start")), unlinkedPast));
 
         assertThat(view.unlinkedLive()).containsExactly(unlinkedLive);
         assertThat(view.unlinkedPast()).containsExactly(unlinkedPast);

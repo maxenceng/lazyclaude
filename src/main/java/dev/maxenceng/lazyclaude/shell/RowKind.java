@@ -5,6 +5,7 @@ enum RowKind {
     GROUP,
     TICKET,
     UNREADABLE,
+    UNAVAILABLE,
     FOLDER,
     DOCUMENT,
     SESSION,

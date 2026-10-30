@@ -63,7 +63,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 class SessionQueryTest {
 
     private static final SessionPayload OF_THE_PROJECT = new SessionPayload(project().root(), List.of());
-    private static final SessionPayload WITH_TICKETS = new SessionPayload(project().root(), linkedTicketIds("PROJ-1", "PROJ-2"));
+    private static final SessionPayload WITH_TICKETS = new SessionPayload(project().root(), linkedTicketIds("1", "2"));
 
     @Mock
     private LiveSessionPort sessions;
@@ -155,20 +155,20 @@ class SessionQueryTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         SessionQuery query = sessionQueryHostingTheRegistered(sessions, past, launchLog, watch, transcriptWatch, warnings);
         SessionId id = sessionId();
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "proj-1"))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "1"))));
 
         assertThat(liveViewsOf(query.sessionsFor(WITH_TICKETS)))
-                .containsExactly(sessionViewBuilder().id(id).links(List.of(ticketLink("PROJ-1", "start"))).build());
+                .containsExactly(sessionViewBuilder().id(id).links(List.of(ticketLink("1", "start"))).build());
     }
 
     @Test
     void shouldViewTheLinksOfAPastSession() {
         when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("review", "PROJ-2"))));
+                .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("review", "2"))));
 
         assertThat(sessionQuery(sessions, past, launchLog, watch, transcriptWatch, warnings).sessionsFor(WITH_TICKETS))
-                .isEqualTo(pastSessionsViewOf(List.of(pastSessionViewBuilder().links(List.of(ticketLink("PROJ-2", "review"))).build())));
+                .isEqualTo(pastSessionsViewOf(List.of(pastSessionViewBuilder().links(List.of(ticketLink("2", "review"))).build())));
     }
 
     @Test
@@ -187,7 +187,7 @@ class SessionQueryTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         SessionQuery query = sessionQueryHostingTheRegistered(sessions, past, launchLog, watch, transcriptWatch, warnings);
         SessionId id = sessionId();
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "PROJ-1"))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "1"))));
 
         assertThat(liveViewsOf(query.sessionsFor(OF_THE_PROJECT)))
                 .containsExactly(sessionViewBuilder().id(id).build());

@@ -87,6 +87,7 @@ import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 import dev.tamboui.layout.Rect;
 import dev.tamboui.style.Color;
+import dev.tamboui.style.Style;
 import dev.tamboui.terminal.BackendFactory;
 import dev.tamboui.toolkit.Toolkit;
 import dev.tamboui.toolkit.app.ToolkitApp;
@@ -202,8 +203,6 @@ public final class Shell extends ToolkitApp {
     private final AtomicBoolean repaintPending = new AtomicBoolean();
     private PullRequestsView pullRequests;
     private volatile BoardView lastRead;
-    private volatile Set<String> mergedTicketBranches = Set.of();
-    private volatile Set<String> latestMergedHeads = Set.of();
     private volatile List<LinkedTicketId> linkedTicketIds;
     private volatile Set<String> mergedHeads = Set.of();
     private final AtomicReference<Set<String>> pendingMergedHeads = new AtomicReference<>();
@@ -405,9 +404,8 @@ public final class Shell extends ToolkitApp {
     }
 
     /**
-     * The merged pull requests have been fetched again. Called on the fetch's thread: when the merged ticket branches differ from the
-     * last ones the board was read with, the board is read again there, so git never runs on the UI thread, and the read board is
-     * applied on the UI thread, at the next render or key press, so no row changes under a frame being drawn.
+     * The merged pull requests have been fetched again. Called on the fetch's thread: the heads are applied on the UI thread, at the
+     * next render or key press, so no row changes under a frame being drawn.
      */
     public void mergedPullRequestsChanged(MergedPullRequestsView view) {
         pendingMergedHeads.set(view.headBranches());
@@ -415,36 +413,21 @@ public final class Shell extends ToolkitApp {
         if (reading != null) {
             reading.runOnRenderThread(this::applyPendingMergedHeads);
         }
-        latestMergedHeads = view.headBranches();
         latestMerged = view;
-        if (mergedTicketBranches().equals(mergedTicketBranches)) {
-            return;
-        }
-        reread();
     }
 
     /**
-     * Something the board is read from changed: the backlog, a ticket worktree's copy of a ticket, or the refs. Callable from any
-     * thread; the board is read again on the caller's, with the branches known merged, and applied on the UI thread.
+     * The project's issues changed on GitHub, or could not be checked. Callable from any thread; the board is read again on the
+     * caller's and applied on the UI thread.
      */
     public void boardChanged() {
         reread();
     }
 
-    private Set<String> mergedTicketBranches() {
-        Set<String> branches = BoardRows.ticketBranchesOf(lastRead);
-        return latestMergedHeads.stream().filter(branches::contains).collect(Collectors.toUnmodifiableSet());
-    }
-
-    /**
-     * One read at a time, so a slow read that started first never lands after a newer one; the merged branches are taken under
-     * the same lock, so a read never goes ahead with heads older than the last one applied.
-     */
+    /** One read at a time, so a slow read that started first never lands after a newer one. */
     private synchronized void reread() {
-        Set<String> merged = mergedTicketBranches();
-        boards.boardReadAgainFor(new BoardPayload(root, merged)).ifPresent(read -> {
+        boards.boardReadAgainFor(new BoardPayload(root)).ifPresent(read -> {
             lastRead = read;
-            mergedTicketBranches = merged;
             pendingBoard.set(read);
             ToolkitRunner running = runner();
             if (running != null) {
@@ -1797,7 +1780,11 @@ public final class Shell extends ToolkitApp {
             case HeaderRow _ -> column();
             case TicketRow row -> ticketDetail(row.ticket());
             case UnreadableRow row ->
-                column(text(row.unreadable().file().value()).bold(), text(row.unreadable().reason().value()));
+                new DetailElement(
+                        _ -> List.of(new DetailRow(TicketText.number(row.unreadable().id()), Style.EMPTY.bold())),
+                        Optional.of(row.unreadable().reason().value()),
+                        mainViewScroll);
+            case UnavailableRow row -> new DetailElement(_ -> List.of(), Optional.of(row.reason().value()), mainViewScroll);
         };
     }
 

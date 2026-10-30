@@ -34,14 +34,6 @@ final class BoardRows {
         this.selected = visible().getFirst().key();
     }
 
-    /** The branches of the tickets on the board, which is how a merged branch is told from one that belongs to no ticket. */
-    static Set<String> ticketBranchesOf(BoardView board) {
-        return board.groups().stream()
-                .flatMap(group -> group.tickets().stream())
-                .map(ticket -> ticket.branch().value())
-                .collect(Collectors.toUnmodifiableSet());
-    }
-
     /** The ids of the tickets on the board, which {@code session} links its sessions against. */
     static List<LinkedTicketId> ticketIdsOf(BoardView board) {
         return board.groups().stream()
@@ -58,13 +50,16 @@ final class BoardRows {
                 .findFirst();
     }
 
-    /** Swaps in a freshly read board; the selection stays on its ticket id, or on the row that took its place. */
+    /** Swaps in a freshly read board; the selection stays on its ticket id, following it into its new status group (see {@link RefreshedSelection}). */
     void replace(BoardView next) {
         RowKey was = selected;
         int index = selectedIndex();
+        BoardView before = board;
         board = next;
         List<RowKey> keys = visible().stream().map(Row::key).toList();
-        selected = RowSelection.kept(Optional.of(was), index, keys).orElseGet(keys::getFirst);
+        selected = RefreshedSelection.of(was, before, keys)
+                .or(() -> RowSelection.kept(Optional.of(was), index, keys))
+                .orElseGet(keys::getFirst);
     }
 
     /** Swaps in a freshly read board while the status columns are open: the cursor follows its ticket, else the row that took its place. */
@@ -107,6 +102,9 @@ final class BoardRows {
     }
 
     List<Row> visible() {
+        if (board.unavailable().isPresent()) {
+            return board.unavailable().stream().<Row>map(UnavailableRow::new).toList();
+        }
         return Stream.concat(board.groups().stream().flatMap(this::groupRows), unreadableRows())
                 .toList();
     }

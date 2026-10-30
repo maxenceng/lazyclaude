@@ -17,7 +17,7 @@ final class VerbPickerText {
     private VerbPickerText() {}
 
     static String title(VerbPicker picker) {
-        String head = TITLE_FORMAT.formatted(picker.ticket().id().value(), picker.ticket().status().label());
+        String head = TITLE_FORMAT.formatted(TicketText.number(picker.ticket().id()), picker.ticket().status().label());
         return picker.checking() ? head + CHECKING : head;
     }
 

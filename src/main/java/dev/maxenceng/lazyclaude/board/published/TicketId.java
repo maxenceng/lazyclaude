@@ -1,43 +1,21 @@
 package dev.maxenceng.lazyclaude.board.published;
 
-import java.util.Comparator;
 import java.util.regex.Pattern;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** A ticket's id, `PREFIX-number`; orders by prefix, then numerically, so PROJ-2 precedes PROJ-10. */
+/** A ticket's id: the number GitHub gave its issue; orders numerically, so 2 precedes 10. */
 public record TicketId(String value) implements Comparable<TicketId> {
 
-    private static final Pattern SHAPE = Pattern.compile("[A-Za-z][A-Za-z0-9]*-\\d{1,18}");
-    private static final String SHAPE_IN_WORDS = "PREFIX-number";
-    private static final char SEPARATOR = '-';
-    private static final Comparator<TicketId> ORDER =
-            Comparator.comparing(TicketId::prefix).thenComparingLong(TicketId::number);
+    private static final Pattern SHAPE = Pattern.compile("[1-9]\\d{0,17}");
+    private static final String SHAPE_IN_WORDS = "an issue number";
 
     public TicketId {
         Assert.matchesPattern("id", value, SHAPE, SHAPE_IN_WORDS);
     }
 
-    /** Whether {@code value} has the shape of a ticket id. */
-    public static boolean fits(String value) {
-        return value != null && SHAPE.matcher(value).matches();
-    }
-
-    /** The shape of a ticket id, in words. */
-    public static String shape() {
-        return SHAPE_IN_WORDS;
-    }
-
-    private String prefix() {
-        return value.substring(0, value.indexOf(SEPARATOR));
-    }
-
-    private long number() {
-        return Long.parseLong(value.substring(value.indexOf(SEPARATOR) + 1));
-    }
-
     @Override
     public int compareTo(TicketId other) {
-        return ORDER.compare(this, other);
+        return Long.compare(Long.parseLong(value), Long.parseLong(other.value));
     }
 }

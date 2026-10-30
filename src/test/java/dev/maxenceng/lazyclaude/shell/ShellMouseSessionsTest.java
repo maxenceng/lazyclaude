@@ -32,7 +32,7 @@ class ShellMouseSessionsTest {
     void shouldOnlyFocusSessionsOnAFirstClickOnAPastSessionTheCursorAlreadyStandsOn() {
         Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, blankScreens());
 
-        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("Refine PROJ-1")));
+        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("Refine 1")));
 
         assertThat(shell.focus()).isEqualTo(Focus.SESSIONS);
         verify(hosting, never()).resume(any());
@@ -41,9 +41,9 @@ class ShellMouseSessionsTest {
     @Test
     void shouldResumeAPastSessionOnASecondClick() {
         Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, blankScreens());
-        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("Refine PROJ-1")));
+        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("Refine 1")));
 
-        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("Refine PROJ-1")));
+        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("Refine 1")));
 
         verify(hosting).resume(any());
     }
@@ -66,7 +66,7 @@ class ShellMouseSessionsTest {
 
         shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("n new: /ticket")));
 
-        assertThat(Screen.of(shell).text()).contains("╭ PROJ-1 · in-review", "enter start · esc cancel");
+        assertThat(Screen.of(shell).text()).contains("╭ #1 · in-review", "enter start · esc cancel");
     }
 
     @Test

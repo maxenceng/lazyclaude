@@ -60,7 +60,7 @@ class ShellReviewTest {
         Screen screen = Screen.of(shell);
 
         assertThat(screen.text()).contains("╭Board", "╭Sessions", "╭Docs").doesNotContain("╭Files", "╭Comments");
-        assertThat(screen.reversedText()).anySatisfy(row -> assertThat(row).contains("PROJ-1"));
+        assertThat(screen.reversedText()).anySatisfy(row -> assertThat(row).contains("#1"));
         assertThat(shell.focus()).isEqualTo(Focus.BOARD);
     }
 

@@ -5,7 +5,7 @@ import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticke
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.branchAtHead;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.branchWithFile;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.missingGit;
-import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithBacklog;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithACommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -34,7 +34,7 @@ class BranchChangesRepositoryTest {
 
     @BeforeEach
     void createRepository() throws Exception {
-        root = repositoryWithBacklog(temp.resolve("app"));
+        root = repositoryWithACommit(temp.resolve("app"));
         project = new Project(root);
     }
 

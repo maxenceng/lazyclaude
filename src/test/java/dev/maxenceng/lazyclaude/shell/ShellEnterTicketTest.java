@@ -23,10 +23,10 @@ class ShellEnterTicketTest {
     @Test
     void shouldMoveToTheSessionsPanelOnTheSessionWithTheStrongestMarker() {
         Shell shell = shellOnTicketSessions(sessionsViewOf(List.of(
-                linkedNamedSessionView(1, "busy-one", new Busy(), ticketLink("PROJ-1", "start")),
-                linkedNamedSessionView(2, "calm-one", new YourTurn(), ticketLink("PROJ-1", "start")),
-                linkedNamedSessionView(3, "stuck-one", waitingForPermission(), ticketLink("PROJ-1", "start")),
-                linkedNamedSessionView(4, "asking-one", waitingForInput(), ticketLink("PROJ-1", "start")))));
+                linkedNamedSessionView(1, "busy-one", new Busy(), ticketLink("1", "start")),
+                linkedNamedSessionView(2, "calm-one", new YourTurn(), ticketLink("1", "start")),
+                linkedNamedSessionView(3, "stuck-one", waitingForPermission(), ticketLink("1", "start")),
+                linkedNamedSessionView(4, "asking-one", waitingForInput(), ticketLink("1", "start")))));
 
         assertThat(shell.press(enter())).isTrue();
 
@@ -37,9 +37,9 @@ class ShellEnterTicketTest {
     @Test
     void shouldGoToTheFirstRowAmongSessionsTiedOnTheStrongestMarker() {
         Shell shell = shellOnTicketSessions(sessionsViewOf(List.of(
-                linkedNamedSessionView(1, "busy-one", new Busy(), ticketLink("PROJ-1", "start")),
-                linkedNamedSessionView(2, "first-asker", waitingForInput(), ticketLink("PROJ-1", "start")),
-                linkedNamedSessionView(3, "second-asker", waitingForInput(), ticketLink("PROJ-1", "start")))));
+                linkedNamedSessionView(1, "busy-one", new Busy(), ticketLink("1", "start")),
+                linkedNamedSessionView(2, "first-asker", waitingForInput(), ticketLink("1", "start")),
+                linkedNamedSessionView(3, "second-asker", waitingForInput(), ticketLink("1", "start")))));
 
         shell.press(enter());
 
@@ -50,9 +50,9 @@ class ShellEnterTicketTest {
     void shouldLandOnTheNewSessionRowWhenNoSessionHasAMarker() {
         Shell shell = shellOnTicketSessions(sessionsViewOf(
                 List.of(
-                        linkedNamedSessionView(1, "busy-one", new Busy(), ticketLink("PROJ-1", "start")),
+                        linkedNamedSessionView(1, "busy-one", new Busy(), ticketLink("1", "start")),
                         linkedNamedSessionView(2, "loose-asker", waitingForInput())),
-                List.of(linkedPastSessionView(1, ticketLink("PROJ-1", "start")))));
+                List.of(linkedPastSessionView(1, ticketLink("1", "start")))));
 
         shell.press(enter());
 
@@ -73,8 +73,8 @@ class ShellEnterTicketTest {
     @Test
     void shouldIgnoreASessionAskingThatIsLinkedToAnotherTicket() {
         Shell shell = shellOnTicketSessions(sessionsViewOf(List.of(
-                linkedNamedSessionView(1, "mine-one", new YourTurn(), ticketLink("PROJ-1", "start")),
-                linkedNamedSessionView(2, "other-one", waitingForPermission(), ticketLink("PROJ-2", "start")))));
+                linkedNamedSessionView(1, "mine-one", new YourTurn(), ticketLink("1", "start")),
+                linkedNamedSessionView(2, "other-one", waitingForPermission(), ticketLink("2", "start")))));
 
         shell.press(enter());
 

@@ -53,14 +53,14 @@ class AvailableSessionsTest {
 
     @Test
     void shouldHaveRunAVerbWhenAPastSessionLastRanItOnTheTicket() {
-        PastSession design = pastSessionBuilder().links(List.of(ticketLink("PROJ-1", "design"))).build();
+        PastSession design = pastSessionBuilder().links(List.of(ticketLink("1", "design"))).build();
 
         assertThat(pastSessionsOf(List.of(design)).ranVerb(linkedTicketId(), Verb.DESIGN)).isTrue();
     }
 
     @Test
     void shouldHaveRunAVerbWhenALiveSessionLastRanItOnTheTicket() {
-        LiveSession design = liveSessionBuilder().links(List.of(ticketLink("PROJ-1", "design"))).build();
+        LiveSession design = liveSessionBuilder().links(List.of(ticketLink("1", "design"))).build();
 
         assertThat(liveSessionsOf(List.of(design)).ranVerb(linkedTicketId(), Verb.DESIGN)).isTrue();
     }
@@ -79,7 +79,7 @@ class AvailableSessionsTest {
 
     @Test
     void shouldNotHaveRunAVerbAnotherTicketsSessionRan() {
-        PastSession design = pastSessionBuilder().links(List.of(ticketLink("PROJ-2", "design"))).build();
+        PastSession design = pastSessionBuilder().links(List.of(ticketLink("2", "design"))).build();
 
         assertThat(pastSessionsOf(List.of(design)).ranVerb(linkedTicketId(), Verb.DESIGN)).isFalse();
     }

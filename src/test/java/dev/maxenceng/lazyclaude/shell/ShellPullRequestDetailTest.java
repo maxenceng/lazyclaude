@@ -1,6 +1,6 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.datedSlugTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.labelledSlugTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.slugTicketView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.draftPullRequestView;
@@ -22,7 +22,7 @@ class ShellPullRequestDetailTest {
         Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(pullRequestView()), slugTicketView()));
 
         assertThat(screen.mainViewRows())
-                .containsSubsequence("PROJ-1 · draft · board · feature", "PR      #23 PR and CI glyphs on the board");
+                .containsSubsequence("#1 · draft · board · feature", "PR      #23 PR and CI glyphs on the board");
     }
 
     @Test
@@ -57,10 +57,10 @@ class ShellPullRequestDetailTest {
 
     @Test
     void shouldPutThePullRequestRowsBetweenTheFrontmatterRowsAndTheRule() {
-        Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(failedPullRequestView()), datedSlugTicketView()));
+        Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(failedPullRequestView()), labelledSlugTicketView()));
 
         assertThat(screen.mainViewRows())
-                .containsSubsequence("blocked_by  [PROJ-8, PROJ-9]", "PR          #23 PR and CI glyphs on the board", "checks      ✗ build", "─".repeat(50));
+                .containsSubsequence("labels  bug, help wanted", "PR      #23 PR and CI glyphs on the board", "checks  ✗ build", "─".repeat(50));
     }
 
     @Test

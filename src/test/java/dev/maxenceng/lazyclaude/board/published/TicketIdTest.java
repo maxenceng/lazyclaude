@@ -12,36 +12,34 @@ class TicketIdTest {
 
     @Test
     void shouldOrderTwoBeforeTen() {
-        assertThat(new TicketId("PROJ-2")).isLessThan(new TicketId("PROJ-10"));
-    }
-
-    @Test
-    void shouldOrderByPrefixBeforeNumber() {
-        assertThat(new TicketId("PROJ-10")).isLessThan(new TicketId("WIDGET-1"));
+        assertThat(new TicketId("2")).isLessThan(new TicketId("10"));
     }
 
     @Test
     void shouldTreatEqualTextAsEqualIds() {
-        assertThat(new TicketId("PROJ-20")).isEqualTo(new TicketId("PROJ-20"));
+        assertThat(new TicketId("20")).isEqualTo(new TicketId("20"));
     }
 
     @Test
     void shouldKeepTheTextItWasGiven() {
-        assertThat(new TicketId("PROJ-20").value()).isEqualTo("PROJ-20");
+        assertThat(new TicketId("20").value()).isEqualTo("20");
     }
 
     @Test
-    void shouldRefuseAnIdWithoutANumber() {
-        assertThatThrownBy(() -> new TicketId("LAZY"))
+    void shouldRefuseAnIdThatIsNotAnIssueNumber() {
+        assertThatThrownBy(() -> new TicketId("PROJ-4"))
                 .isInstanceOf(NotMatchingExpectedPatternException.class)
-                .hasMessage("id 'LAZY' is not PREFIX-number");
+                .hasMessage("id 'PROJ-4' is not an issue number");
     }
 
     @Test
-    void shouldTellWhetherAValueHasTheShapeOfATicketId() {
-        assertThat(TicketId.fits("PROJ-20")).isTrue();
-        assertThat(TicketId.fits("LAZY")).isFalse();
-        assertThat(TicketId.fits(null)).isFalse();
+    void shouldRefuseZeroBecauseGitHubNumbersFromOne() {
+        assertThatThrownBy(() -> new TicketId("0")).isInstanceOf(NotMatchingExpectedPatternException.class);
+    }
+
+    @Test
+    void shouldRefuseANumberWithALeadingZero() {
+        assertThatThrownBy(() -> new TicketId("07")).isInstanceOf(NotMatchingExpectedPatternException.class);
     }
 
     @Test
@@ -56,7 +54,6 @@ class TicketIdTest {
 
     @Test
     void shouldRefuseANumberTooLargeToOrder() {
-        assertThatThrownBy(() -> new TicketId("PROJ-99999999999999999999"))
-                .isInstanceOf(NotMatchingExpectedPatternException.class);
+        assertThatThrownBy(() -> new TicketId("99999999999999999999")).isInstanceOf(NotMatchingExpectedPatternException.class);
     }
 }

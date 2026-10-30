@@ -1,14 +1,15 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
-import static dev.maxenceng.lazyclaude.board.domain.FrontmatterFixture.frontmatter;
 import static dev.maxenceng.lazyclaude.board.published.BodyFixture.body;
 import static dev.maxenceng.lazyclaude.board.published.ContextNameFixture.contextName;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
+import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
 import static dev.maxenceng.lazyclaude.board.published.TypeNameFixture.typeName;
 
+import java.util.List;
+
 import dev.maxenceng.lazyclaude.board.domain.Ticket.TicketBuilder;
-import dev.maxenceng.lazyclaude.board.published.Body;
 import dev.maxenceng.lazyclaude.board.published.NoBody;
 import dev.maxenceng.lazyclaude.board.published.NoContext;
 import dev.maxenceng.lazyclaude.board.published.NoType;
@@ -25,16 +26,13 @@ public final class TicketFixture {
                 .status(Status.TODO)
                 .context(contextName())
                 .type(typeName())
-                .frontmatter(frontmatter())
+                .title(title())
+                .labels(List.of())
                 .body(body());
     }
 
     public static Ticket ticket() {
         return ticketBuilder().build();
-    }
-
-    public static Ticket ticketWithBody(String text) {
-        return ticketBuilder().body(new Body(text)).build();
     }
 
     public static Ticket bareTicket() {

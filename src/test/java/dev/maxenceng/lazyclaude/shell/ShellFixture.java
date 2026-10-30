@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.projectRoot;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.unavailableBoardView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
@@ -22,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Executor;
 
 import org.mockito.ArgumentCaptor;
@@ -141,6 +141,10 @@ final class ShellFixture {
                 background);
     }
 
+    static Shell shellReadingUnavailableBoard(BoardQuery boards, SessionQuery screens) {
+        return shellRefreshing(boards, mock(DocsQuery.class), mock(ReviewQuery.class), screens, Runnable::run, unavailableBoardView());
+    }
+
     static Shell shellReadingBoardWith(BoardQuery boards, SessionQuery screens, TicketView... tickets) {
         return shellRefreshing(boards, mock(DocsQuery.class), mock(ReviewQuery.class), screens, tickets);
     }
@@ -169,8 +173,8 @@ final class ShellFixture {
                 Runnable::run);
     }
 
-    static BoardPayload readingBoardWithMerged(String... branches) {
-        return new BoardPayload(projectRoot().value(), Set.of(branches));
+    static BoardPayload readingBoard() {
+        return new BoardPayload(projectRoot().value());
     }
 
     static Shell shellOnPullRequests(PullRequestsView pullRequests, TicketView... tickets) {
@@ -208,7 +212,7 @@ final class ShellFixture {
     }
 
     static SessionsView yourTurnOnTheFirstTicket() {
-        return sessionsViewOf(List.of(linkedNamedSessionView(1, "calm-one", new YourTurn(), ticketLink("PROJ-1", "start"))));
+        return sessionsViewOf(List.of(linkedNamedSessionView(1, "calm-one", new YourTurn(), ticketLink("1", "start"))));
     }
 
     static Object noHostStarted(InvocationOnMock invocation) {
@@ -375,7 +379,7 @@ final class ShellFixture {
     }
 
     static void boardReadAgainAs(BoardQuery boards, BoardView board) {
-        when(boards.boardReadAgainFor(readingBoardWithMerged())).thenReturn(Optional.of(board));
+        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(board));
     }
 
     static KeyEvent escape() {

@@ -2,8 +2,8 @@ package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.linkedWorktree;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.missingGit;
-import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithBacklog;
-import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithoutBacklog;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithACommit;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithoutACommit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -27,14 +27,14 @@ class ProjectLocatorRepositoryTest {
 
     @Test
     void shouldLocateTheProjectFromItsRoot() throws Exception {
-        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
+        Path repository = repositoryWithACommit(sandbox.resolve("app"));
 
         assertThat(locator.locate(new WorkingDirectory(repository))).isEqualTo(new Project(repository));
     }
 
     @Test
     void shouldLocateTheProjectFromASubdirectory() throws Exception {
-        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
+        Path repository = repositoryWithACommit(sandbox.resolve("app"));
 
         assertThat(locator.locate(new WorkingDirectory(Files.createDirectories(repository.resolve("src/main")))))
                 .isEqualTo(new Project(repository));
@@ -42,7 +42,7 @@ class ProjectLocatorRepositoryTest {
 
     @Test
     void shouldLocateTheMainWorktreeFromALinkedWorktree() throws Exception {
-        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
+        Path repository = repositoryWithACommit(sandbox.resolve("app"));
         Path worktree = linkedWorktree(repository, sandbox.resolve("app.worktrees/PROJ-1-ticket"));
 
         assertThat(locator.locate(new WorkingDirectory(worktree))).isEqualTo(new Project(repository));
@@ -50,7 +50,7 @@ class ProjectLocatorRepositoryTest {
 
     @Test
     void shouldLocateTheMainWorktreeFromASubdirectoryOfALinkedWorktree() throws Exception {
-        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
+        Path repository = repositoryWithACommit(sandbox.resolve("app"));
         Path worktree = linkedWorktree(repository, sandbox.resolve("app.worktrees/PROJ-1-ticket"));
 
         assertThat(locator.locate(new WorkingDirectory(worktree.resolve("docs")))).isEqualTo(new Project(repository));
@@ -58,7 +58,7 @@ class ProjectLocatorRepositoryTest {
 
     @Test
     void shouldLocateTheProjectFromADirectoryGivenThroughASymlink() throws Exception {
-        Path repository = repositoryWithBacklog(sandbox.resolve("app"));
+        Path repository = repositoryWithACommit(sandbox.resolve("app"));
         Path link = Files.createSymbolicLink(sandbox.resolve("link"), repository);
 
         assertThat(locator.locate(new WorkingDirectory(link))).isEqualTo(new Project(repository));
@@ -66,7 +66,7 @@ class ProjectLocatorRepositoryTest {
 
     @Test
     void shouldLocateARepositoryWithoutABacklog() throws Exception {
-        Path repository = repositoryWithoutBacklog(sandbox.resolve("bare-app"));
+        Path repository = repositoryWithoutACommit(sandbox.resolve("bare-app"));
 
         assertThat(locator.locate(new WorkingDirectory(repository)))
                 .as("whether a project has a backlog is the board's question, not the locator's")

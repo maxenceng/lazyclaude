@@ -8,7 +8,7 @@ import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.tamboui.style.Style;
 
 /**
- * A ticket under its status's header: id, then title, with the strongest marker of its live sessions in the gutter before the id and the
+ * A ticket under its status's header: number, then title, with the strongest marker of its live sessions in the gutter before the id and the
  * glyphs of its pull request in the column at the right edge.
  */
 record TicketRow(TicketView ticket) implements Row {
@@ -22,7 +22,7 @@ record TicketRow(TicketView ticket) implements Row {
 
     @Override
     public String text() {
-        return "%s%s %s".formatted(Indent.STEP, ticket.id().value(), TicketText.title(ticket));
+        return "%s%s %s".formatted(Indent.STEP, TicketText.number(ticket.id()), TicketText.title(ticket));
     }
 
     RowLine line(Optional<Marker> marker, List<RowCell> column) {
@@ -30,7 +30,7 @@ record TicketRow(TicketView ticket) implements Row {
                 .map(strongest -> new RowLine(
                         SessionText.glyph(strongest) + GUTTER_GAP,
                         Style.EMPTY.fg(SessionText.colour(strongest)),
-                        "%s %s".formatted(ticket.id().value(), TicketText.title(ticket)),
+                        "%s %s".formatted(TicketText.number(ticket.id()), TicketText.title(ticket)),
                         Style.EMPTY,
                         column))
                 .orElseGet(() -> RowLine.ungutteredOf(text(), Style.EMPTY, column));

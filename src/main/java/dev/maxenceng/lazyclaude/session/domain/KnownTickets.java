@@ -13,8 +13,8 @@ public record KnownTickets(List<LinkedTicketId> ids) {
         Assert.notNull("ticket ids", ids);
     }
 
-    /** The board's own spelling of {@code named}, matched without regard to case. */
+    /** The board's id that {@code named} names. */
     Optional<LinkedTicketId> find(NamedTicketId named) {
-        return ids.stream().filter(id -> id.value().equalsIgnoreCase(named.value())).findFirst();
+        return ids.stream().filter(id -> id.value().equals(named.value())).findFirst();
     }
 }

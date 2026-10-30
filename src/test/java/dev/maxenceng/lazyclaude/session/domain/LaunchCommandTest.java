@@ -13,7 +13,7 @@ class LaunchCommandTest {
 
     @Test
     void shouldRunItsVerbOnItsTicketWhenItIsATicketLaunch() {
-        assertThat(ticketClaude(Verb.DESIGN).launchRun()).contains(ticketRun("design", "PROJ-1"));
+        assertThat(ticketClaude(Verb.DESIGN).launchRun()).contains(ticketRun("design", "1"));
     }
 
     @Test

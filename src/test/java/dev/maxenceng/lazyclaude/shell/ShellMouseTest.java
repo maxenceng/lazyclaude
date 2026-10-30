@@ -29,9 +29,9 @@ class ShellMouseTest {
     void shouldSelectABoardRowWithAClick() {
         Shell shell = shellOn(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT));
 
-        assertThat(shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("PROJ-2")))).isTrue();
+        assertThat(shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("#2")))).isTrue();
 
-        assertThat(Screen.of(shell).reversedText()).anySatisfy(row -> assertThat(row).contains("PROJ-2"));
+        assertThat(Screen.of(shell).reversedText()).anySatisfy(row -> assertThat(row).contains("#2"));
     }
 
     @Test
@@ -48,38 +48,38 @@ class ShellMouseTest {
     void shouldLetTheMainViewFollowTheSelectedRowAsItDoesForJAndK() {
         Shell shell = shellOn(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT));
 
-        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("PROJ-2")));
+        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("#2")));
 
-        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-2 · draft");
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("#2 · draft");
     }
 
     @Test
     void shouldNotFoldAHeaderOnTheClickThatSelectsIt() {
         Shell shell = shellOn(ticketViewNumbered(1, Status.DRAFT));
-        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("PROJ-1")));
+        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("#1")));
 
         shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("draft")));
 
-        assertThat(Screen.of(shell).boardPanelText()).contains("▾ draft (1)", "PROJ-1");
+        assertThat(Screen.of(shell).boardPanelText()).contains("▾ draft (1)", "#1");
     }
 
     @Test
     void shouldFoldAHeaderOnASecondClick() {
         Shell shell = shellOn(ticketViewNumbered(1, Status.DRAFT));
-        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("PROJ-1")));
+        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("#1")));
         shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("draft")));
 
         shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("draft")));
 
-        assertThat(Screen.of(shell).boardPanelText()).contains("▸ draft (1)").doesNotContain("PROJ-1");
+        assertThat(Screen.of(shell).boardPanelText()).contains("▸ draft (1)").doesNotContain("#1");
     }
 
     @Test
     void shouldFocusSessionsOnASecondClickOnATicketRow() {
         Shell shell = shellOn(ticketViewNumbered(1, Status.DRAFT));
-        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("PROJ-1")));
+        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("#1")));
 
-        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("PROJ-1")));
+        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("#1")));
 
         assertThat(shell.focus()).isEqualTo(Focus.SESSIONS);
     }
@@ -92,7 +92,7 @@ class ShellMouseTest {
         shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("draft")));
 
         assertThat(shell.focus()).isEqualTo(Focus.BOARD);
-        assertThat(Screen.of(shell).boardPanelText()).contains("▾ draft (1)", "PROJ-1");
+        assertThat(Screen.of(shell).boardPanelText()).contains("▾ draft (1)", "#1");
     }
 
     @Test
@@ -120,20 +120,20 @@ class ShellMouseTest {
     void shouldSelectTheRowAboveTheLastRowDrawnOfAScrolledList() {
         Shell shell = pressed(shellOn(ticketViewsIn(Status.TODO, 30)), key('j'), 100);
 
-        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("PROJ-30")));
+        shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("#30")));
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-30");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#30");
     }
 
     @Test
     void shouldSelectTheLastRowDrawnAndNotTheBorderBelowIt() {
         Shell shell = shellOn(ticketViewsIn(Status.TODO, 30));
-        Position last = Screen.of(shell).positionInLeftColumn("PROJ-8");
+        Position last = Screen.of(shell).positionInLeftColumn("#8");
 
         assertThat(shell.mouse(leftPress(new Position(last.x(), last.y() + 1)))).isFalse();
         assertThat(shell.mouse(leftPress(last))).isTrue();
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-8");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#8");
     }
 
     @Test
@@ -161,31 +161,31 @@ class ShellMouseTest {
     void shouldIgnoreAClickOnAPanelBorder() {
         Shell shell = shellOn(ticketViewNumbered(1, Status.DRAFT));
 
-        assertThat(shell.mouse(leftPress(new Position(0, Screen.of(shell).lineOf("PROJ-1"))))).isFalse();
+        assertThat(shell.mouse(leftPress(new Position(0, Screen.of(shell).lineOf("#1"))))).isFalse();
     }
 
     @Test
     void shouldIgnoreARightClickAndAMiddleClickOnARow() {
         Shell shell = shellOn(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT));
         shell.press(alt('j'));
-        Position row = Screen.of(shell).positionInLeftColumn("PROJ-2");
+        Position row = Screen.of(shell).positionInLeftColumn("#2");
 
         assertThat(shell.mouse(MouseEvent.press(MouseButton.RIGHT, row.x(), row.y()))).isFalse();
         assertThat(shell.mouse(MouseEvent.press(MouseButton.MIDDLE, row.x(), row.y()))).isFalse();
 
         assertThat(shell.focus()).isEqualTo(Focus.SESSIONS);
-        assertThat(Screen.of(shell).reversedText()).noneSatisfy(text -> assertThat(text).contains("PROJ-2"));
+        assertThat(Screen.of(shell).reversedText()).noneSatisfy(text -> assertThat(text).contains("#2"));
     }
 
     @Test
     void shouldIgnoreAReleaseAndADragOnARow() {
         Shell shell = shellOn(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT));
-        Position row = Screen.of(shell).positionInLeftColumn("PROJ-2");
+        Position row = Screen.of(shell).positionInLeftColumn("#2");
 
         assertThat(shell.mouse(MouseEvent.release(MouseButton.LEFT, row.x(), row.y()))).isFalse();
         assertThat(shell.mouse(MouseEvent.drag(MouseButton.LEFT, row.x(), row.y()))).isFalse();
 
-        assertThat(Screen.of(shell).reversedText()).noneSatisfy(text -> assertThat(text).contains("PROJ-2"));
+        assertThat(Screen.of(shell).reversedText()).noneSatisfy(text -> assertThat(text).contains("#2"));
     }
 
     @Test

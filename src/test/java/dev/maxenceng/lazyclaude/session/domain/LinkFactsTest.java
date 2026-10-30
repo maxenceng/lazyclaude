@@ -16,35 +16,30 @@ class LinkFactsTest {
 
     @Test
     void shouldLinkToATicketTheArgsNamed() {
-        assertThat(ran(ticketRun("start", "PROJ-1")).linksTo(boardTickets())).containsExactly(ticketLink("PROJ-1", "start"));
-    }
-
-    @Test
-    void shouldMatchANamedIdCaseInsensitivelyAndSpellItAsTheBoardDoes() {
-        assertThat(ran(ticketRun("start", "proj-1")).linksTo(boardTickets())).containsExactly(ticketLink("PROJ-1", "start"));
+        assertThat(ran(ticketRun("start", "1")).linksTo(boardTickets())).containsExactly(ticketLink("1", "start"));
     }
 
     @Test
     void shouldLinkOnlyTheNamedIdsTheBoardHas() {
-        assertThat(ran(ticketRun("review", "GONE-9", "PROJ-2")).linksTo(boardTickets())).containsExactly(ticketLink("PROJ-2", "review"));
+        assertThat(ran(ticketRun("review", "9", "2")).linksTo(boardTickets())).containsExactly(ticketLink("2", "review"));
     }
 
     @Test
     void shouldCarryTheLastVerbRunOnATicket() {
-        assertThat(ran(ticketRun("refine", "PROJ-1"), ticketRun("start", "PROJ-1")).linksTo(boardTickets()))
-                .containsExactly(ticketLink("PROJ-1", "start"));
+        assertThat(ran(ticketRun("refine", "1"), ticketRun("start", "1")).linksTo(boardTickets()))
+                .containsExactly(ticketLink("1", "start"));
     }
 
     @Test
     void shouldLinkToEveryTicketTheArgsNamed() {
-        assertThat(ran(ticketRun("review", "PROJ-1", "PROJ-2")).linksTo(boardTickets()))
-                .containsExactlyInAnyOrder(ticketLink("PROJ-1", "review"), ticketLink("PROJ-2", "review"));
+        assertThat(ran(ticketRun("review", "1", "2")).linksTo(boardTickets()))
+                .containsExactlyInAnyOrder(ticketLink("1", "review"), ticketLink("2", "review"));
     }
 
     @Test
     void shouldKeepTheVerbOfEachTicketWhenRunsNameDifferentOnes() {
-        assertThat(ran(ticketRun("refine", "PROJ-1"), ticketRun("start", "PROJ-2")).linksTo(boardTickets()))
-                .containsExactlyInAnyOrder(ticketLink("PROJ-1", "refine"), ticketLink("PROJ-2", "start"));
+        assertThat(ran(ticketRun("refine", "1"), ticketRun("start", "2")).linksTo(boardTickets()))
+                .containsExactlyInAnyOrder(ticketLink("1", "refine"), ticketLink("2", "start"));
     }
 
     @Test
@@ -54,30 +49,30 @@ class LinkFactsTest {
 
     @Test
     void shouldLinkNothingWhenTheBoardHasNoTicket() {
-        assertThat(ran(ticketRun("start", "PROJ-1")).linksTo(noTickets())).isEmpty();
+        assertThat(ran(ticketRun("start", "1")).linksTo(noTickets())).isEmpty();
     }
 
     @Test
     void shouldLinkALaunchFromTheFirstFrameBeforeTheTranscriptSaysAnything() {
-        assertThat(noRuns().launchedAs(Optional.of(ticketRun("design", "PROJ-1"))).linksTo(boardTickets()))
-                .containsExactly(ticketLink("PROJ-1", "design"));
+        assertThat(noRuns().launchedAs(Optional.of(ticketRun("design", "1"))).linksTo(boardTickets()))
+                .containsExactly(ticketLink("1", "design"));
     }
 
     @Test
     void shouldMoveTheLaunchVerbWhenALaterRunInTheTranscriptNamesTheSameTicket() {
-        assertThat(ran(ticketRun("start", "PROJ-1")).launchedAs(Optional.of(ticketRun("design", "PROJ-1"))).linksTo(boardTickets()))
+        assertThat(ran(ticketRun("start", "1")).launchedAs(Optional.of(ticketRun("design", "1"))).linksTo(boardTickets()))
                 .as("the transcript's run comes after the launch that began the session")
-                .containsExactly(ticketLink("PROJ-1", "start"));
+                .containsExactly(ticketLink("1", "start"));
     }
 
     @Test
     void shouldAddALinkWhenALaterRunNamesAnotherTicket() {
-        assertThat(ran(ticketRun("review", "PROJ-2")).launchedAs(Optional.of(ticketRun("design", "PROJ-1"))).linksTo(boardTickets()))
-                .containsExactly(ticketLink("PROJ-1", "design"), ticketLink("PROJ-2", "review"));
+        assertThat(ran(ticketRun("review", "2")).launchedAs(Optional.of(ticketRun("design", "1"))).linksTo(boardTickets()))
+                .containsExactly(ticketLink("1", "design"), ticketLink("2", "review"));
     }
 
     @Test
     void shouldAddNothingWhenTheSessionWasNotLaunchedOnATicket() {
-        assertThat(ran(ticketRun("start", "PROJ-1")).launchedAs(Optional.empty())).isEqualTo(ran(ticketRun("start", "PROJ-1")));
+        assertThat(ran(ticketRun("start", "1")).launchedAs(Optional.empty())).isEqualTo(ran(ticketRun("start", "1")));
     }
 }

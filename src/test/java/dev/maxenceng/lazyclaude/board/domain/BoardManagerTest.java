@@ -1,12 +1,11 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
 import static dev.maxenceng.lazyclaude.board.domain.BranchChangesFixture.frontendChanges;
-import static dev.maxenceng.lazyclaude.board.domain.TicketFileFixture.ticketFileOf;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticket;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicket;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicketBuilder;
-import static dev.maxenceng.lazyclaude.board.published.FileNameFixture.fileName;
+import static dev.maxenceng.lazyclaude.board.published.ReasonFixture.reason;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.secondTicketId;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.tenthTicketId;
@@ -14,11 +13,11 @@ import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,11 +25,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import dev.maxenceng.lazyclaude.board.published.FileName;
-import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
+import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 @ExtendWith(MockitoExtension.class)
 class BoardManagerTest {
@@ -42,7 +40,10 @@ class BoardManagerTest {
     private BacklogPort backlog;
 
     @Mock
-    private BranchCopyPort copies;
+    private BoardWatchPort watch;
+
+    @Mock
+    private WarningPort warnings;
 
     @Mock
     private BranchChangesPort changes;
@@ -55,7 +56,7 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
 
-        assertThat(manager.boardFor(workingDirectory(), Set.of()).groups())
+        assertThat(manager.boardFor(workingDirectory()).groups())
                 .extracting(StatusGroup::status)
                 .containsExactly(Status.values());
     }
@@ -65,16 +66,16 @@ class BoardManagerTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
 
-        assertThat(manager.boardFor(workingDirectory(), Set.of()).project()).isEqualTo(project());
+        assertThat(manager.boardFor(workingDirectory()).project()).isEqualTo(project());
     }
 
     @Test
     void shouldGroupTicketsByStatus() {
         Ticket done = ticketBuilder().id(secondTicketId()).status(Status.DONE).build();
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket()), ticketFileOf(done)));
+        when(backlog.entries(project())).thenReturn(List.of(ticket(), done));
 
-        Board board = manager.boardFor(workingDirectory(), Set.of());
+        Board board = manager.boardFor(workingDirectory());
 
         assertThat(board.groups().get(Status.TODO.ordinal()).tickets()).containsExactly(ticket());
         assertThat(board.groups().get(Status.DONE.ordinal()).tickets()).containsExactly(done);
@@ -85,53 +86,35 @@ class BoardManagerTest {
         Ticket tenth = ticketBuilder().id(tenthTicketId()).build();
         Ticket second = ticketBuilder().id(secondTicketId()).build();
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(tenth), ticketFileOf(second), ticketFileOf(ticket())));
+        when(backlog.entries(project())).thenReturn(List.of(tenth, second, ticket()));
 
-        assertThat(manager.boardFor(workingDirectory(), Set.of()).groups().get(Status.TODO.ordinal()).tickets())
+        assertThat(manager.boardFor(workingDirectory()).groups().get(Status.TODO.ordinal()).tickets())
                 .containsExactly(ticket(), second, tenth);
     }
 
     @Test
     void shouldKeepAnEmptyGroupForAStatusWithNoTickets() {
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket())));
+        when(backlog.entries(project())).thenReturn(List.of(ticket()));
 
-        assertThat(manager.boardFor(workingDirectory(), Set.of()).groups().get(Status.DRAFT.ordinal()).tickets()).isEmpty();
+        assertThat(manager.boardFor(workingDirectory()).groups().get(Status.DRAFT.ordinal()).tickets()).isEmpty();
     }
 
     @Test
-    void shouldOrderUnreadableTicketsByFile() {
-        UnreadableTicket first = unreadableTicketBuilder().file(fileName()).build();
+    void shouldOrderUnreadableTicketsByNumber() {
+        UnreadableTicket first = unreadableTicketBuilder().id(tenthTicketId()).build();
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(unreadableTicket(), first));
 
-        assertThat(manager.boardFor(workingDirectory(), Set.of()).unreadable()).containsExactly(first, unreadableTicket());
-    }
-
-    @Test
-    void shouldListALaterFileClaimingAnIdAsUnreadable() {
-        TicketFile second = TicketFile.builder().file(new FileName("PROJ-1-b.md")).ticket(ticket()).build();
-        when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket()), second));
-
-        Board board = manager.boardFor(workingDirectory(), Set.of());
-
-        assertThat(board.groups().get(Status.TODO.ordinal()).tickets())
-                .as("one id is one ticket, so selection by id stays unambiguous")
-                .containsExactly(ticket());
-        assertThat(board.unreadable())
-                .containsExactly(UnreadableTicket.builder()
-                        .file(second.file())
-                        .reason(new Reason("id PROJ-1 is already used"))
-                        .build());
+        assertThat(manager.boardFor(workingDirectory()).unreadable()).containsExactly(unreadableTicket(), first);
     }
 
     @Test
     void shouldNotBeAbleToChangeTheTicketsOfAGroup() {
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket())));
+        when(backlog.entries(project())).thenReturn(List.of(ticket()));
 
-        List<Ticket> todo = manager.boardFor(workingDirectory(), Set.of()).groups().get(Status.TODO.ordinal()).tickets();
+        List<Ticket> todo = manager.boardFor(workingDirectory()).groups().get(Status.TODO.ordinal()).tickets();
 
         assertThatThrownBy(todo::clear).isExactlyInstanceOf(UnsupportedOperationException.class);
     }
@@ -140,27 +123,45 @@ class BoardManagerTest {
     void shouldLetTheLocatorsFailureThrough() {
         when(locator.locate(workingDirectory())).thenThrow(new ProjectNotFoundException("not here"));
 
-        assertThatThrownBy(() -> manager.boardFor(workingDirectory(), Set.of())).isExactlyInstanceOf(ProjectNotFoundException.class);
+        assertThatThrownBy(() -> manager.boardFor(workingDirectory())).isExactlyInstanceOf(ProjectNotFoundException.class);
     }
 
     @Test
     void shouldReadWhatAnInProgressTicketsBranchChangesAndKeepItOnTheTicket() {
         Ticket inProgress = ticketBuilder().status(Status.IN_PROGRESS).build();
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(inProgress)));
+        when(backlog.entries(project())).thenReturn(List.of(inProgress));
         when(changes.changesOf(project(), ticketBranch())).thenReturn(frontendChanges());
 
-        assertThat(manager.boardFor(workingDirectory(), Set.of()).groups().get(Status.IN_PROGRESS.ordinal()).tickets())
+        assertThat(manager.boardFor(workingDirectory()).groups().get(Status.IN_PROGRESS.ordinal()).tickets())
                 .containsExactly(inProgress.withChanges(frontendChanges()));
     }
 
     @Test
     void shouldReadNoBranchChangesForTicketsNotInProgress() {
         when(locator.locate(workingDirectory())).thenReturn(project());
-        when(backlog.entries(project())).thenReturn(List.of(ticketFileOf(ticket())));
+        when(backlog.entries(project())).thenReturn(List.of(ticket()));
 
-        manager.boardFor(workingDirectory(), Set.of());
+        manager.boardFor(workingDirectory());
 
         verifyNoInteractions(changes);
+    }
+
+    @Test
+    void shouldSayWhyAProjectHasNoTicketsWhenItsIssuesCannotBeRead() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+
+        assertThat(manager.unavailableBoard(workingDirectory(), reason()))
+                .isEqualTo(UnavailableBoard.builder().project(project()).reason(reason()).build());
+    }
+
+    @Test
+    void shouldWatchTheProjectTheWorkingDirectoryBelongsTo() {
+        Runnable changed = () -> {};
+        when(locator.locate(workingDirectory())).thenReturn(project());
+
+        manager.watch(workingDirectory(), changed);
+
+        verify(watch).watch(project(), changed);
     }
 }

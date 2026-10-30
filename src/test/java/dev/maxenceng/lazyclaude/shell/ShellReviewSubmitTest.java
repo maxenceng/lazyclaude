@@ -120,7 +120,7 @@ class ShellReviewSubmitTest {
         Screen screen = Screen.of(shell);
 
         verify(writing).submit(any());
-        assertThat(screen.text()).contains("start /ticket respond PROJ-1?", "y start  esc back");
+        assertThat(screen.text()).contains("start /ticket respond 1?", "y start  esc back");
     }
 
     @Test
@@ -152,7 +152,7 @@ class ShellReviewSubmitTest {
         Screen screen = Screen.of(shell);
 
         assertThat(screen.text()).contains("╭Board").doesNotContain("╭Files", "start /ticket respond");
-        assertThat(screen.reversedText()).anySatisfy(row -> assertThat(row).contains("PROJ-1"));
+        assertThat(screen.reversedText()).anySatisfy(row -> assertThat(row).contains("#1"));
         verifyNoInteractions(hosting);
     }
 
@@ -194,12 +194,12 @@ class ShellReviewSubmitTest {
 
         shell.press(key('j'));
         shell.press(key('q'));
-        assertThat(Screen.of(shell).text()).contains("start /ticket respond PROJ-1?", "╭Files");
+        assertThat(Screen.of(shell).text()).contains("start /ticket respond 1?", "╭Files");
         assertThat(shell.quitRequested()).isFalse();
         shell.press(namedKey(KeyCode.ESCAPE));
 
         assertThat(Screen.of(shell).text()).contains("╭Board").doesNotContain("start /ticket respond", "╭Files");
-        assertThat(Screen.of(shell).reversedText()).anySatisfy(row -> assertThat(row).contains("PROJ-1"));
+        assertThat(Screen.of(shell).reversedText()).anySatisfy(row -> assertThat(row).contains("#1"));
         verifyNoInteractions(hosting);
     }
 

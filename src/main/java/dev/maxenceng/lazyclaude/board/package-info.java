@@ -1,4 +1,4 @@
-/** Board: a project's backlog read into tickets grouped by status. Read-only. */
+/** Board: a project's GitHub issues read into tickets grouped by status. Read-only. */
 @ApplicationModule(type = CONTEXT)
 package dev.maxenceng.lazyclaude.board;
 

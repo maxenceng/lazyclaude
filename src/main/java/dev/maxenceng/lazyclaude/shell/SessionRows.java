@@ -62,7 +62,7 @@ final class SessionRows {
                 .flatMap(Function.identity())
                 .toList();
         return Stream.of(
-                        Stream.<SessionRow>of(new SectionHeaderRow(selectedTicket.value())),
+                        Stream.<SessionRow>of(new SectionHeaderRow(TicketText.number(selectedTicket.value()))),
                         linked.isEmpty() ? Stream.<SessionRow>of(new NoSessionRow(selectedTicket)) : linked.stream(),
                         offered.stream().<SessionRow>map(verb -> new NewSessionRow(selectedTicket, verb)))
                 .flatMap(Function.identity());

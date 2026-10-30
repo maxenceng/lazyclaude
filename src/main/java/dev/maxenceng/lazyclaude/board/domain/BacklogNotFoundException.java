@@ -1,14 +1,12 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
-import java.nio.file.Path;
-
 import dev.maxenceng.lazyclaude.error.domain.DomainErrorStatus;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 
-/** The project has no backlog directory, so there is no board to show. */
+/** The project has no GitHub remote, so there is no backlog to show. */
 public final class BacklogNotFoundException extends DomainException {
 
-    public BacklogNotFoundException(Path backlog) {
-        super(DomainErrorStatus.NOT_FOUND, "the main worktree has no %s".formatted(backlog));
+    public BacklogNotFoundException() {
+        super(DomainErrorStatus.NOT_FOUND, "this project has no GitHub remote, so it has no backlog");
     }
 }

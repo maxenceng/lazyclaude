@@ -1,14 +1,16 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
-import java.nio.file.Path;
-
 import dev.maxenceng.lazyclaude.error.domain.DomainErrorStatus;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 
-/** The backlog directory exists but its files cannot be listed. */
+/** The project's issues cannot be read: GitHub is unreachable, or {@code gh} is missing or not logged in; the board on screen, if any, stays. */
 public final class BacklogUnavailableException extends DomainException {
 
-    public BacklogUnavailableException(Path backlog, Throwable cause) {
-        super(DomainErrorStatus.UNAVAILABLE, "cannot list %s: %s".formatted(backlog, cause.getMessage()), cause);
+    public BacklogUnavailableException(String reason, Throwable cause) {
+        super(DomainErrorStatus.UNAVAILABLE, reason, cause);
+    }
+
+    public BacklogUnavailableException(String reason) {
+        super(DomainErrorStatus.UNAVAILABLE, reason);
     }
 }

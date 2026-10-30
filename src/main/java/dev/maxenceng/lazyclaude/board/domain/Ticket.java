@@ -1,37 +1,31 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import dev.maxenceng.lazyclaude.board.published.Body;
-import dev.maxenceng.lazyclaude.board.published.NoBody;
-import dev.maxenceng.lazyclaude.board.published.NoTitle;
+import dev.maxenceng.lazyclaude.board.published.LabelName;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.TicketBody;
 import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 import dev.maxenceng.lazyclaude.board.published.TicketContext;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
-import dev.maxenceng.lazyclaude.board.published.TicketTitle;
 import dev.maxenceng.lazyclaude.board.published.TicketType;
 import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** One backlog ticket as the board shows it, with the branch its work happens on; a field the file lacks is an explicit absence, never a stand-in. */
+/** One ticket as the board shows it: an issue's number, title, body and labels, with the branch its work happens on; a field the issue lacks is an explicit absence, never a stand-in. */
 public record Ticket(
         TicketId id,
         TicketBranch branch,
         Status status,
         TicketContext context,
         TicketType type,
-        Frontmatter frontmatter,
+        Title title,
+        List<LabelName> labels,
         TicketBody body,
-        BranchChanges changes) {
-
-    private static final String CUT = "";
-    private static final String TITLE_PREFIX = "# ";
-    private static final Pattern FENCED_BLOCK = Pattern.compile("(?ms)^(?:```|~~~).*?(?:^(?:```|~~~)[^\\n]*$|\\z)");
+        BranchChanges changes)
+        implements BacklogEntry {
 
     public Ticket {
         Assert.notNull("id", id);
@@ -39,7 +33,8 @@ public record Ticket(
         Assert.notNull("status", status);
         Assert.notNull("context", context);
         Assert.notNull("type", type);
-        Assert.notNull("frontmatter", frontmatter);
+        Assert.notNull("title", title);
+        Assert.notNull("labels", labels);
         Assert.notNull("body", body);
         Assert.notNull("changes", changes);
     }
@@ -57,25 +52,7 @@ public record Ticket(
     }
 
     public Ticket withChanges(BranchChanges changes) {
-        return new Ticket(id, branch, status, context, type, frontmatter, body, changes);
-    }
-
-    /** The first `# ` line of the body outside a code fence, stripped; derived so it can never disagree with the body. */
-    public TicketTitle title() {
-        return switch (body) {
-            case NoBody _ -> new NoTitle();
-            case Body present -> titleIn(present.value());
-        };
-    }
-
-    private static TicketTitle titleIn(String text) {
-        // deferred: any fence marker closes a fence, not only its own, so a `~~~` inside ``` ends it — close it when a ticket is mis-titled by one.
-        return FENCED_BLOCK.matcher(text).replaceAll(CUT).lines()
-                .filter(line -> line.startsWith(TITLE_PREFIX))
-                .map(line -> line.substring(TITLE_PREFIX.length()).strip())
-                .findFirst()
-                .<TicketTitle>map(heading -> heading.isEmpty() ? new NoTitle() : new Title(heading))
-                .orElseGet(NoTitle::new);
+        return new Ticket(id, branch, status, context, type, title, labels, body, changes);
     }
 
     public static TicketBuilder builder() {
@@ -88,7 +65,8 @@ public record Ticket(
         private Status status;
         private TicketContext context;
         private TicketType type;
-        private Frontmatter frontmatter;
+        private Title title;
+        private List<LabelName> labels = List.of();
         private TicketBody body;
         private BranchChanges changes = new UnreadChanges();
 
@@ -119,8 +97,13 @@ public record Ticket(
             return this;
         }
 
-        public TicketBuilder frontmatter(Frontmatter frontmatter) {
-            this.frontmatter = frontmatter;
+        public TicketBuilder title(Title title) {
+            this.title = title;
+            return this;
+        }
+
+        public TicketBuilder labels(List<LabelName> labels) {
+            this.labels = labels;
             return this;
         }
 
@@ -135,7 +118,7 @@ public record Ticket(
         }
 
         public Ticket build() {
-            return new Ticket(id, branch, status, context, type, frontmatter, body, changes);
+            return new Ticket(id, branch, status, context, type, title, labels, body, changes);
         }
     }
 }

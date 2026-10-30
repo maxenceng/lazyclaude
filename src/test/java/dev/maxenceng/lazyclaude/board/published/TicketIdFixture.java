@@ -5,18 +5,18 @@ public final class TicketIdFixture {
     private TicketIdFixture() {}
 
     public static TicketId ticketId() {
-        return new TicketId("PROJ-1");
+        return new TicketId("1");
     }
 
     public static TicketId secondTicketId() {
-        return new TicketId("PROJ-2");
+        return new TicketId("2");
     }
 
     public static TicketId tenthTicketId() {
-        return new TicketId("PROJ-10");
+        return new TicketId("10");
     }
 
     public static TicketId ticketIdNumbered(int number) {
-        return new TicketId("PROJ-" + number);
+        return new TicketId(String.valueOf(number));
     }
 }

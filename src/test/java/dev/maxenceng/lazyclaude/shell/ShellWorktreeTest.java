@@ -263,7 +263,7 @@ class ShellWorktreeTest {
         assertThat(Screen.of(shell).lines().getLast())
                 .contains("cannot remove: git worktree remove: fatal: it is locked");
         assertThat(Screen.of(shell).statusLine()).doesNotContain("remove worktree");
-        assertThat(Screen.of(shell).boardPanelText()).as("the screen is left as it was").contains("PROJ-1");
+        assertThat(Screen.of(shell).boardPanelText()).as("the screen is left as it was").contains("#1");
     }
 
     @Test

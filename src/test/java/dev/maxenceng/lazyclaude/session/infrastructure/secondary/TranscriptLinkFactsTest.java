@@ -61,24 +61,24 @@ class TranscriptLinkFactsTest {
 
     @Test
     void shouldReadTheVerbAndIdsOfATicketCommandFromItsArgs() throws IOException {
-        writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "main", "/ticket", "start PROJ-1"));
+        writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "main", "/ticket", "start 1"));
 
         assertThat(linksOf(scanned(projects, cacheFile, unwritable, unlistable)))
-                .isEqualTo(ran(ticketRun("start", "PROJ-1")));
+                .isEqualTo(ran(ticketRun("start", "1")));
     }
 
     @Test
     void shouldReadATicketCommandOfAPluginToo() throws IOException {
         writeTranscript(
-                projects, folder(), sessionId(), commandLine(cwd(), started(), "main", "/ddd-workflow:ticket", "review PROJ-1 PROJ-2"));
+                projects, folder(), sessionId(), commandLine(cwd(), started(), "main", "/ddd-workflow:ticket", "review 1 2"));
 
         assertThat(linksOf(scanned(projects, cacheFile, unwritable, unlistable)))
-                .isEqualTo(ran(ticketRun("review", "PROJ-1", "PROJ-2")));
+                .isEqualTo(ran(ticketRun("review", "1", "2")));
     }
 
     @Test
     void shouldNotReadTheArgsOfAnotherCommand() throws IOException {
-        writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "main", "/review", "start PROJ-1"));
+        writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "main", "/review", "start 1"));
 
         assertThat(linksOf(scanned(projects, cacheFile, unwritable, unlistable)))
                 .isEqualTo(noRuns());
@@ -86,25 +86,25 @@ class TranscriptLinkFactsTest {
 
     @Test
     void shouldReadATicketSkillCallFromItsArgs() throws IOException {
-        writeTranscript(projects, folder(), sessionId(), skillLine(cwd(), started(), "main", "ticket", "refine PROJ-3"));
+        writeTranscript(projects, folder(), sessionId(), skillLine(cwd(), started(), "main", "ticket", "refine 3"));
 
         assertThat(linksOf(scanned(projects, cacheFile, unwritable, unlistable)))
-                .isEqualTo(ran(ticketRun("refine", "PROJ-3")));
+                .isEqualTo(ran(ticketRun("refine", "3")));
     }
 
     @Test
     void shouldReadAPluginsTicketSkillCallFromItsArgs() throws IOException {
         writeTranscript(
-                projects, folder(), sessionId(), skillLine(cwd(), started(), "main", "ddd-workflow:ticket", "done PROJ-3"));
+                projects, folder(), sessionId(), skillLine(cwd(), started(), "main", "ddd-workflow:ticket", "done 3"));
 
         assertThat(linksOf(scanned(projects, cacheFile, unwritable, unlistable)))
-                .isEqualTo(ran(ticketRun("done", "PROJ-3")));
+                .isEqualTo(ran(ticketRun("done", "3")));
     }
 
     @Test
     void shouldNotReadTheArgsOfAnotherSkill() throws IOException {
         writeTranscript(
-                projects, folder(), sessionId(), skillLine(cwd(), started(), "main", "superpowers:brainstorming", "Refining PROJ-3"));
+                projects, folder(), sessionId(), skillLine(cwd(), started(), "main", "superpowers:brainstorming", "Refining 3"));
 
         assertThat(linksOf(scanned(projects, cacheFile, unwritable, unlistable)))
                 .isEqualTo(noRuns());
@@ -134,10 +134,10 @@ class TranscriptLinkFactsTest {
 
     @Test
     void shouldSkipAWordThatIsNotAnIdAmongTheNamedOnes() throws IOException {
-        writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "main", "/ticket", "review PROJ-1 and PROJ-22"));
+        writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "main", "/ticket", "review 1 and 22"));
 
         assertThat(linksOf(scanned(projects, cacheFile, unwritable, unlistable)))
-                .isEqualTo(ran(ticketRun("review", "PROJ-1", "PROJ-22")));
+                .isEqualTo(ran(ticketRun("review", "1", "22")));
     }
 
     @Test
@@ -146,31 +146,31 @@ class TranscriptLinkFactsTest {
                 projects,
                 folder(),
                 sessionId(),
-                commandLine(cwd(), started(), "main", "/ticket", "refine PROJ-1"),
-                commandLine(cwd(), later(), "main", "/ticket", "start PROJ-1"),
-                commandLine(cwd(), latest(), "main", "/ticket", "refine PROJ-1"));
+                commandLine(cwd(), started(), "main", "/ticket", "refine 1"),
+                commandLine(cwd(), later(), "main", "/ticket", "start 1"),
+                commandLine(cwd(), latest(), "main", "/ticket", "refine 1"));
 
         assertThat(linksOf(scanned(projects, cacheFile, unwritable, unlistable)))
-                .isEqualTo(ran(ticketRun("start", "PROJ-1"), ticketRun("refine", "PROJ-1")));
+                .isEqualTo(ran(ticketRun("start", "1"), ticketRun("refine", "1")));
     }
 
     @Test
     void shouldAddWhatAGrownTranscriptSaysToWhatTheCacheHolds() throws IOException {
-        Path file = writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "PROJ-1-x", "/ticket", "refine PROJ-1"));
+        Path file = writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "PROJ-1-x", "/ticket", "refine 1"));
         TranscriptRepository repository = scanned(projects, cacheFile, unwritable, unlistable);
 
-        append(file, commandLine(cwd(), later(), "PROJ-1-x", "/ticket", "start PROJ-2"));
+        append(file, commandLine(cwd(), later(), "PROJ-1-x", "/ticket", "start 2"));
         repository.rescan(List.of(file), everyLoggedSession(), unwritable);
 
-        assertThat(linksOf(repository)).isEqualTo(ran(ticketRun("refine", "PROJ-1"), ticketRun("start", "PROJ-2")));
+        assertThat(linksOf(repository)).isEqualTo(ran(ticketRun("refine", "1"), ticketRun("start", "2")));
     }
 
     @Test
     void shouldAnswerTheFactsFromTheCacheWithoutReadingAnyTranscript() throws IOException {
-        writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "PROJ-1-x", "/ticket", "start PROJ-2"));
+        writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "PROJ-1-x", "/ticket", "start 2"));
         scanned(projects, cacheFile, unwritable, unlistable);
 
-        assertThat(linksOf(repositoryOver(projects, cacheFile))).isEqualTo(ran(ticketRun("start", "PROJ-2")));
+        assertThat(linksOf(repositoryOver(projects, cacheFile))).isEqualTo(ran(ticketRun("start", "2")));
     }
 
     @Test
@@ -189,7 +189,7 @@ class TranscriptLinkFactsTest {
 
     @Test
     void shouldReadOnlyTheLinkFactsOfALoggedSession() throws IOException {
-        writeTranscript(projects, folder(), otherSessionId(), commandLine(cwd(), started(), "main", "/ticket", "start PROJ-1"));
+        writeTranscript(projects, folder(), otherSessionId(), commandLine(cwd(), started(), "main", "/ticket", "start 1"));
 
         TranscriptRepository repository = scanned(projects, cacheFile, Set.of(new SessionId(sessionId())), unwritable, unlistable);
 

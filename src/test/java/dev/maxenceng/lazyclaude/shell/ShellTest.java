@@ -1,11 +1,11 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
-import static dev.maxenceng.lazyclaude.board.infrastructure.primary.FrontmatterEntryViewFixture.entryView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.unavailableBoardView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.bareTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.bodylessTicketView;
-import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.datedTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.labelledTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.longDoneTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.longSecondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.longTicketView;
@@ -13,7 +13,6 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFi
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.thematicBreakTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewBuilder;
-import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.untitledTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.wrappingTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.UnreadableTicketViewFixture.unreadableTicketView;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
@@ -40,17 +39,17 @@ class ShellTest {
     @Test
     void shouldGroupTicketsByStatusInLifecycleOrderWithCounts() {
         Shell shell = shellOn(
-                ticketViewBuilder().id(new TicketId("A-1")).status(Status.DONE).build(),
-                ticketViewBuilder().id(new TicketId("A-2")).status(Status.IN_REVIEW).build(),
-                ticketViewBuilder().id(new TicketId("A-3")).status(Status.TODO).build(),
-                ticketViewBuilder().id(new TicketId("A-4")).status(Status.DRAFT).build(),
-                ticketViewBuilder().id(new TicketId("A-5")).status(Status.DRAFT).build(),
-                ticketViewBuilder().id(new TicketId("A-6")).status(Status.IN_PROGRESS).build());
+                ticketViewBuilder().id(new TicketId("1")).status(Status.DONE).build(),
+                ticketViewBuilder().id(new TicketId("2")).status(Status.IN_REVIEW).build(),
+                ticketViewBuilder().id(new TicketId("3")).status(Status.TODO).build(),
+                ticketViewBuilder().id(new TicketId("4")).status(Status.DRAFT).build(),
+                ticketViewBuilder().id(new TicketId("5")).status(Status.DRAFT).build(),
+                ticketViewBuilder().id(new TicketId("6")).status(Status.IN_PROGRESS).build());
 
         assertThat(Screen.of(shell.render(), 80, 30).boardPanelText())
                 .containsSubsequence(
-                        "▾ draft (2)", "A-4", "A-5", "▾ todo (1)", "A-3", "▾ in-progress (1)", "A-6", "▾ in-review (1)",
-                        "A-2", "▸ done (1)");
+                        "▾ draft (2)", "#4", "#5", "▾ todo (1)", "#3", "▾ in-progress (1)", "#6", "▾ in-review (1)",
+                        "#2", "▸ done (1)");
     }
 
     @Test
@@ -63,7 +62,7 @@ class ShellTest {
     void shouldStartWithDoneFolded() {
         assertThat(Screen.of(shellOn(doneTicketView())).text())
                 .contains("▸ done (1)")
-                .doesNotContain(doneTicketView().id().value());
+                .doesNotContain("#1 ");
     }
 
     @Test
@@ -72,7 +71,7 @@ class ShellTest {
 
         shell.press(enter());
 
-        assertThat(Screen.of(shell).text()).contains("▾ done (1)", doneTicketView().id().value());
+        assertThat(Screen.of(shell).text()).contains("▾ done (1)", "#1 ");
     }
 
     @Test
@@ -81,7 +80,7 @@ class ShellTest {
 
         shell.press(enter());
 
-        assertThat(Screen.of(shell).text()).contains("▸ draft (1)").doesNotContain(ticketView().id().value());
+        assertThat(Screen.of(shell).text()).contains("▸ draft (1)").doesNotContain("#1 ");
     }
 
     @Test
@@ -99,7 +98,7 @@ class ShellTest {
 
         shell.press(enter());
 
-        assertThat(Screen.of(shell).text()).contains("▾ draft (1)", ticketView().id().value());
+        assertThat(Screen.of(shell).text()).contains("▾ draft (1)", "#1 ");
     }
 
     @Test
@@ -107,7 +106,7 @@ class ShellTest {
         Shell shell = shellOn(boardViewOf(List.of(ticketView()), List.of(unreadableTicketView())));
 
         assertThat(Screen.of(shell.render(), 80, 30).boardPanelText())
-                .containsSubsequence("▸ done (0)", "▾ unreadable (1)", "PROJ-2.md — status is");
+                .containsSubsequence("▸ done (0)", "▾ unreadable (1)", "#2 — status is");
     }
 
     @Test
@@ -116,17 +115,12 @@ class ShellTest {
     }
 
     @Test
-    void shouldShowATicketWithoutATitleUnderItsId() {
-        assertThat(Screen.of(shellOn(untitledTicketView())).boardPanelText()).contains("PROJ-1 PROJ-1");
-    }
-
-    @Test
     void shouldMoveTheSelectionDownWithJ() {
         Shell shell = shellOn(ticketView(), secondTicketView());
 
         pressed(shell, key('j'), 2);
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-2");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#2");
     }
 
     @Test
@@ -135,7 +129,7 @@ class ShellTest {
 
         shell.press(key('k'));
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#1");
     }
 
     @Test
@@ -160,7 +154,7 @@ class ShellTest {
     void shouldKeepTheSelectionVisibleWhenTheBoardIsLongerThanThePanel() {
         List<TicketView> forty = IntStream.rangeClosed(1, 40)
                 .mapToObj(number -> ticketViewBuilder()
-                        .id(new TicketId("A-%d".formatted(number)))
+                        .id(new TicketId("%d".formatted(number)))
                         .title(new Title("Ticket %d".formatted(number)))
                         .build())
                 .toList();
@@ -168,7 +162,7 @@ class ShellTest {
 
         pressed(shell, key('j'), 30);
 
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("A-30");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#30");
     }
 
     @Test
@@ -176,7 +170,7 @@ class ShellTest {
         Shell shell = pressed(shellOn(ticketViewBuilder().status(Status.IN_REVIEW).build()), key('j'), 4);
 
         assertThat(Screen.of(shell).text())
-                .contains("PROJ-1 · in-review · board · feature", "A board from the backlog");
+                .contains("#1 · in-review · board · feature", "A board from the backlog");
     }
 
     @Test
@@ -205,32 +199,32 @@ class ShellTest {
 
         assertThat(Screen.of(shell).text())
                 .as("an absent field is left out, never shown as a blank between separators")
-                .contains("PROJ-1 · draft")
+                .contains("#1 · draft")
                 .doesNotContain("draft ·");
     }
 
     @Test
-    void shouldShowEveryOtherFrontmatterKeyInFileOrderAlignedUnderTheFacts() {
-        Shell shell = pressed(shellOn(datedTicketView()), key('j'), 1);
+    void shouldShowTheIssueNumberStatusContextAndTypeThenItsOtherLabels() {
+        Shell shell = pressed(shellOn(labelledTicketView()), key('j'), 1);
 
         assertThat(Screen.of(shell).mainViewRows())
-                .startsWith("PROJ-1 · draft · board · feature")
-                .containsSubsequence("created     2026-10-10", "blocked_by  [PROJ-8, PROJ-9]");
+                .startsWith("#1 · draft · board · feature")
+                .containsSubsequence("labels  bug, help wanted");
     }
 
     @Test
-    void shouldShowAKeyWrittenWithNothingAfterItBesideItsName() {
-        TicketView emptyValue = ticketViewBuilder().frontmatter(List.of(entryView("parent", ""))).build();
+    void shouldLeaveOutTheLabelsRowWhenTheIssueHasNoOtherLabel() {
+        Shell shell = pressed(shellOn(ticketView()), key('j'), 1);
 
-        assertThat(Screen.of(pressed(shellOn(emptyValue), key('j'), 1)).mainViewRows()).contains("parent");
+        assertThat(Screen.of(shell).mainViewRows()).noneSatisfy(row -> assertThat(row).startsWith("labels"));
     }
 
     @Test
     void shouldDrawARuleBetweenTheKeysAndTheBody() {
-        Shell shell = pressed(shellOn(datedTicketView()), key('j'), 1);
+        Shell shell = pressed(shellOn(labelledTicketView()), key('j'), 1);
 
         assertThat(Screen.of(shell).mainViewRows())
-                .containsSubsequence("blocked_by  [PROJ-8, PROJ-9]", "─".repeat(50), "A board from the backlog");
+                .containsSubsequence("labels  bug, help wanted", "─".repeat(50), "A board from the backlog");
     }
 
     @Test
@@ -456,7 +450,7 @@ class ShellTest {
 
         shell.press(key('k'));
 
-        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("#1 · draft");
     }
 
     @Test
@@ -513,7 +507,7 @@ class ShellTest {
 
         pressed(shell, ctrl('u'), 3);
 
-        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("#1 · draft");
     }
 
     @Test
@@ -537,7 +531,7 @@ class ShellTest {
 
         shell.press(ctrl('u'));
 
-        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("#1 · draft");
     }
 
     @Test
@@ -548,7 +542,7 @@ class ShellTest {
         assertThat(Screen.of(shell).mainViewRows().getLast()).contains("Row 60");
         shell.press(key('g'));
 
-        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("#1 · draft");
     }
 
     @Test
@@ -572,7 +566,7 @@ class ShellTest {
         shell.press(key('h'));
 
         assertThat(Screen.of(shell).boardPanelLines()).isEqualTo(before);
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("PROJ-1");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("#1");
     }
 
     @Test
@@ -587,7 +581,7 @@ class ShellTest {
 
         shell.press(key('j'));
 
-        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-2 · draft");
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("#2 · draft");
     }
 
     @Test
@@ -606,7 +600,7 @@ class ShellTest {
 
         assertThat(Screen.of(shell).mainViewRows().getFirst())
                 .as("j on the last board row moves nothing, so the main view stays where it was scrolled")
-                .doesNotStartWith("PROJ-1 · done");
+                .doesNotStartWith("#1 · done");
         assertThat(Screen.of(shell).mainViewRows().getLast()).contains("Row 60");
     }
 
@@ -621,7 +615,7 @@ class ShellTest {
         shell.press(key('j'));
         shell.press(key('l'));
 
-        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("#1 · draft");
     }
 
     @Test
@@ -631,7 +625,7 @@ class ShellTest {
 
         assertThat(shell.press(ctrl('d'))).isFalse();
         assertThat(shell.press(key('G'))).isFalse();
-        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("PROJ-1 · draft");
+        assertThat(Screen.of(shell).mainViewRows().getFirst()).startsWith("#1 · draft");
     }
 
     @Test
@@ -658,11 +652,32 @@ class ShellTest {
     void shouldStillShowAnUnreadableFilesFileAndReasonInTheMainView() {
         Shell shell = pressed(shellOn(boardViewOf(List.of(), List.of(unreadableTicketView()))), key('j'), 6);
 
-        assertThat(Screen.of(shell).mainViewRows()).anySatisfy(row -> assertThat(row).contains("PROJ-2.md"));
+        assertThat(Screen.of(shell).mainViewRows()).anySatisfy(row -> assertThat(row).contains("#2"));
     }
 
     @Test
     void shouldShowNothingInTheMainViewOnAGroupHeader() {
-        assertThat(Screen.of(shellOn(datedTicketView())).mainViewRows()).allSatisfy(row -> assertThat(row).isBlank());
+        assertThat(Screen.of(shellOn(ticketView())).mainViewRows()).allSatisfy(row -> assertThat(row).isBlank());
+    }
+
+    @Test
+    void shouldShowWhyTheIssuesCannotBeReadInTheBoardPanel() {
+        Shell shell = shellOn(unavailableBoardView());
+
+        assertThat(Screen.of(shell).boardPanelText()).contains("gh is not logged in;").doesNotContain("▾ draft");
+    }
+
+    @Test
+    void shouldShowTheWholeReasonInTheMainViewWrappedToItsWidth() {
+        Shell shell = shellOn(unavailableBoardView());
+
+        assertThat(Screen.of(shell).mainViewRows()).anySatisfy(row -> assertThat(row).contains("gh is not logged in; run gh auth login"));
+    }
+
+    @Test
+    void shouldShowTheReasonOfAnUnreadableIssueAfterItsNumberInTheMainView() {
+        Shell shell = pressed(shellOn(boardViewOf(List.of(), List.of(unreadableTicketView()))), key('j'), 6);
+
+        assertThat(Screen.of(shell).mainViewRows()).containsSubsequence("#2", "status is missing");
     }
 }

@@ -14,10 +14,10 @@ public final class TranscriptCacheFixture {
                 "(dev=803,ino=4242)",
                 1000,
                 "3f2a91c0-5d4e-4b8a-9c11-0e7d2a6b8f10",
-                "Refine PROJ-1",
-                "/ticket start PROJ-1",
+                "Refine 1",
+                "/ticket start 1",
                 1_760_173_920_000L,
-                List.of(new CachedTicketRun("start", List.of("PROJ-1"))));
+                List.of(new CachedTicketRun("start", List.of("1"))));
     }
 
     static CachedTranscript otherCachedTranscript() {

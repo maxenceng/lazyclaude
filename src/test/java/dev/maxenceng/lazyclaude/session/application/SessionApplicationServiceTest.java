@@ -187,10 +187,10 @@ class SessionApplicationServiceTest {
                 sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "PROJ-1"))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "1"))));
 
         assertThat(service.sessionsFor(project(), boardTickets()).live())
-                .containsExactly(liveSessionBuilder().id(id).links(List.of(ticketLink("PROJ-1", "start"))).build());
+                .containsExactly(liveSessionBuilder().id(id).links(List.of(ticketLink("1", "start"))).build());
     }
 
     @Test
@@ -247,7 +247,7 @@ class SessionApplicationServiceTest {
     void shouldPreselectReviewWhenAPastSessionRanDesignOnTheTicket() {
         when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("design", "PROJ-1"))));
+                .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("design", "1"))));
 
         assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
                         .preselected())
@@ -266,7 +266,7 @@ class SessionApplicationServiceTest {
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         when(launchLog.read(eq(project()), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
         when(past.transcriptsOf(any()))
-                .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("design", "PROJ-1"))));
+                .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("design", "1"))));
         SessionApplicationService service = hostingTheRegisteredSession(
                 sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees), hosts);
         service.subscribe(project(), boardTickets(), read -> {});
@@ -361,13 +361,13 @@ class SessionApplicationServiceTest {
                 sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "PROJ-1"))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "1"))));
         service.subscribe(project(), noTickets(), received::add);
 
         service.knowTickets(project(), boardTickets());
 
         assertThat(received).singleElement().satisfies(linked -> assertThat(linked.live())
-                .containsExactly(liveSessionBuilder().id(id).links(List.of(ticketLink("PROJ-1", "start"))).build()));
+                .containsExactly(liveSessionBuilder().id(id).links(List.of(ticketLink("1", "start"))).build()));
     }
 
     @Test
@@ -378,13 +378,13 @@ class SessionApplicationServiceTest {
                 sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         hostingTheRegisteredSession(service, hosts);
         SessionId id = sessionId();
-        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "PROJ-1"))));
+        when(past.transcriptsOf(any())).thenReturn(transcriptsRead(factsRunning(id, ticketRun("start", "1"))));
         service.subscribe(project(), noTickets(), received::add);
 
         service.refresh(project(), boardTickets());
 
         assertThat(received).singleElement().satisfies(linked -> assertThat(linked.live())
-                .containsExactly(liveSessionBuilder().id(id).links(List.of(ticketLink("PROJ-1", "start"))).build()));
+                .containsExactly(liveSessionBuilder().id(id).links(List.of(ticketLink("1", "start"))).build()));
     }
 
     @Test
