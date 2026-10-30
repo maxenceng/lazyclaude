@@ -20,10 +20,12 @@ public final class TicketCaptureCommand {
 
     /** A blank title is refused before anything is asked of GitHub. */
     public TicketCaptureView capture(TicketCapturePayload payload) {
+        Title title;
         try {
-            return TicketCaptureView.from(tickets.capture(new Project(payload.root()), new Title(payload.title())));
+            title = new Title(payload.title());
         } catch (AssertionException invalid) {
             return new RefusedTicketCaptureView(new Reason(invalid.getMessage()));
         }
+        return TicketCaptureView.from(tickets.capture(new Project(payload.root()), title));
     }
 }

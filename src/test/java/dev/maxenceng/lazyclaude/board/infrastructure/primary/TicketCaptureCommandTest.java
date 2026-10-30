@@ -9,6 +9,7 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptur
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -22,6 +23,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.maxenceng.lazyclaude.board.application.TicketCaptureApplicationService;
 import dev.maxenceng.lazyclaude.board.domain.TicketCapturePort;
 import dev.maxenceng.lazyclaude.board.domain.TicketTemplatePort;
+import dev.maxenceng.lazyclaude.board.published.TicketId;
+import dev.maxenceng.lazyclaude.error.domain.AssertionException;
 
 @ExtendWith(MockitoExtension.class)
 class TicketCaptureCommandTest {
@@ -61,5 +64,15 @@ class TicketCaptureCommandTest {
                 .isInstanceOfSatisfying(RefusedTicketCaptureView.class, refused ->
                         assertThat(refused.reason().value()).as("the reason names the field").contains("title"));
         verifyNoInteractions(captures, templates);
+    }
+
+    @Test
+    void shouldNotAnswerAnInvalidValueMetAfterGitHubWasAskedAsARefusal() {
+        when(templates.templateOf(project())).thenReturn(noTemplate());
+        when(captures.create(any(), any(), any())).thenAnswer(_ -> new TicketId("0"));
+
+        assertThatThrownBy(() -> command.capture(capturePayload()))
+                .as("a refusal invites enter again, which would create the ticket twice")
+                .isInstanceOf(AssertionException.class);
     }
 }

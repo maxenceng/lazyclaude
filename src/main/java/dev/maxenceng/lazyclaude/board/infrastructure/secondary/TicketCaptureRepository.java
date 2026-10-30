@@ -22,7 +22,7 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
  */
 public final class TicketCaptureRepository implements TicketCapturePort {
 
-    private static final Pattern ISSUE_ADDRESS = Pattern.compile("/issues/(\\d+)\\s*\\z");
+    private static final Pattern ISSUE_ADDRESS = Pattern.compile("/issues/([1-9]\\d{0,17})\\s*\\z");
     private static final String NO_NUMBER = "gh issue create printed no issue number: %s";
     private static final String NO_BODY = "";
     private static final List<String> CREATE = List.of("issue", "create");

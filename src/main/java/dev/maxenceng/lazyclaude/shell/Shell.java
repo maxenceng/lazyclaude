@@ -436,13 +436,20 @@ public final class Shell extends ToolkitApp {
 
     /** GitHub numbered a captured ticket: the board is read at once, and its selection goes to the new draft by that number. No row is added before the read. */
     private void captured(TicketId id) {
-        selectOnNextBoard.set(id);
-        background.execute(this::reread);
+        background.execute(() -> reread(Optional.of(id)));
     }
 
-    /** One read at a time, so a slow read that started first never lands after a newer one. */
-    private synchronized void reread() {
+    private void reread() {
+        reread(Optional.empty());
+    }
+
+    /**
+     * One read at a time, so a slow read that started first never lands after a newer one. {@code selecting} goes with this read
+     * alone: a read that fails drops it, and the board it lands with is the only one it is looked for in.
+     */
+    private synchronized void reread(Optional<TicketId> selecting) {
         readAgain().ifPresent(read -> {
+            selecting.ifPresent(selectOnNextBoard::set);
             lastRead = read;
             pendingBoard.set(read);
             ToolkitRunner running = runner();
@@ -496,12 +503,9 @@ public final class Shell extends ToolkitApp {
             } else {
                 board.replace(next);
             }
-            Optional.ofNullable(selectOnNextBoard.get())
+            Optional.ofNullable(selectOnNextBoard.getAndSet(null))
                     .flatMap(board::ticketNumbered)
-                    .ifPresent(ticket -> {
-                        board.selectTicket(ticket);
-                        selectOnNextBoard.compareAndSet(ticket.id(), null);
-                    });
+                    .ifPresent(board::selectTicket);
             if (!board.selected().key().equals(before) && mainViewOwner == Focus.BOARD) {
                 mainViewScroll.reset();
             }

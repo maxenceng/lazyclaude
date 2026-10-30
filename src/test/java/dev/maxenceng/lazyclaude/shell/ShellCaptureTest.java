@@ -15,6 +15,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.escape;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoard;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -153,6 +155,46 @@ class ShellCaptureTest {
         Screen screen = Screen.of(shell);
         assertThat(screen.text()).doesNotContain("New ticket");
         assertThat(screen.reversedTextOnLine(screen.positionInLeftColumn("#7").y())).contains("#7");
+    }
+
+    @Test
+    void shouldNotSelectTheNewDraftOnALaterReadWhenTheReadAfterTheCaptureFailed() {
+        when(capturing.capture(TITLED_HI)).thenReturn(capturedTicketViewNumbered(7));
+        when(boards.boardReadAgainFor(readingBoard()))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(boardViewOf(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(7, Status.DRAFT))));
+        Shell shell = shellOpenForATitle(capturing, boards, Runnable::run, ticketViewNumbered(1, Status.DRAFT));
+        typed(shell, "Hi");
+
+        shell.press(enter());
+        shell.boardChanged();
+
+        Screen screen = Screen.of(shell);
+        assertThat(screen.boardPanelText()).contains("#7");
+        assertThat(screen.reversedTextOnLine(screen.positionInLeftColumn("#7").y()))
+                .as("the selection belongs to the read made at once after the create, not to whichever read lands later")
+                .doesNotContain("#7");
+    }
+
+    @Test
+    void shouldNotSelectTheNewDraftOnALaterReadWhenTheReadAfterTheCaptureLackedIt() {
+        when(capturing.capture(TITLED_HI)).thenReturn(capturedTicketViewNumbered(7));
+        when(boards.boardReadAgainFor(readingBoard()))
+                .thenReturn(Optional.of(boardViewOf(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT))))
+                .thenReturn(Optional.of(boardViewOf(
+                        ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT), ticketViewNumbered(7, Status.DRAFT))));
+        Shell shell = shellOpenForATitle(capturing, boards, Runnable::run, ticketViewNumbered(1, Status.DRAFT));
+        typed(shell, "Hi");
+
+        shell.press(enter());
+        Screen.of(shell);
+        shell.boardChanged();
+
+        Screen screen = Screen.of(shell);
+        assertThat(screen.boardPanelText()).contains("#7");
+        assertThat(screen.reversedTextOnLine(screen.positionInLeftColumn("#7").y()))
+                .as("the selection belongs to the read made at once after the create, not to whichever read lands later")
+                .doesNotContain("#7");
     }
 
     @Test

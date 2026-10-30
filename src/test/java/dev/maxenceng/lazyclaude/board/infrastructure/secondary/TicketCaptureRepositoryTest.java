@@ -9,6 +9,7 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixt
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.ghPrinting;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.ghRecordingItsArguments;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.impatientCaptureRepositoryOver;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.issueAddressWithoutANumber;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.missingCommand;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.projectAt;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
@@ -67,6 +68,15 @@ class TicketCaptureRepositoryTest {
         assertThatThrownBy(() -> captureRepositoryOver(gh).create(projectAt(root), title(), new NoBody()))
                 .isExactlyInstanceOf(TicketCaptureRefusedException.class)
                 .hasMessage("gh issue create printed no issue number: created");
+    }
+
+    @Test
+    void shouldRefuseWhenTheAddressGhPrintsEndsInNoIssueNumber() throws IOException {
+        Path gh = ghPrinting(root, issueAddressWithoutANumber());
+
+        assertThatThrownBy(() -> captureRepositoryOver(gh).create(projectAt(root), title(), new NoBody()))
+                .isExactlyInstanceOf(TicketCaptureRefusedException.class)
+                .hasMessage("gh issue create printed no issue number: " + issueAddressWithoutANumber());
     }
 
     @Test

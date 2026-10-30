@@ -50,6 +50,10 @@ public final class FakeGhFixture {
         return "https://github.example/acme/app/issues/12";
     }
 
+    static String issueAddressWithoutANumber() {
+        return "https://github.example/acme/app/issues/0";
+    }
+
     static Path ghRecordingItsArguments(Path directory, Path record, String output) throws IOException {
         return script(directory, "printf '%%s\\n' \"$@\" > '%s'\necho '%s'\n".formatted(record, output));
     }
