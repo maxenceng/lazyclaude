@@ -72,3 +72,4 @@
 - 0068 [A roadmap is a dated document in docs/roadmap/, part of the record](0068-a-roadmap-is-a-dated-document-in-docs-roadmap-part-of-the-record.md) — Accepted.
 - 0069 [The docs build on a pinned Zensical from a mkdocs.yml both tools read, and deploy only when enabled](0069-the-docs-build-on-a-pinned-zensical-from-a-mkdocs-yml-both-tools-read-and-deploy-only-when-enabled.md) — Accepted.
 - 0070 [The ADR index is written by a script, and a stale one fails the build](0070-the-adr-index-is-written-by-a-script-and-a-stale-one-fails-the-build.md) — Accepted.
+- 0071 [The docs tree puts a folder's README first, then its files, then its subfolders](0071-the-docs-tree-puts-a-folders-readme-first-then-its-files-then-its-subfolders.md) — Accepted.

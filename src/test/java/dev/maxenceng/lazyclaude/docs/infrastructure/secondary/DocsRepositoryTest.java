@@ -85,15 +85,19 @@ class DocsRepositoryTest {
         write(docs, "adr/superseded/0000-old.md", markdown());
         write(docs, "adr/0001-record.md", markdown());
         write(docs, "context-map.md", markdown());
+        write(docs, "adr/README.md", markdown());
+        write(docs, "README.md", markdown());
 
         assertThat(repository.paths(new Project(root)))
-                .as("ordering is done before the domain, which keeps it")
+                .as("ordering is done before the domain, which keeps it, and matches the site's")
                 .containsExactly(
+                        new DocumentPath("README.md"),
+                        new DocumentPath("context-map.md"),
+                        new DocumentPath("glossary.md"),
+                        new DocumentPath("adr/README.md"),
                         new DocumentPath("adr/0001-record.md"),
                         new DocumentPath("adr/superseded/0000-old.md"),
-                        new DocumentPath("adr-old/0000-first.md"),
-                        new DocumentPath("context-map.md"),
-                        new DocumentPath("glossary.md"));
+                        new DocumentPath("adr-old/0000-first.md"));
     }
 
     @Test
