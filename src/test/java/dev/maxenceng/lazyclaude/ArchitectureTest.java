@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaCodeUnitAccess;
@@ -55,6 +56,9 @@ class ArchitectureTest {
 
     private static final String ROOT = "dev.maxenceng.lazyclaude";
     private static final String KEY_EVENT = "dev.tamboui.tui.event.KeyEvent";
+    // The composition root is main and the launches it picks from: the one place that prints and reaches every module (ADR 0077).
+    private static final DescribedPredicate<JavaClass> THE_COMPOSITION_ROOT =
+            JavaClass.Predicates.assignableTo(Launch.class).or(name(LazyClaude.class.getName()));
 
     // The domain is plain Java: it must be testable without a terminal, a process or a file.
     @ArchTest
@@ -91,8 +95,7 @@ class ArchitectureTest {
     static final ArchRule only_the_shell_and_primary_adapters_touch_the_terminal = noClasses()
             .that()
             .resideOutsideOfPackages(ROOT + ".shell..", "..infrastructure.primary..")
-            .and()
-            .doNotHaveFullyQualifiedName(LazyClaude.class.getName())
+            .and(not(THE_COMPOSITION_ROOT))
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("dev.tamboui..", "org.jline..")
@@ -142,8 +145,7 @@ class ArchitectureTest {
     // A line printed while the screen is up lands on the drawn frame (ADR 0022); only the refusal to start prints.
     @ArchTest
     static final ArchRule only_the_composition_root_prints = noClasses()
-            .that()
-            .doNotHaveFullyQualifiedName(LazyClaude.class.getName())
+            .that(not(THE_COMPOSITION_ROOT))
             .should()
             .accessField(System.class, "err")
             .orShould()
@@ -239,8 +241,7 @@ class ArchitectureTest {
     static final ArchRule nothing_depends_on_the_shell = classes()
             .that()
             .resideInAPackage(ROOT + "..")
-            .and()
-            .doNotHaveFullyQualifiedName(LazyClaude.class.getName())
+            .and(not(THE_COMPOSITION_ROOT))
             .should(notReachTheShellFromOutsideIt())
             .allowEmptyShould(true);
 

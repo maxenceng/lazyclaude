@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
+import static dev.maxenceng.lazyclaude.ContextsFixture.sidecarContexts;
 import static org.mockito.Mockito.mock;
 
 import java.io.ByteArrayInputStream;
@@ -21,6 +22,9 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
 import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
@@ -49,6 +53,18 @@ public final class SidecarFixture {
         return linesWritten(sidecarOver(warnings), received);
     }
 
+    public static List<String> linesWritten(DocsQuery docs, String... received) {
+        return linesWritten(sidecarOver(docs), received);
+    }
+
+    public static List<String> linesWritten(ReviewQuery review, String... received) {
+        return linesWritten(sidecarOver(review), received);
+    }
+
+    public static List<String> linesWritten(PendingReviewCommand pendingReview, String... received) {
+        return linesWritten(sidecarOver(pendingReview), received);
+    }
+
     public static int exitCodeOf(BoardQuery board, String... received) {
         return sidecarOver(board).run(stdin(received), new ByteArrayOutputStream());
     }
@@ -60,15 +76,69 @@ public final class SidecarFixture {
     }
 
     private static Sidecar sidecarOver(BoardQuery board) {
-        return new Sidecar(board, mock(SessionQuery.class), mock(HostedSessionCommand.class), mock(WarningQuery.class));
+        return new Sidecar(sidecarContexts(
+                board,
+                mock(SessionQuery.class),
+                mock(HostedSessionCommand.class),
+                mock(WarningQuery.class),
+                mock(DocsQuery.class),
+                mock(ReviewQuery.class),
+                mock(PendingReviewCommand.class)));
     }
 
     private static Sidecar sidecarOver(SessionQuery sessions, HostedSessionCommand hosting) {
-        return new Sidecar(mock(BoardQuery.class), sessions, hosting, mock(WarningQuery.class));
+        return new Sidecar(sidecarContexts(
+                mock(BoardQuery.class),
+                sessions,
+                hosting,
+                mock(WarningQuery.class),
+                mock(DocsQuery.class),
+                mock(ReviewQuery.class),
+                mock(PendingReviewCommand.class)));
     }
 
     private static Sidecar sidecarOver(WarningQuery warnings) {
-        return new Sidecar(mock(BoardQuery.class), mock(SessionQuery.class), mock(HostedSessionCommand.class), warnings);
+        return new Sidecar(sidecarContexts(
+                mock(BoardQuery.class),
+                mock(SessionQuery.class),
+                mock(HostedSessionCommand.class),
+                warnings,
+                mock(DocsQuery.class),
+                mock(ReviewQuery.class),
+                mock(PendingReviewCommand.class)));
+    }
+
+    private static Sidecar sidecarOver(DocsQuery docs) {
+        return new Sidecar(sidecarContexts(
+                mock(BoardQuery.class),
+                mock(SessionQuery.class),
+                mock(HostedSessionCommand.class),
+                mock(WarningQuery.class),
+                docs,
+                mock(ReviewQuery.class),
+                mock(PendingReviewCommand.class)));
+    }
+
+    private static Sidecar sidecarOver(ReviewQuery review) {
+        return new Sidecar(sidecarContexts(
+                mock(BoardQuery.class),
+                mock(SessionQuery.class),
+                mock(HostedSessionCommand.class),
+                mock(WarningQuery.class),
+                mock(DocsQuery.class),
+                review,
+                mock(PendingReviewCommand.class)));
+    }
+
+    private static Sidecar sidecarOver(PendingReviewCommand pendingReview) {
+        return new Sidecar(sidecarContexts(
+                mock(BoardQuery.class),
+                mock(SessionQuery.class),
+                mock(HostedSessionCommand.class),
+                mock(WarningQuery.class),
+                mock(DocsQuery.class),
+                mock(ReviewQuery.class),
+                pendingReview));
     }
 
     public static Path projectPath() {
@@ -141,6 +211,10 @@ public final class SidecarFixture {
 
     public static String errorResponse(String id, int code, String message) {
         return "{\"jsonrpc\":\"2.0\",\"id\":%s,\"error\":{\"code\":%d,\"message\":\"%s\"}}".formatted(id, code, message);
+    }
+
+    public static String invalidParamsCode() {
+        return "\"code\":-32602";
     }
 
     public static String faultWithCode(String id, int code) {
@@ -225,6 +299,7 @@ public final class SidecarFixture {
             if (!released.await(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
                 throw new IllegalStateException("the other request was never answered");
             }
+            Thread.sleep(OVERLAP);
             return answer;
         };
     }

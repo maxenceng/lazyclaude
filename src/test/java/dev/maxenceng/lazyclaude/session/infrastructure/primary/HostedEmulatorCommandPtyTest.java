@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.pasted;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.pressed;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.typed;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorFixture.emulating;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorFixture.screenContaining;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorFixture.serviceOver;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorFixture.textOf;
@@ -26,7 +27,7 @@ class HostedEmulatorCommandPtyTest {
     void shouldShowWhatIsTypedIntoTheChild() throws Exception {
         HostPort host = hostRunning("exec /bin/cat");
         SessionApplicationService service = serviceOver(host);
-        HostedEmulators running = HostedEmulators.listeningTo(service);
+        HostedEmulators running = emulating(service);
         HostedEmulatorCommand emulating = new HostedEmulatorCommand(service, running);
         HostedEmulatorQuery emulators = new HostedEmulatorQuery(running);
         SessionId id = ((StartedHost) new HostedSessionCommand(service).startUnlinked(newHostedPayload())).id();
@@ -42,7 +43,7 @@ class HostedEmulatorCommandPtyTest {
     void shouldGiveTheChildAPasteInsideBracketsWhenItAskedForThem() throws Exception {
         HostPort host = hostRunning("printf '\\033[?2004h'; echo ready; cat -v");
         SessionApplicationService service = serviceOver(host);
-        HostedEmulators running = HostedEmulators.listeningTo(service);
+        HostedEmulators running = emulating(service);
         HostedEmulatorCommand emulating = new HostedEmulatorCommand(service, running);
         HostedEmulatorQuery emulators = new HostedEmulatorQuery(running);
         SessionId id = ((StartedHost) new HostedSessionCommand(service).startUnlinked(newHostedPayload())).id();
@@ -59,7 +60,7 @@ class HostedEmulatorCommandPtyTest {
     void shouldGiveTheChildTheMouseWhenItAskedForIt() throws Exception {
         HostPort host = hostRunning("printf '\\033[?1000h\\033[?1006h'; echo ready; cat -v");
         SessionApplicationService service = serviceOver(host);
-        HostedEmulators running = HostedEmulators.listeningTo(service);
+        HostedEmulators running = emulating(service);
         HostedEmulatorCommand emulating = new HostedEmulatorCommand(service, running);
         HostedEmulatorQuery emulators = new HostedEmulatorQuery(running);
         SessionId id = ((StartedHost) new HostedSessionCommand(service).startUnlinked(newHostedPayload())).id();
@@ -76,7 +77,7 @@ class HostedEmulatorCommandPtyTest {
     void shouldGiveTheChildItsArrowsAsApplicationKeysWhenItAskedForThem() throws Exception {
         HostPort host = hostRunning("printf '\\033[?1h'; echo ready; cat -v");
         SessionApplicationService service = serviceOver(host);
-        HostedEmulators running = HostedEmulators.listeningTo(service);
+        HostedEmulators running = emulating(service);
         HostedEmulatorCommand emulating = new HostedEmulatorCommand(service, running);
         HostedEmulatorQuery emulators = new HostedEmulatorQuery(running);
         SessionId id = ((StartedHost) new HostedSessionCommand(service).startUnlinked(newHostedPayload())).id();
@@ -93,7 +94,7 @@ class HostedEmulatorCommandPtyTest {
     void shouldAnswerTheChildsTerminalQueryOnItsPty() throws Exception {
         HostPort host = hostRunning("printf '\\033[c'; cat -v");
         SessionApplicationService service = serviceOver(host);
-        HostedEmulators running = HostedEmulators.listeningTo(service);
+        HostedEmulators running = emulating(service);
         HostedEmulatorCommand emulating = new HostedEmulatorCommand(service, running);
         HostedEmulatorQuery emulators = new HostedEmulatorQuery(running);
         SessionId id = ((StartedHost) new HostedSessionCommand(service).startUnlinked(newHostedPayload())).id();
@@ -107,7 +108,7 @@ class HostedEmulatorCommandPtyTest {
     void shouldRedrawTheChildAtTheSizeOfTheResizedPane() throws Exception {
         HostPort host = hostRunning("trap 'stty size' WINCH; stty size; while true; do sleep 0.05; done");
         SessionApplicationService service = serviceOver(host);
-        HostedEmulators running = HostedEmulators.listeningTo(service);
+        HostedEmulators running = emulating(service);
         HostedEmulatorCommand emulating = new HostedEmulatorCommand(service, running);
         HostedEmulatorQuery emulators = new HostedEmulatorQuery(running);
         SessionId id = ((StartedHost) new HostedSessionCommand(service).startUnlinked(newHostedPayload())).id();

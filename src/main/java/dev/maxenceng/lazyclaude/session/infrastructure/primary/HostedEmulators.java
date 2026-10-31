@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
@@ -18,16 +19,22 @@ public final class HostedEmulators implements PtyListener {
     private final SessionApplicationService sessions;
     private final Map<SessionId, HostedEmulator> running = new ConcurrentHashMap<>();
     private final List<Runnable> screenListeners = new CopyOnWriteArrayList<>();
+    private final AtomicBoolean listening = new AtomicBoolean();
 
     private HostedEmulators(SessionApplicationService sessions) {
         this.sessions = sessions;
     }
 
-    /** The emulators of {@code sessions}' hosted sessions, told of each launch, output and end from now on. */
-    public static HostedEmulators listeningTo(SessionApplicationService sessions) {
-        HostedEmulators emulators = new HostedEmulators(sessions);
-        sessions.onPty(emulators);
-        return emulators;
+    /** The emulators of {@code sessions}' hosted sessions, none running until {@link HostedEmulatorCommand#emulate} is asked for. */
+    public static HostedEmulators over(SessionApplicationService sessions) {
+        return new HostedEmulators(sessions);
+    }
+
+    /** Told of each launch, output and end from now on; asked for twice, it listens once. */
+    void listen() {
+        if (listening.compareAndSet(false, true)) {
+            sessions.onPty(this);
+        }
     }
 
     Optional<HostedEmulator> of(SessionId id) {

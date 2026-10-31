@@ -63,6 +63,30 @@ class SidecarProtocolTest {
     }
 
     @Test
+    void answers_the_diff_of_a_pull_request_read_through_gh() throws Exception {
+        try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
+            sidecar.nextLine();
+            sidecar.send(request(1, "review/diffOf", "{\"root\":\"%s\",\"number\":23}".formatted(sidecar.projectPath())));
+
+            assertThat(sidecar.nextLine())
+                    .startsWith("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"kind\":\"readDiff\"")
+                    .contains("\"src/Fixture.java\"");
+        }
+    }
+
+    @Test
+    void answers_a_pending_review_write_gh_refuses_as_a_result() throws Exception {
+        try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
+            sidecar.nextLine();
+            sidecar.send(request(1, "review/submit", "{\"root\":\"%s\",\"number\":23,\"summary\":\"Looks close.\"}".formatted(sidecar.projectPath())));
+
+            assertThat(sidecar.nextLine())
+                    .as("a refusal is the write's outcome, so it is a result and never a JSON-RPC error")
+                    .startsWith("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"kind\":\"refusedWrite\",\"reason\":");
+        }
+    }
+
+    @Test
     void answers_a_directory_in_no_project_as_a_result() throws Exception {
         try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
             sidecar.nextLine();

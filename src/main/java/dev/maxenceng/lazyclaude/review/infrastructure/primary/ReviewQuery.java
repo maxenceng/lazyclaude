@@ -6,11 +6,10 @@ import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.review.application.PendingReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.application.PullRequestDiffApplicationService;
 import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
-import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
 import dev.maxenceng.lazyclaude.review.published.Reason;
 
 /**
- * What the shell asks of {@code review}: the open and the merged pull requests of a project as views, and a view again after each fetch,
+ * What a frontend asks of {@code review}: the open and the merged pull requests of a project as views, and a view again after each fetch,
  * and one pull request's diff and threads when it asks for them. It only reads.
  */
 public final class ReviewQuery {
@@ -52,9 +51,9 @@ public final class ReviewQuery {
      * The threads with the diff lines they show under, in diff order, from whatever each read last answered: none until the threads are
      * read, and every one on no line until the diff is. It reads nothing.
      */
-    public ThreadsInDiffView threadsInDiff(PullRequestDiffView diff, ThreadsView threads) {
-        return ThreadsInDiffView.from(
-                pullRequestDiff.threadsInDiff(ReviewReadings.diffOf(diff), ReviewReadings.threadsOf(threads)));
+    public ThreadsInDiffView threadsInDiff(ThreadsInDiffPayload payload) {
+        return ThreadsInDiffView.from(pullRequestDiff.threadsInDiff(
+                ReviewReadings.diffOf(payload.diff()), ReviewReadings.threadsOf(payload.threads())));
     }
 
     /** What stands until the pending review's read answers. */
@@ -71,9 +70,9 @@ public final class ReviewQuery {
      * Where a comment on the diff lines from {@code first} to {@code last} would hang, or why it cannot: the range runs out of its hunk,
      * or a line is not in the diff. It reads nothing.
      */
-    public CommentAnchorView anchorOf(PullRequestDiffView diff, DiffLineIndex first, DiffLineIndex last) {
+    public CommentAnchorView anchorOf(CommentAnchorPayload payload) {
         try {
-            return OnDiffAnchorView.from(pendingReview.anchor(ReviewReadings.diffOf(diff), first, last));
+            return OnDiffAnchorView.from(pendingReview.anchor(ReviewReadings.diffOf(payload.diff()), payload.first(), payload.last()));
         } catch (DomainException refused) {
             return new RefusedAnchorView(new Reason(refused.getMessage()));
         }
@@ -83,9 +82,9 @@ public final class ReviewQuery {
      * The pending comments with the diff lines they show under, in diff order, from whatever each read last answered: none until the
      * pending review is read, and every one on no line until the diff is. It reads nothing.
      */
-    public PendingCommentsInDiffView pendingInDiff(PullRequestDiffView diff, PendingReviewView pending) {
-        return PendingCommentsInDiffView.from(
-                pendingReview.pendingInDiff(ReviewReadings.diffOf(diff), ReviewReadings.commentsOf(pending)));
+    public PendingCommentsInDiffView pendingInDiff(PendingCommentsInDiffPayload payload) {
+        return PendingCommentsInDiffView.from(pendingReview.pendingInDiff(
+                ReviewReadings.diffOf(payload.diff()), ReviewReadings.commentsOf(payload.pending())));
     }
 
     /** What stands until the first fetch answers. */

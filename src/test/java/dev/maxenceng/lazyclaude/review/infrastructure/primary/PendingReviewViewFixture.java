@@ -8,9 +8,11 @@ import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.pendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.secondPendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.threadId;
+import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static dev.maxenceng.lazyclaude.review.published.ReasonFixture.reason;
 import static dev.maxenceng.lazyclaude.review.published.SummaryFixture.summary;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
+import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 
 import java.util.List;
 
@@ -108,5 +110,25 @@ public final class PendingReviewViewFixture {
 
     public static PendingInDiffView pendingOnNoLineView(PendingCommentView comment) {
         return PendingInDiffView.builder().comment(comment).line(new NoDiffLine()).build();
+    }
+
+    public static PendingCommentPayload pendingCommentPayload() {
+        return new PendingCommentPayload(project().root(), pullRequestNumber(), diffPath(), rightOn(3), commentBody());
+    }
+
+    public static PendingReplyPayload pendingReplyPayload() {
+        return new PendingReplyPayload(project().root(), pullRequestNumber(), threadId(), commentBody());
+    }
+
+    public static PendingEditPayload pendingEditPayload() {
+        return new PendingEditPayload(project().root(), pullRequestNumber(), pendingCommentId(), editedCommentBody());
+    }
+
+    public static PendingDeletePayload pendingDeletePayload() {
+        return new PendingDeletePayload(project().root(), pullRequestNumber(), pendingCommentId());
+    }
+
+    public static PendingSubmitPayload pendingSubmitPayload() {
+        return new PendingSubmitPayload(project().root(), pullRequestNumber(), summary());
     }
 }

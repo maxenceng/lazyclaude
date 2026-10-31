@@ -41,11 +41,9 @@ final class TypeSchema {
     private static final Set<Class<?>> INTEGERS =
             Set.of(int.class, long.class, short.class, byte.class, Integer.class, Long.class, Short.class, Byte.class);
     private static final String NOT_JSON = "its shape has to change before it is written as JSON";
-    private static final String NO_SEALED_PARAMS = "a Payload component that is or holds a sealed type is not read yet";
     private static final String NOT_WRITTEN_ONE_WAY = "its values are written by their own class, which it does not name";
     private static final String NO_KIND = "a variant that is not a record or a sealed type carries no kind";
     private static final String HOLDS_ITSELF = "a record of one component is written as that component, so it cannot hold itself";
-    private static final String OF = "%s of %s";
 
     private final SchemaDefinitions definitions;
     private final Set<Class<?>> unwrapping = new HashSet<>();
@@ -58,7 +56,7 @@ final class TypeSchema {
     JsonNode read(Class<?> payload) {
         return definitions.define(payload, () -> {
             ObjectNode properties = SidecarJson.object();
-            Arrays.stream(payload.getRecordComponents()).forEach(component -> properties.set(component.getName(), read(component)));
+            Arrays.stream(payload.getRecordComponents()).forEach(component -> properties.set(component.getName(), written(component.getGenericType())));
             return SchemaNodes.closedObject(properties);
         });
     }
@@ -69,23 +67,6 @@ final class TypeSchema {
             case ParameterizedType generic -> writtenGeneric(generic);
             case Class<?> plain -> writtenClass(plain);
             default -> throw new UnschemableTypeException(type.getTypeName(), NOT_JSON);
-        };
-    }
-
-    private JsonNode read(RecordComponent component) {
-        if (holdsASealedType(component.getGenericType())) {
-            // deferred: a Payload cannot take a sealed type — close it when a method takes one, with a test of how Jackson reads it.
-            throw new UnschemableTypeException(OF.formatted(component.getName(), component.getDeclaringRecord().getSimpleName()), NO_SEALED_PARAMS);
-        }
-        return written(component.getGenericType());
-    }
-
-    private static boolean holdsASealedType(Type type) {
-        return switch (type) {
-            case ParameterizedType generic -> Arrays.stream(generic.getActualTypeArguments()).anyMatch(TypeSchema::holdsASealedType);
-            case Class<?> plain -> plain.isSealed()
-                    || plain.isRecord() && Arrays.stream(plain.getRecordComponents()).anyMatch(held -> holdsASealedType(held.getGenericType()));
-            default -> false;
         };
     }
 
@@ -106,6 +87,9 @@ final class TypeSchema {
     }
 
     private JsonNode writtenClass(Class<?> type) {
+        if (type == Void.class) {
+            return SchemaNodes.typed(NULL);
+        }
         if (type == boolean.class || type == Boolean.class) {
             return SchemaNodes.typed(BOOLEAN);
         }

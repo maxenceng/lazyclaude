@@ -16,10 +16,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
-import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
+import dev.maxenceng.lazyclaude.Contexts;
+
 
 /**
  * The backend a desktop frontend drives: JSON-RPC 2.0, one message per line, requests answered on the sidecar's own executor in any
@@ -39,16 +37,10 @@ public final class Sidecar {
     private static final String INTERNAL_MESSAGE = "internal error";
     private static final System.Logger LOG = System.getLogger(Sidecar.class.getName());
 
-    private final BoardQuery board;
-    private final SessionQuery sessions;
-    private final HostedSessionCommand hosting;
-    private final WarningQuery warnings;
+    private final Contexts contexts;
 
-    public Sidecar(BoardQuery board, SessionQuery sessions, HostedSessionCommand hosting, WarningQuery warnings) {
-        this.board = board;
-        this.sessions = sessions;
-        this.hosting = hosting;
-        this.warnings = warnings;
+    public Sidecar(Contexts contexts) {
+        this.contexts = contexts;
     }
 
     /** The JSON Schema of every method and notification, as committed under {@code docs/protocol/}; the build fails when it is stale (ADR 0073). */
@@ -58,15 +50,17 @@ public final class Sidecar {
 
     /** Everything the sidecar declares: what the schema states, what the contract test counts and what {@link #methods} serves. */
     static Protocol protocol() {
-        return Protocol.of(BoardMethods.protocol(), SessionMethods.protocol(), WarningMethods.protocol());
+        return Protocol.of(BoardMethods.protocol(), SessionMethods.protocol(), WarningMethods.protocol(), DocsMethods.protocol(), ReviewMethods.protocol());
     }
 
     /** What is served on {@code output}, with the pushes of what a hosted {@code claude} writes and how it exits wired to it. */
     Map<String, SidecarMethod> methods(SidecarOutput output) {
         return Stream.of(
-                        new BoardMethods(board, output).methods(),
-                        new SessionMethods(sessions, hosting, output).methods(),
-                        new WarningMethods(warnings, output).methods())
+                        new BoardMethods(contexts.board(), output).methods(),
+                        new SessionMethods(contexts.sessions(), contexts.hosting(), output).methods(),
+                        new WarningMethods(contexts.warnings(), output).methods(),
+                        new DocsMethods(contexts.docs(), output).methods(),
+                        new ReviewMethods(contexts.review(), contexts.pendingReview(), output).methods())
                 .flatMap(served -> served.entrySet().stream())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
@@ -80,7 +74,7 @@ public final class Sidecar {
             Map<String, SidecarMethod> methods = methods(output);
             output.send(JsonRpcMessages.ready());
             int ended = answering(in, methods, output);
-            hosting.endAll();
+            contexts.hosting().endAll();
             return ended;
         }
     }

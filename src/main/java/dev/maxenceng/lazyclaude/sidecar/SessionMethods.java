@@ -5,7 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
@@ -23,7 +24,6 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPaylo
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.NullNode;
 
 /**
  * The {@code session/} and {@code pty/} methods: one per operation of {@link SessionQuery} and {@link HostedSessionCommand}, named
@@ -32,19 +32,21 @@ import tools.jackson.databind.node.NullNode;
  */
 final class SessionMethods {
 
-    private static final ProtocolMethod<NewHostedPayload, HostStart> START_UNLINKED =
-            new ProtocolMethod<>("session/startUnlinked", NewHostedPayload.class, HostStart.class);
-    private static final ProtocolMethod<TicketHostedPayload, HostStart> START_TICKET =
-            new ProtocolMethod<>("session/startTicket", TicketHostedPayload.class, HostStart.class);
-    private static final ProtocolMethod<ResumeHostedPayload, HostStart> RESUME =
-            new ProtocolMethod<>("session/resume", ResumeHostedPayload.class, HostStart.class);
-    private static final ProtocolMethod<ResumeTicketHostedPayload, HostStart> RESUME_IN_TICKET_WORKTREE =
-            new ProtocolMethod<>("session/resumeInTicketWorktree", ResumeTicketHostedPayload.class, HostStart.class);
+    private static final List<ServedMethod<HostedSessionCommand, ?, ?>> STARTS = List.of(
+            ServedMethod.of("session/startUnlinked", NewHostedPayload.class, HostStart.class, HostedSessionCommand::startUnlinked),
+            ServedMethod.of("session/startTicket", TicketHostedPayload.class, HostStart.class, HostedSessionCommand::startTicket),
+            ServedMethod.of("session/resume", ResumeHostedPayload.class, HostStart.class, HostedSessionCommand::resume),
+            ServedMethod.of(
+                    "session/resumeInTicketWorktree",
+                    ResumeTicketHostedPayload.class,
+                    HostStart.class,
+                    HostedSessionCommand::resumeInTicketWorktree));
     private static final ProtocolMethod<SessionPayload, SessionsView> WATCH =
             new ProtocolMethod<>("session/watch", SessionPayload.class, SessionsView.class);
-    private static final ProtocolInput<PtyInputPayload> PTY_INPUT = new ProtocolInput<>("pty/input", PtyInputPayload.class);
-    private static final ProtocolInput<PtyResizePayload> PTY_RESIZE = new ProtocolInput<>("pty/resize", PtyResizePayload.class);
-    private static final ProtocolInput<RepaintPayload> REPAINT = new ProtocolInput<>("session/repaint", RepaintPayload.class);
+    private static final List<ServedInput<HostedSessionCommand, ?>> INPUTS = List.of(
+            ServedInput.of("pty/input", PtyInputPayload.class, HostedSessionCommand::write),
+            ServedInput.of("pty/resize", PtyResizePayload.class, HostedSessionCommand::resizePty),
+            ServedInput.of("session/repaint", RepaintPayload.class, HostedSessionCommand::repaint));
     private static final ProtocolNotification<SessionsView> CHANGED = new ProtocolNotification<>("session/changed", SessionsView.class);
     private static final ProtocolNotification<PtyOutputView> OUTPUT = new ProtocolNotification<>("pty/output", PtyOutputView.class);
     private static final ProtocolNotification<SessionExitView> EXITED = new ProtocolNotification<>("session/exited", SessionExitView.class);
@@ -62,8 +64,8 @@ final class SessionMethods {
 
     static Protocol protocol() {
         return new Protocol(
-                List.of(START_UNLINKED, START_TICKET, RESUME, RESUME_IN_TICKET_WORKTREE, WATCH),
-                List.of(PTY_INPUT, PTY_RESIZE, REPAINT),
+                Stream.concat(STARTS.stream().map(ServedMethod::method), Stream.of(WATCH)).<ProtocolMethod<?, ?>>map(declared -> declared).toList(),
+                INPUTS.stream().<ProtocolInput<?>>map(ServedInput::input).toList(),
                 List.of(CHANGED, OUTPUT, EXITED));
     }
 
@@ -71,24 +73,12 @@ final class SessionMethods {
     Map<String, SidecarMethod> methods() {
         sessions.onOutput(view -> output.send(OUTPUT.message(view)));
         sessions.onExit(view -> output.send(EXITED.message(view)));
-        return Map.of(
-                START_UNLINKED.name(), params -> answered(START_UNLINKED.answer(params, hosting::startUnlinked)),
-                START_TICKET.name(), params -> answered(START_TICKET.answer(params, hosting::startTicket)),
-                RESUME.name(), params -> answered(RESUME.answer(params, hosting::resume)),
-                RESUME_IN_TICKET_WORKTREE.name(), params -> answered(RESUME_IN_TICKET_WORKTREE.answer(params, hosting::resumeInTicketWorktree)),
-                WATCH.name(), this::watch,
-                PTY_INPUT.name(), params -> taken(params, PTY_INPUT, hosting::write),
-                PTY_RESIZE.name(), params -> taken(params, PTY_RESIZE, hosting::resizePty),
-                REPAINT.name(), params -> taken(params, REPAINT, hosting::repaint));
-    }
-
-    private static SidecarAnswer answered(HostStart start) {
-        return SidecarAnswer.of(SidecarJson.tree(start));
-    }
-
-    private static <P> SidecarAnswer taken(JsonNode params, ProtocolInput<P> input, Consumer<P> operation) {
-        input.accept(params, operation);
-        return SidecarAnswer.of(NullNode.getInstance());
+        return Stream.of(
+                        STARTS.stream().map(start -> start.boundTo(hosting)),
+                        INPUTS.stream().map(input -> input.boundTo(hosting)),
+                        Stream.of(Map.<String, SidecarMethod>entry(WATCH.name(), this::watch)))
+                .flatMap(served -> served)
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /** The watch opens once the current sessions are queued, so no {@code session/changed} reaches the frontend before the sessions it changes. */

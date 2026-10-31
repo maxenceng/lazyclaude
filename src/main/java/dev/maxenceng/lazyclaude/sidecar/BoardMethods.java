@@ -19,8 +19,8 @@ import tools.jackson.databind.JsonNode;
 /** The {@code board/} methods: one per operation of {@link BoardQuery}, named after it (ADR 0050). */
 final class BoardMethods {
 
-    private static final ProtocolMethod<BoardPayload, BoardLookupView> BOARD_FOR =
-            new ProtocolMethod<>("board/boardFor", BoardPayload.class, BoardLookupView.class);
+    private static final ServedMethod<BoardQuery, BoardPayload, BoardLookupView> BOARD_FOR =
+            ServedMethod.of("board/boardFor", BoardPayload.class, BoardLookupView.class, BoardQuery::boardFor);
     private static final ProtocolMethod<BoardPayload, BoardLookupView> WATCH =
             new ProtocolMethod<>("board/watch", BoardPayload.class, BoardLookupView.class);
     private static final ProtocolNotification<BoardReadingView> CHANGED =
@@ -36,15 +36,11 @@ final class BoardMethods {
     }
 
     static Protocol protocol() {
-        return new Protocol(List.of(BOARD_FOR, WATCH), List.of(), List.of(CHANGED));
+        return new Protocol(List.of(BOARD_FOR.method(), WATCH), List.of(), List.of(CHANGED));
     }
 
     Map<String, SidecarMethod> methods() {
-        return Map.of(BOARD_FOR.name(), this::boardFor, WATCH.name(), this::watch);
-    }
-
-    private SidecarAnswer boardFor(JsonNode params) {
-        return SidecarAnswer.of(SidecarJson.tree(BOARD_FOR.answer(params, board::boardFor)));
+        return Map.ofEntries(BOARD_FOR.boundTo(board), Map.entry(WATCH.name(), this::watch));
     }
 
     /** The watch opens once the current board is queued, so no {@code board/changed} reaches the frontend before the board it changes. */
