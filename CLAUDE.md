@@ -39,7 +39,7 @@ Use `make`, never `mvn` directly — the Makefile selects the Java 25 toolchain.
 ## Structure
 
 ```
-dev.maxenceng.lazyclaude.LazyClaude                  composition root: loads the configuration, opens the shell or the sidecar
+dev.maxenceng.lazyclaude.LazyClaude                  composition root: runs the Launch its arguments pick (shell, sidecar, schema)
 dev.maxenceng.lazyclaude.shell                       the TamboUI application: screens and keys
 dev.maxenceng.lazyclaude.<context>.{published, domain, application, infrastructure.{primary, secondary}}
 ```

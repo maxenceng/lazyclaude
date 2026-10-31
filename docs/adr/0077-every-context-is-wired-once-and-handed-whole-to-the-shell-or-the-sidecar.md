@@ -19,16 +19,21 @@ emulators and the end of hosted sessions. Review asked for the root to stay agno
   whole and read what they drive. It lives in the root package, which the frontends may read as they read
   `ApplicationModule`; nothing in it depends on a frontend.
 - **`ConfigurationLoader` reads the configuration, then builds `Contexts` over it.** A file that cannot be used is a
-  `DomainException`, thrown before anything is built.
-- **`LazyClaude.main` only picks the frontend and prints.** `--sidecar` runs `Sidecar`, otherwise `ShellStartup.open`
-  runs the shell. A refusal comes back to `main`, the configuration's as a `DomainException`, a missing project as
-  its `Reason`, and `main` prints it: it stays the one class that prints (ADR 0022's rule).
+  `DomainException`, thrown before anything is built. The warnings it raises are held in the contexts it builds.
+- **How lazyclaude is launched is a `Launch`, picked from the arguments by `Launch.from`.** `SchemaLaunch` prints the
+  schema, `SidecarLaunch` sends `System.out` to stderr and serves on the real stdout, `ShellLaunch` opens the shell.
+  `LazyClaude.main` runs the one picked and exits with its code, and knows nothing of either frontend. A launch
+  prints its own refusal: the configuration's `DomainException`, or a missing project's `Reason`.
+- **The composition root is `LazyClaude` and the `Launch` implementations.** `ArchitectureTest` exempts them, and only
+  them, from the rule that nothing prints (ADR 0022) and from the rules that keep modules off the shells: each launch
+  touches the streams it owns.
 - **The shell's startup lives in the shell.** `ShellStartup` holds the first read, the subscriptions, the
   uncaught-failure handler and the end of hosted sessions; a failure that ends `main` is handed back for `main` to print.
 - **A frontend that draws hosted sessions asks for their emulators.** `Contexts` builds them idle;
   `HostedEmulatorCommand.emulate` starts them listening, and only the shell calls it. The sidecar hands the pty's bytes
   to its frontend and parses no terminal.
-- Rejected: a `main` per frontend (`ShellMain`, `SidecarMain`), which keeps the duplicated wiring this removes.
+- Rejected: a `main` per frontend (`ShellMain`, `SidecarMain`), which keeps the duplicated wiring this removes; and
+  launches handed their streams by `main`, which keeps the sidecar's stdout redirect in `main`.
 
 ## Consequences
 

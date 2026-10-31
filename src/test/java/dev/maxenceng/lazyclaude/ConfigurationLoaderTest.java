@@ -7,8 +7,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -16,31 +14,28 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
-import dev.maxenceng.lazyclaude.shared.domain.Warning;
-import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.NoWarningView;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView;
 
 class ConfigurationLoaderTest {
 
     @TempDir
     Path home;
 
-    private final WarningRepository raised = new WarningRepository();
-    private final List<String> warned = new ArrayList<>();
     private ConfigurationLoader loader;
 
     @BeforeEach
     void setUp() {
-        raised.subscribe(warnings -> {
-            warned.clear();
-            warned.addAll(warnings.raised().stream().map(Warning::text).toList());
-        });
-        loader = new ConfigurationLoader(home, Map.of(), raised);
+        loader = new ConfigurationLoader(home, Map.of());
     }
 
     @Test
     void shouldStartOnTheDefaultsWithoutAnyFile() {
-        assertThat(loader.configuration()).isEqualTo(defaultConfigurationView());
-        assertThat(warned).isEmpty();
+        ConfigurationView configuration = loader.configuration();
+
+        assertThat(configuration).isEqualTo(defaultConfigurationView());
+        assertThat(loader.contexts(configuration).warnings().held()).isInstanceOf(NoWarningView.class);
     }
 
     @Test
@@ -58,16 +53,27 @@ class ConfigurationLoaderTest {
         keybindingsJson(home, """
                 {"bindings": [{"context": "Chat", "bindings": {"meta+z": "app:redraw", "ALT+H": "chat:cancel", "alt+m": null}}]}""");
 
-        assertThat(loader.configuration()).isNotNull();
-        assertThat(warned).hasSize(1).allSatisfy(text -> assertThat(text).contains("alt+z", "alt+h").doesNotContain("alt+m"));
+        ConfigurationView configuration = loader.configuration();
+
+        assertThat(loader.contexts(configuration).warnings().held())
+                .as("the warnings raised while reading are held for the frontend that opens on these contexts")
+                .isInstanceOfSatisfying(WarningView.class, warning -> {
+                    assertThat(warning.count()).isEqualTo(1);
+                    assertThat(warning.text()).contains("alt+z", "alt+h").doesNotContain("alt+m");
+                });
     }
 
     @Test
     void shouldCarryOnWithAWarningWhenClaudesKeybindingsCannotBeRead() throws Exception {
         keybindingsJson(home, "not json");
 
-        assertThat(loader.configuration()).isNotNull();
-        assertThat(warned).hasSize(1).allSatisfy(text -> assertThat(text).contains("skipped"));
+        ConfigurationView configuration = loader.configuration();
+
+        assertThat(loader.contexts(configuration).warnings().held())
+                .isInstanceOfSatisfying(WarningView.class, warning -> {
+                    assertThat(warning.count()).isEqualTo(1);
+                    assertThat(warning.text()).contains("skipped");
+                });
     }
 
     @Test

@@ -48,12 +48,11 @@ final class ConfigurationLoader {
 
     private final Path home;
     private final Map<String, String> environment;
-    private final WarningRepository warnings;
+    private final WarningRepository warnings = new WarningRepository();
 
-    ConfigurationLoader(Path home, Map<String, String> environment, WarningRepository warnings) {
+    ConfigurationLoader(Path home, Map<String, String> environment) {
         this.home = home;
         this.environment = environment;
-        this.warnings = warnings;
     }
 
     /** What the user configured; a file that cannot be used is refused with a {@code DomainException} saying where and why. */
