@@ -16,7 +16,8 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.pressed;
-import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoard;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoardAgain;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoardAgainOverAReason;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellReadingBoardOnDocs;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellReadingBoardWith;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellReadingUnavailableBoard;
@@ -54,7 +55,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldReadTheBoardAgainWhenTheBoardChanges() {
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().title(secondTitle()).build())));
         Shell shell = shellReadingBoardWith(boards, screens, ticketView());
 
@@ -65,7 +66,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldKeepTheBoardOnScreenWhenItCannotBeReadAgain() {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.empty());
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.empty());
         Shell shell = shellReadingBoardWith(boards, screens, ticketView());
 
         shell.boardChanged();
@@ -75,7 +76,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldKeepTheSelectionOnTheTicketWhenARowAppearsAboveIt() {
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.of(boardViewOf(ticketView(), secondTicketView())));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, secondTicketView()), key('j'), 1);
 
@@ -86,7 +87,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldLeaveTheCursorOnTheRowThatTookThePlaceOfATicketThatVanished() {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(secondTicketView())));
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.of(boardViewOf(secondTicketView())));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketView(), secondTicketView()), key('j'), 1);
 
         shell.boardChanged();
@@ -96,7 +97,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldLeaveTheCursorOnTheRowThatTookThePlaceOfATicketMovedIntoAFoldedGroup() {
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().status(Status.DONE).build(), secondTicketView())));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketView(), secondTicketView()), key('j'), 1);
 
@@ -112,7 +113,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldRedrawTheOpenTicketDetailAndKeepItsScrollPosition() {
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder()
                         .title(secondTitle())
                         .body(longTicketView().body())
@@ -132,7 +133,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldKeepTheScrollPositionOfAnOpenDocumentWhenTheBoardCursorMoves() {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(secondTicketView())));
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.of(boardViewOf(secondTicketView())));
         Shell shell = pressed(
                 shellReadingBoardOnDocs(boards, docsViewOfDocuments(longDocumentView()), ticketView(), secondTicketView()),
                 key('j'),
@@ -152,7 +153,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldHandSessionsTheTicketIdsOfTheBoardJustRead() {
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.of(boardViewOf(ticketView(), secondTicketView())));
         Shell shell = shellReadingBoardWith(boards, screens, ticketView());
 
@@ -165,7 +166,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldNotHandSessionsTheTicketIdsAgainWhenTheyAreTheSame() {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketView())));
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.of(boardViewOf(ticketView())));
         Shell shell = shellReadingBoardWith(boards, screens, ticketView());
 
         shell.boardChanged();
@@ -175,7 +176,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldFollowTheSelectedTicketIntoTheStatusGroupItMovedTo() {
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().status(Status.TODO).build(), secondTicketView())));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketView(), secondTicketView()), key('j'), 1);
 
@@ -187,7 +188,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldLeaveTheCursorOnTheNextRowOfTheOldGroupWhenTheSelectedTicketIsGone() {
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(3, Status.DRAFT), ticketViewNumbered(4, Status.TODO))));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT), ticketViewNumbered(3, Status.DRAFT), ticketViewNumbered(4, Status.TODO)), key('j'), 2);
 
@@ -198,7 +199,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldLeaveTheCursorOnThePreviousRowOfTheOldGroupWhenTheSelectedTicketWasItsLast() {
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(4, Status.TODO))));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT), ticketViewNumbered(4, Status.TODO)), key('j'), 2);
 
@@ -213,7 +214,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldLeaveTheCursorOnTheHeaderOfTheOldGroupWhenTheSelectedTicketWasItsOnlyOne() {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketViewNumbered(4, Status.TODO))));
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.of(boardViewOf(ticketViewNumbered(4, Status.TODO))));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(4, Status.TODO)), key('j'), 1);
 
         shell.boardChanged();
@@ -224,7 +225,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldClampTheScrollOfTheOpenTicketDetailWhenTheBodyShrank() {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketViewBuilder().body(new Body("Short.")).build())));
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.of(boardViewOf(ticketViewBuilder().body(new Body("Short.")).build())));
         Shell shell = pressed(shellReadingBoardWith(boards, screens, longTicketView()), key('j'), 1);
         Screen.of(shell);
         shell.press(key('l'));
@@ -239,7 +240,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldLeaveAFoldedGroupFoldedWhenTheBoardIsReadAgain() {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketView(), secondTicketView())));
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.of(boardViewOf(ticketView(), secondTicketView())));
         Shell shell = shellReadingBoardWith(boards, screens, ticketView());
         shell.press(enter());
 
@@ -250,7 +251,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldKeepTheZoomWhenTheBoardIsReadAgain() {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketView(), secondTicketView())));
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.of(boardViewOf(ticketView(), secondTicketView())));
         Shell shell = shellReadingBoardWith(boards, screens, ticketView());
         shell.press(key('z'));
 
@@ -261,7 +262,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldReplaceTheReasonWithTheTicketsWhenTheBoardIsReadAtLast() {
-        when(boards.boardFor(readingBoard())).thenReturn(boardViewOf(ticketView()));
+        when(boards.boardAfterChange(readingBoardAgainOverAReason())).thenReturn(Optional.of(boardViewOf(ticketView())));
         Shell shell = shellReadingUnavailableBoard(boards, screens);
         assertThat(Screen.of(shell).mainViewRows()).anySatisfy(row -> assertThat(row).contains("gh is not logged in; run gh auth login"));
 
@@ -273,7 +274,7 @@ class ShellBoardWatchTest {
 
     @Test
     void shouldReplaceTheReasonWithTheNewOneWhenTheBoardStillCannotBeRead() {
-        when(boards.boardFor(readingBoard())).thenReturn(unreachableBoardView());
+        when(boards.boardAfterChange(readingBoardAgainOverAReason())).thenReturn(Optional.of(unreachableBoardView()));
         Shell shell = shellReadingUnavailableBoard(boards, screens);
 
         shell.boardChanged();
@@ -285,12 +286,24 @@ class ShellBoardWatchTest {
     }
 
     @Test
-    void shouldNotAskForTheBoardAsLastReadWhenNoneWasEverRead() {
-        when(boards.boardFor(readingBoard())).thenReturn(unreachableBoardView());
+    void shouldAskForTheBoardAfterAChangeAsOneWithoutTicketsShownWhenNoneWasEverRead() {
+        when(boards.boardAfterChange(any())).thenReturn(Optional.of(unreachableBoardView()));
         Shell shell = shellReadingUnavailableBoard(boards, screens);
 
         shell.boardChanged();
 
-        verify(boards, never()).boardReadAgainFor(any());
+        verify(boards).boardAfterChange(readingBoardAgainOverAReason());
+    }
+
+    @Test
+    void shouldKeepTheReasonWhenNothingReplacesIt() {
+        when(boards.boardAfterChange(readingBoardAgainOverAReason())).thenReturn(Optional.empty());
+        Shell shell = shellReadingUnavailableBoard(boards, screens);
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .as("a board with nothing to replace it keeps its reason on screen")
+                .anySatisfy(row -> assertThat(row).contains("gh is not logged in; run gh auth login"));
     }
 }

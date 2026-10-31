@@ -4,7 +4,7 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 
-/** What the shell asks of `board`: the board of a working directory, as a view. It only reads. */
+/** What a frontend asks of `board`: the board of a working directory, as a view. It only reads. */
 public final class BoardQuery {
 
     private final BoardApplicationService boards;
@@ -13,21 +13,17 @@ public final class BoardQuery {
         this.boards = boards;
     }
 
-    /**
-     * The board of the project, or a view without tickets that says why its issues cannot be read.
-     *
-     * @throws dev.maxenceng.lazyclaude.error.domain.DomainException when the directory belongs to no project
-     */
-    public BoardReadingView boardFor(BoardPayload payload) {
-        return BoardReadingView.from(boards.boardFor(payload.toDomain()));
+    /** The board of the project, or a view without tickets that says why its issues cannot be read, or why there is no project. */
+    public BoardLookupView boardFor(BoardPayload payload) {
+        return BoardLookupView.from(boards.boardFor(payload.toDomain()));
     }
 
     /**
-     * The board read again, or nothing when it cannot be, so a board already on screen stays; a read that fails after a good one
-     * raises a warning saying why.
+     * The board read again after a change, or nothing when what is shown stays: a board with tickets is kept when the read fails, the
+     * warning saying why, and one without is read whole so its reason stays current.
      */
-    public Optional<BoardReadingView> boardReadAgainFor(BoardPayload payload) {
-        return boards.boardReadAgainFor(payload.toDomain()).map(BoardReadingView::from);
+    public Optional<BoardReadingView> boardAfterChange(BoardAfterChangePayload payload) {
+        return boards.boardAfterChange(payload.toDomain(), payload.boardShown()).map(BoardReadingView::from);
     }
 
     /**

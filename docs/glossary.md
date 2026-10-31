@@ -40,10 +40,10 @@ words mean.
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| Backend | The contexts' application layer and everything beneath it, whichever frontend drives it. | `sidecar`, `shell` (expected) |
-| Frontend | What drives a backend and draws it: the TUI, which calls it in-process, or the desktop frontend, which drives a sidecar. Each emulates its own terminal (ADR 0049). | `shell`, `sidecar` (expected) |
-| Sidecar | The backend run as a child process of the desktop frontend, `lazyclaude --sidecar`, in the project's directory. It ends when its stdin closes, and its hosted sessions end with it (ADR 0048). | `sidecar` (expected) |
-| Protocol | The JSON-RPC 2.0 messages, one per line, that a frontend and its sidecar exchange: one method per `*Query`/`*Command` operation, `*/changed` and `pty/*` notifications, `ready` first (ADR 0050). | `sidecar` (expected) |
+| Backend | The contexts' application layer and everything beneath it, whichever frontend drives it. | `sidecar`, `shell` |
+| Frontend | What drives a backend and draws it: the TUI, which calls it in-process, or the desktop frontend, which drives a sidecar. Each emulates its own terminal (ADR 0049). | `shell`, `sidecar` |
+| Sidecar | The backend run as a child process of the desktop frontend, `lazyclaude --sidecar`, in the project's directory. It ends when its stdin closes, and its hosted sessions end with it (ADR 0048). | `sidecar` |
+| Protocol | The JSON-RPC 2.0 messages, one per line, that a frontend and its sidecar exchange: one method per `*Query`/`*Command` operation, `*/changed` and `pty/*` notifications, `ready` first (ADR 0050). | `sidecar` |
 | Desktop frontend | The Tauri window, React over xterm.js, that drives a sidecar: the Board, the hosted session pane, Docs and Review, the TUI's screens and keys with the mouse. Not the *desktop notification*, which either frontend may fire. | `frontend/` (expected) |
 | Relay | The desktop frontend's Rust half: it spawns the sidecar, carries its lines both ways in batches and keeps `ready` for a reloaded page. It knows none of the protocol's methods. | `frontend/src-tauri/` (expected) |
 | Bundle | The desktop frontend as installed, a deb or an AppImage: the relay with the runtime, the jar and pty4j's natives beside it, built by `make bundle` (ADR 0059). Not `make package`'s jar. | `frontend/` (expected) |
@@ -61,6 +61,7 @@ words mean.
 | Ticket branch | The branch `<number>-<title slug>` a ticket's work happens on, as `gh issue develop` names it by default (ADR 0052). The board derives the name from the number and title rather than reading `linkedBranches` back (ADR 0065). | `board` |
 | Status | A ticket's place in its lifecycle: the issue's one `status:` label while it is open (a `draft` when it has none), and `done` once it is closed as completed, whatever labels it still carries. Nothing else is a source: no copy rides on the ticket branch (ADR 0052). | `board` |
 | Unavailable board | A Board that has no tickets because the issues could not be read: the project has no GitHub remote, GitHub is unreachable, or `gh` is not logged in (the reason names `gh auth login`). The Board shows the reason in place of the groups; the next read, `R` or the poll, replaces it. | `board` |
+| No project | What asking for a board answers when the working directory belongs to no project, or whether it does could not be told: no board, and why. The TUI prints the reason and does not start; the sidecar answers it as a result. | `board` |
 | Issues poll | The board's watch: every 30 s a conditional request for the most recently updated issue with the last answer's `ETag`; a 304 costs nothing and the board stays, anything else reads it again. A check that fails counts as a change, so the board is read and says why it cannot be. | `board` |
 | Capture | `c` on the Board: a title typed into a popup becomes a GitHub issue with no labels, read as an unassigned `draft`, its body the sections of the project's ticket template, or empty without one. lazyclaude's one ticket write; every other goes through a `/ticket` verb in a session (ADR 0054). | `board` |
 | Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` |

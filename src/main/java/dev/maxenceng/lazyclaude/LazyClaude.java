@@ -1,9 +1,11 @@
 package dev.maxenceng.lazyclaude;
 
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +16,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardWatchPayload;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchChangesRepository;
@@ -74,10 +77,12 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.ProjectLocatorRepository;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepository;
 import dev.maxenceng.lazyclaude.shell.Shell;
+import dev.maxenceng.lazyclaude.sidecar.Sidecar;
 
-/** Composition root: the one place that builds adapters and hands them to the shell. */
+/** Composition root: the one place that builds adapters and hands them to the shell, or with {@code --sidecar} to the sidecar. */
 public final class LazyClaude {
 
+    private static final String SIDECAR = "--sidecar";
     private static final String HERE = "";
     private static final String PREFIX = "lazyclaude: ";
     private static final String USER_HOME = "user.home";
@@ -98,7 +103,12 @@ public final class LazyClaude {
 
     private LazyClaude() {}
 
-    static void main() throws Exception {
+    static void main(String[] arguments) throws Exception {
+        boolean sidecar = Arrays.asList(arguments).contains(SIDECAR);
+        OutputStream protocol = System.out;
+        if (sidecar) {
+            System.setOut(System.err);
+        }
         WarningRepository warningRepository = new WarningRepository();
         Path home = Path.of(System.getProperty(USER_HOME));
         int exit = configured(
@@ -107,19 +117,37 @@ public final class LazyClaude {
                         new ClaudeKeybindingsRepository(home),
                         warningRepository)),
                 System.err,
-                configuration -> open(configuration, warningRepository));
+                configuration -> {
+                    if (sidecar) {
+                        serve(protocol, warningRepository);
+                    } else {
+                        open(configuration, warningRepository);
+                    }
+                });
         if (exit != 0) {
             System.exit(exit);
         }
     }
 
-    private static void open(ConfigurationView configuration, WarningRepository warningRepository) throws Exception {
-        BoardQuery board = new BoardQuery(new BoardApplicationService(
+    /**
+     * Answers the desktop frontend on stdin and {@code protocol}, the real stdout, until stdin closes (ADR 0050). {@code main} sends
+     * {@code System.out} to stderr before anything is built, so nothing else, a library included, prints into the protocol.
+     */
+    private static void serve(OutputStream protocol, WarningRepository warningRepository) {
+        System.exit(new Sidecar(boardQuery(warningRepository)).run(System.in, protocol));
+    }
+
+    private static BoardQuery boardQuery(WarningRepository warningRepository) {
+        return new BoardQuery(new BoardApplicationService(
                 new ProjectLocatorRepository(),
                 new IssuesRepository(),
                 new BranchChangesRepository(),
                 new IssuesWatchRepository(),
                 warningRepository));
+    }
+
+    private static void open(ConfigurationView configuration, WarningRepository warningRepository) throws Exception {
+        BoardQuery board = boardQuery(warningRepository);
         WarningApplicationService warningService = new WarningApplicationService(warningRepository, warningRepository);
         WarningQuery warnings = new WarningQuery(warningService);
         Thread.setDefaultUncaughtExceptionHandler(
@@ -241,8 +269,14 @@ public final class LazyClaude {
         BoardReadingView view;
         DocsView tree;
         SessionsView live;
+        switch (board.boardFor(new BoardPayload(from))) {
+            case NoProjectView none -> {
+                err.println(PREFIX + none.reason().value());
+                return 1;
+            }
+            case BoardReadingView read -> view = read;
+        }
         try {
-            view = board.boardFor(new BoardPayload(from));
             tree = docs.docsFor(new DocsPayload(view.root().value()));
             live = sessions.sessionsFor(sessionPayload(view));
         } catch (DomainException e) {

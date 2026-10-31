@@ -303,7 +303,7 @@ class ShellWorktreeTest {
     @Test
     void shouldAskWhenAHostedDoneSessionEndsAndTheTicketReadsDone() {
         BoardQuery boards = mock(BoardQuery.class);
-        when(boards.boardReadAgainFor(any())).thenReturn(Optional.of(boardViewOf(doneTicketView())));
+        when(boards.boardAfterChange(any())).thenReturn(Optional.of(boardViewOf(doneTicketView())));
         Shell shell = shellOnDoneTicket(removing, boards, clearHeldWorktreeView());
 
         shell.ticketDoneEnded(linkedTicketId());
@@ -314,7 +314,7 @@ class ShellWorktreeTest {
     @Test
     void shouldAskNothingWhenTheTicketDoesNotReadDoneAfterItsDoneSessionEnds() {
         BoardQuery boards = mock(BoardQuery.class);
-        when(boards.boardReadAgainFor(any())).thenReturn(Optional.of(boardViewOf(ticketViewIn(Status.IN_REVIEW))));
+        when(boards.boardAfterChange(any())).thenReturn(Optional.of(boardViewOf(ticketViewIn(Status.IN_REVIEW))));
         Shell shell = shellOnDoneTicket(removing, boards, clearHeldWorktreeView());
 
         shell.ticketDoneEnded(linkedTicketId());
@@ -325,7 +325,7 @@ class ShellWorktreeTest {
     @Test
     void shouldAskNothingWhenTheDoneTicketHasNoWorktree() {
         BoardQuery boards = mock(BoardQuery.class);
-        when(boards.boardReadAgainFor(any())).thenReturn(Optional.of(boardViewOf(doneTicketView())));
+        when(boards.boardAfterChange(any())).thenReturn(Optional.of(boardViewOf(doneTicketView())));
         Shell shell = shellOnDoneTicket(removing, boards, new NoWorktreeView());
 
         shell.ticketDoneEnded(linkedTicketId());
@@ -339,7 +339,7 @@ class ShellWorktreeTest {
     @Test
     void shouldRefuseWithTheReasonWhenTheDoneSessionEndsOverADirtyWorktree() {
         BoardQuery boards = mock(BoardQuery.class);
-        when(boards.boardReadAgainFor(any())).thenReturn(Optional.of(boardViewOf(doneTicketView())));
+        when(boards.boardAfterChange(any())).thenReturn(Optional.of(boardViewOf(doneTicketView())));
         Shell shell = shellOnDoneTicket(removing, boards, heldWorktreeView(dirtyWorktreeContentsView(), false));
 
         shell.ticketDoneEnded(linkedTicketId());
@@ -351,7 +351,7 @@ class ShellWorktreeTest {
     @Test
     void shouldAskForTheEndedTicketWhateverIsSelectedWhenItsSessionEnds() {
         BoardQuery boards = mock(BoardQuery.class);
-        when(boards.boardReadAgainFor(any())).thenReturn(Optional.of(boardViewOf(doneTicketView())));
+        when(boards.boardAfterChange(any())).thenReturn(Optional.of(boardViewOf(doneTicketView())));
         Shell shell = shellOnDoneTicket(removing, boards, clearHeldWorktreeView());
         shell.press(key('k'));
 

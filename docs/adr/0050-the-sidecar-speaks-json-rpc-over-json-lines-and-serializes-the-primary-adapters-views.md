@@ -28,7 +28,7 @@ what is already there.
   (`board/boardFor`, `session/startTicket`). The protocol grows when a primary adapter grows.
 - **A domain outcome is a result.** Refused and unavailable Views travel as results, as the TUI gets them. `error`
   carries only faults: an unparseable line, an unknown method, invalid params, and an uncaught exception, which gets a
-  short message while its stack trace goes to stderr. The codes are JSON-RPC's standard ones plus one internal code.
+  short message while its stack trace goes to stderr. The codes are JSON-RPC's standard ones, its internal error included; none is the sidecar's own.
 - **Watches are requests and pushes.** `board/watch`, `docs/watch`, `session/watch` and `warning/watch` each answer the
   current View (where the primary adapter only signals a change, the sidecar reads the View again itself), then push `<context>/changed` notifications carrying the next one in full, the latest winning. Calling
   a watch again returns the current View and opens nothing new. A watch nobody asked for never runs. Rejected:
@@ -64,3 +64,15 @@ what is already there.
 - `ArchitectureTest`'s rule that Jackson stays in secondary adapters gains `sidecar` as its one other home.
 - Moving the tracker to GitHub Issues changes `board`'s and `review`'s methods along with their operations.
 - A View that cannot be written as JSON (a callback, a stream) has to change shape before it reaches the protocol.
+- A sealed type's variants are written as an object led by `kind`, a record that is not a variant and has one component is that
+  component (`Title`, `TicketId`, `ProjectRoot` are strings), any other record is an object of its components, and an enum constant is its
+  name. The sidecar does this by reading records, so no View or Payload needs an annotation, and a new View is written without a change here.
+- A directory that belongs to no project is a View, `NoProjectView`, beside the board's: `board/boardFor` answers it as a result
+  (`kind` `noProject`), `board/watch` answers it and opens no watch, and the TUI prints its reason and does not start, as before.
+  A `DomainException` a `*Query` still throws has no View to travel as, so it answers as the internal fault with its message and
+  its stack trace goes to stderr; it becomes a result when its primary adapter gives it a View.
+- What a change reads is `board`'s rule, not a composer's: `BoardQuery.boardAfterChange` is told whether a board with tickets is
+  shown, keeps it when the read fails, and otherwise reads the board whole so its reason stays current. The TUI and the sidecar both
+  call it, each with the board it last showed or sent, so neither keeps a first reason a later read replaced.
+- Requests run on a virtual thread each, named `sidecar-request-n`, and a thread named `sidecar-writer` writes stdout. `LazyClaude`
+  points `System.out` at stderr before starting the sidecar, so a library that prints cannot break a line.
