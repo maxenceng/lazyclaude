@@ -72,6 +72,22 @@ public final class SpawnedSidecar implements AutoCloseable {
         return new SpawnedSidecar(builder.start(), project.toRealPath());
     }
 
+    public static String protocolSchemaPrinted() throws IOException, InterruptedException {
+        Process process = new ProcessBuilder(
+                        Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                        "-cp",
+                        System.getProperty("java.class.path"),
+                        LazyClaude.class.getName(),
+                        "--protocol-schema")
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start();
+        String printed = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        if (!process.waitFor(EXIT_PATIENCE_SECONDS, TimeUnit.SECONDS) || process.exitValue() != 0) {
+            throw new IllegalStateException("--protocol-schema did not end cleanly");
+        }
+        return printed;
+    }
+
     public String projectPath() {
         return project.toString();
     }

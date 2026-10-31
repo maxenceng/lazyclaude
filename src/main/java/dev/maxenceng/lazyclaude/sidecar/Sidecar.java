@@ -37,6 +37,11 @@ public final class Sidecar {
         this.board = board;
     }
 
+    /** The JSON Schema of every method and notification, as committed under {@code docs/protocol/}; the build fails when it is stale (ADR 0050). */
+    public static String protocolSchema() {
+        return ProtocolSchema.text(BoardMethods.signatures(), BoardMethods.notifications());
+    }
+
     /** Writes {@code ready}, then answers every line of {@code in} until it closes; returns the exit code. */
     public int run(InputStream in, OutputStream out) {
         try (SidecarOutput output = new SidecarOutput(out);

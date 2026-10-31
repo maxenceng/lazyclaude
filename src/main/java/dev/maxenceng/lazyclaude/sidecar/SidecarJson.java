@@ -4,9 +4,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Locale;
+import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
@@ -28,8 +27,7 @@ final class SidecarJson {
             .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES)
             .enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES)
             .build();
-    private static final String KIND = "kind";
-    private static final String VIEW = "View";
+    private static final String NEWLINE = "\n";
     private static final String INVALID_PARAMS = "invalid params: %s";
     private static final String NOT_AN_OBJECT = "they are not an object";
 
@@ -41,6 +39,19 @@ final class SidecarJson {
 
     static String line(JsonNode message) {
         return MAPPER.writeValueAsString(message);
+    }
+
+    /** A tree as the committed files show it: indented, keys in the order they were set, ending in a newline. */
+    static String pretty(JsonNode tree) {
+        return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(tree) + NEWLINE;
+    }
+
+    static ArrayNode array(List<? extends JsonNode> items) {
+        return MAPPER.createArrayNode().addAll(items);
+    }
+
+    static ArrayNode texts(List<String> items) {
+        return array(items.stream().map(item -> (JsonNode) MAPPER.getNodeFactory().stringNode(item)).toList());
     }
 
     static ObjectNode object() {
@@ -64,6 +75,7 @@ final class SidecarJson {
             case null -> NullNode.getInstance();
             case Boolean flag -> MAPPER.getNodeFactory().booleanNode(flag);
             case Number number -> MAPPER.valueToTree(number);
+            case Enum<?> constant -> MAPPER.getNodeFactory().stringNode(constant.name());
             case Optional<?> optional -> optional.map(SidecarJson::tree).orElse(NullNode.getInstance());
             case Collection<?> items -> array(items);
             case Record record -> fromRecord(record);
@@ -77,27 +89,16 @@ final class SidecarJson {
 
     private static JsonNode fromRecord(Record record) {
         RecordComponent[] components = record.getClass().getRecordComponents();
-        boolean variant = isVariantOfASealedType(record.getClass());
+        boolean variant = ViewShape.isVariantOfASealedType(record.getClass());
         if (components.length == 1 && !variant) {
             return tree(valueOf(record, components[0]));
         }
         ObjectNode node = MAPPER.createObjectNode();
         if (variant) {
-            node.put(KIND, kindOf(record.getClass()));
+            node.put(ViewShape.KIND, ViewShape.kindOf(record.getClass()));
         }
         Arrays.stream(components).forEach(component -> node.set(component.getName(), tree(valueOf(record, component))));
         return node;
-    }
-
-    private static boolean isVariantOfASealedType(Class<?> type) {
-        return Stream.concat(Stream.of(type.getInterfaces()), Stream.ofNullable(type.getSuperclass())).anyMatch(Class::isSealed);
-    }
-
-    /** The simple name without {@code View}, in lower camel case: {@code UnavailableBoardView} is {@code unavailableBoard}. */
-    static String kindOf(Class<?> type) {
-        String name = type.getSimpleName();
-        String bare = name.endsWith(VIEW) && name.length() > VIEW.length() ? name.substring(0, name.length() - VIEW.length()) : name;
-        return bare.substring(0, 1).toLowerCase(Locale.ROOT) + bare.substring(1);
     }
 
     private static Object valueOf(Record record, RecordComponent component) {
