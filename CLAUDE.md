@@ -68,7 +68,7 @@ an ADR.
 
 ## Conventions
 
-- Wiring is constructor injection, done by hand in `LazyClaude.main`. No service locator, no
+- Wiring is constructor injection, done by hand in `Contexts.of`, once for the shell and the sidecar (ADR 0077). No service locator, no
   static singletons.
 - Roles are named alike in every context (ADR 0011): `*ApplicationService` → domain `*Manager`
   → `*Port`, implemented by a `*Repository`; the shell asks through a primary `*Query` (reads)

@@ -10,40 +10,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 
-import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
-import dev.maxenceng.lazyclaude.board.application.TicketCaptureApplicationService;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardWatchPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchChangesRepository;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesRepository;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesWatchRepository;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.TicketCaptureRepository;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.TicketTemplateRepository;
-import dev.maxenceng.lazyclaude.docs.application.DocsApplicationService;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
-import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;
-import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsRepository;
-import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsWatchRepository;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
-import dev.maxenceng.lazyclaude.review.application.PendingReviewApplicationService;
-import dev.maxenceng.lazyclaude.review.application.PullRequestDiffApplicationService;
-import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
-import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhMergedPullRequestsRepository;
-import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPendingReviewRepository;
-import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestDiffRepository;
-import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestsRepository;
-import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhThreadRepository;
-import dev.maxenceng.lazyclaude.review.infrastructure.secondary.PullRequestWatchRepository;
 import dev.maxenceng.lazyclaude.session.application.ConfigurationApplicationService;
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationQuery;
@@ -53,10 +29,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorQue
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulators;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ClaudeKeybindingsRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigurationRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LaunchLogRepository;
@@ -71,12 +44,9 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatch
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.WorktreeRepository;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
-import dev.maxenceng.lazyclaude.shared.application.WarningApplicationService;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.StoppedThreadPayload;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningCommand;
-import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
-import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.ProjectLocatorRepository;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepository;
 import dev.maxenceng.lazyclaude.shell.Shell;
 import dev.maxenceng.lazyclaude.sidecar.Sidecar;
@@ -105,8 +75,6 @@ public final class LazyClaude {
     private static final List<String> GDBUS = List.of("gdbus");
     private static final Duration NOTIFY_PATIENCE = Duration.ofSeconds(5);
     private static final String REPAINT_THREAD = "session-repaint";
-    private static final String GH = "gh";
-    private static final Duration GH_PATIENCE = Duration.ofSeconds(30);
 
     private LazyClaude() {}
 
@@ -129,10 +97,12 @@ public final class LazyClaude {
                         warningRepository)),
                 System.err,
                 configuration -> {
+                    SessionApplicationService sessionService = sessionService(warningRepository, configuration.desktopNotifications());
+                    Contexts contexts = Contexts.of(warningRepository, sessionService);
                     if (sidecar) {
-                        serve(protocol, warningRepository, configuration.desktopNotifications());
+                        serve(protocol, contexts);
                     } else {
-                        open(configuration, warningRepository);
+                        open(configuration, contexts, sessionService);
                     }
                 });
         if (exit != 0) {
@@ -144,76 +114,31 @@ public final class LazyClaude {
      * Answers the desktop frontend on stdin and {@code protocol}, the real stdout, until stdin closes (ADR 0050). {@code main} sends
      * {@code System.out} to stderr before anything is built, so nothing else, a library included, prints into the protocol.
      */
-    private static void serve(OutputStream protocol, WarningRepository warningRepository, boolean desktopNotifications) {
-        SessionApplicationService sessionService = sessionService(warningRepository, desktopNotifications);
-        PendingReviewApplicationService pendingReview = pendingReviewService();
+    private static void serve(OutputStream protocol, Contexts contexts) {
         Sidecar sidecar = new Sidecar(
-                boardQuery(warningRepository),
-                new SessionQuery(sessionService),
-                new HostedSessionCommand(sessionService),
-                new WarningQuery(new WarningApplicationService(warningRepository, warningRepository)),
-                docsQuery(warningRepository),
-                reviewQuery(pendingReview),
-                new PendingReviewCommand(pendingReview));
+                contexts.board(),
+                contexts.sessions(),
+                contexts.hosting(),
+                contexts.warnings(),
+                contexts.docs(),
+                contexts.review(),
+                contexts.pendingReview());
         System.exit(sidecar.run(System.in, protocol));
     }
 
-    private static BoardQuery boardQuery(WarningRepository warningRepository) {
-        return new BoardQuery(new BoardApplicationService(
-                new ProjectLocatorRepository(),
-                new IssuesRepository(),
-                new BranchChangesRepository(),
-                new IssuesWatchRepository(),
-                warningRepository));
-    }
-
-    private static DocsQuery docsQuery(WarningRepository warningRepository) {
-        return new DocsQuery(
-                new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(), warningRepository));
-    }
-
-    private static PendingReviewApplicationService pendingReviewService() {
-        return new PendingReviewApplicationService(new GhPendingReviewRepository(GH, GH_PATIENCE));
-    }
-
-    private static ReviewQuery reviewQuery(PendingReviewApplicationService pendingReview) {
-        return new ReviewQuery(
-                new ReviewApplicationService(
-                        new GhPullRequestsRepository(GH, GH_PATIENCE),
-                        new GhMergedPullRequestsRepository(GH, GH_PATIENCE),
-                        new PullRequestWatchRepository()),
-                new PullRequestDiffApplicationService(
-                        new GhPullRequestDiffRepository(GH, GH_PATIENCE), new GhThreadRepository(GH, GH_PATIENCE)),
-                pendingReview);
-    }
-
-    private static void open(ConfigurationView configuration, WarningRepository warningRepository) throws Exception {
-        BoardQuery board = boardQuery(warningRepository);
-        WarningApplicationService warningService = new WarningApplicationService(warningRepository, warningRepository);
-        WarningQuery warnings = new WarningQuery(warningService);
-        Thread.setDefaultUncaughtExceptionHandler(
-                warnOfStoppedThreads(Thread.currentThread(), new WarningCommand(warningService), System.err));
-        DocsQuery docs = docsQuery(warningRepository);
-        SessionApplicationService sessionService = sessionService(warningRepository, configuration.desktopNotifications());
-        SessionQuery sessions = new SessionQuery(sessionService);
-        HostedSessionCommand hosting = new HostedSessionCommand(sessionService);
+    /** Opens the shell on {@code contexts}, with the terminal emulators of hosted sessions only the shell draws. */
+    private static void open(ConfigurationView configuration, Contexts contexts, SessionApplicationService sessionService) throws Exception {
+        Thread.setDefaultUncaughtExceptionHandler(warnOfStoppedThreads(Thread.currentThread(), contexts.warning(), System.err));
         HostedEmulators running = HostedEmulators.listeningTo(sessionService);
         HostedEmulatorCommand emulating = new HostedEmulatorCommand(sessionService, running);
         HostedEmulatorQuery emulators = new HostedEmulatorQuery(running);
-        WatchedSessionCommand watching = new WatchedSessionCommand(sessionService);
-        TicketWorktreeCommand removing = new TicketWorktreeCommand(sessionService);
-        PendingReviewApplicationService pendingReview = pendingReviewService();
-        ReviewQuery reviews = reviewQuery(pendingReview);
-        PendingReviewCommand writing = new PendingReviewCommand(pendingReview);
-        TicketCaptureCommand capturing =
-                new TicketCaptureCommand(new TicketCaptureApplicationService(new TicketCaptureRepository(), new TicketTemplateRepository()));
         int exit = start(
                 Path.of(HERE).toAbsolutePath(),
-                board,
-                docs,
-                sessions,
+                contexts,
                 System.err,
-                (view, tree, live) -> run(view, tree, live, board, docs, sessions, reviews, writing, capturing, configuration.reservedChords(), configuration.mouse(), hosting, emulating, emulators, watching, removing, warnings));
+                (view, tree, live) -> runThenEndHosted(
+                        shellOn(view, tree, live, contexts, emulating, emulators, configuration.reservedChords(), configuration.mouse())::run,
+                        contexts.hosting()));
         if (exit != 0) {
             System.exit(exit);
         }
@@ -296,13 +221,11 @@ public final class LazyClaude {
      * live and past sessions, or says why there is no project and returns non-zero without opening it. Docs that
      * cannot be listed and issues that cannot be read do not stop it: their panel says why.
      */
-    static int start(
-            Path from, BoardQuery board, DocsQuery docs, SessionQuery sessions, PrintStream err, ShellOpener shell)
-            throws Exception {
+    static int start(Path from, Contexts contexts, PrintStream err, ShellOpener shell) throws Exception {
         BoardReadingView view;
         DocsView tree;
         SessionsView live;
-        switch (board.boardFor(new BoardPayload(from))) {
+        switch (contexts.board().boardFor(new BoardPayload(from))) {
             case NoProjectView none -> {
                 err.println(PREFIX + none.reason().value());
                 return 1;
@@ -310,8 +233,8 @@ public final class LazyClaude {
             case BoardReadingView read -> view = read;
         }
         try {
-            tree = docs.docsFor(new DocsPayload(view.root().value()));
-            live = sessions.sessionsFor(sessionPayload(view));
+            tree = contexts.docs().docsFor(new DocsPayload(view.root().value()));
+            live = contexts.sessions().sessionsFor(sessionPayload(view));
         } catch (DomainException e) {
             err.println(PREFIX + e.getMessage());
             return 1;
@@ -330,28 +253,6 @@ public final class LazyClaude {
             case UnavailableBoardView _ -> List.of();
         };
         return new SessionPayload(view.root().value(), ids);
-    }
-
-    private static void run(
-            BoardReadingView view,
-            DocsView tree,
-            SessionsView live,
-            BoardQuery board,
-            DocsQuery docs,
-            SessionQuery sessions,
-            ReviewQuery reviews,
-            PendingReviewCommand writing,
-            TicketCaptureCommand capturing,
-            ReservedChords chords,
-            boolean mouse,
-            HostedSessionCommand hosting,
-            HostedEmulatorCommand emulating,
-            HostedEmulatorQuery emulators,
-            WatchedSessionCommand watching,
-            TicketWorktreeCommand removing,
-            WarningQuery warnings)
-            throws Exception {
-        runThenEndHosted(shellOn(view, tree, live, board, docs, sessions, reviews, writing, capturing, chords, mouse, hosting, emulating, emulators, watching, removing, warnings)::run, hosting);
     }
 
     /** Runs the shell, and however it ends, ends every hosted {@code claude}: they live and die with lazyclaude (ADR 0026). */
@@ -373,30 +274,38 @@ public final class LazyClaude {
             BoardReadingView view,
             DocsView tree,
             SessionsView live,
-            BoardQuery board,
-            DocsQuery docs,
-            SessionQuery sessions,
-            ReviewQuery reviews,
-            PendingReviewCommand writing,
-            TicketCaptureCommand capturing,
-            ReservedChords chords,
-            boolean mouse,
-            HostedSessionCommand hosting,
+            Contexts contexts,
             HostedEmulatorCommand emulating,
             HostedEmulatorQuery emulators,
-            WatchedSessionCommand watching,
-            TicketWorktreeCommand removing,
-            WarningQuery warnings) {
-        Shell shell = new Shell(view, tree, live, reviews.checking(), hosting, emulating, emulators, watching, removing, sessions, board, docs, reviews, writing, capturing, chords, mouse);
-        docs.subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
-        board.subscribe(new BoardWatchPayload(view.root().value()), shell::boardChanged);
-        sessions.subscribe(sessionPayload(view), shell::sessionsChanged);
+            ReservedChords chords,
+            boolean mouse) {
+        Shell shell = new Shell(
+                view,
+                tree,
+                live,
+                contexts.review().checking(),
+                contexts.hosting(),
+                emulating,
+                emulators,
+                contexts.watching(),
+                contexts.removing(),
+                contexts.sessions(),
+                contexts.board(),
+                contexts.docs(),
+                contexts.review(),
+                contexts.pendingReview(),
+                contexts.capturing(),
+                chords,
+                mouse);
+        contexts.docs().subscribe(new DocsPayload(view.root().value()), shell::docsChanged);
+        contexts.board().subscribe(new BoardWatchPayload(view.root().value()), shell::boardChanged);
+        contexts.sessions().subscribe(sessionPayload(view), shell::sessionsChanged);
         emulators.onScreenChange(shell::screensChanged);
-        sessions.onTicketDoneEnded(shell::ticketDoneEnded);
-        reviews.subscribe(
+        contexts.sessions().onTicketDoneEnded(shell::ticketDoneEnded);
+        contexts.review().subscribe(
                 new ReviewPayload(view.root().value()), shell::pullRequestsChanged, shell::mergedPullRequestsChanged);
-        warnings.subscribe(shell::warningsChanged);
-        warnings.onNoneHeld(shell::warningsCleared);
+        contexts.warnings().subscribe(shell::warningsChanged);
+        contexts.warnings().onNoneHeld(shell::warningsCleared);
         return shell;
     }
 }

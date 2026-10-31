@@ -212,6 +212,10 @@ public final class SidecarFixture {
         return "{\"jsonrpc\":\"2.0\",\"id\":%s,\"error\":{\"code\":%d,\"message\":\"%s\"}}".formatted(id, code, message);
     }
 
+    public static String invalidParamsCode() {
+        return "\"code\":-32602";
+    }
+
     public static String faultWithCode(String id, int code) {
         return "{\"jsonrpc\":\"2.0\",\"id\":%s,\"error\":{\"code\":%d,".formatted(id, code);
     }

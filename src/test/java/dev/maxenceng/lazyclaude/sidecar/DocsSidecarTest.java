@@ -10,6 +10,7 @@ import static dev.maxenceng.lazyclaude.sidecar.DocsSidecarFixture.emptyDocs;
 import static dev.maxenceng.lazyclaude.sidecar.DocsSidecarFixture.otherDocsParams;
 import static dev.maxenceng.lazyclaude.sidecar.DocsSidecarFixture.unavailableDocs;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.failingAfterReleasing;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.invalidParamsCode;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.linesWritten;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.ready;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.request;
@@ -22,6 +23,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.Test;
@@ -78,12 +80,16 @@ class DocsSidecarTest {
     }
 
     @Test
-    void opens_a_watch_of_another_project() {
+    void refuses_a_watch_of_another_project_with_the_invalid_params_code() {
         when(docs.docsFor(any())).thenReturn(emptyDocsView());
 
-        linesWritten(docs, request(1, "docs/watch", docsParams()), request(2, "docs/watch", otherDocsParams()));
+        List<String> written = linesWritten(docs, request(1, "docs/watch", docsParams()), request(2, "docs/watch", otherDocsParams()));
 
-        verify(docs, times(2)).subscribe(any(), any());
+        assertThat(written)
+                .as("the one watcher holds one project, so the second root watched is refused rather than taking it over")
+                .filteredOn(line -> line.contains(invalidParamsCode()))
+                .hasSize(1);
+        verify(docs, times(1)).subscribe(any(), any());
     }
 
     @Test

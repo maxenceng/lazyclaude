@@ -1,10 +1,7 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
@@ -15,14 +12,15 @@ import tools.jackson.databind.JsonNode;
 /** The {@code docs/} methods: {@code docs/docsFor} for the read of {@link DocsQuery}, {@code docs/watch} for its subscription, which pushes {@code docs/changed} (ADR 0050). */
 final class DocsMethods {
 
-    private static final ProtocolMethod<DocsPayload, DocsView> DOCS_FOR =
-            new ProtocolMethod<>("docs/docsFor", DocsPayload.class, DocsView.class);
+    private static final ServedMethod<DocsQuery, DocsPayload, DocsView> DOCS_FOR =
+            ServedMethod.of("docs/docsFor", DocsPayload.class, DocsView.class, DocsQuery::docsFor);
     private static final ProtocolMethod<DocsPayload, DocsView> WATCH = new ProtocolMethod<>("docs/watch", DocsPayload.class, DocsView.class);
     private static final ProtocolNotification<DocsView> CHANGED = new ProtocolNotification<>("docs/changed", DocsView.class);
+    private static final Runnable ALREADY_PUSHING = () -> {};
 
     private final DocsQuery docs;
     private final SidecarOutput output;
-    private final Set<Path> watching = ConcurrentHashMap.newKeySet();
+    private final WatchedRoot watched = new WatchedRoot(WATCH.name());
 
     DocsMethods(DocsQuery docs, SidecarOutput output) {
         this.docs = docs;
@@ -30,35 +28,21 @@ final class DocsMethods {
     }
 
     static Protocol protocol() {
-        return new Protocol(List.of(DOCS_FOR, WATCH), List.of(), List.of(CHANGED));
+        return new Protocol(List.of(DOCS_FOR.method(), WATCH), List.of(), List.of(CHANGED));
     }
 
     Map<String, SidecarMethod> methods() {
-        return Map.of(DOCS_FOR.name(), this::docsFor, WATCH.name(), this::watch);
-    }
-
-    private SidecarAnswer docsFor(JsonNode params) {
-        return SidecarAnswer.of(SidecarJson.tree(DOCS_FOR.answer(params, docs::docsFor)));
+        return Map.ofEntries(DOCS_FOR.boundTo(docs), Map.entry(WATCH.name(), this::watch));
     }
 
     /** The watch opens once the current docs are queued, so no {@code docs/changed} reaches the frontend before the docs it changes. */
     // deferred: a change between this read and the watch starting is pushed only at the next change — close it when a document edited as the frontend connects is seen stale.
     private SidecarAnswer watch(JsonNode params) {
-        DocsView current = WATCH.answer(params, docs::docsFor);
         DocsPayload payload = SidecarJson.params(params, WATCH.params());
-        return new SidecarAnswer(SidecarJson.tree(current), () -> watchOnce(payload));
-    }
-
-    /** A watch that failed to open is forgotten before another {@code docs/watch} of the project is let in, so that one tries again. */
-    // deferred: the one DocsWatchRepository's TreeWatcher holds one project, so a second root's watch takes over the first's — close it when a frontend watches two projects.
-    private synchronized void watchOnce(DocsPayload payload) {
-        if (watching.add(payload.root())) {
-            try {
-                docs.subscribe(payload, view -> output.send(CHANGED.message(view)));
-            } catch (RuntimeException failure) {
-                watching.remove(payload.root());
-                throw failure;
-            }
-        }
+        watched.claim(payload.root());
+        DocsView current = WATCH.answer(params, docs::docsFor);
+        return new SidecarAnswer(
+                SidecarJson.tree(current),
+                () -> watched.open(() -> docs.subscribe(payload, view -> output.send(CHANGED.message(view))), ALREADY_PUSHING));
     }
 }

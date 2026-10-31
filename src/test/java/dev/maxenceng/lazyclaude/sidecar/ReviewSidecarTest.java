@@ -33,6 +33,7 @@ import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.unavailableP
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.unavailablePullRequests;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.unavailableThreads;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.failingAfterReleasing;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.invalidParamsCode;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.linesWritten;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.projectPath;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.ready;
@@ -202,12 +203,25 @@ class ReviewSidecarTest {
     }
 
     @Test
-    void opens_a_watch_of_another_project() {
+    void refuses_a_watch_of_another_project_with_the_invalid_params_code() {
         when(review.checking()).thenReturn(checkingPullRequestsView());
 
-        linesWritten(review, request(1, "review/watch", reviewParams()), request(2, "review/watch", otherReviewParams()));
+        List<String> written = linesWritten(review, request(1, "review/watch", reviewParams()), request(2, "review/watch", otherReviewParams()));
 
-        verify(review, times(2)).subscribe(any(), any(), any());
+        assertThat(written)
+                .as("the one watcher holds one project, so the second root watched is refused rather than taking it over")
+                .filteredOn(line -> line.contains(invalidParamsCode()))
+                .hasSize(1);
+        verify(review, times(1)).subscribe(any(), any(), any());
+    }
+
+    @Test
+    void asks_for_a_fetch_on_a_repeat_watch_of_the_project() {
+        when(review.checking()).thenReturn(checkingPullRequestsView());
+
+        linesWritten(review, request(1, "review/watch", reviewParams()), request(2, "review/watch", reviewParams()));
+
+        verify(review, times(1).description("a reloaded page would show checking until the next timed fetch")).refresh();
     }
 
     @Test
