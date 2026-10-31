@@ -77,3 +77,4 @@
 - 0073 [The protocol schema is written by the sidecar from its own writer rules](0073-the-protocol-schema-is-written-by-the-sidecar-from-its-own-writer-rules.md) — Accepted.
 - 0074 [Hosted sessions run over the sidecar by inputs, pushes and a repaint the manager schedules](0074-hosted-sessions-run-over-the-sidecar-by-inputs-pushes-and-a-repaint-the-manager-schedules.md) — Accepted.
 - 0075 [No class copies a collection it was given](0075-no-class-copies-a-collection-it-was-given.md) — Accepted.
+- 0076 [The views a review query joins travel as one payload, and review watches by two notifications](0076-the-views-a-review-query-joins-travel-as-one-payload-and-review-watches-by-two-notifications.md) — Accepted.

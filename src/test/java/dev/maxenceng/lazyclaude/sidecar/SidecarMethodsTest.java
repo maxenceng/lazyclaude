@@ -12,6 +12,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
@@ -31,9 +34,18 @@ class SidecarMethodsTest {
     @Mock
     private WarningQuery warnings;
 
+    @Mock
+    private DocsQuery docs;
+
+    @Mock
+    private ReviewQuery review;
+
+    @Mock
+    private PendingReviewCommand pendingReview;
+
     @Test
     void serves_exactly_the_methods_and_inputs_the_schema_states() {
-        List<String> served = List.copyOf(new Sidecar(board, sessions, hosting, warnings).methods(new SidecarOutput(new ByteArrayOutputStream())).keySet());
+        List<String> served = List.copyOf(new Sidecar(board, sessions, hosting, warnings, docs, review, pendingReview).methods(new SidecarOutput(new ByteArrayOutputStream())).keySet());
 
         assertThat(served).as("a handler without a declaration is missing from the schema, a declaration without one cannot be called")
                 .containsExactlyInAnyOrderElementsOf(
@@ -44,7 +56,7 @@ class SidecarMethodsTest {
     @Test
     void declares_the_notifications_it_pushes() {
         assertThat(Sidecar.protocol().notifications().stream().map(ProtocolNotification::name))
-                .containsExactlyInAnyOrder("board/changed", "session/changed", "pty/output", "session/exited", "warning/changed");
+                .containsExactlyInAnyOrder("board/changed", "session/changed", "pty/output", "session/exited", "warning/changed", "docs/changed", "review/changed", "review/mergedChanged");
     }
 
     @Test

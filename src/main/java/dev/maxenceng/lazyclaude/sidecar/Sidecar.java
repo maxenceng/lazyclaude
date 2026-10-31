@@ -17,6 +17,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
+import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
@@ -43,12 +46,25 @@ public final class Sidecar {
     private final SessionQuery sessions;
     private final HostedSessionCommand hosting;
     private final WarningQuery warnings;
+    private final DocsQuery docs;
+    private final ReviewQuery review;
+    private final PendingReviewCommand pendingReview;
 
-    public Sidecar(BoardQuery board, SessionQuery sessions, HostedSessionCommand hosting, WarningQuery warnings) {
+    public Sidecar(
+            BoardQuery board,
+            SessionQuery sessions,
+            HostedSessionCommand hosting,
+            WarningQuery warnings,
+            DocsQuery docs,
+            ReviewQuery review,
+            PendingReviewCommand pendingReview) {
         this.board = board;
         this.sessions = sessions;
         this.hosting = hosting;
         this.warnings = warnings;
+        this.docs = docs;
+        this.review = review;
+        this.pendingReview = pendingReview;
     }
 
     /** The JSON Schema of every method and notification, as committed under {@code docs/protocol/}; the build fails when it is stale (ADR 0073). */
@@ -58,7 +74,7 @@ public final class Sidecar {
 
     /** Everything the sidecar declares: what the schema states, what the contract test counts and what {@link #methods} serves. */
     static Protocol protocol() {
-        return Protocol.of(BoardMethods.protocol(), SessionMethods.protocol(), WarningMethods.protocol());
+        return Protocol.of(BoardMethods.protocol(), SessionMethods.protocol(), WarningMethods.protocol(), DocsMethods.protocol(), ReviewMethods.protocol());
     }
 
     /** What is served on {@code output}, with the pushes of what a hosted {@code claude} writes and how it exits wired to it. */
@@ -66,7 +82,9 @@ public final class Sidecar {
         return Stream.of(
                         new BoardMethods(board, output).methods(),
                         new SessionMethods(sessions, hosting, output).methods(),
-                        new WarningMethods(warnings, output).methods())
+                        new WarningMethods(warnings, output).methods(),
+                        new DocsMethods(docs, output).methods(),
+                        new ReviewMethods(review, pendingReview, output).methods())
                 .flatMap(served -> served.entrySet().stream())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }

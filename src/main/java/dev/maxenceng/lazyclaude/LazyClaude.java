@@ -146,11 +146,15 @@ public final class LazyClaude {
      */
     private static void serve(OutputStream protocol, WarningRepository warningRepository, boolean desktopNotifications) {
         SessionApplicationService sessionService = sessionService(warningRepository, desktopNotifications);
+        PendingReviewApplicationService pendingReview = pendingReviewService();
         Sidecar sidecar = new Sidecar(
                 boardQuery(warningRepository),
                 new SessionQuery(sessionService),
                 new HostedSessionCommand(sessionService),
-                new WarningQuery(new WarningApplicationService(warningRepository, warningRepository)));
+                new WarningQuery(new WarningApplicationService(warningRepository, warningRepository)),
+                docsQuery(warningRepository),
+                reviewQuery(pendingReview),
+                new PendingReviewCommand(pendingReview));
         System.exit(sidecar.run(System.in, protocol));
     }
 
@@ -163,14 +167,33 @@ public final class LazyClaude {
                 warningRepository));
     }
 
+    private static DocsQuery docsQuery(WarningRepository warningRepository) {
+        return new DocsQuery(
+                new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(), warningRepository));
+    }
+
+    private static PendingReviewApplicationService pendingReviewService() {
+        return new PendingReviewApplicationService(new GhPendingReviewRepository(GH, GH_PATIENCE));
+    }
+
+    private static ReviewQuery reviewQuery(PendingReviewApplicationService pendingReview) {
+        return new ReviewQuery(
+                new ReviewApplicationService(
+                        new GhPullRequestsRepository(GH, GH_PATIENCE),
+                        new GhMergedPullRequestsRepository(GH, GH_PATIENCE),
+                        new PullRequestWatchRepository()),
+                new PullRequestDiffApplicationService(
+                        new GhPullRequestDiffRepository(GH, GH_PATIENCE), new GhThreadRepository(GH, GH_PATIENCE)),
+                pendingReview);
+    }
+
     private static void open(ConfigurationView configuration, WarningRepository warningRepository) throws Exception {
         BoardQuery board = boardQuery(warningRepository);
         WarningApplicationService warningService = new WarningApplicationService(warningRepository, warningRepository);
         WarningQuery warnings = new WarningQuery(warningService);
         Thread.setDefaultUncaughtExceptionHandler(
                 warnOfStoppedThreads(Thread.currentThread(), new WarningCommand(warningService), System.err));
-        DocsQuery docs = new DocsQuery(
-                new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(), warningRepository));
+        DocsQuery docs = docsQuery(warningRepository);
         SessionApplicationService sessionService = sessionService(warningRepository, configuration.desktopNotifications());
         SessionQuery sessions = new SessionQuery(sessionService);
         HostedSessionCommand hosting = new HostedSessionCommand(sessionService);
@@ -179,16 +202,8 @@ public final class LazyClaude {
         HostedEmulatorQuery emulators = new HostedEmulatorQuery(running);
         WatchedSessionCommand watching = new WatchedSessionCommand(sessionService);
         TicketWorktreeCommand removing = new TicketWorktreeCommand(sessionService);
-        PendingReviewApplicationService pendingReview =
-                new PendingReviewApplicationService(new GhPendingReviewRepository(GH, GH_PATIENCE));
-        ReviewQuery reviews = new ReviewQuery(
-                new ReviewApplicationService(
-                        new GhPullRequestsRepository(GH, GH_PATIENCE),
-                        new GhMergedPullRequestsRepository(GH, GH_PATIENCE),
-                        new PullRequestWatchRepository()),
-                new PullRequestDiffApplicationService(
-                        new GhPullRequestDiffRepository(GH, GH_PATIENCE), new GhThreadRepository(GH, GH_PATIENCE)),
-                pendingReview);
+        PendingReviewApplicationService pendingReview = pendingReviewService();
+        ReviewQuery reviews = reviewQuery(pendingReview);
         PendingReviewCommand writing = new PendingReviewCommand(pendingReview);
         TicketCaptureCommand capturing =
                 new TicketCaptureCommand(new TicketCaptureApplicationService(new TicketCaptureRepository(), new TicketTemplateRepository()));
