@@ -88,46 +88,46 @@ class ReviewQueryPendingTest {
 
     @Test
     void shouldAnchorACommentOnTheLinesOfTheDiffAsAViewOfWhereItSits() {
-        assertThat(query.anchorOf(twoFileDiffView(), new DiffLineIndex(2), new DiffLineIndex(2)))
+        assertThat(query.anchorOf(new CommentAnchorPayload(twoFileDiffView(), new DiffLineIndex(2), new DiffLineIndex(2))))
                 .isEqualTo(onDiffAnchorView(diffPath(), rightOn(3)));
-        assertThat(query.anchorOf(twoFileDiffView(), new DiffLineIndex(2), new DiffLineIndex(3)))
+        assertThat(query.anchorOf(new CommentAnchorPayload(twoFileDiffView(), new DiffLineIndex(2), new DiffLineIndex(3))))
                 .isEqualTo(onDiffAnchorView(diffPath(), rightRange(3, 4)));
     }
 
     @Test
     void shouldRefuseARangeAcrossHunksSayingWhyInsteadOfFailing() {
-        assertThat(query.anchorOf(twoFileDiffView(), new DiffLineIndex(3), new DiffLineIndex(4)))
+        assertThat(query.anchorOf(new CommentAnchorPayload(twoFileDiffView(), new DiffLineIndex(3), new DiffLineIndex(4))))
                 .isEqualTo(new RefusedAnchorView(new Reason("a range must stay inside one hunk")));
     }
 
     @Test
     void shouldRefuseARangeAcrossSidesSayingWhyInsteadOfFailing() {
-        assertThat(query.anchorOf(twoFileDiffView(), new DiffLineIndex(1), new DiffLineIndex(2)))
+        assertThat(query.anchorOf(new CommentAnchorPayload(twoFileDiffView(), new DiffLineIndex(1), new DiffLineIndex(2))))
                 .isEqualTo(new RefusedAnchorView(new Reason("a range must stay on one side of the diff")));
     }
 
     @Test
     void shouldRefuseToAnchorACommentWhileTheDiffIsNotRead() {
-        assertThat(query.anchorOf(loadingDiffView(), new DiffLineIndex(0), new DiffLineIndex(0)))
+        assertThat(query.anchorOf(new CommentAnchorPayload(loadingDiffView(), new DiffLineIndex(0), new DiffLineIndex(0))))
                 .isEqualTo(new RefusedAnchorView(new Reason("that line is no longer in the diff")));
     }
 
     @Test
     void shouldPlaceThePendingCommentsOnTheDiffLinesTheyShowUnder() {
-        assertThat(query.pendingInDiff(twoFileDiffView(), openPendingView()).comments())
+        assertThat(query.pendingInDiff(new PendingInDiffPayload(twoFileDiffView(), openPendingView())).comments())
                 .containsExactly(pendingOnLineView(commentOnDiffLineView(), 2), pendingOnLineView(replyView(), 2));
     }
 
     @Test
     void shouldPutEveryPendingCommentOnNoLineUntilTheDiffIsRead() {
-        assertThat(query.pendingInDiff(loadingDiffView(), openPendingView()).comments())
+        assertThat(query.pendingInDiff(new PendingInDiffPayload(loadingDiffView(), openPendingView())).comments())
                 .containsExactly(pendingOnNoLineView(commentOnDiffLineView()), pendingOnNoLineView(replyView()));
     }
 
     @Test
     void shouldHoldNoPendingCommentUntilThePendingReviewIsReadOrWhenThereIsNone() {
-        assertThat(query.pendingInDiff(twoFileDiffView(), loadingPendingView()).comments()).isEqualTo(List.of());
-        assertThat(query.pendingInDiff(twoFileDiffView(), noPendingReviewView()).comments()).isEqualTo(List.of());
-        assertThat(query.pendingInDiff(twoFileDiffView(), unavailablePendingView()).comments()).isEqualTo(List.of());
+        assertThat(query.pendingInDiff(new PendingInDiffPayload(twoFileDiffView(), loadingPendingView())).comments()).isEqualTo(List.of());
+        assertThat(query.pendingInDiff(new PendingInDiffPayload(twoFileDiffView(), noPendingReviewView())).comments()).isEqualTo(List.of());
+        assertThat(query.pendingInDiff(new PendingInDiffPayload(twoFileDiffView(), unavailablePendingView())).comments()).isEqualTo(List.of());
     }
 }

@@ -1,5 +1,10 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.loadingPendingView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.openPendingView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.unavailableDiffView;
 import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.escapeBytes;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyOutputView;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -10,6 +15,8 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RepaintPayload;
@@ -72,5 +79,43 @@ class SidecarJsonTest {
     @Test
     void writes_bytes_as_base64() {
         assertThat(SidecarJson.tree(ptyOutputView(new SessionId("s"))).path("data").asString()).isEqualTo("G1tB");
+    }
+
+    @Test
+    void reads_a_payload_holding_the_diff_a_view_the_writer_wrote() {
+        ThreadsInDiffPayload payload = new ThreadsInDiffPayload(twoFileDiffView(), loadingThreadsView());
+
+        assertThat(SidecarJson.params(SidecarJson.tree(payload), ThreadsInDiffPayload.class))
+                .as("a view is read by the rules it is written by, sealed types by their kind")
+                .isEqualTo(payload);
+    }
+
+    @Test
+    void reads_a_payload_holding_the_diff_that_could_not_be_read() {
+        ThreadsInDiffPayload payload = new ThreadsInDiffPayload(unavailableDiffView(), loadingThreadsView());
+
+        assertThat(SidecarJson.params(SidecarJson.tree(payload), ThreadsInDiffPayload.class)).isEqualTo(payload);
+    }
+
+    @Test
+    void reads_a_payload_holding_the_pending_review_a_view_the_writer_wrote() {
+        PendingInDiffPayload payload = new PendingInDiffPayload(twoFileDiffView(), openPendingView());
+
+        assertThat(SidecarJson.params(SidecarJson.tree(payload), PendingInDiffPayload.class)).isEqualTo(payload);
+    }
+
+    @Test
+    void reads_a_payload_holding_a_pending_review_not_read_yet() {
+        PendingInDiffPayload payload = new PendingInDiffPayload(twoFileDiffView(), loadingPendingView());
+
+        assertThat(SidecarJson.params(SidecarJson.tree(payload), PendingInDiffPayload.class)).isEqualTo(payload);
+    }
+
+    @Test
+    void refuses_a_kind_no_variant_of_the_sealed_type_has_as_invalid_params() {
+        assertThatThrownBy(() -> SidecarJson.params(
+                        SidecarJson.parse("{\"diff\":{\"kind\":\"nonsense\"},\"threads\":{\"kind\":\"loadingThreads\"}}"),
+                        ThreadsInDiffPayload.class))
+                .isInstanceOfSatisfying(JsonRpcFaultException.class, fault -> assertThat(fault.code()).isEqualTo(ErrorCode.INVALID_PARAMS));
     }
 }

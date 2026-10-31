@@ -4,11 +4,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OnDiffAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
@@ -16,6 +18,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
@@ -75,8 +78,8 @@ final class ReviewPane {
         this.threads = threads;
         this.pending = pending;
         this.reviews = reviews;
-        this.placed = reviews.threadsInDiff(diff, threads);
-        this.placedPending = reviews.pendingInDiff(diff, pending);
+        this.placed = reviews.threadsInDiff(new ThreadsInDiffPayload(diff, threads));
+        this.placedPending = reviews.pendingInDiff(new PendingInDiffPayload(diff, pending));
         this.rows = DiffRows.of(diff, placed, placedPending, inlineBox(), showResolved);
     }
 
@@ -363,7 +366,7 @@ final class ReviewPane {
     Optional<Reason> markRange(int from, int to) {
         moveTo(to);
         int start = clamp(from, rows.lineCount());
-        return switch (reviews.anchorOf(diff, new DiffLineIndex(Math.min(start, cursor)), new DiffLineIndex(Math.max(start, cursor)))) {
+        return switch (reviews.anchorOf(new CommentAnchorPayload(diff, new DiffLineIndex(Math.min(start, cursor)), new DiffLineIndex(Math.max(start, cursor))))) {
             case OnDiffAnchorView _ -> {
                 rangeStart = Optional.of(start);
                 rangeEnd = Optional.of(cursor);
@@ -375,10 +378,7 @@ final class ReviewPane {
 
     /** Where a comment would hang: the range marked, else the line the cursor is on. */
     CommentAnchorView anchor() {
-        return reviews.anchorOf(
-                diff,
-                new DiffLineIndex(rangeStart.isPresent() ? rangeLow() : cursor),
-                new DiffLineIndex(rangeStart.isPresent() ? rangeHigh() : cursor));
+        return reviews.anchorOf(new CommentAnchorPayload(diff, new DiffLineIndex(rangeStart.isPresent() ? rangeLow() : cursor), new DiffLineIndex(rangeStart.isPresent() ? rangeHigh() : cursor)));
     }
 
     /** The diff line a comment on the marked range or the cursor's line is drawn under: the last line of it. */
@@ -426,8 +426,8 @@ final class ReviewPane {
     }
 
     private void rebuild() {
-        placed = reviews.threadsInDiff(diff, threads);
-        placedPending = reviews.pendingInDiff(diff, pending);
+        placed = reviews.threadsInDiff(new ThreadsInDiffPayload(diff, threads));
+        placedPending = reviews.pendingInDiff(new PendingInDiffPayload(diff, pending));
         rows = DiffRows.of(diff, placed, placedPending, inlineBox(), showResolved);
         moveTo(cursor);
     }
