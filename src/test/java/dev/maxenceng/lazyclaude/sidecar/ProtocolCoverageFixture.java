@@ -66,8 +66,8 @@ public final class ProtocolCoverageFixture {
 
     public static Set<String> protocolMethods() {
         return Stream.concat(
-                        Sidecar.protocolMethods().stream().map(ProtocolMethod::name),
-                        Sidecar.protocolInputs().stream().map(ProtocolInput::name))
+                        Sidecar.protocol().methods().stream().map(ProtocolMethod::name),
+                        Sidecar.protocol().inputs().stream().map(ProtocolInput::name))
                 .collect(Collectors.toSet());
     }
 

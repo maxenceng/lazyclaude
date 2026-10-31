@@ -37,19 +37,19 @@ class SidecarMethodsTest {
 
         assertThat(served).as("a handler without a declaration is missing from the schema, a declaration without one cannot be called")
                 .containsExactlyInAnyOrderElementsOf(
-                        Stream.concat(Sidecar.protocolMethods().stream().map(ProtocolMethod::name), Sidecar.protocolInputs().stream().map(ProtocolInput::name))
+                        Stream.concat(Sidecar.protocol().methods().stream().map(ProtocolMethod::name), Sidecar.protocol().inputs().stream().map(ProtocolInput::name))
                                 .toList());
     }
 
     @Test
     void declares_the_notifications_it_pushes() {
-        assertThat(Sidecar.protocolNotifications().stream().map(ProtocolNotification::name))
+        assertThat(Sidecar.protocol().notifications().stream().map(ProtocolNotification::name))
                 .containsExactlyInAnyOrder("board/changed", "session/changed", "pty/output", "session/exited", "warning/changed");
     }
 
     @Test
     void declares_the_calls_it_takes_without_answering() {
-        assertThat(Sidecar.protocolInputs().stream().map(ProtocolInput::name))
+        assertThat(Sidecar.protocol().inputs().stream().map(ProtocolInput::name))
                 .containsExactlyInAnyOrder("pty/input", "pty/resize", "session/repaint");
     }
 }

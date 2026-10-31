@@ -35,12 +35,8 @@ final class BoardMethods {
         this.output = output;
     }
 
-    static List<ProtocolMethod<?, ?>> protocolMethods() {
-        return List.of(BOARD_FOR, WATCH);
-    }
-
-    static List<ProtocolNotification<?>> protocolNotifications() {
-        return List.of(CHANGED);
+    static Protocol protocol() {
+        return new Protocol(List.of(BOARD_FOR, WATCH), List.of(), List.of(CHANGED));
     }
 
     Map<String, SidecarMethod> methods() {

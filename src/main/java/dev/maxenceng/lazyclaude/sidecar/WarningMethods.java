@@ -26,12 +26,8 @@ final class WarningMethods {
         this.output = output;
     }
 
-    static List<ProtocolMethod<?, ?>> protocolMethods() {
-        return List.of(WATCH);
-    }
-
-    static List<ProtocolNotification<?>> protocolNotifications() {
-        return List.of(CHANGED);
+    static Protocol protocol() {
+        return new Protocol(List.of(WATCH), List.of(), List.of(CHANGED));
     }
 
     Map<String, SidecarMethod> methods() {

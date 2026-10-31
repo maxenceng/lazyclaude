@@ -22,7 +22,7 @@ public final class ProtocolSchemaFixture {
     }
 
     public static String schemaOf(ProtocolMethod<?, ?> method) {
-        return ProtocolSchema.text(List.of(method), List.of(), List.of());
+        return ProtocolSchema.text(new Protocol(List.of(method), List.of(), List.of()));
     }
 
     public static JsonNode definitionOf(ProtocolMethod<?, ?> method, String name) {

@@ -60,16 +60,11 @@ final class SessionMethods {
         this.output = output;
     }
 
-    static List<ProtocolMethod<?, ?>> protocolMethods() {
-        return List.of(START_UNLINKED, START_TICKET, RESUME, RESUME_IN_TICKET_WORKTREE, WATCH);
-    }
-
-    static List<ProtocolInput<?>> protocolInputs() {
-        return List.of(PTY_INPUT, PTY_RESIZE, REPAINT);
-    }
-
-    static List<ProtocolNotification<?>> protocolNotifications() {
-        return List.of(CHANGED, OUTPUT, EXITED);
+    static Protocol protocol() {
+        return new Protocol(
+                List.of(START_UNLINKED, START_TICKET, RESUME, RESUME_IN_TICKET_WORKTREE, WATCH),
+                List.of(PTY_INPUT, PTY_RESIZE, REPAINT),
+                List.of(CHANGED, OUTPUT, EXITED));
     }
 
     /** The methods, and the pushes of what a hosted {@code claude} writes and how it exits wired to the output. */

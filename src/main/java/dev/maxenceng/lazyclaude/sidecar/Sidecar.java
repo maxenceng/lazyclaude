@@ -7,7 +7,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -30,8 +29,7 @@ public final class Sidecar {
 
     private static final String REQUEST_NAME = "sidecar-request-";
     private static final String INPUT_NAME = "sidecar-input";
-    private static final Set<String> INPUT_NAMES =
-            protocolInputs().stream().map(ProtocolInput::name).collect(Collectors.toUnmodifiableSet());
+    private static final Set<String> INPUT_NAMES = protocol().inputNames();
     private static final int ENDED = 0;
     private static final int STDIN_FAILED = 1;
     private static final String UNKNOWN_METHOD = "unknown method: %s";
@@ -55,28 +53,12 @@ public final class Sidecar {
 
     /** The JSON Schema of every method and notification, as committed under {@code docs/protocol/}; the build fails when it is stale (ADR 0073). */
     public static String protocolSchema() {
-        return ProtocolSchema.text(protocolMethods(), protocolInputs(), protocolNotifications());
+        return ProtocolSchema.text(protocol());
     }
 
-    /** Every method the sidecar declares: what the schema states, what the contract test counts and what {@link #methods} serves. */
-    static List<ProtocolMethod<?, ?>> protocolMethods() {
-        return Stream.of(BoardMethods.protocolMethods(), SessionMethods.protocolMethods(), WarningMethods.protocolMethods())
-                .flatMap(List::stream)
-                .toList();
-    }
-
-    /** Every call the sidecar takes and does not answer. */
-    static List<ProtocolInput<?>> protocolInputs() {
-        return SessionMethods.protocolInputs();
-    }
-
-    static List<ProtocolNotification<?>> protocolNotifications() {
-        return Stream.of(
-                        BoardMethods.protocolNotifications(),
-                        SessionMethods.protocolNotifications(),
-                        WarningMethods.protocolNotifications())
-                .flatMap(List::stream)
-                .toList();
+    /** Everything the sidecar declares: what the schema states, what the contract test counts and what {@link #methods} serves. */
+    static Protocol protocol() {
+        return Protocol.of(BoardMethods.protocol(), SessionMethods.protocol(), WarningMethods.protocol());
     }
 
     /** What is served on {@code output}, with the pushes of what a hosted {@code claude} writes and how it exits wired to it. */
