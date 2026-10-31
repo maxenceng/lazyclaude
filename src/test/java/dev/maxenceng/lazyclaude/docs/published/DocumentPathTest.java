@@ -76,6 +76,7 @@ class DocumentPathTest {
     void shouldNotBeListedWhenItIsNotMarkdown() {
         assertThat(new DocumentPath("openapi.json").listed()).isFalse();
         assertThat(new DocumentPath("adr/diagram.png").listed()).isFalse();
+        assertThat(new DocumentPath("adr/index.html").listed()).isFalse();
     }
 
     @Test
@@ -112,7 +113,39 @@ class DocumentPathTest {
     }
 
     @Test
-    void shouldOrderAFolderBeforeTheFolderItStartsWith() {
-        assertThat(adrPath()).isLessThan(deepPath());
+    void shouldOrderAFolderReadmeBeforeItsOtherFiles() {
+        assertThat(new DocumentPath("adr/README.md"))
+                .as("a folder's README is its index page, which the site shows first")
+                .isLessThan(new DocumentPath("adr/0001-record.md"));
+    }
+
+    @Test
+    void shouldOrderTheDocsReadmeBeforeEverything() {
+        DocumentPath docsReadme = new DocumentPath("README.md");
+
+        assertThat(docsReadme).isLessThan(new DocumentPath("0-first.md"));
+        assertThat(docsReadme).isLessThan(adrPath());
+    }
+
+    @Test
+    void shouldOrderAFolderFilesBeforeItsSubfolders() {
+        assertThat(new DocumentPath("adr/zz-last.md"))
+                .as("a level's files come before its subfolders, whatever their names")
+                .isLessThan(deepPath());
+        assertThat(documentPath()).isLessThan(adrPath());
+    }
+
+    @Test
+    void shouldOrderAReadmeInASubfolderAmongTheSubfolders() {
+        assertThat(new DocumentPath("adr/0001-record.md"))
+                .as("only a level's own README heads it")
+                .isLessThan(new DocumentPath("adr/superseded/README.md"));
+    }
+
+    @Test
+    void shouldOrderAFolderNamedReadmeAmongTheFolders() {
+        assertThat(documentPath())
+                .as("only a file named README.md heads a level, not a folder of that name")
+                .isLessThan(new DocumentPath("README.md/0000-first.md"));
     }
 }

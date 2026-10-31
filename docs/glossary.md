@@ -126,7 +126,7 @@ words mean.
 | Term | Meaning | Where it lives |
 |---|---|---|
 | Document | One markdown file under the project's `docs/`, outside `docs/backlog/`, shown read-only. | `docs` |
-| Docs tree | The project's documents grouped by folder, as the Docs panel shows them: the files directly under `docs/` first, then one header per folder with the count of documents beneath it, each level sorted by name. | `docs` |
+| Docs tree | The project's documents grouped by folder, as the Docs panel shows them: one header per folder with the count of documents beneath it, each level ordered with its folder's `README.md` first (the folder's index page, as a docs site shows it), then its other files by name, then its subfolders by name. | `docs` |
 | Site | lazyclaude's own docs built into HTML by Zensical from `docs/`, `docs/backlog/` left out. lazyclaude never reads it: the Docs panel reads the markdown sources. `make docs` builds it into `site/`, and a push to `main` deploys it to GitHub Pages when the repository variable `DOCS_PAGES` is `true`. | `docs` |
 | Polling | Checking the docs or the transcripts on a timer (every 5 s) in place of the watch, only when the watch cannot be set up or kept; each tree that cannot be watched is polled and warned of by itself. Not a sweep: none has polling while its watch holds. The board's *Issues poll* is its watch, not a fallback. | `docs`, `session` |
 

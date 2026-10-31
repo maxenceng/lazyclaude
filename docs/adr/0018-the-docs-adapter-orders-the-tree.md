@@ -4,7 +4,8 @@ Date: 2026-10-10
 
 ## Status
 
-Accepted.
+Accepted. Its order is superseded by ADR 0071: a folder's `README.md` first, then its files, then its
+subfolders. Where the order is applied stands.
 
 ## Context
 
