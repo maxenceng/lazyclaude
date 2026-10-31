@@ -3,11 +3,11 @@ package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -41,13 +41,13 @@ final class TranscriptTail {
     private String aiTitle;
     private String firstPrompt;
     private Long lastActivity;
-    private final List<CachedTicketRun> ticketRuns;
+    private List<CachedTicketRun> ticketRuns;
 
     TranscriptTail(CachedTranscript known) {
         this.aiTitle = known.aiTitle();
         this.firstPrompt = known.firstPrompt();
         this.lastActivity = known.lastActivity();
-        this.ticketRuns = new ArrayList<>(known.ticketRuns());
+        this.ticketRuns = known.ticketRuns();
     }
 
     void accept(byte[] line) {
@@ -79,8 +79,7 @@ final class TranscriptTail {
     }
 
     private void ran(CachedTicketRun run) {
-        ticketRuns.remove(run);
-        ticketRuns.add(run);
+        ticketRuns = Stream.concat(ticketRuns.stream().filter(held -> !held.equals(run)), Stream.of(run)).toList();
     }
 
     private static Optional<CachedTicketRun> ticketRunOf(TranscriptLine entry) {
@@ -171,6 +170,6 @@ final class TranscriptTail {
                 aiTitle,
                 firstPrompt,
                 lastActivity,
-                List.copyOf(ticketRuns));
+                ticketRuns);
     }
 }

@@ -1,6 +1,5 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
-import java.util.List;
 
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -45,6 +44,6 @@ final class SchemaNodes {
     }
 
     private static ArrayNode names(ObjectNode properties) {
-        return SidecarJson.texts(List.copyOf(properties.propertyNames()));
+        return SidecarJson.texts(properties.propertyNames());
     }
 }

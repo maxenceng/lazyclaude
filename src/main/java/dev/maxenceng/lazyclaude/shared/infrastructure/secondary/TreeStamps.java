@@ -28,7 +28,7 @@ final class TreeStamps extends ChurnTolerantVisitor {
         } catch (IOException unreadable) {
             return previous;
         }
-        return Map.copyOf(walk.stamps);
+        return walk.stamps;
     }
 
     @Override

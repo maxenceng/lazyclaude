@@ -64,7 +64,7 @@ final class SidecarJson {
         return MAPPER.createArrayNode().addAll(items);
     }
 
-    static ArrayNode texts(List<String> items) {
+    static ArrayNode texts(Collection<String> items) {
         return array(items.stream().map(item -> (JsonNode) MAPPER.getNodeFactory().stringNode(item)).toList());
     }
 

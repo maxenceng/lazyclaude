@@ -76,3 +76,4 @@
 - 0072 [The docs open in dark mode, through a theme block both tools read](0072-the-docs-open-in-dark-mode-through-a-theme-block-both-tools-read.md) — Accepted.
 - 0073 [The protocol schema is written by the sidecar from its own writer rules](0073-the-protocol-schema-is-written-by-the-sidecar-from-its-own-writer-rules.md) — Accepted.
 - 0074 [Hosted sessions run over the sidecar by inputs, pushes and a repaint the manager schedules](0074-hosted-sessions-run-over-the-sidecar-by-inputs-pushes-and-a-repaint-the-manager-schedules.md) — Accepted.
+- 0075 [No class copies a collection it was given](0075-no-class-copies-a-collection-it-was-given.md) — Accepted.

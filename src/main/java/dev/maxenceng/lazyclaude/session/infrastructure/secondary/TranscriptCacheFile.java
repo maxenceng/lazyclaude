@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Collection;
 import java.util.List;
 
 import tools.jackson.core.JacksonException;
@@ -44,10 +43,10 @@ public final class TranscriptCacheFile {
     }
 
     /** @throws IOException when the cache cannot be written, with the reason in its message */
-    void write(Collection<CachedTranscript> transcripts) throws IOException {
+    void write(List<CachedTranscript> transcripts) throws IOException {
         byte[] json;
         try {
-            json = MAPPER.writeValueAsBytes(new TranscriptCache(FORMAT_VERSION, List.copyOf(transcripts)));
+            json = MAPPER.writeValueAsBytes(new TranscriptCache(FORMAT_VERSION, transcripts));
         } catch (JacksonException e) {
             throw new IOException("cannot serialise the cache: %s".formatted(e.getOriginalMessage()), e);
         }

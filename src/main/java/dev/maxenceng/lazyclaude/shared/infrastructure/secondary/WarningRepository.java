@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.shared.domain.Warning;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
@@ -19,15 +20,15 @@ import dev.maxenceng.lazyclaude.shared.domain.Warnings;
 public final class WarningRepository implements WarningPort, WarningWatchPort {
 
     private final Object lock = new Object();
-    private final List<Warning> raised = new ArrayList<>();
+    private List<Warning> raised = List.of();
     private final List<Consumer<Warnings>> listeners = new ArrayList<>();
     private final List<Runnable> noneHeld = new ArrayList<>();
 
     @Override
     public void raise(Warning warning) {
         synchronized (lock) {
-            raised.add(warning);
-            Warnings held = new Warnings(List.copyOf(raised));
+            raised = Stream.concat(raised.stream(), Stream.of(warning)).toList();
+            Warnings held = new Warnings(raised);
             listeners.forEach(listener -> listener.accept(held));
         }
     }
@@ -35,14 +36,16 @@ public final class WarningRepository implements WarningPort, WarningWatchPort {
     @Override
     public void withdraw(Warning warning) {
         synchronized (lock) {
-            if (!raised.remove(warning)) {
+            int at = raised.indexOf(warning);
+            if (at < 0) {
                 return;
             }
+            raised = Stream.concat(raised.subList(0, at).stream(), raised.subList(at + 1, raised.size()).stream()).toList();
             if (raised.isEmpty()) {
                 noneHeld.forEach(Runnable::run);
                 return;
             }
-            Warnings held = new Warnings(List.copyOf(raised));
+            Warnings held = new Warnings(raised);
             listeners.forEach(listener -> listener.accept(held));
         }
     }
@@ -52,7 +55,7 @@ public final class WarningRepository implements WarningPort, WarningWatchPort {
         synchronized (lock) {
             listeners.add(listener);
             if (!raised.isEmpty()) {
-                listener.accept(new Warnings(List.copyOf(raised)));
+                listener.accept(new Warnings(raised));
             }
         }
     }
@@ -60,7 +63,7 @@ public final class WarningRepository implements WarningPort, WarningWatchPort {
     @Override
     public Optional<Warnings> held() {
         synchronized (lock) {
-            return raised.isEmpty() ? Optional.empty() : Optional.of(new Warnings(List.copyOf(raised)));
+            return raised.isEmpty() ? Optional.empty() : Optional.of(new Warnings(raised));
         }
     }
 
