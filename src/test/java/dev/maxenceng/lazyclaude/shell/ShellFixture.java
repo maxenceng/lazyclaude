@@ -28,6 +28,7 @@ import java.util.concurrent.Executor;
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardAfterChangePayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
@@ -176,6 +177,14 @@ final class ShellFixture {
 
     static BoardPayload readingBoard() {
         return new BoardPayload(projectRoot().value());
+    }
+
+    static BoardAfterChangePayload readingBoardAgain() {
+        return new BoardAfterChangePayload(projectRoot().value(), true);
+    }
+
+    static BoardAfterChangePayload readingBoardAgainOverAReason() {
+        return new BoardAfterChangePayload(projectRoot().value(), false);
     }
 
     static Shell shellOnPullRequests(PullRequestsView pullRequests, TicketView... tickets) {
@@ -380,7 +389,7 @@ final class ShellFixture {
     }
 
     static void boardReadAgainAs(BoardQuery boards, BoardReadingView board) {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(board));
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.of(board));
     }
 
     static KeyEvent escape() {

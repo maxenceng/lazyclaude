@@ -13,7 +13,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.oneTabInDockWithReviews;
-import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoard;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoardAgain;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellRefreshing;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -62,7 +62,7 @@ class ShellRefreshTest {
 
     @Test
     void shouldReadTheBoardAgainOnR() {
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewBuilder().title(secondTitle()).build())));
         Shell shell = shellRefreshing(boards, docs, reviews, screens, ticketView());
 
@@ -110,7 +110,7 @@ class ShellRefreshTest {
 
         shell.press(key('R'));
 
-        verify(boards, never()).boardReadAgainFor(any());
+        verify(boards, never()).boardAfterChange(any());
         verify(docs, never()).docsFor(any());
         verify(screens, never()).refresh(any());
         verify(reviews, never()).refresh();
@@ -126,7 +126,7 @@ class ShellRefreshTest {
 
     @Test
     void shouldNotFlashOrSayItRefreshed() {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(boardViewOf(ticketView())));
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.of(boardViewOf(ticketView())));
         Shell shell = shellRefreshing(boards, docs, reviews, screens, ticketView());
         String before = Screen.of(shell).text();
 

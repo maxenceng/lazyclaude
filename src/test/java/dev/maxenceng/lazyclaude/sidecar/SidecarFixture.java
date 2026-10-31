@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.mockito.stubbing.Answer;
 
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardAfterChangePayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
@@ -50,6 +51,14 @@ public final class SidecarFixture {
 
     public static BoardPayload payload() {
         return new BoardPayload(projectPath());
+    }
+
+    public static BoardAfterChangePayload afterChangeOverABoard() {
+        return new BoardAfterChangePayload(projectPath(), true);
+    }
+
+    public static BoardAfterChangePayload afterChangeOverAReason() {
+        return new BoardAfterChangePayload(projectPath(), false);
     }
 
     public static BoardPayload otherPayload() {
@@ -120,6 +129,11 @@ public final class SidecarFixture {
         return "{\"kind\":\"unavailableBoard\",\"root\":\"/work/app\",\"reason\":\"gh is not logged in; run gh auth login\"}";
     }
 
+    public static String unreachableBoard() {
+        return "{\"kind\":\"unavailableBoard\",\"root\":\"/work/app\","
+                + "\"reason\":\"cannot read the issues from GitHub: error connecting to api.github.com\"}";
+    }
+
     public static NoProjectView noProjectView() {
         return new NoProjectView(new Reason("/work/app is not inside a git repository"));
     }
@@ -147,6 +161,14 @@ public final class SidecarFixture {
 
     public static Answer<Object> signalAtOnce() {
         return call -> {
+            call.<Runnable>getArgument(1).run();
+            return null;
+        };
+    }
+
+    public static Answer<Object> signalTwiceAtOnce() {
+        return call -> {
+            call.<Runnable>getArgument(1).run();
             call.<Runnable>getArgument(1).run();
             return null;
         };

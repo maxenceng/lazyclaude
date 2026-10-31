@@ -24,13 +24,12 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardAfterChangePayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsPayload;
@@ -449,7 +448,7 @@ public final class Shell extends ToolkitApp {
      * alone: a read that fails drops it, and the board it lands with is the only one it is looked for in.
      */
     private synchronized void reread(Optional<TicketId> selecting) {
-        readAgain().ifPresent(read -> {
+        boards.boardAfterChange(new BoardAfterChangePayload(root, lastRead instanceof BoardView)).ifPresent(read -> {
             selecting.ifPresent(selectOnNextBoard::set);
             lastRead = read;
             pendingBoard.set(read);
@@ -459,21 +458,6 @@ public final class Shell extends ToolkitApp {
             }
             followTickets(read);
         });
-    }
-
-    /**
-     * A board that was never read is read whole, so its reason stays current and no warning claims a board is kept; one on screen is
-     * kept when the read fails, and so is the reason when the project itself is gone, the read again raising the warning that says why.
-     */
-    private Optional<BoardReadingView> readAgain() {
-        BoardPayload payload = new BoardPayload(root);
-        if (!(lastRead instanceof UnavailableBoardView)) {
-            return boards.boardReadAgainFor(payload);
-        }
-        return switch (boards.boardFor(payload)) {
-            case BoardReadingView read -> Optional.of(read);
-            case NoProjectView _ -> boards.boardReadAgainFor(payload);
-        };
     }
 
     /** Sessions are linked against the tickets of the board as last read, so a ticket created while running links them. */

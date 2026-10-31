@@ -71,5 +71,8 @@ what is already there.
   (`kind` `noProject`), `board/watch` answers it and opens no watch, and the TUI prints its reason and does not start, as before.
   A `DomainException` a `*Query` still throws has no View to travel as, so it answers as the internal fault with its message and
   its stack trace goes to stderr; it becomes a result when its primary adapter gives it a View.
+- What a change reads is `board`'s rule, not a composer's: `BoardQuery.boardAfterChange` is told whether a board with tickets is
+  shown, keeps it when the read fails, and otherwise reads the board whole so its reason stays current. The TUI and the sidecar both
+  call it, each with the board it last showed or sent, so neither keeps a first reason a later read replaced.
 - Requests run on a virtual thread each, named `sidecar-request-n`, and a thread named `sidecar-writer` writes stdout. `LazyClaude`
   points `System.out` at stderr before starting the sidecar, so a library that prints cannot break a line.

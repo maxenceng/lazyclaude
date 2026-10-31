@@ -41,6 +41,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 class BoardQueryTest {
 
     private static final BoardPayload FROM_THE_PROJECT = new BoardPayload(workingDirectory().path());
+    private static final BoardAfterChangePayload AFTER_A_CHANGE_OVER_A_BOARD = new BoardAfterChangePayload(workingDirectory().path(), true);
 
     @Mock
     private ProjectLocatorPort locator;
@@ -164,7 +165,7 @@ class BoardQueryTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticket()));
 
-        assertThat(boardQuery(locator, backlog).boardReadAgainFor(FROM_THE_PROJECT))
+        assertThat(boardQuery(locator, backlog).boardAfterChange(AFTER_A_CHANGE_OVER_A_BOARD))
                 .get()
                 .extracting(board -> read(board).groups().get(Status.TODO.ordinal()).tickets())
                 .isEqualTo(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).groups().get(Status.TODO.ordinal()).tickets());
@@ -174,9 +175,19 @@ class BoardQueryTest {
     void shouldViewNothingWhenTheBoardCannotBeReadAgain() {
         when(locator.locate(workingDirectory())).thenThrow(new ProjectNotFoundException("not here"));
 
-        assertThat(boardQuery(locator, backlog).boardReadAgainFor(FROM_THE_PROJECT))
+        assertThat(boardQuery(locator, backlog).boardAfterChange(AFTER_A_CHANGE_OVER_A_BOARD))
                 .as("a board already on screen stays, rather than being replaced by a failure")
                 .isEmpty();
+    }
+
+    @Test
+    void shouldViewTheReasonReadAgainWhenNoBoardIsShown() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenThrow(new BacklogUnavailableException("gh is not logged in"));
+
+        assertThat(boardQuery(locator, backlog).boardAfterChange(new BoardAfterChangePayload(workingDirectory().path(), false)))
+                .get()
+                .isInstanceOf(UnavailableBoardView.class);
     }
 
     @Test

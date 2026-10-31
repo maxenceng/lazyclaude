@@ -19,11 +19,11 @@ public final class BoardQuery {
     }
 
     /**
-     * The board read again, or nothing when it cannot be, so a board already on screen stays; a read that fails after a good one
-     * raises a warning saying why.
+     * The board read again after a change, or nothing when what is shown stays: a board with tickets is kept when the read fails, the
+     * warning saying why, and one without is read whole so its reason stays current.
      */
-    public Optional<BoardReadingView> boardReadAgainFor(BoardPayload payload) {
-        return boards.boardReadAgainFor(payload.toDomain()).map(BoardReadingView::from);
+    public Optional<BoardReadingView> boardAfterChange(BoardAfterChangePayload payload) {
+        return boards.boardAfterChange(payload.toDomain(), payload.boardShown()).map(BoardReadingView::from);
     }
 
     /**

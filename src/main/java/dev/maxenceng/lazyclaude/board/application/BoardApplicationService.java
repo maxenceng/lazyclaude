@@ -4,9 +4,9 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
-import dev.maxenceng.lazyclaude.board.domain.Board;
 import dev.maxenceng.lazyclaude.board.domain.BoardLookup;
 import dev.maxenceng.lazyclaude.board.domain.BoardManager;
+import dev.maxenceng.lazyclaude.board.domain.BoardReading;
 import dev.maxenceng.lazyclaude.board.domain.BoardWatchPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
 import dev.maxenceng.lazyclaude.board.domain.NoProject;
@@ -46,14 +46,33 @@ public final class BoardApplicationService {
         }
     }
 
-    /** The board read again, or nothing when it cannot be, so a board already on screen stays; the manager decides what that costs a warning. */
-    public Optional<Board> boardReadAgainFor(WorkingDirectory from) {
+    /**
+     * The board read again after a change, or nothing when what is shown stays. A board with tickets is kept when the read fails, the
+     * warning saying why; one without is read whole, so its reason stays current, and kept with that warning only when the project
+     * itself is gone.
+     */
+    public Optional<BoardReading> boardAfterChange(WorkingDirectory from, boolean boardShown) {
+        if (boardShown) {
+            return boardReadAgainFor(from);
+        }
+        return switch (boardFor(from)) {
+            case BoardReading read -> Optional.of(read);
+            case NoProject none -> kept(none.reason());
+        };
+    }
+
+    private Optional<BoardReading> boardReadAgainFor(WorkingDirectory from) {
         try {
             return Optional.of(manager.boardFor(from));
         } catch (DomainException cannotRead) {
-            manager.boardUnreadable(new Reason(cannotRead.getMessage()));
-            return Optional.empty();
+            return kept(new Reason(cannotRead.getMessage()));
         }
+    }
+
+    /** What is shown stays; the manager decides what that costs a warning. */
+    private Optional<BoardReading> kept(Reason cause) {
+        manager.boardUnreadable(cause);
+        return Optional.empty();
     }
 
     /** Runs {@code changed} whenever the project's issues changed. */

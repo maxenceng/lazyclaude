@@ -1,6 +1,6 @@
 package dev.maxenceng.lazyclaude.shell;
 
-import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoard;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoardAgain;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
@@ -13,6 +13,6 @@ final class BoardRead {
     private BoardRead() {}
 
     static void returning(BoardQuery boards, BoardReadingView board) {
-        when(boards.boardReadAgainFor(readingBoard())).thenReturn(Optional.of(board));
+        when(boards.boardAfterChange(readingBoardAgain())).thenReturn(Optional.of(board));
     }
 }

@@ -117,9 +117,11 @@ class BoardApplicationServiceTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticket()));
 
-        assertThat(service.boardReadAgainFor(workingDirectory()))
-                .map(board -> board.groups().get(Status.TODO.ordinal()).tickets())
-                .contains(List.of(ticket()));
+        assertThat(service.boardAfterChange(workingDirectory(), true))
+                .get()
+                .asInstanceOf(InstanceOfAssertFactories.type(Board.class))
+                .extracting(board -> board.groups().get(Status.TODO.ordinal()).tickets())
+                .isEqualTo(List.of(ticket()));
     }
 
     @Test
@@ -127,7 +129,7 @@ class BoardApplicationServiceTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenThrow(new BacklogUnavailableException("this project has no GitHub remote, so it has no backlog"));
 
-        assertThat(service.boardReadAgainFor(workingDirectory())).isEmpty();
+        assertThat(service.boardAfterChange(workingDirectory(), true)).isEmpty();
 
         assertThat(raisedTexts(warnings))
                 .containsExactly("board: this project has no GitHub remote, so it has no backlog; showing the board as last read");
@@ -138,7 +140,7 @@ class BoardApplicationServiceTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
 
-        service.boardReadAgainFor(workingDirectory());
+        service.boardAfterChange(workingDirectory(), true);
 
         verifyNoInteractions(warnings);
     }
@@ -148,9 +150,9 @@ class BoardApplicationServiceTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenThrow(new BacklogUnavailableException("this project has no GitHub remote, so it has no backlog"));
 
-        service.boardReadAgainFor(workingDirectory());
-        service.boardReadAgainFor(workingDirectory());
-        service.boardReadAgainFor(workingDirectory());
+        service.boardAfterChange(workingDirectory(), true);
+        service.boardAfterChange(workingDirectory(), true);
+        service.boardAfterChange(workingDirectory(), true);
 
         assertThat(raisedTexts(warnings))
                 .as("naming the mode again would only pile up copies of it")
@@ -173,9 +175,9 @@ class BoardApplicationServiceTest {
     void shouldWithdrawTheWarningWhenTheBoardIsReadAgainAfterAFailedRead() {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenThrow(new BacklogUnavailableException("this project has no GitHub remote, so it has no backlog")).thenReturn(List.of());
-        service.boardReadAgainFor(workingDirectory());
+        service.boardAfterChange(workingDirectory(), true);
 
-        service.boardReadAgainFor(workingDirectory());
+        service.boardAfterChange(workingDirectory(), true);
 
         verify(warnings)
                 .withdraw(new Warning("board: this project has no GitHub remote, so it has no backlog; showing the board as last read"));
@@ -186,8 +188,8 @@ class BoardApplicationServiceTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
 
-        service.boardReadAgainFor(workingDirectory());
-        service.boardReadAgainFor(workingDirectory());
+        service.boardAfterChange(workingDirectory(), true);
+        service.boardAfterChange(workingDirectory(), true);
 
         verifyNoInteractions(warnings);
     }
@@ -196,10 +198,10 @@ class BoardApplicationServiceTest {
     void shouldWithdrawTheWarningOnlyOnceHoweverManyGoodReadsFollow() {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenThrow(new BacklogUnavailableException("this project has no GitHub remote, so it has no backlog")).thenReturn(List.of());
-        service.boardReadAgainFor(workingDirectory());
-        service.boardReadAgainFor(workingDirectory());
+        service.boardAfterChange(workingDirectory(), true);
+        service.boardAfterChange(workingDirectory(), true);
 
-        service.boardReadAgainFor(workingDirectory());
+        service.boardAfterChange(workingDirectory(), true);
 
         verify(warnings, times(1)).withdraw(any());
     }
@@ -211,10 +213,10 @@ class BoardApplicationServiceTest {
                 .thenThrow(new BacklogUnavailableException("this project has no GitHub remote, so it has no backlog"))
                 .thenReturn(List.of())
                 .thenThrow(new BacklogUnavailableException("this project has no GitHub remote, so it has no backlog"));
-        service.boardReadAgainFor(workingDirectory());
-        service.boardReadAgainFor(workingDirectory());
+        service.boardAfterChange(workingDirectory(), true);
+        service.boardAfterChange(workingDirectory(), true);
 
-        service.boardReadAgainFor(workingDirectory());
+        service.boardAfterChange(workingDirectory(), true);
 
         assertThat(raisedTexts(warnings)).as("a new failure is a new warning once the old one is gone").hasSize(2);
     }
@@ -224,9 +226,46 @@ class BoardApplicationServiceTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenThrow(new BacklogUnavailableException("this project has no GitHub remote, so it has no backlog"));
 
-        service.boardReadAgainFor(workingDirectory());
-        service.boardReadAgainFor(workingDirectory());
+        service.boardAfterChange(workingDirectory(), true);
+        service.boardAfterChange(workingDirectory(), true);
 
         verify(warnings, never()).withdraw(any());
+    }
+
+    @Test
+    void shouldReadTheReasonAgainWhenNoBoardIsShown() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenThrow(new BacklogUnavailableException("gh is not logged in"));
+
+        assertThat(service.boardAfterChange(workingDirectory(), false))
+                .as("a board without tickets has nothing to keep, so the latest reason replaces it")
+                .contains(UnavailableBoard.builder().project(project()).reason(new Reason("gh is not logged in")).build());
+        verifyNoInteractions(warnings);
+    }
+
+    @Test
+    void shouldReadTheBoardWhenNoBoardIsShown() {
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(ticket()));
+
+        assertThat(service.boardAfterChange(workingDirectory(), false)).get().isInstanceOf(Board.class);
+    }
+
+    @Test
+    void shouldKeepTheReasonShownAndRaiseAWarningWhenTheProjectIsGone() {
+        when(locator.locate(workingDirectory())).thenThrow(new ProjectNotFoundException("not here"));
+
+        assertThat(service.boardAfterChange(workingDirectory(), false)).isEmpty();
+
+        assertThat(raisedTexts(warnings)).containsExactly("board: not here; showing the board as last read");
+    }
+
+    @Test
+    void shouldLookForTheProjectOnceWhenItIsGone() {
+        when(locator.locate(workingDirectory())).thenThrow(new ProjectNotFoundException("not here"));
+
+        service.boardAfterChange(workingDirectory(), false);
+
+        verify(locator, times(1)).locate(workingDirectory());
     }
 }

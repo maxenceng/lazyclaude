@@ -15,7 +15,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.escape;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.key;
-import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoard;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.readingBoardAgain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -160,7 +160,7 @@ class ShellCaptureTest {
     @Test
     void shouldNotSelectTheNewDraftOnALaterReadWhenTheReadAfterTheCaptureFailed() {
         when(capturing.capture(TITLED_HI)).thenReturn(capturedTicketViewNumbered(7));
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.empty())
                 .thenReturn(Optional.of(boardViewOf(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(7, Status.DRAFT))));
         Shell shell = shellOpenForATitle(capturing, boards, Runnable::run, ticketViewNumbered(1, Status.DRAFT));
@@ -179,7 +179,7 @@ class ShellCaptureTest {
     @Test
     void shouldNotSelectTheNewDraftOnALaterReadWhenTheReadAfterTheCaptureLackedIt() {
         when(capturing.capture(TITLED_HI)).thenReturn(capturedTicketViewNumbered(7));
-        when(boards.boardReadAgainFor(readingBoard()))
+        when(boards.boardAfterChange(readingBoardAgain()))
                 .thenReturn(Optional.of(boardViewOf(ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT))))
                 .thenReturn(Optional.of(boardViewOf(
                         ticketViewNumbered(1, Status.DRAFT), ticketViewNumbered(2, Status.DRAFT), ticketViewNumbered(7, Status.DRAFT))));
@@ -210,7 +210,7 @@ class ShellCaptureTest {
         ShellFixture.drained(queued);
 
         assertThat(Screen.of(shell).boardPanelText()).doesNotContain("#7");
-        verify(boards, never()).boardReadAgainFor(any());
+        verify(boards, never()).boardAfterChange(any());
         assertThat(queued).as("the read is queued at once, off the render thread").hasSize(1);
         ShellFixture.drained(queued);
         assertThat(Screen.of(shell).boardPanelText()).contains("#7");
@@ -252,7 +252,7 @@ class ShellCaptureTest {
         shell.press(enter());
 
         assertThat(Screen.of(shell).text()).contains("│ Title: Hi").contains("│ ⚠ " + reason().value());
-        verify(boards, never()).boardReadAgainFor(any());
+        verify(boards, never()).boardAfterChange(any());
     }
 
     @Test

@@ -2,13 +2,14 @@ package dev.maxenceng.lazyclaude.sidecar;
 
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardAfterChangePayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardLookupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardWatchPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
 
@@ -23,7 +24,7 @@ final class BoardMethods {
 
     private final BoardQuery board;
     private final SidecarOutput output;
-    private final Set<Path> watched = ConcurrentHashMap.newKeySet();
+    private final Map<Path, BoardReadingView> shown = new ConcurrentHashMap<>();
 
     BoardMethods(BoardQuery board, SidecarOutput output) {
         this.board = board;
@@ -44,26 +45,31 @@ final class BoardMethods {
         BoardLookupView current = board.boardFor(SidecarJson.params(params, BoardPayload.class));
         JsonNode result = SidecarJson.tree(current);
         return switch (current) {
-            case BoardReadingView read -> new SidecarAnswer(result, () -> watchOnce(read.root().value()));
+            case BoardReadingView read -> new SidecarAnswer(result, () -> watchOnce(read));
             case NoProjectView _ -> SidecarAnswer.of(result);
         };
     }
 
-    /** A watch that failed to open is forgotten, so the next {@code board/watch} of the project tries again. */
-    private void watchOnce(Path root) {
-        if (watched.add(root)) {
+    /**
+     * The board the frontend was last sent is what the next change is read against. A watch that failed to open is forgotten, so the
+     * next {@code board/watch} of the project tries again.
+     */
+    private void watchOnce(BoardReadingView current) {
+        Path root = current.root().value();
+        if (shown.put(root, current) == null) {
             try {
                 board.subscribe(new BoardWatchPayload(root), () -> pushBoardOf(root));
             } catch (RuntimeException failure) {
-                watched.remove(root);
+                shown.remove(root);
                 throw failure;
             }
         }
     }
 
-    // deferred: an unavailable board is never pushed again, so its first reason stays — close it when the shell's read-after-a-change rule moves into board.
     private void pushBoardOf(Path root) {
-        board.boardReadAgainFor(new BoardPayload(root))
-                .ifPresent(view -> output.send(JsonRpcMessages.notification(CHANGED, SidecarJson.tree(view))));
+        board.boardAfterChange(new BoardAfterChangePayload(root, shown.get(root) instanceof BoardView)).ifPresent(view -> {
+            shown.put(root, view);
+            output.send(JsonRpcMessages.notification(CHANGED, SidecarJson.tree(view)));
+        });
     }
 }

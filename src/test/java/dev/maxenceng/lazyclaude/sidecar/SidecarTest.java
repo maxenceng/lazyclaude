@@ -2,7 +2,10 @@ package dev.maxenceng.lazyclaude.sidecar;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.unavailableBoardView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.unreachableBoardView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.afterChangeOverABoard;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.afterChangeOverAReason;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.boardForOtherProject;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.boardForProject;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.callOfAnotherVersion;
@@ -24,15 +27,18 @@ import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.request;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.requestWithoutParams;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.resultOf;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.signalAtOnce;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.signalTwiceAtOnce;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.ticketBoard;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.ticketlessBoard;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.unavailableBoard;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.unparseableLine;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.unreachableBoard;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.waitingFor;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.watchProject;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -43,6 +49,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -181,7 +188,7 @@ class SidecarTest {
     void answers_the_current_board_to_a_watch_and_pushes_the_board_read_again_on_a_change() {
         BoardView read = boardViewOf();
         when(board.boardFor(payload())).thenReturn(read);
-        when(board.boardReadAgainFor(payload())).thenReturn(Optional.of(read));
+        when(board.boardAfterChange(afterChangeOverABoard())).thenReturn(Optional.of(read));
         doAnswer(signalAtOnce()).when(board).subscribe(any(), any());
 
         assertThat(linesWritten(board, watchProject(1)))
@@ -212,10 +219,35 @@ class SidecarTest {
     @Test
     void pushes_nothing_when_the_board_cannot_be_read_again() {
         when(board.boardFor(payload())).thenReturn(boardViewOf());
-        when(board.boardReadAgainFor(payload())).thenReturn(Optional.empty());
+        when(board.boardAfterChange(afterChangeOverABoard())).thenReturn(Optional.empty());
         doAnswer(signalAtOnce()).when(board).subscribe(any(), any());
 
         assertThat(linesWritten(board, watchProject(1))).containsExactlyInAnyOrder(ready(), resultOf(1, ticketlessBoard()));
+    }
+
+    @Test
+    void pushes_the_new_reason_when_a_watch_that_began_on_an_unavailable_board_sees_a_change() {
+        when(board.boardFor(payload())).thenReturn(unavailableBoardView());
+        when(board.boardAfterChange(afterChangeOverAReason())).thenReturn(Optional.of(unreachableBoardView()));
+        doAnswer(signalAtOnce()).when(board).subscribe(any(), any());
+
+        assertThat(linesWritten(board, watchProject(1)))
+                .as("a frontend that never had tickets shows the reason the latest read gave, not the first one")
+                .containsExactly(ready(), resultOf(1, unavailableBoard()), changed(unreachableBoard()));
+    }
+
+    @Test
+    void reads_the_next_change_against_the_board_it_pushed_last() {
+        when(board.boardFor(payload())).thenReturn(unavailableBoardView());
+        when(board.boardAfterChange(afterChangeOverAReason())).thenReturn(Optional.of(boardViewOf()));
+        when(board.boardAfterChange(afterChangeOverABoard())).thenReturn(Optional.empty());
+        doAnswer(signalTwiceAtOnce()).when(board).subscribe(any(), any());
+
+        linesWritten(board, watchProject(1));
+
+        InOrder reads = inOrder(board);
+        reads.verify(board).boardAfterChange(afterChangeOverAReason());
+        reads.verify(board).boardAfterChange(afterChangeOverABoard());
     }
 
     @Test
