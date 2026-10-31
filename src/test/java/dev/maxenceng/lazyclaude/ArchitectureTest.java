@@ -14,6 +14,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -181,11 +182,11 @@ class ArchitectureTest {
             .callMethod(Optional.class, "orElseThrow")
             .allowEmptyShould(true);
 
-    // Jackson parses what other tools write; it stays in the adapter that reads it, never in a domain or a screen.
+    // Jackson parses what other tools write; it stays in the adapter that reads it and in the sidecar that speaks JSON (ADR 0050), never in a domain or a screen.
     @ArchTest
-    static final ArchRule json_is_parsed_only_in_secondary_adapters = noClasses()
+    static final ArchRule json_is_parsed_only_in_secondary_adapters_and_the_sidecar = noClasses()
             .that()
-            .resideOutsideOfPackage("..infrastructure.secondary..")
+            .resideOutsideOfPackages("..infrastructure.secondary..", ROOT + ".sidecar..")
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..")
@@ -223,17 +224,17 @@ class ArchitectureTest {
             .should(reachModulesOnlyThroughPrimaryAndPublishedFromTheShell())
             .allowEmptyShould(true);
 
-    // The shell asks a primary adapter in its roles only: a Query reads, a Command writes, a Payload goes in, a View comes out (ADR 0012, ADR 0049).
+    // The shell and the sidecar ask a primary adapter in its roles only: a Query reads, a Command writes, a Payload goes in, a View comes out (ADR 0012, ADR 0049).
     @ArchTest
     static final ArchRule the_shell_reads_primary_adapters_only_through_their_roles = noClasses()
             .that()
-            .resideInAPackage(ROOT + ".shell..")
+            .resideInAnyPackage(ROOT + ".shell..", ROOT + ".sidecar..")
             .should()
             .dependOnClassesThat(resideInAPackage("..infrastructure.primary..")
                     .and(not(nameMatching(".*(Query|Command|Payload|View)(\\$[A-Za-z]+Builder)?"))))
             .allowEmptyShould(true);
 
-    // The shell composes contexts; a context that knew about the shell could not be reused or tested alone.
+    // A shell (the TUI, the sidecar) composes contexts; a context that knew about one could not be reused or tested alone, and a shell never leans on the other.
     @ArchTest
     static final ArchRule nothing_depends_on_the_shell = classes()
             .that()
@@ -707,11 +708,10 @@ class ArchitectureTest {
         return new ArchCondition<>("not depend on the shell from outside it") {
             @Override
             public void check(JavaClass origin, ConditionEvents events) {
-                if (kindOf(origin) == ModuleType.SHELL) {
-                    return;
-                }
                 for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
-                    if (kindOf(dependency.getTargetClass()) == ModuleType.SHELL) {
+                    JavaClass target = dependency.getTargetClass();
+                    boolean otherShell = kindOf(target) == ModuleType.SHELL && !Objects.equals(moduleNameOf(origin), moduleNameOf(target));
+                    if (otherShell) {
                         events.add(SimpleConditionEvent.violated(dependency, dependency.getDescription()));
                     }
                 }

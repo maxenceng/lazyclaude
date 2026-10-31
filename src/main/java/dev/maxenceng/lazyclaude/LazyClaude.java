@@ -1,9 +1,11 @@
 package dev.maxenceng.lazyclaude;
 
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -74,10 +76,12 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.ProjectLocatorRepository;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepository;
 import dev.maxenceng.lazyclaude.shell.Shell;
+import dev.maxenceng.lazyclaude.sidecar.Sidecar;
 
-/** Composition root: the one place that builds adapters and hands them to the shell. */
+/** Composition root: the one place that builds adapters and hands them to the shell, or with {@code --sidecar} to the sidecar. */
 public final class LazyClaude {
 
+    private static final String SIDECAR = "--sidecar";
     private static final String HERE = "";
     private static final String PREFIX = "lazyclaude: ";
     private static final String USER_HOME = "user.home";
@@ -98,7 +102,8 @@ public final class LazyClaude {
 
     private LazyClaude() {}
 
-    static void main() throws Exception {
+    static void main(String[] arguments) throws Exception {
+        boolean sidecar = Arrays.asList(arguments).contains(SIDECAR);
         WarningRepository warningRepository = new WarningRepository();
         Path home = Path.of(System.getProperty(USER_HOME));
         int exit = configured(
@@ -107,19 +112,39 @@ public final class LazyClaude {
                         new ClaudeKeybindingsRepository(home),
                         warningRepository)),
                 System.err,
-                configuration -> open(configuration, warningRepository));
+                configuration -> {
+                    if (sidecar) {
+                        serve(warningRepository);
+                    } else {
+                        open(configuration, warningRepository);
+                    }
+                });
         if (exit != 0) {
             System.exit(exit);
         }
     }
 
-    private static void open(ConfigurationView configuration, WarningRepository warningRepository) throws Exception {
-        BoardQuery board = new BoardQuery(new BoardApplicationService(
+    /**
+     * Answers the desktop frontend on stdin and stdout until stdin closes (ADR 0050). Stdout is the protocol's alone, so anything else
+     * that prints to it, a library included, is sent to stderr instead.
+     */
+    private static void serve(WarningRepository warningRepository) {
+        OutputStream protocol = System.out;
+        System.setOut(System.err);
+        System.exit(new Sidecar(boardQuery(warningRepository)).run(System.in, protocol));
+    }
+
+    private static BoardQuery boardQuery(WarningRepository warningRepository) {
+        return new BoardQuery(new BoardApplicationService(
                 new ProjectLocatorRepository(),
                 new IssuesRepository(),
                 new BranchChangesRepository(),
                 new IssuesWatchRepository(),
                 warningRepository));
+    }
+
+    private static void open(ConfigurationView configuration, WarningRepository warningRepository) throws Exception {
+        BoardQuery board = boardQuery(warningRepository);
         WarningApplicationService warningService = new WarningApplicationService(warningRepository, warningRepository);
         WarningQuery warnings = new WarningQuery(warningService);
         Thread.setDefaultUncaughtExceptionHandler(
