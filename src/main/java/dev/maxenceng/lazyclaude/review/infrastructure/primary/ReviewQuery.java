@@ -9,7 +9,7 @@ import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.published.Reason;
 
 /**
- * What the shell asks of {@code review}: the open and the merged pull requests of a project as views, and a view again after each fetch,
+ * What a frontend asks of {@code review}: the open and the merged pull requests of a project as views, and a view again after each fetch,
  * and one pull request's diff and threads when it asks for them. It only reads.
  */
 public final class ReviewQuery {
@@ -82,7 +82,7 @@ public final class ReviewQuery {
      * The pending comments with the diff lines they show under, in diff order, from whatever each read last answered: none until the
      * pending review is read, and every one on no line until the diff is. It reads nothing.
      */
-    public PendingCommentsInDiffView pendingInDiff(PendingInDiffPayload payload) {
+    public PendingCommentsInDiffView pendingInDiff(PendingCommentsInDiffPayload payload) {
         return PendingCommentsInDiffView.from(pendingReview.pendingInDiff(
                 ReviewReadings.diffOf(payload.diff()), ReviewReadings.commentsOf(payload.pending())));
     }

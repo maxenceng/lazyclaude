@@ -56,8 +56,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
@@ -134,7 +134,7 @@ class ReviewSidecarTest {
 
     @Test
     void joins_the_diff_and_the_pending_review_it_is_sent() {
-        when(review.pendingInDiff(new PendingInDiffPayload(loadingDiffView(), loadingPendingView())))
+        when(review.pendingInDiff(new PendingCommentsInDiffPayload(loadingDiffView(), loadingPendingView())))
                 .thenReturn(new PendingCommentsInDiffView(List.of()));
 
         assertThat(linesWritten(review, request(1, "review/pendingInDiff", loadingDiffAndPendingParams())))

@@ -7,11 +7,10 @@ import tools.jackson.core.JsonParser;
 import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ValueDeserializer;
-import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Reads a sealed type from its {@code kind}, as the writer writes it and the schema states it: the variant whose
- * {@link ViewShape#kindOf} is the {@code kind} reads the rest (ADR 0050). A {@code kind} no variant has is the caller's invalid param.
+ * {@link ViewShape#kindOf} is the {@code kind} reads it (ADR 0050). A {@code kind} no variant has is the caller's invalid param.
  */
 final class SealedViewDeserializer extends ValueDeserializer<Object> {
 
@@ -30,17 +29,11 @@ final class SealedViewDeserializer extends ValueDeserializer<Object> {
         return variants(type)
                 .filter(candidate -> ViewShape.kindOf(candidate).equals(kind))
                 .findFirst()
-                .map(variant -> context.readTreeAsValue(withoutKind(node), variant))
+                .map(variant -> context.readTreeAsValue(node, variant))
                 .orElseGet(() -> context.reportInputMismatch(type, NO_VARIANT.formatted(type.getSimpleName(), kind)));
     }
 
     private static Stream<Class<?>> variants(Class<?> sealed) {
         return Arrays.stream(sealed.getPermittedSubclasses()).flatMap(permitted -> permitted.isSealed() ? variants(permitted) : Stream.of(permitted));
-    }
-
-    private static JsonNode withoutKind(JsonNode node) {
-        ObjectNode rest = SidecarJson.object();
-        node.properties().stream().filter(property -> !property.getKey().equals(ViewShape.KIND)).forEach(property -> rest.set(property.getKey(), property.getValue()));
-        return rest;
     }
 }

@@ -9,8 +9,8 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OnDiffAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
@@ -79,7 +79,7 @@ final class ReviewPane {
         this.pending = pending;
         this.reviews = reviews;
         this.placed = reviews.threadsInDiff(new ThreadsInDiffPayload(diff, threads));
-        this.placedPending = reviews.pendingInDiff(new PendingInDiffPayload(diff, pending));
+        this.placedPending = reviews.pendingInDiff(new PendingCommentsInDiffPayload(diff, pending));
         this.rows = DiffRows.of(diff, placed, placedPending, inlineBox(), showResolved);
     }
 
@@ -427,7 +427,7 @@ final class ReviewPane {
 
     private void rebuild() {
         placed = reviews.threadsInDiff(new ThreadsInDiffPayload(diff, threads));
-        placedPending = reviews.pendingInDiff(new PendingInDiffPayload(diff, pending));
+        placedPending = reviews.pendingInDiff(new PendingCommentsInDiffPayload(diff, pending));
         rows = DiffRows.of(diff, placed, placedPending, inlineBox(), showResolved);
         moveTo(cursor);
     }

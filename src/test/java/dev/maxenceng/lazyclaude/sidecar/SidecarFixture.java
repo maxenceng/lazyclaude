@@ -294,6 +294,7 @@ public final class SidecarFixture {
             if (!released.await(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
                 throw new IllegalStateException("the other request was never answered");
             }
+            Thread.sleep(OVERLAP);
             return answer;
         };
     }

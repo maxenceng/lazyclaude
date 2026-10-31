@@ -9,6 +9,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
+
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.util.DefaultIndenter;
 import tools.jackson.core.util.DefaultPrettyPrinter;
@@ -26,17 +29,19 @@ import tools.jackson.databind.node.ObjectNode;
  * Payloads carry no annotation, so how they are written is decided here (ADR 0050): a record that is one of a sealed type's variants
  * is an object led by its {@code kind}, a record of one component is that component, any other record is an object of its
  * components, an enum constant is its name, and anything else (a path, an instant) is its text. Params are read the same way: an enum
- * by its name, a path by {@link Path#of}.
+ * by its name, a path by {@link Path#of}, and a param the schema does not state, or a null in a list, is refused, as the schema does.
  */
 final class SidecarJson {
 
     private static final JsonMapper MAPPER = JsonMapper.builder()
             .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES)
             .enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES)
+            .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .changeDefaultNullHandling(_ -> JsonSetter.Value.forContentNulls(Nulls.FAIL))
             .disable(EnumFeature.READ_ENUMS_USING_TO_STRING)
             .addModule(new SimpleModule()
                     .addDeserializer(Path.class, new PathParamDeserializer())
-                    .setDeserializerModifier(new UnwrappedRecordDeserializers()))
+                    .setDeserializerModifier(new ProtocolDeserializers()))
             .build();
     private static final String NEWLINE = "\n";
     private static final String INDENT = "  ";

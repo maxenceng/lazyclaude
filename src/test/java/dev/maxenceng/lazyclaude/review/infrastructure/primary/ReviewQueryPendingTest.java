@@ -114,20 +114,20 @@ class ReviewQueryPendingTest {
 
     @Test
     void shouldPlaceThePendingCommentsOnTheDiffLinesTheyShowUnder() {
-        assertThat(query.pendingInDiff(new PendingInDiffPayload(twoFileDiffView(), openPendingView())).comments())
+        assertThat(query.pendingInDiff(new PendingCommentsInDiffPayload(twoFileDiffView(), openPendingView())).comments())
                 .containsExactly(pendingOnLineView(commentOnDiffLineView(), 2), pendingOnLineView(replyView(), 2));
     }
 
     @Test
     void shouldPutEveryPendingCommentOnNoLineUntilTheDiffIsRead() {
-        assertThat(query.pendingInDiff(new PendingInDiffPayload(loadingDiffView(), openPendingView())).comments())
+        assertThat(query.pendingInDiff(new PendingCommentsInDiffPayload(loadingDiffView(), openPendingView())).comments())
                 .containsExactly(pendingOnNoLineView(commentOnDiffLineView()), pendingOnNoLineView(replyView()));
     }
 
     @Test
     void shouldHoldNoPendingCommentUntilThePendingReviewIsReadOrWhenThereIsNone() {
-        assertThat(query.pendingInDiff(new PendingInDiffPayload(twoFileDiffView(), loadingPendingView())).comments()).isEqualTo(List.of());
-        assertThat(query.pendingInDiff(new PendingInDiffPayload(twoFileDiffView(), noPendingReviewView())).comments()).isEqualTo(List.of());
-        assertThat(query.pendingInDiff(new PendingInDiffPayload(twoFileDiffView(), unavailablePendingView())).comments()).isEqualTo(List.of());
+        assertThat(query.pendingInDiff(new PendingCommentsInDiffPayload(twoFileDiffView(), loadingPendingView())).comments()).isEqualTo(List.of());
+        assertThat(query.pendingInDiff(new PendingCommentsInDiffPayload(twoFileDiffView(), noPendingReviewView())).comments()).isEqualTo(List.of());
+        assertThat(query.pendingInDiff(new PendingCommentsInDiffPayload(twoFileDiffView(), unavailablePendingView())).comments()).isEqualTo(List.of());
     }
 }

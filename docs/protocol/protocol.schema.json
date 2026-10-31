@@ -248,7 +248,7 @@
           "type" : "object",
           "properties" : {
             "params" : {
-              "$ref" : "#/$defs/review.PendingInDiffPayload"
+              "$ref" : "#/$defs/review.PendingCommentsInDiffPayload"
             },
             "result" : {
               "type" : "array",
@@ -1344,6 +1344,19 @@
       "required" : [ "id", "body", "anchor" ],
       "additionalProperties" : false
     },
+    "review.PendingCommentsInDiffPayload" : {
+      "type" : "object",
+      "properties" : {
+        "diff" : {
+          "$ref" : "#/$defs/review.PullRequestDiffView"
+        },
+        "pending" : {
+          "$ref" : "#/$defs/review.PendingReviewView"
+        }
+      },
+      "required" : [ "diff", "pending" ],
+      "additionalProperties" : false
+    },
     "review.PendingDeletePayload" : {
       "type" : "object",
       "properties" : {
@@ -1377,19 +1390,6 @@
         }
       },
       "required" : [ "root", "number", "comment", "body" ],
-      "additionalProperties" : false
-    },
-    "review.PendingInDiffPayload" : {
-      "type" : "object",
-      "properties" : {
-        "diff" : {
-          "$ref" : "#/$defs/review.PullRequestDiffView"
-        },
-        "pending" : {
-          "$ref" : "#/$defs/review.PendingReviewView"
-        }
-      },
-      "required" : [ "diff", "pending" ],
       "additionalProperties" : false
     },
     "review.PendingInDiffView" : {

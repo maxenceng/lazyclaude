@@ -4,7 +4,7 @@ import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.docs.application.DocsApplicationService;
 
-/** What the shell asks of `docs`: a project's documents as a view, and a view again whenever they change. It only reads. */
+/** What a frontend asks of `docs`: a project's documents as a view, and a view again whenever they change. It only reads. */
 public final class DocsQuery {
 
     private final DocsApplicationService docs;

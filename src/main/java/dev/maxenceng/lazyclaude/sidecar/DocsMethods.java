@@ -50,6 +50,7 @@ final class DocsMethods {
     }
 
     /** A watch that failed to open is forgotten before another {@code docs/watch} of the project is let in, so that one tries again. */
+    // deferred: the one DocsWatchRepository's TreeWatcher holds one project, so a second root's watch takes over the first's — close it when a frontend watches two projects.
     private synchronized void watchOnce(DocsPayload payload) {
         if (watching.add(payload.root())) {
             try {

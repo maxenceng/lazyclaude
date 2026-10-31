@@ -10,10 +10,10 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorPaylo
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingDeletePayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingEditPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReplyPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
@@ -54,8 +54,8 @@ final class ReviewMethods {
             new ProtocolMethod<>("review/pendingOf", PullRequestPayload.class, PendingReviewView.class);
     private static final ProtocolMethod<CommentAnchorPayload, CommentAnchorView> ANCHOR_OF =
             new ProtocolMethod<>("review/anchorOf", CommentAnchorPayload.class, CommentAnchorView.class);
-    private static final ProtocolMethod<PendingInDiffPayload, PendingCommentsInDiffView> PENDING_IN_DIFF =
-            new ProtocolMethod<>("review/pendingInDiff", PendingInDiffPayload.class, PendingCommentsInDiffView.class);
+    private static final ProtocolMethod<PendingCommentsInDiffPayload, PendingCommentsInDiffView> PENDING_IN_DIFF =
+            new ProtocolMethod<>("review/pendingInDiff", PendingCommentsInDiffPayload.class, PendingCommentsInDiffView.class);
     private static final ProtocolMethod<NoParams, PullRequestsView> CHECKING =
             new ProtocolMethod<>("review/checking", NoParams.class, PullRequestsView.class);
     private static final ProtocolMethod<NoParams, Void> REFRESH = new ProtocolMethod<>("review/refresh", NoParams.class, Void.class);
@@ -143,7 +143,8 @@ final class ReviewMethods {
         return SidecarAnswer.of(NullNode.getInstance());
     }
 
-    /** The watch opens once the pull requests checked so far are queued, so no {@code review/changed} reaches the frontend before the ones it changes. */
+    /** The watch opens once the answer, the pull requests not checked yet, is queued, so no {@code review/changed} reaches the frontend before it. */
+    // deferred: a second review/watch of a root answers checking and pushes nothing until the next fetch — close it when a reloaded desktop page is seen waiting on it.
     private SidecarAnswer watch(JsonNode params) {
         PullRequestsView current = WATCH.answer(params, _ -> review.checking());
         ReviewPayload payload = SidecarJson.params(params, WATCH.params());
@@ -151,6 +152,7 @@ final class ReviewMethods {
     }
 
     /** A watch that failed to open is forgotten before another {@code review/watch} of the project is let in, so that one tries again. */
+    // deferred: the one PullRequestWatchRepository serves one project, so a second root's watch shares its timer and refresh — close it when a frontend watches two projects.
     private synchronized void watchOnce(ReviewPayload payload) {
         if (watching.add(payload.root())) {
             try {

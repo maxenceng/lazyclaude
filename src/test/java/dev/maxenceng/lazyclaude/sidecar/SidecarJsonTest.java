@@ -8,6 +8,10 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.unavailableDiffView;
 import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.escapeBytes;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyOutputView;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarJsonFixture.pendingCommentWithAParamNotStated;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarJsonFixture.pendingCommentWithPositionOfKind;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarJsonFixture.pendingCommentWithPositionWithoutKind;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarJsonFixture.threadsInDiffWithANullFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -17,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyResizePayload;
@@ -101,16 +105,16 @@ class SidecarJsonTest {
 
     @Test
     void reads_a_payload_holding_the_pending_review_a_view_the_writer_wrote() {
-        PendingInDiffPayload payload = new PendingInDiffPayload(twoFileDiffView(), openPendingView());
+        PendingCommentsInDiffPayload payload = new PendingCommentsInDiffPayload(twoFileDiffView(), openPendingView());
 
-        assertThat(SidecarJson.params(SidecarJson.tree(payload), PendingInDiffPayload.class)).isEqualTo(payload);
+        assertThat(SidecarJson.params(SidecarJson.tree(payload), PendingCommentsInDiffPayload.class)).isEqualTo(payload);
     }
 
     @Test
     void reads_a_payload_holding_a_pending_review_not_read_yet() {
-        PendingInDiffPayload payload = new PendingInDiffPayload(twoFileDiffView(), loadingPendingView());
+        PendingCommentsInDiffPayload payload = new PendingCommentsInDiffPayload(twoFileDiffView(), loadingPendingView());
 
-        assertThat(SidecarJson.params(SidecarJson.tree(payload), PendingInDiffPayload.class)).isEqualTo(payload);
+        assertThat(SidecarJson.params(SidecarJson.tree(payload), PendingCommentsInDiffPayload.class)).isEqualTo(payload);
     }
 
     @Test
@@ -128,5 +132,33 @@ class SidecarJsonTest {
         assertThat(SidecarJson.params(SidecarJson.tree(payload), PendingCommentPayload.class))
                 .as("the writer leads a variant with its kind even where the declared type is the variant")
                 .isEqualTo(payload);
+    }
+
+    @Test
+    void refuses_a_variant_led_by_another_variants_kind_as_invalid_params() {
+        assertThatThrownBy(() -> SidecarJson.params(pendingCommentWithPositionOfKind("outdatedThread"), PendingCommentPayload.class))
+                .as("where the declared type is the variant, its kind is checked as the sealed type's reader checks it")
+                .isInstanceOfSatisfying(JsonRpcFaultException.class, fault -> assertThat(fault.code()).isEqualTo(ErrorCode.INVALID_PARAMS));
+    }
+
+    @Test
+    void refuses_a_variant_without_its_kind_as_invalid_params() {
+        assertThatThrownBy(() -> SidecarJson.params(pendingCommentWithPositionWithoutKind(), PendingCommentPayload.class))
+                .as("the schema requires kind on every variant")
+                .isInstanceOfSatisfying(JsonRpcFaultException.class, fault -> assertThat(fault.code()).isEqualTo(ErrorCode.INVALID_PARAMS));
+    }
+
+    @Test
+    void refuses_a_param_the_schema_does_not_state_as_invalid_params() {
+        assertThatThrownBy(() -> SidecarJson.params(pendingCommentWithAParamNotStated(), PendingCommentPayload.class))
+                .as("the schema states no additional properties, so a misspelled param is refused rather than dropped")
+                .isInstanceOfSatisfying(JsonRpcFaultException.class, fault -> assertThat(fault.code()).isEqualTo(ErrorCode.INVALID_PARAMS));
+    }
+
+    @Test
+    void refuses_a_null_item_of_a_list_param_as_invalid_params() {
+        assertThatThrownBy(() -> SidecarJson.params(threadsInDiffWithANullFile(), ThreadsInDiffPayload.class))
+                .as("a null in a list is the caller's wrong shape, not an internal error once the View is read into the domain")
+                .isInstanceOfSatisfying(JsonRpcFaultException.class, fault -> assertThat(fault.code()).isEqualTo(ErrorCode.INVALID_PARAMS));
     }
 }
