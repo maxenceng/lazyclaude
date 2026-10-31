@@ -22,7 +22,7 @@ JAVA := $(if $(JAVA_HOME),$(JAVA_HOME)/bin/java,java)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help doctor build test contract test-one arch fmt lint dup config-check adr-check adr-index
+.PHONY: help doctor build test contract test-one arch fmt lint dup config-check adr-check adr-index protocol-schema
 .PHONY: docs docs-serve ticket-check guard-fixtures guard-harness no-skipped-tests test-comment-check var-check
 .PHONY: package run ci verify verify-report pr-checks clean
 
@@ -96,6 +96,10 @@ docs-serve: ## Serve the docs on localhost with reload
 
 package: ## Build the runnable jar into target/lazyclaude.jar
 	$(MVN) -q package -DskipTests
+
+protocol-schema: package ## Write docs/protocol/protocol.schema.json from the sidecar's Views and Payloads
+	@$(JAVA) -jar $(JAR) --protocol-schema > target/protocol.schema.json
+	@mv target/protocol.schema.json docs/protocol/protocol.schema.json
 
 run: package ## Start the TUI in this terminal
 	@$(JAVA) --enable-native-access=ALL-UNNAMED -jar $(JAR)

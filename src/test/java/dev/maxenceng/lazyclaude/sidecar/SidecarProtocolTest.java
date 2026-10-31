@@ -80,4 +80,9 @@ class SidecarProtocolTest {
             assertThat(sidecar.remainingLines()).hasSize(4).allSatisfy(line -> assertThat(line).startsWith("{\"jsonrpc\":\"2.0\""));
         }
     }
+
+    @Test
+    void prints_the_protocol_schema_and_nothing_else_for_protocol_schema() throws Exception {
+        assertThat(SpawnedSidecar.protocolSchemaPrinted()).isEqualTo(Sidecar.protocolSchema());
+    }
 }

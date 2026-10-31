@@ -22,6 +22,18 @@ final class JsonRpcMessages {
 
     private JsonRpcMessages() {}
 
+    static String readyName() {
+        return READY;
+    }
+
+    static String protocolField() {
+        return PROTOCOL;
+    }
+
+    static int protocolVersion() {
+        return PROTOCOL_VERSION;
+    }
+
     static JsonNode ready() {
         ObjectNode params = SidecarJson.object();
         params.put(PROTOCOL, PROTOCOL_VERSION);

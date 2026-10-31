@@ -79,10 +79,14 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepositor
 import dev.maxenceng.lazyclaude.shell.Shell;
 import dev.maxenceng.lazyclaude.sidecar.Sidecar;
 
-/** Composition root: the one place that builds adapters and hands them to the shell, or with {@code --sidecar} to the sidecar. */
+/**
+ * Composition root: the one place that builds adapters and hands them to the shell, or with {@code --sidecar} to the sidecar. With
+ * {@code --protocol-schema} it builds nothing and prints the sidecar's schema.
+ */
 public final class LazyClaude {
 
     private static final String SIDECAR = "--sidecar";
+    private static final String PROTOCOL_SCHEMA = "--protocol-schema";
     private static final String HERE = "";
     private static final String PREFIX = "lazyclaude: ";
     private static final String USER_HOME = "user.home";
@@ -104,6 +108,10 @@ public final class LazyClaude {
     private LazyClaude() {}
 
     static void main(String[] arguments) throws Exception {
+        if (Arrays.asList(arguments).contains(PROTOCOL_SCHEMA)) {
+            System.out.print(Sidecar.protocolSchema());
+            return;
+        }
         boolean sidecar = Arrays.asList(arguments).contains(SIDECAR);
         OutputStream protocol = System.out;
         if (sidecar) {

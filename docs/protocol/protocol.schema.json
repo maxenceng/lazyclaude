@@ -1,0 +1,339 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "title" : "LazyclaudeProtocol",
+  "description" : "Every method and notification of the lazyclaude sidecar, generated from its Payloads and Views.",
+  "type" : "object",
+  "properties" : {
+    "methods" : {
+      "type" : "object",
+      "properties" : {
+        "board/boardFor" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/board.BoardPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/board.BoardLookupView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "board/watch" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/board.BoardPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/board.BoardLookupView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        }
+      },
+      "required" : [ "board/boardFor", "board/watch" ],
+      "additionalProperties" : false
+    },
+    "notifications" : {
+      "type" : "object",
+      "properties" : {
+        "ready" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "type" : "object",
+              "properties" : {
+                "protocol" : {
+                  "const" : 1
+                }
+              },
+              "required" : [ "protocol" ],
+              "additionalProperties" : false
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        },
+        "board/changed" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/board.BoardReadingView"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        }
+      },
+      "required" : [ "ready", "board/changed" ],
+      "additionalProperties" : false
+    }
+  },
+  "required" : [ "methods", "notifications" ],
+  "additionalProperties" : false,
+  "$defs" : {
+    "board.BoardLookupView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/board.BoardReadingView"
+      }, {
+        "$ref" : "#/$defs/board.NoProjectView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "board.BoardPayload" : {
+      "type" : "object",
+      "properties" : {
+        "from" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "from" ],
+      "additionalProperties" : false
+    },
+    "board.BoardReadingView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/board.BoardView"
+      }, {
+        "$ref" : "#/$defs/board.UnavailableBoardView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "board.BoardView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "board"
+        },
+        "groups" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/board.StatusGroupView"
+          }
+        },
+        "unreadable" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/board.UnreadableTicketView"
+          }
+        },
+        "root" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "groups", "unreadable", "root" ],
+      "additionalProperties" : false
+    },
+    "board.Body" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "body"
+        },
+        "value" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "board.ContextName" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "contextName"
+        },
+        "value" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "board.NoBody" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noBody"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "board.NoContext" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noContext"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "board.NoProjectView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noProject"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "board.NoType" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noType"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "board.Status" : {
+      "type" : "string",
+      "enum" : [ "DRAFT", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE" ]
+    },
+    "board.StatusGroupView" : {
+      "type" : "object",
+      "properties" : {
+        "status" : {
+          "$ref" : "#/$defs/board.Status"
+        },
+        "tickets" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/board.TicketView"
+          }
+        }
+      },
+      "required" : [ "status", "tickets" ],
+      "additionalProperties" : false
+    },
+    "board.TicketBody" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/board.Body"
+      }, {
+        "$ref" : "#/$defs/board.NoBody"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "board.TicketContext" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/board.ContextName"
+      }, {
+        "$ref" : "#/$defs/board.NoContext"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "board.TicketType" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/board.TypeName"
+      }, {
+        "$ref" : "#/$defs/board.NoType"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "board.TicketView" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "branch" : {
+          "type" : "string"
+        },
+        "title" : {
+          "type" : "string"
+        },
+        "status" : {
+          "$ref" : "#/$defs/board.Status"
+        },
+        "context" : {
+          "$ref" : "#/$defs/board.TicketContext"
+        },
+        "type" : {
+          "$ref" : "#/$defs/board.TicketType"
+        },
+        "otherLabels" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "body" : {
+          "$ref" : "#/$defs/board.TicketBody"
+        },
+        "verbs" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/board.Verb"
+          }
+        }
+      },
+      "required" : [ "id", "branch", "title", "status", "context", "type", "otherLabels", "body", "verbs" ],
+      "additionalProperties" : false
+    },
+    "board.TypeName" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "typeName"
+        },
+        "value" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "board.UnavailableBoardView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unavailableBoard"
+        },
+        "root" : {
+          "type" : "string"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "root", "reason" ],
+      "additionalProperties" : false
+    },
+    "board.UnreadableTicketView" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "id", "reason" ],
+      "additionalProperties" : false
+    },
+    "board.Verb" : {
+      "type" : "string",
+      "enum" : [ "REFINE", "START", "REVIEW", "DESIGN", "RESPOND", "DONE" ]
+    }
+  }
+}

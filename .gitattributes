@@ -1,2 +1,4 @@
 /mvnw text eol=lf
 *.cmd text eol=crlf
+# The drift test compares the schema byte for byte with what the sidecar writes.
+docs/protocol/*.json text eol=lf

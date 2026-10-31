@@ -74,3 +74,4 @@
 - 0070 [The ADR index is written by a script, and a stale one fails the build](0070-the-adr-index-is-written-by-a-script-and-a-stale-one-fails-the-build.md) — Accepted.
 - 0071 [The docs tree puts a folder's README first, then its files, then its subfolders](0071-the-docs-tree-puts-a-folders-readme-first-then-its-files-then-its-subfolders.md) — Accepted.
 - 0072 [The docs open in dark mode, through a theme block both tools read](0072-the-docs-open-in-dark-mode-through-a-theme-block-both-tools-read.md) — Accepted.
+- 0073 [The protocol schema is written by the sidecar from its own writer rules](0073-the-protocol-schema-is-written-by-the-sidecar-from-its-own-writer-rules.md) — Accepted.
