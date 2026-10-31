@@ -9,6 +9,7 @@ final class JsonRpcReader {
     private static final String ID = "id";
     private static final String METHOD = "method";
     private static final String PARAMS = "params";
+    private static final String NOT_JSON = "not JSON: %s";
 
     private JsonRpcReader() {}
 
@@ -27,7 +28,7 @@ final class JsonRpcReader {
         try {
             return SidecarJson.parse(line);
         } catch (JacksonException e) {
-            throw new JsonRpcFaultException(ErrorCode.PARSE_ERROR, "not JSON: " + e.getOriginalMessage(), e);
+            throw new JsonRpcFaultException(ErrorCode.PARSE_ERROR, NOT_JSON.formatted(e.getOriginalMessage()), e);
         }
     }
 }

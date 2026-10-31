@@ -64,3 +64,10 @@ what is already there.
 - `ArchitectureTest`'s rule that Jackson stays in secondary adapters gains `sidecar` as its one other home.
 - Moving the tracker to GitHub Issues changes `board`'s and `review`'s methods along with their operations.
 - A View that cannot be written as JSON (a callback, a stream) has to change shape before it reaches the protocol.
+- A sealed type's variants are written as an object led by `kind`, a record that is not a variant and has one component is that
+  component (`Title`, `TicketId`, `ProjectRoot` are strings), any other record is an object of its components, and an enum constant is its
+  name. The sidecar does this by reading records, so no View or Payload needs an annotation, and a new View is written without a change here.
+- A `DomainException` a `*Query` throws, such as a directory that belongs to no project, has no View to travel as, so it answers
+  as the internal fault with its message and its stack trace goes to stderr. It becomes a result when its primary adapter gives it a View.
+- Requests run on a virtual thread each, named `sidecar-request-n`, and a thread named `sidecar-writer` writes stdout. `LazyClaude`
+  points `System.out` at stderr before starting the sidecar, so a library that prints cannot break a line.

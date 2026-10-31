@@ -15,6 +15,8 @@ import tools.jackson.databind.JsonNode;
 /** The one writer of stdout: every message is a line, and a single thread writes them, so lines never interleave (ADR 0050). */
 final class SidecarOutput implements AutoCloseable {
 
+    private static final String DROPPED = "dropped a message sent after the output closed";
+    private static final String CANNOT_WRITE = "cannot write to stdout";
     private static final String WRITER_NAME = "sidecar-writer";
     private static final System.Logger LOG = System.getLogger(SidecarOutput.class.getName());
 
@@ -32,7 +34,7 @@ final class SidecarOutput implements AutoCloseable {
         try {
             writer.execute(() -> write(line));
         } catch (RejectedExecutionException closed) {
-            LOG.log(System.Logger.Level.DEBUG, "dropped a message sent after the output closed", closed);
+            LOG.log(System.Logger.Level.DEBUG, DROPPED, closed);
         }
     }
 
@@ -53,7 +55,7 @@ final class SidecarOutput implements AutoCloseable {
             out.newLine();
             out.flush();
         } catch (IOException e) {
-            LOG.log(System.Logger.Level.ERROR, "cannot write to stdout", e);
+            LOG.log(System.Logger.Level.ERROR, CANNOT_WRITE, e);
         }
     }
 }

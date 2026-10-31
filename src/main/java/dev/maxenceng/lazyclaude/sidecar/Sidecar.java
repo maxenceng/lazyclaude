@@ -26,6 +26,9 @@ public final class Sidecar {
     private static final String REQUEST_NAME = "sidecar-request-";
     private static final int ENDED = 0;
     private static final int STDIN_FAILED = 1;
+    private static final String UNKNOWN_METHOD = "unknown method: %s";
+    private static final String FAILED = "%s failed";
+    private static final String CANNOT_READ_STDIN = "cannot read stdin";
     private static final String INTERNAL_MESSAGE = "internal error";
     private static final System.Logger LOG = System.getLogger(Sidecar.class.getName());
 
@@ -50,7 +53,7 @@ public final class Sidecar {
             lines.lines().filter(line -> !line.isBlank()).forEach(received);
             return ENDED;
         } catch (UncheckedIOException | IOException e) {
-            LOG.log(System.Logger.Level.ERROR, "cannot read stdin", e);
+            LOG.log(System.Logger.Level.ERROR, CANNOT_READ_STDIN, e);
             return STDIN_FAILED;
         }
     }
@@ -72,7 +75,7 @@ public final class Sidecar {
         } catch (JsonRpcFaultException fault) {
             return JsonRpcMessages.fault(request.id(), fault.code(), fault.getMessage());
         } catch (RuntimeException failure) {
-            LOG.log(System.Logger.Level.ERROR, "%s failed".formatted(request.method()), failure);
+            LOG.log(System.Logger.Level.ERROR, FAILED.formatted(request.method()), failure);
             return JsonRpcMessages.fault(request.id(), ErrorCode.INTERNAL_ERROR, shortMessage(failure));
         }
     }
@@ -81,13 +84,13 @@ public final class Sidecar {
         try {
             invoke(notification, methods);
         } catch (RuntimeException failure) {
-            LOG.log(System.Logger.Level.ERROR, "%s failed".formatted(notification.method()), failure);
+            LOG.log(System.Logger.Level.ERROR, FAILED.formatted(notification.method()), failure);
         }
     }
 
     private static JsonNode invoke(JsonRpcCall call, Map<String, SidecarMethod> methods) {
         return Optional.ofNullable(methods.get(call.method()))
-                .orElseThrow(() -> new JsonRpcFaultException(ErrorCode.METHOD_NOT_FOUND, "unknown method: " + call.method()))
+                .orElseThrow(() -> new JsonRpcFaultException(ErrorCode.METHOD_NOT_FOUND, UNKNOWN_METHOD.formatted(call.method())))
                 .call(call.params());
     }
 

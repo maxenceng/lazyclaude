@@ -30,6 +30,7 @@ final class SidecarJson {
             .build();
     private static final String KIND = "kind";
     private static final String VIEW = "View";
+    private static final String INVALID_PARAMS = "invalid params: %s";
 
     private SidecarJson() {}
 
@@ -50,7 +51,7 @@ final class SidecarJson {
         try {
             return MAPPER.treeToValue(params, type);
         } catch (JacksonException e) {
-            throw new JsonRpcFaultException(ErrorCode.INVALID_PARAMS, "invalid params: " + e.getOriginalMessage(), e);
+            throw new JsonRpcFaultException(ErrorCode.INVALID_PARAMS, INVALID_PARAMS.formatted(e.getOriginalMessage()), e);
         }
     }
 
@@ -67,9 +68,7 @@ final class SidecarJson {
     }
 
     private static ArrayNode array(Collection<?> items) {
-        ArrayNode array = MAPPER.createArrayNode();
-        items.stream().map(SidecarJson::tree).forEach(array::add);
-        return array;
+        return MAPPER.createArrayNode().addAll(items.stream().map(SidecarJson::tree).toList());
     }
 
     private static JsonNode fromRecord(Record record) {
