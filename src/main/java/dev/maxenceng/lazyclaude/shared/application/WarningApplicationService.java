@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.shared.application;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.shared.domain.WarningManager;
@@ -18,6 +19,10 @@ public final class WarningApplicationService {
 
     public void subscribe(Consumer<Warnings> listener) {
         manager.subscribe(listener);
+    }
+
+    public Optional<Warnings> held() {
+        return manager.held();
     }
 
     public void onNoneHeld(Runnable listener) {

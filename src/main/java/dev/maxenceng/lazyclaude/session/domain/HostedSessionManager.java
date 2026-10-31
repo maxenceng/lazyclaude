@@ -1,18 +1,21 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.UnaryOperator;
 
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
+import dev.maxenceng.lazyclaude.session.published.PaneHeight;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.Reason;
@@ -33,6 +36,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  */
 public final class HostedSessionManager {
 
+    private static final Duration REPAINT_GAP = Duration.ofMillis(50);
     private static final String START_WARNING = "hosted session: %s.";
     private static final String EXIT_WARNING = "hosted session: claude exited with code %d.";
     private static final String GONE_WARNING = "resume: %s is gone; nothing resumed.";
@@ -45,22 +49,32 @@ public final class HostedSessionManager {
     private final WarningPort warnings;
     private final WorktreePort worktrees;
     private final LaunchLogPort log;
+    private final TimerPort timer;
     private final SessionClock clock;
     private final List<HostedSession> open = new ArrayList<>();
     private final List<SessionId> spawning = new ArrayList<>();
     private final List<SessionId> endingWithLazyclaude = new CopyOnWriteArrayList<>();
     private final Map<SessionId, ExitCode> earlyExits = new HashMap<>();
+    private final Map<SessionId, PaneSize> sizes = new ConcurrentHashMap<>();
     private final List<OpenSessionsListener> changeListeners = new CopyOnWriteArrayList<>();
     private final List<TicketDoneEndedListener> doneEndedListeners = new CopyOnWriteArrayList<>();
     private final List<PtyListener> ptyListeners = new CopyOnWriteArrayList<>();
+    private final List<SessionExitListener> exitListeners = new CopyOnWriteArrayList<>();
 
     public HostedSessionManager(
-            HostPort hosts, LiveSessionPort records, WarningPort warnings, WorktreePort worktrees, LaunchLogPort log, Clock clock) {
+            HostPort hosts,
+            LiveSessionPort records,
+            WarningPort warnings,
+            WorktreePort worktrees,
+            LaunchLogPort log,
+            TimerPort timer,
+            Clock clock) {
         this.hosts = hosts;
         this.records = records;
         this.warnings = warnings;
         this.worktrees = worktrees;
         this.log = log;
+        this.timer = timer;
         this.clock = new SessionClock(clock);
     }
 
@@ -144,8 +158,37 @@ public final class HostedSessionManager {
         hosts.write(id, bytes);
     }
 
+    /** Resizing takes the lock the repaint's restore does, so a restore never applies a size older than one applied meanwhile. */
     public void resize(SessionId id, PaneSize size) {
-        hosts.resize(id, size);
+        synchronized (sizes) {
+            sizes.replace(id, size);
+            hosts.resize(id, size);
+        }
+    }
+
+    /**
+     * Makes {@code claude} redraw its whole screen for a frontend whose emulator starts empty (ADR 0049): the session's pty is shrunk
+     * by one row and, {@link #REPAINT_GAP} later, given back the size it has by then, as two resizes with no gap repaint nothing.
+     * Nothing for a session that is not open.
+     */
+    public void repaint(SessionId id) {
+        synchronized (sizes) {
+            Optional.ofNullable(sizes.get(id)).ifPresent(size -> {
+                hosts.resize(id, oneRowShorter(size));
+                timer.after(REPAINT_GAP, () -> restored(id));
+            });
+        }
+    }
+
+    private void restored(SessionId id) {
+        synchronized (sizes) {
+            Optional.ofNullable(sizes.get(id)).ifPresent(size -> hosts.resize(id, size));
+        }
+    }
+
+    // deferred: a one-row pane is not shrunk, so a repaint of it changes nothing — close it when a pane that small is hosted.
+    private static PaneSize oneRowShorter(PaneSize size) {
+        return PaneSize.builder().width(size.width()).height(new PaneHeight(size.height().cells() - 1)).build();
     }
 
     /** Ends every open session's {@code claude}: they live and die with lazyclaude. */
@@ -163,6 +206,11 @@ public final class HostedSessionManager {
     /** Tells {@code listener} which ticket's {@code /ticket done} session ended, however it ended; a session running any other verb tells nothing. */
     public void onTicketDoneEnded(TicketDoneEndedListener listener) {
         doneEndedListeners.add(listener);
+    }
+
+    /** Tells {@code listener} the code of each session whose {@code claude} exits by itself; a session ended with lazyclaude tells nothing. */
+    public void onExit(SessionExitListener listener) {
+        exitListeners.add(listener);
     }
 
     /** Tells {@code listener} what happens to each session's pty from now on. */
@@ -218,6 +266,7 @@ public final class HostedSessionManager {
                 return new StartedHost(id);
             }
             spawning.add(id);
+            sizes.put(id, size);
         }
         StartedAt spawnedAt = new StartedAt(clock.clock().instant().truncatedTo(ChronoUnit.MILLIS));
         try {
@@ -282,16 +331,21 @@ public final class HostedSessionManager {
         if (dropped.isEmpty()) {
             return;
         }
-        if (!endingWithLazyclaude.remove(id)) {
+        boolean byItself = !endingWithLazyclaude.remove(id);
+        if (byItself) {
             EndedAt ended = new EndedAt(clock.clock().instant());
             logged(project, entries -> entries.ended(id, ended));
         }
         warnOfFailure(code);
         changed();
+        if (byItself) {
+            exitListeners.forEach(listener -> listener.exited(id, code));
+        }
         dropped.flatMap(HostedSession::doneTicket).ifPresent(this::doneEnded);
     }
 
     private void ended(SessionId id) {
+        sizes.remove(id);
         ptyListeners.forEach(listener -> listener.ended(id));
     }
 

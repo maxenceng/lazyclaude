@@ -64,6 +64,16 @@ public final class SessionQuery {
         }
     }
 
+    /** Hands {@code listener} each read of a hosted pty from now on, on the host's reader thread, for a frontend that emulates the session itself. */
+    public void onOutput(Consumer<PtyOutputView> listener) {
+        sessions.onPty(new PtyOutputRelay(listener));
+    }
+
+    /** Hands {@code listener} each hosted session whose {@code claude} exits by itself from now on; one ended with lazyclaude is not handed. */
+    public void onExit(Consumer<SessionExitView> listener) {
+        sessions.onExit((id, code) -> listener.accept(SessionExitView.builder().session(id).code(code.value()).build()));
+    }
+
     /** Hands {@code listener} the ticket whose {@code /ticket done} session ended, however it ended, on whichever thread ended it. */
     public void onTicketDoneEnded(Consumer<LinkedTicketId> listener) {
         sessions.onTicketDoneEnded(listener::accept);

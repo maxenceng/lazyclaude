@@ -266,13 +266,9 @@ class ArchitectureTest {
             .haveSimpleNameEndingWith("Builder")
             .allowEmptyShould(true);
 
-    // An aggregate hands back the list it was built from; a copy in one type reads as a guarantee the others do not give.
+    // A type hands back the collection it was given; a copy in one type reads as a guarantee the others do not give (ADR 0075).
     @ArchTest
-    static final ArchRule domain_classes_do_not_copy_collections_defensively = noClasses()
-            .that()
-            .resideInAnyPackage("..domain..", "..published..")
-            .and()
-            .resideOutsideOfPackage(ROOT + ".error..")
+    static final ArchRule no_class_copies_a_collection = noClasses()
             .should()
             .callMethodWhere(target(name("copyOf")).and(target(owner(nameMatching("java\\.util\\.(List|Set|Map)")))))
             .allowEmptyShould(true);

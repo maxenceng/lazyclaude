@@ -7,22 +7,29 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
 
 /**
  * The backend a desktop frontend drives: JSON-RPC 2.0, one message per line, requests answered on the sidecar's own executor in any
- * order, matched by {@code id}. It ends when stdin does (ADR 0050).
+ * order, matched by {@code id}, and inputs taken in the order they arrive. It ends when stdin does (ADR 0050).
  */
 public final class Sidecar {
 
     private static final String REQUEST_NAME = "sidecar-request-";
+    private static final String INPUT_NAME = "sidecar-input";
+    private static final Set<String> INPUT_NAMES = protocol().inputNames();
     private static final int ENDED = 0;
     private static final int STDIN_FAILED = 1;
     private static final String UNKNOWN_METHOD = "unknown method: %s";
@@ -33,36 +40,65 @@ public final class Sidecar {
     private static final System.Logger LOG = System.getLogger(Sidecar.class.getName());
 
     private final BoardQuery board;
+    private final SessionQuery sessions;
+    private final HostedSessionCommand hosting;
+    private final WarningQuery warnings;
 
-    public Sidecar(BoardQuery board) {
+    public Sidecar(BoardQuery board, SessionQuery sessions, HostedSessionCommand hosting, WarningQuery warnings) {
         this.board = board;
+        this.sessions = sessions;
+        this.hosting = hosting;
+        this.warnings = warnings;
     }
 
     /** The JSON Schema of every method and notification, as committed under {@code docs/protocol/}; the build fails when it is stale (ADR 0073). */
     public static String protocolSchema() {
-        return ProtocolSchema.text(protocolMethods(), protocolNotifications());
+        return ProtocolSchema.text(protocol());
     }
 
-    /** Every method the sidecar declares: what the schema states, what the contract test counts and what {@link #methods} serves. */
-    static List<ProtocolMethod<?, ?>> protocolMethods() {
-        return BoardMethods.protocolMethods();
+    /** Everything the sidecar declares: what the schema states, what the contract test counts and what {@link #methods} serves. */
+    static Protocol protocol() {
+        return Protocol.of(BoardMethods.protocol(), SessionMethods.protocol(), WarningMethods.protocol());
     }
 
-    static List<ProtocolNotification<?>> protocolNotifications() {
-        return BoardMethods.protocolNotifications();
-    }
-
+    /** What is served on {@code output}, with the pushes of what a hosted {@code claude} writes and how it exits wired to it. */
     Map<String, SidecarMethod> methods(SidecarOutput output) {
-        return new BoardMethods(board, output).methods();
+        return Stream.of(
+                        new BoardMethods(board, output).methods(),
+                        new SessionMethods(sessions, hosting, output).methods(),
+                        new WarningMethods(warnings, output).methods())
+                .flatMap(served -> served.entrySet().stream())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    /** Writes {@code ready}, then answers every line of {@code in} until it closes; returns the exit code. */
+    /**
+     * Writes {@code ready}, then answers every line of {@code in} until it closes, ends every hosted {@code claude} once the requests
+     * still running are answered, and returns the exit code (ADR 0048).
+     */
     public int run(InputStream in, OutputStream out) {
-        try (SidecarOutput output = new SidecarOutput(out);
-                ExecutorService requests = Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name(REQUEST_NAME, 0).factory())) {
+        try (SidecarOutput output = new SidecarOutput(out)) {
             Map<String, SidecarMethod> methods = methods(output);
             output.send(JsonRpcMessages.ready());
-            return read(in, line -> requests.execute(() -> answer(line, methods, output)));
+            int ended = answering(in, methods, output);
+            hosting.endAll();
+            return ended;
+        }
+    }
+
+    /** Inputs are taken one at a time in the order they arrive, as keystrokes and resizes must be; requests run concurrently. */
+    private static int answering(InputStream in, Map<String, SidecarMethod> methods, SidecarOutput output) {
+        try (ExecutorService requests = Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name(REQUEST_NAME, 0).factory());
+                ExecutorService inputs = Executors.newSingleThreadExecutor(Thread.ofVirtual().name(INPUT_NAME).factory())) {
+            return read(in, line -> received(line, output, call -> (INPUT_NAMES.contains(call.method()) ? inputs : requests)
+                    .execute(() -> answer(call, methods, output))));
+        }
+    }
+
+    private static void received(String line, SidecarOutput output, Consumer<JsonRpcCall> dispatched) {
+        try {
+            dispatched.accept(JsonRpcReader.read(line));
+        } catch (JsonRpcFaultException unreadable) {
+            output.send(JsonRpcMessages.fault(JsonRpcMessages.unidentified(), unreadable.code(), unreadable.getMessage()));
         }
     }
 
@@ -76,14 +112,10 @@ public final class Sidecar {
         }
     }
 
-    private static void answer(String line, Map<String, SidecarMethod> methods, SidecarOutput output) {
-        try {
-            switch (JsonRpcReader.read(line)) {
-                case JsonRpcRequest request -> respondTo(request, methods, output);
-                case JsonRpcNotification notification -> handle(notification, methods);
-            }
-        } catch (JsonRpcFaultException unreadable) {
-            output.send(JsonRpcMessages.fault(JsonRpcMessages.unidentified(), unreadable.code(), unreadable.getMessage()));
+    private static void answer(JsonRpcCall call, Map<String, SidecarMethod> methods, SidecarOutput output) {
+        switch (call) {
+            case JsonRpcRequest request -> respondTo(request, methods, output);
+            case JsonRpcNotification notification -> handle(notification, methods);
         }
     }
 

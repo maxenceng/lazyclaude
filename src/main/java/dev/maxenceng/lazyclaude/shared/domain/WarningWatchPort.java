@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.shared.domain;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /** Tells the domain which warnings have been raised, those raised before it asked included. */
@@ -11,6 +12,12 @@ public interface WarningWatchPort {
      */
     void subscribe(Consumer<Warnings> listener);
 
-    /** Runs {@code listener} each time the last warning held is withdrawn, on the thread that withdrew it, for as long as the process lives. */
+    /** Every warning held now, none when none is. */
+    Optional<Warnings> held();
+
+    /**
+     * Runs {@code listener} at once if no warning is held, and each time the last one held is withdrawn, on the thread that withdrew it,
+     * for as long as the process lives.
+     */
     void onNoneHeld(Runnable listener);
 }

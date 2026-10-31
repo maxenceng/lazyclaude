@@ -4,7 +4,7 @@ Date: 2026-10-27
 
 ## Status
 
-Accepted; amended 2026-10-27 with the repaint's checked facts, and 2026-10-29 with the emulator's roles. Supersedes ADR 0026's host port, encoding boundary and
+Accepted; amended 2026-10-27 with the repaint's checked facts, and 2026-10-29 with the emulator's roles. Amended 2026-10-31 by ADR 0074: the manager keeps each open session's size, to restore it after the repaint. Supersedes ADR 0026's host port, encoding boundary and
 library rule; ADR 0026's aggregate, chords and lifetime stand. Builds on ADR 0048.
 
 ## Context

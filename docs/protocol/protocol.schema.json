@@ -32,9 +32,124 @@
           },
           "required" : [ "params", "result" ],
           "additionalProperties" : false
+        },
+        "session/startUnlinked" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.NewHostedPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/session.HostStart"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "session/startTicket" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.TicketHostedPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/session.HostStart"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "session/resume" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.ResumeHostedPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/session.HostStart"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "session/resumeInTicketWorktree" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.ResumeTicketHostedPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/session.HostStart"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "session/watch" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.SessionPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/session.SessionsView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "warning/watch" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/sidecar.NoParams"
+            },
+            "result" : {
+              "$ref" : "#/$defs/shared.WarningsView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
         }
       },
-      "required" : [ "board/boardFor", "board/watch" ],
+      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startTicket", "session/resume", "session/resumeInTicketWorktree", "session/watch", "warning/watch" ],
+      "additionalProperties" : false
+    },
+    "inputs" : {
+      "type" : "object",
+      "properties" : {
+        "pty/input" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.PtyInputPayload"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        },
+        "pty/resize" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.PtyResizePayload"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        },
+        "session/repaint" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.RepaintPayload"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        }
+      },
+      "required" : [ "pty/input", "pty/resize", "session/repaint" ],
       "additionalProperties" : false
     },
     "notifications" : {
@@ -66,13 +181,53 @@
           },
           "required" : [ "params" ],
           "additionalProperties" : false
+        },
+        "session/changed" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.SessionsView"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        },
+        "pty/output" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.PtyOutputView"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        },
+        "session/exited" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.SessionExitView"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        },
+        "warning/changed" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/shared.WarningsView"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
         }
       },
-      "required" : [ "ready", "board/changed" ],
+      "required" : [ "ready", "board/changed", "session/changed", "pty/output", "session/exited", "warning/changed" ],
       "additionalProperties" : false
     }
   },
-  "required" : [ "methods", "notifications" ],
+  "required" : [ "methods", "inputs", "notifications" ],
   "additionalProperties" : false,
   "$defs" : {
     "board.BoardLookupView" : {
@@ -334,6 +489,637 @@
     "board.Verb" : {
       "type" : "string",
       "enum" : [ "REFINE", "START", "REVIEW", "DESIGN", "RESPOND", "DONE" ]
+    },
+    "session.AiTitle" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "aiTitle"
+        },
+        "value" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "session.Busy" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "busy"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.ClaudeVersion" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.Version"
+      }, {
+        "$ref" : "#/$defs/session.NoVersion"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.FirstPrompt" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "firstPrompt"
+        },
+        "value" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "session.HostStart" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.StartedHost"
+      }, {
+        "$ref" : "#/$defs/session.NotStartedHost"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.HostedSessionView" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "pid" : {
+          "type" : "integer"
+        },
+        "live" : {
+          "anyOf" : [ {
+            "$ref" : "#/$defs/session.LiveSessionView"
+          }, {
+            "type" : "null"
+          } ]
+        },
+        "busyOrWaiting" : {
+          "type" : "boolean"
+        },
+        "ticket" : {
+          "anyOf" : [ {
+            "type" : "string"
+          }, {
+            "type" : "null"
+          } ]
+        }
+      },
+      "required" : [ "id", "pid", "live", "busyOrWaiting", "ticket" ],
+      "additionalProperties" : false
+    },
+    "session.LiveSessionView" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "pid" : {
+          "type" : "integer"
+        },
+        "name" : {
+          "type" : "string"
+        },
+        "directory" : {
+          "type" : "string"
+        },
+        "startedAt" : {
+          "type" : "string"
+        },
+        "age" : {
+          "type" : "string"
+        },
+        "version" : {
+          "$ref" : "#/$defs/session.ClaudeVersion"
+        },
+        "state" : {
+          "$ref" : "#/$defs/session.SessionState"
+        },
+        "links" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.TicketLink"
+          }
+        }
+      },
+      "required" : [ "id", "pid", "name", "directory", "startedAt", "age", "version", "state", "links" ],
+      "additionalProperties" : false
+    },
+    "session.NewHostedPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "size" : {
+          "$ref" : "#/$defs/session.PaneSize"
+        }
+      },
+      "required" : [ "root", "size" ],
+      "additionalProperties" : false
+    },
+    "session.NoFirstPrompt" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noFirstPrompt"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.NoTitle" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noTitle"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.NoVersion" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noVersion"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.NoWaitingReason" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noWaitingReason"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.NotStartedHost" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "notStartedHost"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.OpeningPrompt" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.FirstPrompt"
+      }, {
+        "$ref" : "#/$defs/session.NoFirstPrompt"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.PaneSize" : {
+      "type" : "object",
+      "properties" : {
+        "width" : {
+          "type" : "integer"
+        },
+        "height" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "width", "height" ],
+      "additionalProperties" : false
+    },
+    "session.PastSessionView" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "title" : {
+          "$ref" : "#/$defs/session.SessionTitle"
+        },
+        "opening" : {
+          "$ref" : "#/$defs/session.OpeningPrompt"
+        },
+        "reading" : {
+          "$ref" : "#/$defs/session.TranscriptReading"
+        },
+        "directory" : {
+          "type" : "string"
+        },
+        "lastActivity" : {
+          "type" : "string"
+        },
+        "age" : {
+          "type" : "string"
+        },
+        "startedAt" : {
+          "type" : "string"
+        },
+        "links" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.TicketLink"
+          }
+        },
+        "interrupted" : {
+          "type" : "boolean"
+        }
+      },
+      "required" : [ "id", "title", "opening", "reading", "directory", "lastActivity", "age", "startedAt", "links", "interrupted" ],
+      "additionalProperties" : false
+    },
+    "session.PtyInputPayload" : {
+      "type" : "object",
+      "properties" : {
+        "session" : {
+          "type" : "string"
+        },
+        "data" : {
+          "type" : "string",
+          "contentEncoding" : "base64"
+        }
+      },
+      "required" : [ "session", "data" ],
+      "additionalProperties" : false
+    },
+    "session.PtyOutputView" : {
+      "type" : "object",
+      "properties" : {
+        "session" : {
+          "type" : "string"
+        },
+        "data" : {
+          "type" : "string",
+          "contentEncoding" : "base64"
+        }
+      },
+      "required" : [ "session", "data" ],
+      "additionalProperties" : false
+    },
+    "session.PtyResizePayload" : {
+      "type" : "object",
+      "properties" : {
+        "session" : {
+          "type" : "string"
+        },
+        "cols" : {
+          "type" : "integer"
+        },
+        "rows" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "session", "cols", "rows" ],
+      "additionalProperties" : false
+    },
+    "session.ReadableTranscript" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "readableTranscript"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.RepaintPayload" : {
+      "type" : "object",
+      "properties" : {
+        "session" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "session" ],
+      "additionalProperties" : false
+    },
+    "session.ResumeHostedPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "session" : {
+          "type" : "string"
+        },
+        "recordedDirectory" : {
+          "type" : "string"
+        },
+        "size" : {
+          "$ref" : "#/$defs/session.PaneSize"
+        }
+      },
+      "required" : [ "root", "session", "recordedDirectory", "size" ],
+      "additionalProperties" : false
+    },
+    "session.ResumeTicketHostedPayload" : {
+      "type" : "object",
+      "properties" : {
+        "session" : {
+          "type" : "string"
+        },
+        "recordedDirectory" : {
+          "type" : "string"
+        },
+        "root" : {
+          "type" : "string"
+        },
+        "branch" : {
+          "type" : "string"
+        },
+        "size" : {
+          "$ref" : "#/$defs/session.PaneSize"
+        }
+      },
+      "required" : [ "session", "recordedDirectory", "root", "branch", "size" ],
+      "additionalProperties" : false
+    },
+    "session.SessionExitView" : {
+      "type" : "object",
+      "properties" : {
+        "session" : {
+          "type" : "string"
+        },
+        "code" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "session", "code" ],
+      "additionalProperties" : false
+    },
+    "session.SessionPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "ticketIds" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        }
+      },
+      "required" : [ "root", "ticketIds" ],
+      "additionalProperties" : false
+    },
+    "session.SessionState" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.Busy"
+      }, {
+        "$ref" : "#/$defs/session.YourTurn"
+      }, {
+        "$ref" : "#/$defs/session.WaitingForPermission"
+      }, {
+        "$ref" : "#/$defs/session.WaitingForInput"
+      }, {
+        "$ref" : "#/$defs/session.Unknown"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.SessionTitle" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.AiTitle"
+      }, {
+        "$ref" : "#/$defs/session.FirstPrompt"
+      }, {
+        "$ref" : "#/$defs/session.NoTitle"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.SessionsView" : {
+      "type" : "object",
+      "properties" : {
+        "live" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.LiveSessionView"
+          }
+        },
+        "past" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.PastSessionView"
+          }
+        },
+        "hosted" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.HostedSessionView"
+          }
+        }
+      },
+      "required" : [ "live", "past", "hosted" ],
+      "additionalProperties" : false
+    },
+    "session.StartedHost" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "startedHost"
+        },
+        "id" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "id" ],
+      "additionalProperties" : false
+    },
+    "session.TicketHostedPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "ticket" : {
+          "type" : "string"
+        },
+        "branch" : {
+          "type" : "string"
+        },
+        "verb" : {
+          "$ref" : "#/$defs/board.Verb"
+        },
+        "size" : {
+          "$ref" : "#/$defs/session.PaneSize"
+        }
+      },
+      "required" : [ "root", "ticket", "branch", "verb", "size" ],
+      "additionalProperties" : false
+    },
+    "session.TicketLink" : {
+      "type" : "object",
+      "properties" : {
+        "ticket" : {
+          "type" : "string"
+        },
+        "verb" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "ticket", "verb" ],
+      "additionalProperties" : false
+    },
+    "session.TranscriptReading" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.ReadableTranscript"
+      }, {
+        "$ref" : "#/$defs/session.UnreadableTranscript"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.Unknown" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unknown"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.UnreadableTranscript" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unreadableTranscript"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "session.Version" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "version"
+        },
+        "value" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "session.WaitingFor" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.WaitingReason"
+      }, {
+        "$ref" : "#/$defs/session.NoWaitingReason"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.WaitingForInput" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "waitingForInput"
+        },
+        "reason" : {
+          "$ref" : "#/$defs/session.WaitingFor"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "session.WaitingForPermission" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "waitingForPermission"
+        },
+        "reason" : {
+          "$ref" : "#/$defs/session.WaitingReason"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "session.WaitingReason" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "waitingReason"
+        },
+        "value" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "session.YourTurn" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "yourTurn"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "shared.NoWarningView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noWarning"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "shared.WarningView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "warning"
+        },
+        "text" : {
+          "type" : "string"
+        },
+        "count" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "text", "count" ],
+      "additionalProperties" : false
+    },
+    "shared.WarningsView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/shared.WarningView"
+      }, {
+        "$ref" : "#/$defs/shared.NoWarningView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "sidecar.NoParams" : {
+      "type" : "object",
+      "properties" : { },
+      "required" : [ ],
+      "additionalProperties" : false
     }
   }
 }

@@ -13,6 +13,9 @@ import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyOutputView;
+
+import tools.jackson.databind.JsonNode;
 
 class ProtocolSchemaTest {
 
@@ -79,9 +82,11 @@ class ProtocolSchemaTest {
     }
 
     @Test
-    void refuses_a_payload_component_that_is_a_record() {
-        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/nested", NestedPayload.class, BoardView.class)))
-                .isInstanceOf(UnschemableTypeException.class);
+    void states_a_payload_component_that_is_a_record_as_the_component_it_is_read_from() {
+        assertThat(definitionOf(new ProtocolMethod<>("x/nested", NestedPayload.class, BoardView.class), "sidecar.NestedPayload")
+                        .path("properties").path("inner").path("type").asString())
+                .as("Jackson reads a record of one component from that component")
+                .isEqualTo("string");
     }
 
     @Test
@@ -111,10 +116,33 @@ class ProtocolSchemaTest {
     }
 
     @Test
-    void refuses_a_payload_component_that_holds_a_record() {
-        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/list", ListPayload.class, BoardView.class)))
-                .as("Jackson reads a record in a list as an object, the writer writes a one-component record as its component")
+    void states_a_payload_list_of_records_as_a_list_of_the_components_they_are_read_from() {
+        assertThat(definitionOf(new ProtocolMethod<>("x/list", ListPayload.class, BoardView.class), "sidecar.ListPayload")
+                        .path("properties").path("inner").path("items").path("type").asString())
+                .isEqualTo("string");
+    }
+
+    @Test
+    void refuses_a_payload_component_that_is_a_record_holding_a_sealed_type() {
+        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/wrapped", WrappedSealedPayload.class, BoardView.class)))
+                .as("Jackson cannot choose the variant of a sealed type it is not told the kind of")
                 .isInstanceOf(UnschemableTypeException.class);
+    }
+
+    @Test
+    void states_bytes_as_base64_text() {
+        JsonNode data = definitionOf(new ProtocolMethod<>("x/bytes", BoardPayload.class, PtyOutputView.class), "session.PtyOutputView")
+                .path("properties").path("data");
+
+        assertThat(data.path("type").asString()).isEqualTo("string");
+        assertThat(data.path("contentEncoding").asString()).isEqualTo("base64");
+    }
+
+    @Test
+    void states_an_input_by_its_params_alone() {
+        assertThat(protocolSchema().at("/properties/inputs/properties/pty~1input/properties/params/$ref").asString())
+                .isEqualTo("#/$defs/session.PtyInputPayload");
+        assertThat(protocolSchema().at("/properties/inputs/properties/pty~1input/properties").propertyNames()).containsExactly("params");
     }
 
     @Test

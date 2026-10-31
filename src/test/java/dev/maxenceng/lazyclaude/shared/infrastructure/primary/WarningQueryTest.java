@@ -7,9 +7,11 @@ import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningView
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
@@ -55,10 +57,37 @@ class WarningQueryTest {
         verify(listener).run();
     }
 
+    @Test
+    void shouldWatchTheWarningsRaisedAndThatNoneIsHeldWhenTheLastIsWithdrawn() {
+        List<WarningsView> received = new ArrayList<>();
+        new WarningQuery(new WarningApplicationService(watch, warnings)).watch(received::add);
+        ArgumentCaptor<Runnable> noneHeld = ArgumentCaptor.forClass(Runnable.class);
+        verify(watch).onNoneHeld(noneHeld.capture());
+
+        listener().accept(warnings());
+        noneHeld.getValue().run();
+
+        assertThat(received).containsExactly(warningView(), new NoWarningView());
+    }
+
     Consumer<Warnings> listener() {
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Consumer<Warnings>> listener = ArgumentCaptor.forClass(Consumer.class);
         verify(watch).subscribe(listener.capture());
         return listener.getValue();
+    }
+
+    @Test
+    void shouldAnswerTheWarningsHeldAsTheNewestAndTheCount() {
+        when(watch.held()).thenReturn(Optional.of(twoWarnings()));
+
+        assertThat(new WarningQuery(new WarningApplicationService(watch, warnings)).held()).isEqualTo(twoWarningsView());
+    }
+
+    @Test
+    void shouldAnswerThatNoWarningIsHeldWhenNoneIs() {
+        when(watch.held()).thenReturn(Optional.empty());
+
+        assertThat(new WarningQuery(new WarningApplicationService(watch, warnings)).held()).isEqualTo(new NoWarningView());
     }
 }

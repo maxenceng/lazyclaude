@@ -207,7 +207,7 @@ public final class TranscriptRepository implements PastSessionPort {
             return;
         }
         try {
-            cache.write(known.values());
+            cache.write(known.values().stream().toList());
         } catch (IOException e) {
             unwritable.unwritable(new Reason(CACHE_UNWRITABLE.formatted(cache.file(), FileFailure.causeOf(e))));
         }

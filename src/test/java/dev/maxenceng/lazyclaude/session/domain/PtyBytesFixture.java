@@ -14,6 +14,10 @@ public final class PtyBytesFixture {
         return ptyBytesOf("a");
     }
 
+    public static PtyBytes escapeBytes() {
+        return new PtyBytes(new byte[] {0x1b, '[', 'A'});
+    }
+
     public static String utf8Of(PtyBytes bytes) {
         return new String(bytes.value(), StandardCharsets.UTF_8);
     }

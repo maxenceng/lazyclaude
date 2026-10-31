@@ -35,12 +35,8 @@ final class BoardMethods {
         this.output = output;
     }
 
-    static List<ProtocolMethod<?, ?>> protocolMethods() {
-        return List.of(BOARD_FOR, WATCH);
-    }
-
-    static List<ProtocolNotification<?>> protocolNotifications() {
-        return List.of(CHANGED);
+    static Protocol protocol() {
+        return new Protocol(List.of(BOARD_FOR, WATCH), List.of(), List.of(CHANGED));
     }
 
     Map<String, SidecarMethod> methods() {
@@ -63,10 +59,10 @@ final class BoardMethods {
     }
 
     /**
-     * The board the frontend was last sent is what the next change is read against. A watch that failed to open is forgotten, so the
-     * next {@code board/watch} of the project tries again.
+     * The board the frontend was last sent is what the next change is read against. A watch that failed to open is forgotten before
+     * another {@code board/watch} of the project is let in, so that one tries again.
      */
-    private void watchOnce(BoardReadingView current) {
+    private synchronized void watchOnce(BoardReadingView current) {
         Path root = current.root().value();
         if (shown.put(root, current) == null) {
             try {

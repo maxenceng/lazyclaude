@@ -1,6 +1,9 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.sessionExited;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.noProject;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.notification;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.observedRepaintGap;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.ready;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.request;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.resultOf;
@@ -84,5 +87,70 @@ class SidecarProtocolTest {
     @Test
     void prints_the_protocol_schema_and_nothing_else_for_protocol_schema() throws Exception {
         assertThat(SpawnedSidecar.protocolSchemaPrinted()).isEqualTo(Sidecar.protocolSchema());
+    }
+
+    @Test
+    void hosts_a_claude_that_echoes_what_is_sent_to_its_pty() throws Exception {
+        try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
+            String session = sidecar.startedSession();
+
+            sidecar.send(notification("pty/input", "{\"session\":\"%s\",\"data\":\"eHl6\"}".formatted(session)));
+
+            assertThat(sidecar.awaitOutputContaining("xyz")).contains("ready");
+        }
+    }
+
+    @Test
+    void resizes_the_pty_of_a_hosted_claude_to_the_columns_and_rows_it_is_sent() throws Exception {
+        try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
+            String session = sidecar.startedSession();
+
+            sidecar.send(notification("pty/resize", "{\"session\":\"%s\",\"cols\":90,\"rows\":20}".formatted(session)));
+
+            assertThat(sidecar.awaitResizes(1)).extracting(StubResize::size).containsExactly("20 90");
+        }
+    }
+
+    @Test
+    void repaints_by_shrinking_the_pty_one_row_and_restoring_it_after_the_gap() throws Exception {
+        try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
+            String session = sidecar.startedSession();
+
+            sidecar.send(notification("session/repaint", "{\"session\":\"%s\"}".formatted(session)));
+
+            List<StubResize> resizes = sidecar.awaitResizes(2);
+            assertThat(resizes).extracting(StubResize::size).containsExactly("29 100", "30 100");
+            assertThat(resizes.get(1).at().minus(resizes.get(0).at()))
+                    .as("two resizes with no gap repaint nothing (ADR 0049), and the stub saw one after the other")
+                    .isGreaterThanOrEqualTo(observedRepaintGap());
+        }
+    }
+
+    @Test
+    void pushes_the_exit_code_of_a_claude_that_exits_by_itself() throws Exception {
+        try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
+            String session = sidecar.startedSession();
+
+            sidecar.send(notification("pty/input", "{\"session\":\"%s\",\"data\":\"cQ==\"}".formatted(session)));
+
+            assertThat(sidecar.awaitLine(line -> line.contains("\"method\":\"session/exited\"")))
+                    .isEqualTo(sessionExited(session, 7));
+        }
+    }
+
+    @Test
+    void ends_every_hosted_claude_when_stdin_closes_and_logs_no_end_for_it() throws Exception {
+        try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
+            sidecar.startedSession();
+
+            assertThat(sidecar.closeStdinAndAwaitExit()).isZero();
+
+            assertThat(sidecar.claudeIsAlive()).as("closing stdin ends the claude it hosted").isFalse();
+            assertThat(sidecar.remainingLines()).noneMatch(line -> line.contains("session/exited"));
+            assertThat(sidecar.launchLogLines())
+                    .as("ADR 0048: a session cut off by the frontend closing is logged as interrupted, with no end")
+                    .singleElement()
+                    .satisfies(line -> assertThat(SidecarJson.parse(line).path("endedAt").isString()).isFalse());
+        }
     }
 }

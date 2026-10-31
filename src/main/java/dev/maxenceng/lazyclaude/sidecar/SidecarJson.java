@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +34,9 @@ final class SidecarJson {
             .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES)
             .enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES)
             .disable(EnumFeature.READ_ENUMS_USING_TO_STRING)
-            .addModule(new SimpleModule().addDeserializer(Path.class, new PathParamDeserializer()))
+            .addModule(new SimpleModule()
+                    .addDeserializer(Path.class, new PathParamDeserializer())
+                    .setDeserializerModifier(new UnwrappedRecordDeserializers()))
             .build();
     private static final String NEWLINE = "\n";
     private static final String INDENT = "  ";
@@ -61,7 +64,7 @@ final class SidecarJson {
         return MAPPER.createArrayNode().addAll(items);
     }
 
-    static ArrayNode texts(List<String> items) {
+    static ArrayNode texts(Collection<String> items) {
         return array(items.stream().map(item -> (JsonNode) MAPPER.getNodeFactory().stringNode(item)).toList());
     }
 
@@ -86,6 +89,7 @@ final class SidecarJson {
             case null -> NullNode.getInstance();
             case Boolean flag -> MAPPER.getNodeFactory().booleanNode(flag);
             case Number number -> MAPPER.valueToTree(number);
+            case byte[] bytes -> MAPPER.getNodeFactory().stringNode(Base64.getEncoder().encodeToString(bytes));
             case Enum<?> constant -> MAPPER.getNodeFactory().stringNode(constant.name());
             case Optional<?> optional -> optional.map(SidecarJson::tree).orElse(NullNode.getInstance());
             case Collection<?> items -> array(items);
@@ -101,7 +105,7 @@ final class SidecarJson {
     private static JsonNode fromRecord(Record record) {
         RecordComponent[] components = record.getClass().getRecordComponents();
         boolean variant = ViewShape.isVariantOfASealedType(record.getClass());
-        if (components.length == 1 && !variant) {
+        if (ViewShape.isUnwrapped(record.getClass())) {
             return tree(valueOf(record, components[0]));
         }
         ObjectNode node = MAPPER.createObjectNode();

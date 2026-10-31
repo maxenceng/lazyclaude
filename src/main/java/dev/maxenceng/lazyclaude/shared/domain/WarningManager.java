@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.shared.domain;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -12,6 +13,10 @@ public record WarningManager(WarningWatchPort watch, WarningPort warnings) {
 
     public void subscribe(Consumer<Warnings> listener) {
         watch.subscribe(listener);
+    }
+
+    public Optional<Warnings> held() {
+        return watch.held();
     }
 
     public void onNoneHeld(Runnable listener) {

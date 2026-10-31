@@ -18,8 +18,22 @@ public final class WarningQuery {
         warnings.subscribe(held -> listener.accept(WarningView.from(held)));
     }
 
-    /** Runs {@code listener} each time the last warning held is withdrawn, on the thread that withdrew it: the status line has nothing to show. */
+    /** The warnings held now as the status line shows them, or that none is held. */
+    public WarningsView held() {
+        return warnings.held().<WarningsView>map(WarningView::from).orElseGet(NoWarningView::new);
+    }
+
+    /** Runs {@code listener} at once if no warning is held, and each time the last one held is withdrawn: the status line has nothing to show. */
     public void onNoneHeld(Runnable listener) {
         warnings.onNoneHeld(listener);
+    }
+
+    /**
+     * Hands {@code listener} what the status line shows at once, and again after each warning raised or the last one withdrawn, on the
+     * thread that did it: a frontend that never learns of a withdrawal is told that none is held.
+     */
+    public void watch(Consumer<WarningsView> listener) {
+        subscribe(listener::accept);
+        onNoneHeld(() -> listener.accept(new NoWarningView()));
     }
 }

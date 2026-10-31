@@ -32,6 +32,21 @@ public final class HostedSessionCommand {
         return sessions.resume(payload.project(), payload.session(), payload.recorded(), payload.size());
     }
 
+    /** Writes the bytes to the session's pty as they are; nothing for a session that is gone. */
+    public void write(PtyInputPayload payload) {
+        sessions.write(payload.session(), payload.data());
+    }
+
+    /** Gives the session's pty a new size, for a frontend that has already resized its own emulator. */
+    public void resizePty(PtyResizePayload payload) {
+        sessions.resize(payload.session(), payload.size());
+    }
+
+    /** Has the session's {@code claude} draw its whole screen again, for a frontend whose emulator starts empty (ADR 0049). */
+    public void repaint(RepaintPayload payload) {
+        sessions.repaint(payload.session());
+    }
+
     /** Ends every hosted {@code claude}, as lazyclaude quits. */
     public void endAll() {
         sessions.endAll();
