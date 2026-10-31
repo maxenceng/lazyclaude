@@ -110,9 +110,262 @@
           },
           "required" : [ "params", "result" ],
           "additionalProperties" : false
+        },
+        "docs/docsFor" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/docs.DocsPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/docs.DocsView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "docs/watch" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/docs.DocsPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/docs.DocsView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/loadingDiff" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/sidecar.NoParams"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PullRequestDiffView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/loadingThreads" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/sidecar.NoParams"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.ThreadsView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/diffOf" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PullRequestPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PullRequestDiffView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/threadsOf" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PullRequestPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.ThreadsView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/threadsInDiff" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.ThreadsInDiffPayload"
+            },
+            "result" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/$defs/review.ThreadInDiffView"
+              }
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/loadingPending" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/sidecar.NoParams"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PendingReviewView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/pendingOf" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PullRequestPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PendingReviewView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/anchorOf" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.CommentAnchorPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.CommentAnchorView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/pendingInDiff" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PendingCommentsInDiffPayload"
+            },
+            "result" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/$defs/review.PendingInDiffView"
+              }
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/checking" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/sidecar.NoParams"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PullRequestsView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/refresh" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/sidecar.NoParams"
+            },
+            "result" : {
+              "type" : "null"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/watch" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.ReviewPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PullRequestsView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/comment" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PendingCommentPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PendingReviewWriteView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/reply" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PendingReplyPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PendingReviewWriteView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/edit" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PendingEditPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PendingReviewWriteView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/delete" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PendingDeletePayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PendingReviewWriteView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/submit" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PendingSubmitPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PendingReviewWriteView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
         }
       },
-      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startTicket", "session/resume", "session/resumeInTicketWorktree", "session/watch", "warning/watch" ],
+      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startTicket", "session/resume", "session/resumeInTicketWorktree", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/threadsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/pendingInDiff", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
       "additionalProperties" : false
     },
     "inputs" : {
@@ -221,9 +474,42 @@
           },
           "required" : [ "params" ],
           "additionalProperties" : false
+        },
+        "docs/changed" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/docs.DocsView"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        },
+        "review/changed" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PullRequestsView"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        },
+        "review/mergedChanged" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/$defs/review.MergedHeadView"
+              }
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
         }
       },
-      "required" : [ "ready", "board/changed", "session/changed", "pty/output", "session/exited", "warning/changed" ],
+      "required" : [ "ready", "board/changed", "session/changed", "pty/output", "session/exited", "warning/changed", "docs/changed", "review/changed", "review/mergedChanged" ],
       "additionalProperties" : false
     }
   },
@@ -489,6 +775,1062 @@
     "board.Verb" : {
       "type" : "string",
       "enum" : [ "REFINE", "START", "REVIEW", "DESIGN", "RESPOND", "DONE" ]
+    },
+    "docs.Content" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "content"
+        },
+        "value" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "docs.DocsPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "root" ],
+      "additionalProperties" : false
+    },
+    "docs.DocsTreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "docsTree"
+        },
+        "documents" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/docs.DocumentView"
+          }
+        },
+        "folders" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/docs.FolderView"
+          }
+        }
+      },
+      "required" : [ "kind", "documents", "folders" ],
+      "additionalProperties" : false
+    },
+    "docs.DocsView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/docs.DocsTreeView"
+      }, {
+        "$ref" : "#/$defs/docs.UnavailableDocsView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "docs.DocumentText" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/docs.Content"
+      }, {
+        "$ref" : "#/$defs/docs.EmptyDocument"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "docs.DocumentView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/docs.ReadDocumentView"
+      }, {
+        "$ref" : "#/$defs/docs.UnreadableDocumentView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "docs.EmptyDocument" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "emptyDocument"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "docs.FolderView" : {
+      "type" : "object",
+      "properties" : {
+        "path" : {
+          "type" : "string"
+        },
+        "documents" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/docs.DocumentView"
+          }
+        },
+        "folders" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/docs.FolderView"
+          }
+        }
+      },
+      "required" : [ "path", "documents", "folders" ],
+      "additionalProperties" : false
+    },
+    "docs.ReadDocumentView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "readDocument"
+        },
+        "path" : {
+          "type" : "string"
+        },
+        "text" : {
+          "$ref" : "#/$defs/docs.DocumentText"
+        }
+      },
+      "required" : [ "kind", "path", "text" ],
+      "additionalProperties" : false
+    },
+    "docs.UnavailableDocsView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unavailableDocs"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "docs.UnreadableDocumentView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unreadableDocument"
+        },
+        "path" : {
+          "type" : "string"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "path", "reason" ],
+      "additionalProperties" : false
+    },
+    "review.AddedFile" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "addedFile"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.AddedLine" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "addedLine"
+        },
+        "content" : {
+          "type" : "string"
+        },
+        "newNumber" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "content", "newNumber" ],
+      "additionalProperties" : false
+    },
+    "review.CheckOutcome" : {
+      "type" : "string",
+      "enum" : [ "FAILED", "PENDING", "PASSED" ]
+    },
+    "review.CheckView" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string"
+        },
+        "outcome" : {
+          "$ref" : "#/$defs/review.CheckOutcome"
+        }
+      },
+      "required" : [ "name", "outcome" ],
+      "additionalProperties" : false
+    },
+    "review.CheckingPullRequestsView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "checkingPullRequests"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.CommentAnchorPayload" : {
+      "type" : "object",
+      "properties" : {
+        "diff" : {
+          "$ref" : "#/$defs/review.PullRequestDiffView"
+        },
+        "first" : {
+          "type" : "integer"
+        },
+        "last" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "diff", "first", "last" ],
+      "additionalProperties" : false
+    },
+    "review.CommentAnchorView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.OnDiffAnchorView"
+      }, {
+        "$ref" : "#/$defs/review.RefusedAnchorView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.ContextLine" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "contextLine"
+        },
+        "content" : {
+          "type" : "string"
+        },
+        "oldNumber" : {
+          "type" : "integer"
+        },
+        "newNumber" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "content", "oldNumber", "newNumber" ],
+      "additionalProperties" : false
+    },
+    "review.DeletedFile" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "deletedFile"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.DiffFileView" : {
+      "type" : "object",
+      "properties" : {
+        "path" : {
+          "type" : "string"
+        },
+        "status" : {
+          "$ref" : "#/$defs/review.FileStatus"
+        },
+        "hunks" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.HunkView"
+          }
+        }
+      },
+      "required" : [ "path", "status", "hunks" ],
+      "additionalProperties" : false
+    },
+    "review.DiffLine" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.AddedLine"
+      }, {
+        "$ref" : "#/$defs/review.RemovedLine"
+      }, {
+        "$ref" : "#/$defs/review.ContextLine"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.FileStatus" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.AddedFile"
+      }, {
+        "$ref" : "#/$defs/review.ModifiedFile"
+      }, {
+        "$ref" : "#/$defs/review.DeletedFile"
+      }, {
+        "$ref" : "#/$defs/review.RenamedFile"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.HeadCommit" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "headCommit"
+        },
+        "value" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "review.HeadMove" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.MovedHead"
+      }, {
+        "$ref" : "#/$defs/review.HeldHead"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.HeldHead" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "heldHead"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.HunkView" : {
+      "type" : "object",
+      "properties" : {
+        "header" : {
+          "type" : "string"
+        },
+        "lines" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.DiffLine"
+          }
+        }
+      },
+      "required" : [ "header", "lines" ],
+      "additionalProperties" : false
+    },
+    "review.LoadingDiffView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "loadingDiff"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.LoadingPendingReviewView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "loadingPendingReview"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.LoadingThreadsView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "loadingThreads"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.MergedHeadView" : {
+      "type" : "object",
+      "properties" : {
+        "branch" : {
+          "type" : "string"
+        },
+        "commit" : {
+          "$ref" : "#/$defs/review.HeadCommit"
+        }
+      },
+      "required" : [ "branch", "commit" ],
+      "additionalProperties" : false
+    },
+    "review.ModifiedFile" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "modifiedFile"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.MovedHead" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "movedHead"
+        },
+        "writtenOn" : {
+          "type" : "string"
+        },
+        "head" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "writtenOn", "head" ],
+      "additionalProperties" : false
+    },
+    "review.NoDiffLine" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noDiffLine"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.NoPendingReviewView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noPendingReview"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.OnDiffAnchorView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "onDiffAnchor"
+        },
+        "path" : {
+          "type" : "string"
+        },
+        "position" : {
+          "$ref" : "#/$defs/review.PlacedThread"
+        }
+      },
+      "required" : [ "kind", "path", "position" ],
+      "additionalProperties" : false
+    },
+    "review.OnDiffLine" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "onDiffLine"
+        },
+        "index" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "index" ],
+      "additionalProperties" : false
+    },
+    "review.OpenPendingReviewView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "openPendingReview"
+        },
+        "summary" : {
+          "type" : "string"
+        },
+        "comments" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.PendingCommentView"
+          }
+        },
+        "headMove" : {
+          "$ref" : "#/$defs/review.HeadMove"
+        }
+      },
+      "required" : [ "kind", "summary", "comments", "headMove" ],
+      "additionalProperties" : false
+    },
+    "review.OpenPullRequestsView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "openPullRequests"
+        },
+        "pullRequests" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.PullRequestView"
+          }
+        }
+      },
+      "required" : [ "kind", "pullRequests" ],
+      "additionalProperties" : false
+    },
+    "review.OutdatedThread" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "outdatedThread"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.PendingAnchorView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.OnDiffAnchorView"
+      }, {
+        "$ref" : "#/$defs/review.ReplyAnchorView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.PendingCommentPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "number" : {
+          "type" : "integer"
+        },
+        "path" : {
+          "type" : "string"
+        },
+        "position" : {
+          "$ref" : "#/$defs/review.PlacedThread"
+        },
+        "body" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "root", "number", "path", "position", "body" ],
+      "additionalProperties" : false
+    },
+    "review.PendingCommentView" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "body" : {
+          "type" : "string"
+        },
+        "anchor" : {
+          "$ref" : "#/$defs/review.PendingAnchorView"
+        }
+      },
+      "required" : [ "id", "body", "anchor" ],
+      "additionalProperties" : false
+    },
+    "review.PendingCommentsInDiffPayload" : {
+      "type" : "object",
+      "properties" : {
+        "diff" : {
+          "$ref" : "#/$defs/review.PullRequestDiffView"
+        },
+        "pending" : {
+          "$ref" : "#/$defs/review.PendingReviewView"
+        }
+      },
+      "required" : [ "diff", "pending" ],
+      "additionalProperties" : false
+    },
+    "review.PendingDeletePayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "number" : {
+          "type" : "integer"
+        },
+        "comment" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "root", "number", "comment" ],
+      "additionalProperties" : false
+    },
+    "review.PendingEditPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "number" : {
+          "type" : "integer"
+        },
+        "comment" : {
+          "type" : "string"
+        },
+        "body" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "root", "number", "comment", "body" ],
+      "additionalProperties" : false
+    },
+    "review.PendingInDiffView" : {
+      "type" : "object",
+      "properties" : {
+        "comment" : {
+          "$ref" : "#/$defs/review.PendingCommentView"
+        },
+        "line" : {
+          "$ref" : "#/$defs/review.ThreadLine"
+        }
+      },
+      "required" : [ "comment", "line" ],
+      "additionalProperties" : false
+    },
+    "review.PendingReplyPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "number" : {
+          "type" : "integer"
+        },
+        "thread" : {
+          "type" : "string"
+        },
+        "body" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "root", "number", "thread", "body" ],
+      "additionalProperties" : false
+    },
+    "review.PendingReviewView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.LoadingPendingReviewView"
+      }, {
+        "$ref" : "#/$defs/review.NoPendingReviewView"
+      }, {
+        "$ref" : "#/$defs/review.OpenPendingReviewView"
+      }, {
+        "$ref" : "#/$defs/review.UnavailablePendingReviewView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.PendingReviewWriteView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.WrittenReviewView"
+      }, {
+        "$ref" : "#/$defs/review.RefusedWriteView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.PendingSubmitPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "number" : {
+          "type" : "integer"
+        },
+        "summary" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "root", "number", "summary" ],
+      "additionalProperties" : false
+    },
+    "review.PlacedThread" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "placedThread"
+        },
+        "side" : {
+          "$ref" : "#/$defs/review.ThreadSide"
+        },
+        "first" : {
+          "type" : "integer"
+        },
+        "last" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "side", "first", "last" ],
+      "additionalProperties" : false
+    },
+    "review.PullRequestDiffView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.LoadingDiffView"
+      }, {
+        "$ref" : "#/$defs/review.ReadDiffView"
+      }, {
+        "$ref" : "#/$defs/review.UnavailableDiffView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.PullRequestPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "number" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "root", "number" ],
+      "additionalProperties" : false
+    },
+    "review.PullRequestView" : {
+      "type" : "object",
+      "properties" : {
+        "number" : {
+          "type" : "integer"
+        },
+        "title" : {
+          "type" : "string"
+        },
+        "head" : {
+          "type" : "string"
+        },
+        "draft" : {
+          "type" : "boolean"
+        },
+        "checks" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.CheckView"
+          }
+        }
+      },
+      "required" : [ "number", "title", "head", "draft", "checks" ],
+      "additionalProperties" : false
+    },
+    "review.PullRequestsView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.CheckingPullRequestsView"
+      }, {
+        "$ref" : "#/$defs/review.OpenPullRequestsView"
+      }, {
+        "$ref" : "#/$defs/review.UnavailablePullRequestsView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.ReadDiffView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "readDiff"
+        },
+        "files" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.DiffFileView"
+          }
+        }
+      },
+      "required" : [ "kind", "files" ],
+      "additionalProperties" : false
+    },
+    "review.ReadThreadsView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "readThreads"
+        },
+        "threads" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.ReviewThreadView"
+          }
+        }
+      },
+      "required" : [ "kind", "threads" ],
+      "additionalProperties" : false
+    },
+    "review.RefusedAnchorView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "refusedAnchor"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "review.RefusedWriteView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "refusedWrite"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "review.RemovedLine" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "removedLine"
+        },
+        "content" : {
+          "type" : "string"
+        },
+        "oldNumber" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "content", "oldNumber" ],
+      "additionalProperties" : false
+    },
+    "review.RenamedFile" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "renamedFile"
+        },
+        "from" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "from" ],
+      "additionalProperties" : false
+    },
+    "review.ReplyAnchorView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "replyAnchor"
+        },
+        "thread" : {
+          "type" : "string"
+        },
+        "path" : {
+          "type" : "string"
+        },
+        "position" : {
+          "$ref" : "#/$defs/review.ThreadPosition"
+        }
+      },
+      "required" : [ "kind", "thread", "path", "position" ],
+      "additionalProperties" : false
+    },
+    "review.ReviewPayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "root" ],
+      "additionalProperties" : false
+    },
+    "review.ReviewThreadView" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "path" : {
+          "type" : "string"
+        },
+        "position" : {
+          "$ref" : "#/$defs/review.ThreadPosition"
+        },
+        "resolved" : {
+          "type" : "boolean"
+        },
+        "open" : {
+          "type" : "boolean"
+        },
+        "comments" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.ThreadComment"
+          }
+        }
+      },
+      "required" : [ "id", "path", "position", "resolved", "open", "comments" ],
+      "additionalProperties" : false
+    },
+    "review.ThreadComment" : {
+      "type" : "object",
+      "properties" : {
+        "author" : {
+          "type" : "string"
+        },
+        "body" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "author", "body" ],
+      "additionalProperties" : false
+    },
+    "review.ThreadInDiffView" : {
+      "type" : "object",
+      "properties" : {
+        "thread" : {
+          "$ref" : "#/$defs/review.ReviewThreadView"
+        },
+        "line" : {
+          "$ref" : "#/$defs/review.ThreadLine"
+        }
+      },
+      "required" : [ "thread", "line" ],
+      "additionalProperties" : false
+    },
+    "review.ThreadLine" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.OnDiffLine"
+      }, {
+        "$ref" : "#/$defs/review.NoDiffLine"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.ThreadPosition" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.PlacedThread"
+      }, {
+        "$ref" : "#/$defs/review.OutdatedThread"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.ThreadSide" : {
+      "type" : "string",
+      "enum" : [ "LEFT", "RIGHT" ]
+    },
+    "review.ThreadsInDiffPayload" : {
+      "type" : "object",
+      "properties" : {
+        "diff" : {
+          "$ref" : "#/$defs/review.PullRequestDiffView"
+        },
+        "threads" : {
+          "$ref" : "#/$defs/review.ThreadsView"
+        }
+      },
+      "required" : [ "diff", "threads" ],
+      "additionalProperties" : false
+    },
+    "review.ThreadsView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.LoadingThreadsView"
+      }, {
+        "$ref" : "#/$defs/review.ReadThreadsView"
+      }, {
+        "$ref" : "#/$defs/review.UnavailableThreadsView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.UnavailableDiffView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unavailableDiff"
+        },
+        "reason" : {
+          "type" : "string"
+        },
+        "tooLarge" : {
+          "type" : "boolean"
+        }
+      },
+      "required" : [ "kind", "reason", "tooLarge" ],
+      "additionalProperties" : false
+    },
+    "review.UnavailablePendingReviewView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unavailablePendingReview"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "review.UnavailablePullRequestsView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unavailablePullRequests"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "review.UnavailableThreadsView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unavailableThreads"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "review.WrittenReviewView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "writtenReview"
+        },
+        "pending" : {
+          "$ref" : "#/$defs/review.PendingReviewView"
+        }
+      },
+      "required" : [ "kind", "pending" ],
+      "additionalProperties" : false
     },
     "session.AiTitle" : {
       "type" : "object",

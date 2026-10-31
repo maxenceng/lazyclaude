@@ -4,8 +4,8 @@ import dev.maxenceng.lazyclaude.review.application.PendingReviewApplicationServi
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
- * What the shell asks of {@code review} to write your pending review of a pull request, which GitHub keeps until it is submitted
- * (ADR 0009): a comment, a reply, an edit, a deletion, and the submit with the summary. Each waits for {@code gh}, so the caller is off the
+ * What a frontend asks of {@code review} to write your pending review of a pull request, which GitHub keeps until it is submitted
+ * (ADR 0009): a comment, a reply, an edit, a deletion, and the submit with the summary. Each waits for {@code gh}, so a frontend calls it off its
  * render thread, and answers what GitHub took or why it did not; it never fails.
  */
 public final class PendingReviewCommand {

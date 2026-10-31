@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.Contexts;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardAfterChangePayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
@@ -247,40 +248,23 @@ public final class Shell extends ToolkitApp {
     /** Whether the press that focused the dock's pane is still held, so that its drags and release are not the session's. */
     private boolean focusingClick;
 
-    public Shell(
-            BoardReadingView board,
-            DocsView docs,
-            SessionsView sessions,
-            PullRequestsView pullRequests,
-            HostedSessionCommand hosting,
-            HostedEmulatorCommand emulating,
-            HostedEmulatorQuery emulators,
-            WatchedSessionCommand watching,
-            TicketWorktreeCommand removing,
-            SessionQuery screens,
-            BoardQuery boards,
-            DocsQuery docsQuery,
-            ReviewQuery reviews,
-            PendingReviewCommand writing,
-            TicketCaptureCommand capturing,
-            ReservedChords chords,
-            boolean mouseCapture) {
+    Shell(BoardReadingView board, DocsView docs, SessionsView sessions, Contexts contexts, ReservedChords chords, boolean mouseCapture) {
         this(
                 board,
                 docs,
                 sessions,
-                pullRequests,
-                hosting,
-                emulating,
-                emulators,
-                watching,
-                removing,
-                screens,
-                boards,
-                docsQuery,
-                reviews,
-                writing,
-                capturing,
+                contexts.review().checking(),
+                contexts.hosting(),
+                contexts.emulating(),
+                contexts.emulators(),
+                contexts.watching(),
+                contexts.removing(),
+                contexts.sessions(),
+                contexts.board(),
+                contexts.docs(),
+                contexts.review(),
+                contexts.pendingReview(),
+                contexts.capturing(),
                 chords,
                 mouseCapture,
                 Executors.newVirtualThreadPerTaskExecutor());

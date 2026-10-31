@@ -98,4 +98,10 @@ public final class HostedEmulatorFixture {
                 .filter(thread -> thread.getName().equals(name))
                 .count();
     }
+
+    public static HostedEmulators emulating(SessionApplicationService sessions) {
+        HostedEmulators emulators = HostedEmulators.over(sessions);
+        new HostedEmulatorCommand(sessions, emulators).emulate();
+        return emulators;
+    }
 }

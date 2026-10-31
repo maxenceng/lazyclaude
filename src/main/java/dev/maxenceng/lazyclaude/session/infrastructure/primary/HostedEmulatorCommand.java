@@ -17,6 +17,14 @@ public final class HostedEmulatorCommand {
         this.emulators = emulators;
     }
 
+    /**
+     * Runs an emulator for every hosted session launched from now on. Only an output that draws the sessions asks for it: the
+     * sidecar hands the pty's bytes to its frontend instead, and an emulator nobody reads is a terminal parsed for nothing.
+     */
+    public void emulate() {
+        emulators.listen();
+    }
+
     /** Encodes the key, paste or mouse event for the session's emulator and writes it to its pty; nothing for a session that is gone. */
     public void send(HostedInputPayload payload) {
         emulators.of(payload.session()).ifPresent(emulator -> write(payload, emulator.encode(payload.input())));

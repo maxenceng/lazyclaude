@@ -79,7 +79,9 @@ public final class ProtocolCoverageFixture {
                 "session/subscribe",
                 "warning/held",
                 "warning/subscribe",
-                "warning/onNoneHeld");
+                "warning/onNoneHeld",
+                "docs/subscribe",
+                "review/subscribe");
     }
 
     public static List<String> servedUnderAnotherName() {
@@ -89,26 +91,8 @@ public final class ProtocolCoverageFixture {
     public static List<String> notYetOnTheProtocol() {
         return List.of(
 "board/capture",
-"docs/docsFor",
-"docs/subscribe",
-"review/anchorOf",
-"review/checking",
-"review/comment",
-"review/delete",
-"review/diffOf",
-"review/edit",
-"review/loadingDiff",
-"review/loadingPending",
-"review/loadingThreads",
-"review/pendingInDiff",
-"review/pendingOf",
-"review/refresh",
-"review/reply",
-"review/submit",
-"review/subscribe",
-"review/threadsInDiff",
-"review/threadsOf",
 "session/configuration",
+"session/emulate",
 "session/followsPointer",
 "session/knowTickets",
 "session/onScreenChange",

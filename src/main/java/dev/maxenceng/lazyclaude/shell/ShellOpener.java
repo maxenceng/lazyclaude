@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude;
+package dev.maxenceng.lazyclaude.shell;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsView;

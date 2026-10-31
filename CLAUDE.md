@@ -39,7 +39,7 @@ Use `make`, never `mvn` directly — the Makefile selects the Java 25 toolchain.
 ## Structure
 
 ```
-dev.maxenceng.lazyclaude.LazyClaude                  composition root: builds adapters, starts the shell
+dev.maxenceng.lazyclaude.LazyClaude                  composition root: loads the configuration, opens the shell or the sidecar
 dev.maxenceng.lazyclaude.shell                       the TamboUI application: screens and keys
 dev.maxenceng.lazyclaude.<context>.{published, domain, application, infrastructure.{primary, secondary}}
 ```
@@ -68,7 +68,7 @@ an ADR.
 
 ## Conventions
 
-- Wiring is constructor injection, done by hand in `LazyClaude.main`. No service locator, no
+- Wiring is constructor injection, done by hand in `Contexts.of`, once for both frontends (ADR 0077). No service locator, no
   static singletons.
 - Roles are named alike in every context (ADR 0011): `*ApplicationService` → domain `*Manager`
   → `*Port`, implemented by a `*Repository`; the shell asks through a primary `*Query` (reads)

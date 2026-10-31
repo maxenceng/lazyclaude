@@ -34,10 +34,24 @@ public final class SpawnedSidecar implements AutoCloseable {
               cat <<'JSON'
             %s
             JSON
+            elif [ "$1" = "pr" ] && [ "$2" = "diff" ]; then
+              cat <<'DIFF'
+            %s
+            DIFF
             else
+              echo "gh: not logged in" >&2
               exit 1
             fi
             """;
+    private static final String DIFF = """
+            diff --git a/src/Fixture.java b/src/Fixture.java
+            index 1111111..2222222 100644
+            --- a/src/Fixture.java
+            +++ b/src/Fixture.java
+            @@ -1,2 +1,2 @@
+             kept
+            -old
+            +new""";
     private static final String ISSUES =
             "[{\"number\":7,\"title\":\"A fixture ticket\",\"body\":\"\",\"labels\":[{\"name\":\"status:todo\"},{\"name\":\"context:board\"},{\"name\":\"type:feature\"}],\"state\":\"OPEN\",\"stateReason\":\"\"}]";
     private static final String CLAUDE_SCRIPT = """
@@ -84,7 +98,7 @@ public final class SpawnedSidecar implements AutoCloseable {
         Path project = Files.createDirectory(root.resolve("project"));
         Path home = Files.createDirectory(root.resolve("home"));
         Path bin = Files.createDirectory(root.resolve("bin"));
-        Path gh = Files.writeString(bin.resolve("gh"), GH_SCRIPT.formatted(ISSUES));
+        Path gh = Files.writeString(bin.resolve("gh"), GH_SCRIPT.formatted(ISSUES, DIFF));
         Files.setPosixFilePermissions(gh, PosixFilePermissions.fromString("rwx------"));
         if (new ProcessBuilder("git", "init", "-q", project.toString()).inheritIO().start().waitFor() != 0) {
             throw new IllegalStateException("git init failed in " + project);

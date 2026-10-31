@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
@@ -41,6 +42,9 @@ class HostedEmulatorCommandTest {
     @Mock
     private Runnable drew;
 
+    @Mock
+    private SessionApplicationService sessions;
+
     private HostedEmulatorCommand emulating;
     private HostedEmulatorQuery emulators;
     private SessionApplicationService service;
@@ -48,9 +52,33 @@ class HostedEmulatorCommandTest {
     @BeforeEach
     void setUp() {
         service = serviceOver(hosts);
-        HostedEmulators running = HostedEmulators.listeningTo(service);
+        HostedEmulators running = HostedEmulators.over(service);
         emulating = new HostedEmulatorCommand(service, running);
         emulators = new HostedEmulatorQuery(running);
+        emulating.emulate();
+    }
+
+    @Test
+    void shouldRunNoEmulatorForASessionLaunchedBeforeEmulatingIsAskedFor() {
+        SessionApplicationService undrawn = serviceOver(hosts);
+        HostedEmulators idle = HostedEmulators.over(undrawn);
+
+        RunningSession session = startedOn(hosts, undrawn);
+
+        assertThat(idle.of(session.id()))
+                .as("the sidecar never asks to emulate, so it parses no session's terminal")
+                .isEmpty();
+        undrawn.endAll();
+    }
+
+    @Test
+    void shouldListenOnceWhenEmulatingIsAskedForTwice() {
+        HostedEmulatorCommand twice = new HostedEmulatorCommand(sessions, HostedEmulators.over(sessions));
+
+        twice.emulate();
+        twice.emulate();
+
+        verify(sessions, times(1)).onPty(any());
     }
 
     @Test

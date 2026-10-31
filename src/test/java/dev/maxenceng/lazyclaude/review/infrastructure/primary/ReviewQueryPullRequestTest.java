@@ -114,7 +114,7 @@ class ReviewQueryPullRequestTest {
         ReviewThreadView onTheOldSide = openThreadView(diffPath(), leftOn(3));
         ReviewThreadView outdated = outdatedThreadView(diffPath());
 
-        assertThat(query.threadsInDiff(twoFileDiffView(), readThreadsViewOf(outdated, onTheOldSide)))
+        assertThat(query.threadsInDiff(new ThreadsInDiffPayload(twoFileDiffView(), readThreadsViewOf(outdated, onTheOldSide))))
                 .isEqualTo(new ThreadsInDiffView(List.of(onLineView(onTheOldSide, 1), onNoLineView(outdated))));
     }
 
@@ -122,15 +122,15 @@ class ReviewQueryPullRequestTest {
     void shouldPutEveryThreadOnNoLineWhileTheDiffItHandedOutIsNotRead() {
         ReviewThreadView thread = openThreadView(diffPath(), rightOn(3));
 
-        assertThat(query.threadsInDiff(tooLargeDiffView(), readThreadsViewOf(thread)))
+        assertThat(query.threadsInDiff(new ThreadsInDiffPayload(tooLargeDiffView(), readThreadsViewOf(thread))))
                 .isEqualTo(new ThreadsInDiffView(List.of(onNoLineView(thread))));
-        assertThat(query.threadsInDiff(loadingDiffView(), readThreadsViewOf(thread)))
+        assertThat(query.threadsInDiff(new ThreadsInDiffPayload(loadingDiffView(), readThreadsViewOf(thread))))
                 .isEqualTo(new ThreadsInDiffView(List.of(onNoLineView(thread))));
     }
 
     @Test
     void shouldPlaceNoThreadWhileTheThreadsItHandedOutAreNotRead() {
-        assertThat(query.threadsInDiff(twoFileDiffView(), loadingThreadsView())).isEqualTo(new ThreadsInDiffView(List.of()));
-        assertThat(query.threadsInDiff(twoFileDiffView(), unavailableThreadsView())).isEqualTo(new ThreadsInDiffView(List.of()));
+        assertThat(query.threadsInDiff(new ThreadsInDiffPayload(twoFileDiffView(), loadingThreadsView()))).isEqualTo(new ThreadsInDiffView(List.of()));
+        assertThat(query.threadsInDiff(new ThreadsInDiffPayload(twoFileDiffView(), unavailableThreadsView()))).isEqualTo(new ThreadsInDiffView(List.of()));
     }
 }
