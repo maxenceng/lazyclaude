@@ -1,8 +1,9 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
-import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.faultWithCode;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.noProject;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.ready;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.request;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.resultOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
@@ -57,15 +58,12 @@ class SidecarProtocolTest {
     }
 
     @Test
-    void answers_a_failure_with_the_internal_code_and_writes_its_stack_trace_to_stderr_only() throws Exception {
+    void answers_a_directory_in_no_project_as_a_result() throws Exception {
         try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
             sidecar.nextLine();
             sidecar.send(request(2, "board/boardFor", "{\"from\":\"/no/such/directory\"}"));
-            String answer = sidecar.nextLine();
-            sidecar.closeStdinAndAwaitExit();
 
-            assertThat(answer).startsWith(faultWithCode("2", -32603));
-            assertThat(sidecar.stderrText()).contains("ProjectNotFoundException");
+            assertThat(sidecar.nextLine()).isEqualTo(resultOf(2, noProject("/no/such/directory is not a directory")));
         }
     }
 

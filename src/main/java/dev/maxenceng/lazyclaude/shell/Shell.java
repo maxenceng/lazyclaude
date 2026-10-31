@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
@@ -462,11 +463,17 @@ public final class Shell extends ToolkitApp {
 
     /**
      * A board that was never read is read whole, so its reason stays current and no warning claims a board is kept; one on screen is
-     * kept when the read fails.
+     * kept when the read fails, and so is the reason when the project itself is gone, the read again raising the warning that says why.
      */
     private Optional<BoardReadingView> readAgain() {
         BoardPayload payload = new BoardPayload(root);
-        return lastRead instanceof UnavailableBoardView ? Optional.of(boards.boardFor(payload)) : boards.boardReadAgainFor(payload);
+        if (!(lastRead instanceof UnavailableBoardView)) {
+            return boards.boardReadAgainFor(payload);
+        }
+        return switch (boards.boardFor(payload)) {
+            case BoardReadingView read -> Optional.of(read);
+            case NoProjectView _ -> boards.boardReadAgainFor(payload);
+        };
     }
 
     /** Sessions are linked against the tickets of the board as last read, so a ticket created while running links them. */

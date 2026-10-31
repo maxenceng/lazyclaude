@@ -67,7 +67,9 @@ what is already there.
 - A sealed type's variants are written as an object led by `kind`, a record that is not a variant and has one component is that
   component (`Title`, `TicketId`, `ProjectRoot` are strings), any other record is an object of its components, and an enum constant is its
   name. The sidecar does this by reading records, so no View or Payload needs an annotation, and a new View is written without a change here.
-- A `DomainException` a `*Query` throws, such as a directory that belongs to no project, has no View to travel as, so it answers
-  as the internal fault with its message and its stack trace goes to stderr. It becomes a result when its primary adapter gives it a View.
+- A directory that belongs to no project is a View, `NoProjectView`, beside the board's: `board/boardFor` answers it as a result
+  (`kind` `noProject`), `board/watch` answers it and opens no watch, and the TUI prints its reason and does not start, as before.
+  A `DomainException` a `*Query` still throws has no View to travel as, so it answers as the internal fault with its message and
+  its stack trace goes to stderr; it becomes a result when its primary adapter gives it a View.
 - Requests run on a virtual thread each, named `sidecar-request-n`, and a thread named `sidecar-writer` writes stdout. `LazyClaude`
   points `System.out` at stderr before starting the sidecar, so a library that prints cannot break a line.

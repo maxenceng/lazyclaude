@@ -75,7 +75,7 @@ class BoardQueryTest {
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of());
 
-        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT).root())
+        assertThat(read(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT)).root())
                 .as("the shell hands it on to the contexts that work in the same project")
                 .isEqualTo(BoardViewFixture.projectRoot());
     }
@@ -131,6 +131,15 @@ class BoardQueryTest {
                         .root(BoardViewFixture.projectRoot())
                         .reason(new Reason("this project has no GitHub remote, so it has no backlog"))
                         .build());
+    }
+
+    @Test
+    void shouldViewWhyThereIsNoProjectWhenTheDirectoryBelongsToNone() {
+        when(locator.locate(workingDirectory())).thenThrow(new ProjectNotFoundException("not here"));
+
+        assertThat(boardQuery(locator, backlog).boardFor(FROM_THE_PROJECT))
+                .as("a directory outside any project is an answer the caller shows, not a failure it has to catch")
+                .isEqualTo(new NoProjectView(new Reason("not here")));
     }
 
     @Test

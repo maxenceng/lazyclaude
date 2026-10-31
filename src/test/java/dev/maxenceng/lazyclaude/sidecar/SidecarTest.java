@@ -10,6 +10,8 @@ import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.errorResponse;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.exitCodeOf;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.faultWithCode;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.linesWritten;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.noProject;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.noProjectView;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.notACall;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.notificationWithoutId;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.otherPayload;
@@ -28,6 +30,7 @@ import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.watchProject;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -118,11 +121,42 @@ class SidecarTest {
     }
 
     @Test
+    void answers_a_directory_in_no_project_as_a_result() {
+        when(board.boardFor(payload())).thenReturn(noProjectView());
+
+        assertThat(linesWritten(board, boardForProject(1)))
+                .as("a domain refusal travels as a result, as the TUI gets it, never as an error")
+                .containsExactly(ready(), resultOf(1, noProject()));
+    }
+
+    @Test
+    void answers_a_watch_on_a_directory_in_no_project_without_opening_a_watch() {
+        when(board.boardFor(payload())).thenReturn(noProjectView());
+
+        assertThat(linesWritten(board, watchProject(1))).containsExactly(ready(), resultOf(1, noProject()));
+        verify(board, never()).subscribe(any(), any());
+    }
+
+    @Test
     void answers_a_failure_nobody_caught_with_the_internal_code_and_its_message() {
-        when(board.boardFor(payload())).thenThrow(new IllegalStateException("the directory is no project"));
+        when(board.boardFor(payload())).thenThrow(new IllegalStateException("the board could not be built"));
 
         assertThat(linesWritten(board, boardForProject(1)).get(1))
-                .isEqualTo(errorResponse("1", -32603, "the directory is no project"));
+                .isEqualTo(errorResponse("1", -32603, "the board could not be built"));
+    }
+
+    @Test
+    void logs_the_stack_trace_of_a_failure_nobody_caught() {
+        IllegalStateException failure = new IllegalStateException("the board could not be built");
+        when(board.boardFor(payload())).thenThrow(failure);
+        CapturedLog log = CapturedLog.of(Sidecar.class);
+        try {
+            linesWritten(board, boardForProject(1));
+        } finally {
+            log.close();
+        }
+
+        assertThat(log.thrown()).as("the failure goes to the log, which writes to stderr, so stdout carries only the short message").containsExactly(failure);
     }
 
     @Test

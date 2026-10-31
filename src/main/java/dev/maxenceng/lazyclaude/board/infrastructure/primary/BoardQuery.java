@@ -13,13 +13,9 @@ public final class BoardQuery {
         this.boards = boards;
     }
 
-    /**
-     * The board of the project, or a view without tickets that says why its issues cannot be read.
-     *
-     * @throws dev.maxenceng.lazyclaude.error.domain.DomainException when the directory belongs to no project
-     */
-    public BoardReadingView boardFor(BoardPayload payload) {
-        return BoardReadingView.from(boards.boardFor(payload.toDomain()));
+    /** The board of the project, or a view without tickets that says why its issues cannot be read, or why there is no project. */
+    public BoardLookupView boardFor(BoardPayload payload) {
+        return BoardLookupView.from(boards.boardFor(payload.toDomain()));
     }
 
     /**

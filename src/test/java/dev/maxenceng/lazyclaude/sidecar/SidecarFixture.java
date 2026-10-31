@@ -16,6 +16,8 @@ import org.mockito.stubbing.Answer;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
+import dev.maxenceng.lazyclaude.board.published.Reason;
 
 public final class SidecarFixture {
 
@@ -108,6 +110,18 @@ public final class SidecarFixture {
 
     public static String unavailableBoard() {
         return "{\"kind\":\"unavailableBoard\",\"root\":\"/work/app\",\"reason\":\"gh is not logged in; run gh auth login\"}";
+    }
+
+    public static NoProjectView noProjectView() {
+        return new NoProjectView(new Reason("/work/app is not inside a git repository"));
+    }
+
+    public static String noProject() {
+        return noProject("/work/app is not inside a git repository");
+    }
+
+    public static String noProject(String reason) {
+        return "{\"kind\":\"noProject\",\"reason\":\"%s\"}".formatted(reason);
     }
 
     public static String resultOf(int id, String result) {

@@ -16,6 +16,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardWatchPayload;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.UnavailableBoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchChangesRepository;
@@ -266,8 +267,14 @@ public final class LazyClaude {
         BoardReadingView view;
         DocsView tree;
         SessionsView live;
+        switch (board.boardFor(new BoardPayload(from))) {
+            case NoProjectView none -> {
+                err.println(PREFIX + none.reason().value());
+                return 1;
+            }
+            case BoardReadingView read -> view = read;
+        }
         try {
-            view = board.boardFor(new BoardPayload(from));
             tree = docs.docsFor(new DocsPayload(view.root().value()));
             live = sessions.sessionsFor(sessionPayload(view));
         } catch (DomainException e) {

@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardLookupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
@@ -38,12 +39,17 @@ final class BoardMethods {
 
     // deferred: a change between this read and the watch starting is pushed only at the next change — close it when a ticket edited as the frontend connects is seen stale.
     private JsonNode watch(JsonNode params) {
-        BoardReadingView current = board.boardFor(SidecarJson.params(params, BoardPayload.class));
-        Path root = current.root().value();
+        BoardLookupView current = board.boardFor(SidecarJson.params(params, BoardPayload.class));
+        if (current instanceof BoardReadingView read) {
+            watchOnce(read.root().value());
+        }
+        return SidecarJson.tree(current);
+    }
+
+    private void watchOnce(Path root) {
         if (watched.add(root)) {
             board.subscribe(new BoardWatchPayload(root), () -> pushBoardOf(root));
         }
-        return SidecarJson.tree(current);
     }
 
     private void pushBoardOf(Path root) {

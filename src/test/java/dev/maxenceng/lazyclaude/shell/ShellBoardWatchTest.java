@@ -34,7 +34,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
 import dev.maxenceng.lazyclaude.board.published.Body;
+import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
@@ -292,5 +294,18 @@ class ShellBoardWatchTest {
         shell.boardChanged();
 
         verify(boards, never()).boardReadAgainFor(any());
+    }
+
+    @Test
+    void shouldKeepTheReasonAndReadAgainWhenTheProjectIsGoneByTheNextRead() {
+        when(boards.boardFor(readingBoard())).thenReturn(new NoProjectView(new Reason("not inside a git repository")));
+        Shell shell = shellReadingUnavailableBoard(boards, screens);
+
+        shell.boardChanged();
+
+        assertThat(Screen.of(shell).mainViewRows())
+                .as("a board with nothing to replace it keeps its reason on screen")
+                .anySatisfy(row -> assertThat(row).contains("gh is not logged in; run gh auth login"));
+        verify(boards).boardReadAgainFor(readingBoard());
     }
 }

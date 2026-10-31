@@ -5,7 +5,6 @@ import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.raisedTexts;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.workingDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -13,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.assertj.core.api.InstanceOfAssertFactories;
@@ -28,11 +28,13 @@ import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.Board;
 import dev.maxenceng.lazyclaude.board.domain.BoardWatchPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
+import dev.maxenceng.lazyclaude.board.domain.NoProject;
 import dev.maxenceng.lazyclaude.board.domain.UnavailableBoard;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
+import dev.maxenceng.lazyclaude.shared.domain.ProjectUnavailableException;
 import dev.maxenceng.lazyclaude.shared.domain.Warning;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -96,10 +98,18 @@ class BoardApplicationServiceTest {
     }
 
     @Test
-    void shouldLetTheLocatorsFailureThroughWhenThereIsNoProject() {
+    void shouldAnswerNoProjectWithTheLocatorsReasonWhenThereIsNone() {
         when(locator.locate(workingDirectory())).thenThrow(new ProjectNotFoundException("not here"));
 
-        assertThatThrownBy(() -> service.boardFor(workingDirectory())).isExactlyInstanceOf(ProjectNotFoundException.class);
+        assertThat(service.boardFor(workingDirectory())).isEqualTo(new NoProject(new Reason("not here")));
+    }
+
+    @Test
+    void shouldAnswerNoProjectWithTheLocatorsReasonWhenItCannotTell() {
+        when(locator.locate(workingDirectory()))
+                .thenThrow(new ProjectUnavailableException("git could not be run", new IOException("no git")));
+
+        assertThat(service.boardFor(workingDirectory())).isEqualTo(new NoProject(new Reason("git could not be run")));
     }
 
     @Test

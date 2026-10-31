@@ -34,12 +34,10 @@ public final class SpawnedSidecar implements AutoCloseable {
     private final BufferedReader stdout;
     private final BufferedWriter stdin;
     private final Path project;
-    private final Path stderr;
 
-    private SpawnedSidecar(Process process, Path project, Path stderr) {
+    private SpawnedSidecar(Process process, Path project) {
         this.process = process;
         this.project = project;
-        this.stderr = stderr;
         this.stdout = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
         this.stdin = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
     }
@@ -62,7 +60,7 @@ public final class SpawnedSidecar implements AutoCloseable {
                 .directory(project.toFile())
                 .redirectError(stderr.toFile());
         builder.environment().put("PATH", bin + ":" + System.getenv("PATH"));
-        return new SpawnedSidecar(builder.start(), project.toRealPath(), stderr);
+        return new SpawnedSidecar(builder.start(), project.toRealPath());
     }
 
     public String projectPath() {
@@ -90,10 +88,6 @@ public final class SpawnedSidecar implements AutoCloseable {
 
     public List<String> remainingLines() throws IOException {
         return stdout.lines().toList();
-    }
-
-    public String stderrText() throws IOException {
-        return Files.readString(stderr);
     }
 
     @Override
