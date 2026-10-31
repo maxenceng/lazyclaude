@@ -44,8 +44,7 @@ public final class SpawnedSidecar implements AutoCloseable {
         this.stdin = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
     }
 
-    public static SpawnedSidecar inFixtureProject() throws IOException, InterruptedException {
-        Path root = Files.createTempDirectory("sidecar-protocol");
+    public static SpawnedSidecar inFixtureProject(Path root) throws IOException, InterruptedException {
         Path project = Files.createDirectory(root.resolve("project"));
         Path home = Files.createDirectory(root.resolve("home"));
         Path bin = Files.createDirectory(root.resolve("bin"));
@@ -99,6 +98,6 @@ public final class SpawnedSidecar implements AutoCloseable {
 
     @Override
     public void close() {
-        process.destroyForcibly();
+        process.destroyForcibly().onExit().join();
     }
 }
