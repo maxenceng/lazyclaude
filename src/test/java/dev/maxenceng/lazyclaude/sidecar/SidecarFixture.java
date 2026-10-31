@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
+import static dev.maxenceng.lazyclaude.ContextsFixture.sidecarContexts;
 import static org.mockito.Mockito.mock;
 
 import java.io.ByteArrayInputStream;
@@ -75,69 +76,69 @@ public final class SidecarFixture {
     }
 
     private static Sidecar sidecarOver(BoardQuery board) {
-        return new Sidecar(
+        return new Sidecar(sidecarContexts(
                 board,
                 mock(SessionQuery.class),
                 mock(HostedSessionCommand.class),
                 mock(WarningQuery.class),
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
-                mock(PendingReviewCommand.class));
+                mock(PendingReviewCommand.class)));
     }
 
     private static Sidecar sidecarOver(SessionQuery sessions, HostedSessionCommand hosting) {
-        return new Sidecar(
+        return new Sidecar(sidecarContexts(
                 mock(BoardQuery.class),
                 sessions,
                 hosting,
                 mock(WarningQuery.class),
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
-                mock(PendingReviewCommand.class));
+                mock(PendingReviewCommand.class)));
     }
 
     private static Sidecar sidecarOver(WarningQuery warnings) {
-        return new Sidecar(
+        return new Sidecar(sidecarContexts(
                 mock(BoardQuery.class),
                 mock(SessionQuery.class),
                 mock(HostedSessionCommand.class),
                 warnings,
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
-                mock(PendingReviewCommand.class));
+                mock(PendingReviewCommand.class)));
     }
 
     private static Sidecar sidecarOver(DocsQuery docs) {
-        return new Sidecar(
+        return new Sidecar(sidecarContexts(
                 mock(BoardQuery.class),
                 mock(SessionQuery.class),
                 mock(HostedSessionCommand.class),
                 mock(WarningQuery.class),
                 docs,
                 mock(ReviewQuery.class),
-                mock(PendingReviewCommand.class));
+                mock(PendingReviewCommand.class)));
     }
 
     private static Sidecar sidecarOver(ReviewQuery review) {
-        return new Sidecar(
+        return new Sidecar(sidecarContexts(
                 mock(BoardQuery.class),
                 mock(SessionQuery.class),
                 mock(HostedSessionCommand.class),
                 mock(WarningQuery.class),
                 mock(DocsQuery.class),
                 review,
-                mock(PendingReviewCommand.class));
+                mock(PendingReviewCommand.class)));
     }
 
     private static Sidecar sidecarOver(PendingReviewCommand pendingReview) {
-        return new Sidecar(
+        return new Sidecar(sidecarContexts(
                 mock(BoardQuery.class),
                 mock(SessionQuery.class),
                 mock(HostedSessionCommand.class),
                 mock(WarningQuery.class),
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
-                pendingReview);
+                pendingReview));
     }
 
     public static Path projectPath() {

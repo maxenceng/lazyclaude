@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.ptyBytesOf;
 import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.utf8Of;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorScreenViewFixture.blankScreen;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorFixture.emulating;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorFixture.emulatorsLeft;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorFixture.screenContaining;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorFixture.serviceOver;
@@ -49,7 +50,7 @@ class HostedEmulatorQueryTest {
     @BeforeEach
     void setUp() {
         service = serviceOver(hosts);
-        HostedEmulators running = HostedEmulators.listeningTo(service);
+        HostedEmulators running = emulating(service);
         emulating = new HostedEmulatorCommand(service, running);
         emulators = new HostedEmulatorQuery(running);
     }

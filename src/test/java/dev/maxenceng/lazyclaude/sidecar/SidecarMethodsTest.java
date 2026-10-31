@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
+import static dev.maxenceng.lazyclaude.ContextsFixture.sidecarContexts;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
@@ -45,7 +46,7 @@ class SidecarMethodsTest {
 
     @Test
     void serves_exactly_the_methods_and_inputs_the_schema_states() {
-        List<String> served = List.copyOf(new Sidecar(board, sessions, hosting, warnings, docs, review, pendingReview).methods(new SidecarOutput(new ByteArrayOutputStream())).keySet());
+        List<String> served = List.copyOf(new Sidecar(sidecarContexts(board, sessions, hosting, warnings, docs, review, pendingReview)).methods(new SidecarOutput(new ByteArrayOutputStream())).keySet());
 
         assertThat(served).as("a handler without a declaration is missing from the schema, a declaration without one cannot be called")
                 .containsExactlyInAnyOrderElementsOf(

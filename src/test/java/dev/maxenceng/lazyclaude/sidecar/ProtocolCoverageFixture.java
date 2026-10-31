@@ -92,6 +92,7 @@ public final class ProtocolCoverageFixture {
         return List.of(
 "board/capture",
 "session/configuration",
+"session/emulate",
 "session/followsPointer",
 "session/knowTickets",
 "session/onScreenChange",
