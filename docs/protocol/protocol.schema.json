@@ -11,10 +11,10 @@
           "type" : "object",
           "properties" : {
             "params" : {
-              "$ref" : "#/$defs/BoardPayload"
+              "$ref" : "#/$defs/board.BoardPayload"
             },
             "result" : {
-              "$ref" : "#/$defs/BoardLookupView"
+              "$ref" : "#/$defs/board.BoardLookupView"
             }
           },
           "required" : [ "params", "result" ],
@@ -24,10 +24,10 @@
           "type" : "object",
           "properties" : {
             "params" : {
-              "$ref" : "#/$defs/BoardPayload"
+              "$ref" : "#/$defs/board.BoardPayload"
             },
             "result" : {
-              "$ref" : "#/$defs/BoardLookupView"
+              "$ref" : "#/$defs/board.BoardLookupView"
             }
           },
           "required" : [ "params", "result" ],
@@ -61,7 +61,7 @@
           "type" : "object",
           "properties" : {
             "params" : {
-              "$ref" : "#/$defs/BoardReadingView"
+              "$ref" : "#/$defs/board.BoardReadingView"
             }
           },
           "required" : [ "params" ],
@@ -75,17 +75,17 @@
   "required" : [ "methods", "notifications" ],
   "additionalProperties" : false,
   "$defs" : {
-    "BoardLookupView" : {
+    "board.BoardLookupView" : {
       "oneOf" : [ {
-        "$ref" : "#/$defs/BoardReadingView"
+        "$ref" : "#/$defs/board.BoardReadingView"
       }, {
-        "$ref" : "#/$defs/NoProjectView"
+        "$ref" : "#/$defs/board.NoProjectView"
       } ],
       "discriminator" : {
         "propertyName" : "kind"
       }
     },
-    "BoardPayload" : {
+    "board.BoardPayload" : {
       "type" : "object",
       "properties" : {
         "from" : {
@@ -95,17 +95,17 @@
       "required" : [ "from" ],
       "additionalProperties" : false
     },
-    "BoardReadingView" : {
+    "board.BoardReadingView" : {
       "oneOf" : [ {
-        "$ref" : "#/$defs/BoardView"
+        "$ref" : "#/$defs/board.BoardView"
       }, {
-        "$ref" : "#/$defs/UnavailableBoardView"
+        "$ref" : "#/$defs/board.UnavailableBoardView"
       } ],
       "discriminator" : {
         "propertyName" : "kind"
       }
     },
-    "BoardView" : {
+    "board.BoardView" : {
       "type" : "object",
       "properties" : {
         "kind" : {
@@ -114,13 +114,13 @@
         "groups" : {
           "type" : "array",
           "items" : {
-            "$ref" : "#/$defs/StatusGroupView"
+            "$ref" : "#/$defs/board.StatusGroupView"
           }
         },
         "unreadable" : {
           "type" : "array",
           "items" : {
-            "$ref" : "#/$defs/UnreadableTicketView"
+            "$ref" : "#/$defs/board.UnreadableTicketView"
           }
         },
         "root" : {
@@ -130,7 +130,7 @@
       "required" : [ "kind", "groups", "unreadable", "root" ],
       "additionalProperties" : false
     },
-    "Body" : {
+    "board.Body" : {
       "type" : "object",
       "properties" : {
         "kind" : {
@@ -143,7 +143,7 @@
       "required" : [ "kind", "value" ],
       "additionalProperties" : false
     },
-    "ContextName" : {
+    "board.ContextName" : {
       "type" : "object",
       "properties" : {
         "kind" : {
@@ -156,7 +156,7 @@
       "required" : [ "kind", "value" ],
       "additionalProperties" : false
     },
-    "NoBody" : {
+    "board.NoBody" : {
       "type" : "object",
       "properties" : {
         "kind" : {
@@ -166,7 +166,7 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
-    "NoContext" : {
+    "board.NoContext" : {
       "type" : "object",
       "properties" : {
         "kind" : {
@@ -176,7 +176,7 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
-    "NoProjectView" : {
+    "board.NoProjectView" : {
       "type" : "object",
       "properties" : {
         "kind" : {
@@ -189,7 +189,7 @@
       "required" : [ "kind", "reason" ],
       "additionalProperties" : false
     },
-    "NoType" : {
+    "board.NoType" : {
       "type" : "object",
       "properties" : {
         "kind" : {
@@ -199,57 +199,57 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
-    "Status" : {
+    "board.Status" : {
       "type" : "string",
       "enum" : [ "DRAFT", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE" ]
     },
-    "StatusGroupView" : {
+    "board.StatusGroupView" : {
       "type" : "object",
       "properties" : {
         "status" : {
-          "$ref" : "#/$defs/Status"
+          "$ref" : "#/$defs/board.Status"
         },
         "tickets" : {
           "type" : "array",
           "items" : {
-            "$ref" : "#/$defs/TicketView"
+            "$ref" : "#/$defs/board.TicketView"
           }
         }
       },
       "required" : [ "status", "tickets" ],
       "additionalProperties" : false
     },
-    "TicketBody" : {
+    "board.TicketBody" : {
       "oneOf" : [ {
-        "$ref" : "#/$defs/Body"
+        "$ref" : "#/$defs/board.Body"
       }, {
-        "$ref" : "#/$defs/NoBody"
+        "$ref" : "#/$defs/board.NoBody"
       } ],
       "discriminator" : {
         "propertyName" : "kind"
       }
     },
-    "TicketContext" : {
+    "board.TicketContext" : {
       "oneOf" : [ {
-        "$ref" : "#/$defs/ContextName"
+        "$ref" : "#/$defs/board.ContextName"
       }, {
-        "$ref" : "#/$defs/NoContext"
+        "$ref" : "#/$defs/board.NoContext"
       } ],
       "discriminator" : {
         "propertyName" : "kind"
       }
     },
-    "TicketType" : {
+    "board.TicketType" : {
       "oneOf" : [ {
-        "$ref" : "#/$defs/TypeName"
+        "$ref" : "#/$defs/board.TypeName"
       }, {
-        "$ref" : "#/$defs/NoType"
+        "$ref" : "#/$defs/board.NoType"
       } ],
       "discriminator" : {
         "propertyName" : "kind"
       }
     },
-    "TicketView" : {
+    "board.TicketView" : {
       "type" : "object",
       "properties" : {
         "id" : {
@@ -262,13 +262,13 @@
           "type" : "string"
         },
         "status" : {
-          "$ref" : "#/$defs/Status"
+          "$ref" : "#/$defs/board.Status"
         },
         "context" : {
-          "$ref" : "#/$defs/TicketContext"
+          "$ref" : "#/$defs/board.TicketContext"
         },
         "type" : {
-          "$ref" : "#/$defs/TicketType"
+          "$ref" : "#/$defs/board.TicketType"
         },
         "otherLabels" : {
           "type" : "array",
@@ -277,19 +277,19 @@
           }
         },
         "body" : {
-          "$ref" : "#/$defs/TicketBody"
+          "$ref" : "#/$defs/board.TicketBody"
         },
         "verbs" : {
           "type" : "array",
           "items" : {
-            "$ref" : "#/$defs/Verb"
+            "$ref" : "#/$defs/board.Verb"
           }
         }
       },
       "required" : [ "id", "branch", "title", "status", "context", "type", "otherLabels", "body", "verbs" ],
       "additionalProperties" : false
     },
-    "TypeName" : {
+    "board.TypeName" : {
       "type" : "object",
       "properties" : {
         "kind" : {
@@ -302,7 +302,7 @@
       "required" : [ "kind", "value" ],
       "additionalProperties" : false
     },
-    "UnavailableBoardView" : {
+    "board.UnavailableBoardView" : {
       "type" : "object",
       "properties" : {
         "kind" : {
@@ -318,7 +318,7 @@
       "required" : [ "kind", "root", "reason" ],
       "additionalProperties" : false
     },
-    "UnreadableTicketView" : {
+    "board.UnreadableTicketView" : {
       "type" : "object",
       "properties" : {
         "id" : {
@@ -331,7 +331,7 @@
       "required" : [ "id", "reason" ],
       "additionalProperties" : false
     },
-    "Verb" : {
+    "board.Verb" : {
       "type" : "string",
       "enum" : [ "REFINE", "START", "REVIEW", "DESIGN", "RESPOND", "DONE" ]
     }

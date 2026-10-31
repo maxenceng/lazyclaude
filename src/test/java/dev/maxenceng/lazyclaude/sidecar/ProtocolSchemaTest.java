@@ -18,42 +18,42 @@ class ProtocolSchemaTest {
 
     @Test
     void names_the_kind_as_the_discriminator_of_a_sealed_view() {
-        assertThat(definition("BoardLookupView").path("discriminator").path("propertyName").asString()).isEqualTo("kind");
-        assertThat(definition("BoardLookupView").path("oneOf")).hasSize(2);
+        assertThat(definition("board.BoardLookupView").path("discriminator").path("propertyName").asString()).isEqualTo("kind");
+        assertThat(definition("board.BoardLookupView").path("oneOf")).hasSize(2);
     }
 
     @Test
     void leads_a_variant_with_its_required_kind_constant() {
-        assertThat(definition("BoardView").path("properties").propertyNames().iterator().next()).isEqualTo("kind");
-        assertThat(definition("BoardView").path("properties").path("kind").path("const").asString()).isEqualTo("board");
-        assertThat(definition("BoardView").path("required").get(0).asString()).isEqualTo("kind");
-        assertThat(definition("NoProjectView").path("properties").path("kind").path("const").asString()).isEqualTo("noProject");
+        assertThat(definition("board.BoardView").path("properties").propertyNames().iterator().next()).isEqualTo("kind");
+        assertThat(definition("board.BoardView").path("properties").path("kind").path("const").asString()).isEqualTo("board");
+        assertThat(definition("board.BoardView").path("required").get(0).asString()).isEqualTo("kind");
+        assertThat(definition("board.NoProjectView").path("properties").path("kind").path("const").asString()).isEqualTo("noProject");
     }
 
     @Test
     void closes_every_object_so_an_unknown_field_is_not_a_valid_view() {
-        assertThat(definition("BoardView").path("additionalProperties").asBoolean(true)).isFalse();
+        assertThat(definition("board.BoardView").path("additionalProperties").asBoolean(true)).isFalse();
     }
 
     @Test
     void writes_a_record_of_one_component_as_that_component() {
-        assertThat(definition("NoProjectView").path("properties").path("reason").path("type").asString()).isEqualTo("string");
-        assertThat(definition("BoardView").path("properties").path("root").path("type").asString()).isEqualTo("string");
-        assertThat(protocolSchema().path("$defs").has("ProjectRoot")).isFalse();
+        assertThat(definition("board.NoProjectView").path("properties").path("reason").path("type").asString()).isEqualTo("string");
+        assertThat(definition("board.BoardView").path("properties").path("root").path("type").asString()).isEqualTo("string");
+        assertThat(protocolSchema().path("$defs").has("board.ProjectRoot")).isFalse();
     }
 
     @Test
     void lists_the_names_of_an_enum() {
-        assertThat(definition("Status").path("enum").valueStream().map(name -> name.asString()))
+        assertThat(definition("board.Status").path("enum").valueStream().map(name -> name.asString()))
                 .containsExactly("DRAFT", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE");
     }
 
     @Test
     void states_a_payload_as_an_object_of_all_its_components() {
         assertThat(protocolSchema().at("/properties/methods/properties/board~1boardFor/properties/params/$ref").asString())
-                .isEqualTo("#/$defs/BoardPayload");
-        assertThat(definition("BoardPayload").path("properties").path("from").path("type").asString()).isEqualTo("string");
-        assertThat(definition("BoardPayload").path("properties").propertyNames()).containsExactly("from");
+                .isEqualTo("#/$defs/board.BoardPayload");
+        assertThat(definition("board.BoardPayload").path("properties").path("from").path("type").asString()).isEqualTo("string");
+        assertThat(definition("board.BoardPayload").path("properties").propertyNames()).containsExactly("from");
     }
 
     @Test
@@ -91,7 +91,21 @@ class ProtocolSchemaTest {
     }
 
     @Test
-    void refuses_two_types_that_share_a_simple_name() {
+    void keys_each_definition_by_its_module_so_two_modules_may_own_one_name() {
+        assertThat(SidecarJson.parse(schemaOf(new ProtocolMethod<>("x/twoModules", BoardPayload.class, TwoModulesView.class)))
+                        .path("$defs").propertyNames())
+                .contains("board.Clash", "sidecar.Clash");
+    }
+
+    @Test
+    void refuses_a_type_in_no_module() {
+        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/unplaced", BoardPayload.class, UnplacedView.class)))
+                .as("a definition is keyed by its module, and the root holds none")
+                .isInstanceOf(UnschemableTypeException.class);
+    }
+
+    @Test
+    void refuses_two_types_of_one_module_that_share_a_simple_name() {
         assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/clash", BoardPayload.class, ClashView.class)))
                 .isInstanceOf(DuplicateSchemaNameException.class);
     }
@@ -105,7 +119,7 @@ class ProtocolSchemaTest {
 
     @Test
     void states_a_char_as_the_text_it_is_written_as() {
-        assertThat(definitionOf(new ProtocolMethod<>("x/letter", BoardPayload.class, LetterView.class), "LetterView")
+        assertThat(definitionOf(new ProtocolMethod<>("x/letter", BoardPayload.class, LetterView.class), "sidecar.LetterView")
                         .path("properties").path("letter").path("type").asString())
                 .isEqualTo("string");
     }

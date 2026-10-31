@@ -31,7 +31,7 @@ where the sidecar is on Jackson 3. Params go the other way: Jackson reads a Payl
 - **A result is described as written, a Payload as Jackson reads it**: an object of its components, a one-component
   Payload included. A Payload holding a record or a sealed type is refused until a method takes one.
 - **A shape the writer cannot carry fails the generation**: a `Map`, an array, a raw or wildcard generic, two types of
-  one simple name, a record of one component that holds itself. So does a declared type its values may be written
+  one module and one simple name, a type in no module, a record of one component that holds itself. So does a declared type its values may be written
   differently from — an interface other than `Path`, an abstract or non-final class, `Object` — since the writer reads
   the runtime class and the schema the declared one, and a sealed type's variant that is not a record or a sealed
   type, which would carry no `kind`. It is renamed or reshaped, not described.
@@ -53,8 +53,10 @@ where the sidecar is on Jackson 3. Params go the other way: Jackson reads a Payl
 - Every operation of docs, review, session and the warnings, and the ticket capture, is listed as not yet on the
   protocol. Each leaves the list with the change that puts it on the sidecar; one that stays off for good (the TUI's
   own emulator) moves to a list of its own with the reason.
-- A `kind` or a `$defs` name is the Java simple name's; renaming a View, or a `published` value object a View holds,
-  is a protocol change the drift check shows.
+- A `kind` is the Java simple name's, and a `$defs` key is the module's and the simple name's (`board.Status`):
+  qualified always, not on a clash, so a second context owning a `Status` renames no existing key and bends no
+  model name to the wire. `kind` stays simple, being unique within its sealed type. Renaming a View, or a
+  `published` value object a View holds, is a protocol change the drift check shows.
 - Jackson reading a nested record in a Payload is assumed nowhere: the first method that takes one decides it, with a
   test of how it is read.
 - The schema carries no descriptions; Javadoc is not there at runtime, and the Views stay free of annotations.

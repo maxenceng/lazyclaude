@@ -69,6 +69,11 @@ final class ProtocolSchema {
     private static final String HOLDS_ITSELF = "a record of one component is written as that component, so it cannot hold itself";
     private static final String OF = "%s of %s";
     private static final String SAME_NAME = "%s and %s share the name %s, which keys the schema's definitions";
+    private static final char PACKAGE_SEPARATOR = '.';
+    private static final String ROOT = ProtocolSchema.class.getPackageName().substring(0, ProtocolSchema.class.getPackageName().lastIndexOf(PACKAGE_SEPARATOR));
+    private static final String NO_MODULE = "it is in no module of " + ROOT + ", which qualifies the schema's definitions";
+    private static final String MODULE_PREFIX = ROOT + PACKAGE_SEPARATOR;
+    private static final String QUALIFIED = "%s.%s";
 
     private final Map<String, Class<?>> owners = new TreeMap<>();
     private final Map<String, JsonNode> definitions = new TreeMap<>();
@@ -268,7 +273,7 @@ final class ProtocolSchema {
     }
 
     private JsonNode define(Class<?> type, Supplier<JsonNode> definition) {
-        String name = type.getSimpleName();
+        String name = QUALIFIED.formatted(moduleOf(type), type.getSimpleName());
         Class<?> owner = owners.putIfAbsent(name, type);
         if (owner != null && !owner.equals(type)) {
             throw new DuplicateSchemaNameException(SAME_NAME.formatted(owner.getName(), type.getName(), name));
@@ -279,5 +284,15 @@ final class ProtocolSchema {
         ObjectNode reference = SidecarJson.object();
         reference.put(REF, REF_PREFIX + name);
         return reference;
+    }
+
+    /** The direct subpackage of the root a type is in, so two contexts may own a type of one name (ADR 0073). */
+    private static String moduleOf(Class<?> type) {
+        if (!type.getPackageName().startsWith(MODULE_PREFIX)) {
+            throw new UnschemableTypeException(CANNOT_STATE.formatted(type.getTypeName(), NO_MODULE));
+        }
+        String below = type.getPackageName().substring(MODULE_PREFIX.length());
+        int end = below.indexOf(PACKAGE_SEPARATOR);
+        return end < 0 ? below : below.substring(0, end);
     }
 }
