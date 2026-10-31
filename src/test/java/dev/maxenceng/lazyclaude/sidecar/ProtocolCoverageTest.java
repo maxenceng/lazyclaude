@@ -39,4 +39,9 @@ class ProtocolCoverageTest {
     void every_operation_listed_as_not_yet_on_the_protocol_still_exists() {
         assertThat(operations()).as("an operation that was removed or renamed goes off the list").containsAll(notYetOnTheProtocol()).containsAll(servedByAWatch());
     }
+
+    @Test
+    void no_two_operations_of_one_context_share_a_name() {
+        assertThat(operations()).as("one protocol method name would stand for both: rename one").doesNotHaveDuplicates();
+    }
 }

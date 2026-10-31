@@ -3,7 +3,7 @@ package dev.maxenceng.lazyclaude.sidecar;
 import java.util.Locale;
 import java.util.stream.Stream;
 
-/** How a View is told apart on the wire, read by the writer and by the schema alike so the two cannot drift (ADR 0050). */
+/** Which written record is a sealed type's variant and what its {@code kind} is, read by the writer and by the schema alike (ADR 0073). */
 final class ViewShape {
 
     static final String KIND = "kind";

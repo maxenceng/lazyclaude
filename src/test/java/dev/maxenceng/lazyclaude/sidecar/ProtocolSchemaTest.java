@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
 import static dev.maxenceng.lazyclaude.sidecar.ProtocolSchemaFixture.definition;
+import static dev.maxenceng.lazyclaude.sidecar.ProtocolSchemaFixture.definitionOf;
 import static dev.maxenceng.lazyclaude.sidecar.ProtocolSchemaFixture.protocolSchema;
 import static dev.maxenceng.lazyclaude.sidecar.ProtocolSchemaFixture.schemaOf;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -93,5 +94,47 @@ class ProtocolSchemaTest {
     void refuses_two_types_that_share_a_simple_name() {
         assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/clash", BoardPayload.class, ClashView.class)))
                 .isInstanceOf(DuplicateSchemaNameException.class);
+    }
+
+    @Test
+    void refuses_a_payload_component_that_holds_a_record() {
+        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/list", ListPayload.class, BoardView.class)))
+                .as("Jackson reads a record in a list as an object, the writer writes a one-component record as its component")
+                .isInstanceOf(UnschemableTypeException.class);
+    }
+
+    @Test
+    void states_a_char_as_the_text_it_is_written_as() {
+        assertThat(definitionOf(new ProtocolMethod<>("x/letter", BoardPayload.class, LetterView.class), "LetterView")
+                        .path("properties").path("letter").path("type").asString())
+                .isEqualTo("string");
+    }
+
+    @Test
+    void refuses_an_array() {
+        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/array", BoardPayload.class, ArrayView.class)))
+                .as("the writer writes an array as its identity text")
+                .isInstanceOf(UnschemableTypeException.class);
+    }
+
+    @Test
+    void refuses_an_interface_its_values_are_written_by_their_own_class() {
+        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/text", BoardPayload.class, TextView.class)))
+                .as("a record behind an interface is written as an object, not as the text the schema would state")
+                .isInstanceOf(UnschemableTypeException.class);
+    }
+
+    @Test
+    void refuses_a_sealed_type_with_a_variant_that_carries_no_kind() {
+        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/forecast", BoardPayload.class, ForecastView.class)))
+                .as("a variant without a kind breaks the discriminator a generated union narrows on")
+                .isInstanceOf(UnschemableTypeException.class);
+    }
+
+    @Test
+    void refuses_a_record_of_one_component_that_holds_itself() {
+        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/node", BoardPayload.class, NodeView.class)))
+                .as("it unwraps into itself without end")
+                .isInstanceOf(UnschemableTypeException.class);
     }
 }

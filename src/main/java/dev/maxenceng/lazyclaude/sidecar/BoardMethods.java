@@ -19,11 +19,12 @@ import tools.jackson.databind.JsonNode;
 /** The {@code board/} methods: one per operation of {@link BoardQuery}, named after it (ADR 0050). */
 final class BoardMethods {
 
-    private static final ProtocolMethod<BoardPayload> BOARD_FOR =
+    private static final ProtocolMethod<BoardPayload, BoardLookupView> BOARD_FOR =
             new ProtocolMethod<>("board/boardFor", BoardPayload.class, BoardLookupView.class);
-    private static final ProtocolMethod<BoardPayload> WATCH =
+    private static final ProtocolMethod<BoardPayload, BoardLookupView> WATCH =
             new ProtocolMethod<>("board/watch", BoardPayload.class, BoardLookupView.class);
-    private static final ProtocolNotification CHANGED = new ProtocolNotification("board/changed", BoardReadingView.class);
+    private static final ProtocolNotification<BoardReadingView> CHANGED =
+            new ProtocolNotification<>("board/changed", BoardReadingView.class);
 
     private final BoardQuery board;
     private final SidecarOutput output;
@@ -34,11 +35,11 @@ final class BoardMethods {
         this.output = output;
     }
 
-    static List<ProtocolMethod<?>> signatures() {
+    static List<ProtocolMethod<?, ?>> protocolMethods() {
         return List.of(BOARD_FOR, WATCH);
     }
 
-    static List<ProtocolNotification> notifications() {
+    static List<ProtocolNotification<?>> protocolNotifications() {
         return List.of(CHANGED);
     }
 
@@ -47,13 +48,13 @@ final class BoardMethods {
     }
 
     private SidecarAnswer boardFor(JsonNode params) {
-        return SidecarAnswer.of(SidecarJson.tree(board.boardFor(SidecarJson.params(params, BOARD_FOR.params()))));
+        return SidecarAnswer.of(SidecarJson.tree(BOARD_FOR.answer(params, board::boardFor)));
     }
 
     /** The watch opens once the current board is queued, so no {@code board/changed} reaches the frontend before the board it changes. */
     // deferred: a change between this read and the watch starting is pushed only at the next change — close it when a ticket edited as the frontend connects is seen stale.
     private SidecarAnswer watch(JsonNode params) {
-        BoardLookupView current = board.boardFor(SidecarJson.params(params, WATCH.params()));
+        BoardLookupView current = WATCH.answer(params, board::boardFor);
         JsonNode result = SidecarJson.tree(current);
         return switch (current) {
             case BoardReadingView read -> new SidecarAnswer(result, () -> watchOnce(read));
@@ -80,7 +81,7 @@ final class BoardMethods {
     private void pushBoardOf(Path root) {
         board.boardAfterChange(new BoardAfterChangePayload(root, shown.get(root) instanceof BoardView)).ifPresent(view -> {
             shown.put(root, view);
-            output.send(JsonRpcMessages.notification(CHANGED.name(), SidecarJson.tree(view)));
+            output.send(CHANGED.message(view));
         });
     }
 }

@@ -1,10 +1,13 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,9 +20,10 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * The JSON Schema of the protocol, written from the Payloads and Views by the same rules {@link SidecarJson} writes them with
- * (ADR 0050). Results and notification params are written; params are read by Jackson into the Payload's components, so a Payload is
- * an object of all of them. A library would have every one of those rules overridden, so the schema is written here.
+ * The JSON Schema of the protocol, written from the Payloads and Views by the rules {@link SidecarJson} writes them with (ADR 0073).
+ * Results and notification params are written; params are read by Jackson into the Payload's components, so a Payload is an object of
+ * all of them. The writer looks at a value's runtime class and this at a declared type, so a declared type whose values could be
+ * written another way than it states (an interface, an abstract class, an array) is refused rather than guessed.
  */
 final class ProtocolSchema {
 
@@ -59,20 +63,24 @@ final class ProtocolSchema {
             Set.of(int.class, long.class, short.class, byte.class, Integer.class, Long.class, Short.class, Byte.class);
     private static final String CANNOT_STATE = "the protocol cannot state %s: %s";
     private static final String NOT_JSON = "its shape has to change before it is written as JSON";
-    private static final String NO_RECORD_PARAMS = "a Payload component that is a record or a sealed type is not read yet";
+    private static final String NO_RECORD_PARAMS = "a Payload component that is or holds a record or a sealed type is not read yet";
+    private static final String NOT_WRITTEN_ONE_WAY = "its values are written by their own class, which it does not name";
+    private static final String NO_KIND = "a variant that is not a record or a sealed type carries no kind";
+    private static final String HOLDS_ITSELF = "a record of one component is written as that component, so it cannot hold itself";
     private static final String OF = "%s of %s";
     private static final String SAME_NAME = "%s and %s share the name %s, which keys the schema's definitions";
 
     private final Map<String, Class<?>> owners = new TreeMap<>();
     private final Map<String, JsonNode> definitions = new TreeMap<>();
+    private final Set<Class<?>> unwrapping = new HashSet<>();
 
     private ProtocolSchema() {}
 
-    static String text(List<ProtocolMethod<?>> methods, List<ProtocolNotification> notifications) {
+    static String text(List<ProtocolMethod<?, ?>> methods, List<ProtocolNotification<?>> notifications) {
         return SidecarJson.pretty(new ProtocolSchema().root(methods, notifications));
     }
 
-    private ObjectNode root(List<ProtocolMethod<?>> methods, List<ProtocolNotification> notifications) {
+    private ObjectNode root(List<ProtocolMethod<?, ?>> methods, List<ProtocolNotification<?>> notifications) {
         ObjectNode methodProperties = SidecarJson.object();
         methods.forEach(method -> methodProperties.set(method.name(), call(method)));
         ObjectNode notificationProperties = SidecarJson.object();
@@ -93,14 +101,14 @@ final class ProtocolSchema {
         return root;
     }
 
-    private ObjectNode call(ProtocolMethod<?> method) {
+    private ObjectNode call(ProtocolMethod<?, ?> method) {
         ObjectNode properties = SidecarJson.object();
         properties.set(PARAMS, definePayload(method.params()));
         properties.set(RESULT, written(method.result()));
         return closedObject(properties);
     }
 
-    private ObjectNode push(ProtocolNotification notification) {
+    private ObjectNode push(ProtocolNotification<?> notification) {
         ObjectNode properties = SidecarJson.object();
         properties.set(PARAMS, written(notification.params()));
         return closedObject(properties);
@@ -138,12 +146,19 @@ final class ProtocolSchema {
     }
 
     private JsonNode read(RecordComponent component) {
-        Class<?> type = component.getType();
-        if (type.isRecord() || type.isSealed()) {
+        if (holdsARecord(component.getGenericType())) {
             // deferred: a Payload cannot take a record or a sealed type — close it when a method takes one, with a test of how Jackson reads it.
             throw new UnschemableTypeException(CANNOT_STATE.formatted(OF.formatted(component.getName(), component.getDeclaringRecord().getSimpleName()), NO_RECORD_PARAMS));
         }
         return written(component.getGenericType());
+    }
+
+    private static boolean holdsARecord(Type type) {
+        return switch (type) {
+            case ParameterizedType generic -> Arrays.stream(generic.getActualTypeArguments()).anyMatch(ProtocolSchema::holdsARecord);
+            case Class<?> plain -> plain.isRecord() || plain.isSealed();
+            default -> false;
+        };
     }
 
     private JsonNode written(Type type) {
@@ -177,10 +192,13 @@ final class ProtocolSchema {
         if (INTEGERS.contains(type)) {
             return typed(INTEGER);
         }
+        if (type == char.class || type == Character.class) {
+            return typed(STRING);
+        }
         if (Number.class.isAssignableFrom(type) || type.isPrimitive()) {
             return typed(NUMBER);
         }
-        if (Map.class.isAssignableFrom(type) || Optional.class.equals(type) || Collection.class.isAssignableFrom(type)) {
+        if (Map.class.isAssignableFrom(type) || Optional.class.equals(type) || Collection.class.isAssignableFrom(type) || type.isArray()) {
             throw new UnschemableTypeException(CANNOT_STATE.formatted(type.getTypeName(), NOT_JSON));
         }
         if (type.isEnum()) {
@@ -192,14 +210,17 @@ final class ProtocolSchema {
         if (type.isRecord()) {
             return writtenRecord(type);
         }
-        return typed(STRING);
+        if (Path.class.equals(type) || !type.isInterface() && Modifier.isFinal(type.getModifiers())) {
+            return typed(STRING);
+        }
+        throw new UnschemableTypeException(CANNOT_STATE.formatted(type.getTypeName(), NOT_WRITTEN_ONE_WAY));
     }
 
     private JsonNode writtenRecord(Class<?> type) {
         RecordComponent[] components = type.getRecordComponents();
         boolean variant = ViewShape.isVariantOfASealedType(type);
         if (components.length == 1 && !variant) {
-            return written(components[0].getGenericType());
+            return unwrapped(type, components[0]);
         }
         return define(type, () -> {
             ObjectNode properties = SidecarJson.object();
@@ -211,11 +232,27 @@ final class ProtocolSchema {
         });
     }
 
+    private JsonNode unwrapped(Class<?> type, RecordComponent component) {
+        if (!unwrapping.add(type)) {
+            throw new UnschemableTypeException(CANNOT_STATE.formatted(type.getTypeName(), HOLDS_ITSELF));
+        }
+        JsonNode node = written(component.getGenericType());
+        unwrapping.remove(type);
+        return node;
+    }
+
     private ObjectNode alternatives(Class<?> sealed) {
         ObjectNode node = SidecarJson.object();
-        node.set(ONE_OF, SidecarJson.array(Arrays.stream(sealed.getPermittedSubclasses()).map(this::writtenClass).toList()));
+        node.set(ONE_OF, SidecarJson.array(Arrays.stream(sealed.getPermittedSubclasses()).map(this::variant).toList()));
         node.putObject(DISCRIMINATOR).put(PROPERTY_NAME, ViewShape.KIND);
         return node;
+    }
+
+    private JsonNode variant(Class<?> type) {
+        if (!type.isRecord() && !type.isSealed()) {
+            throw new UnschemableTypeException(CANNOT_STATE.formatted(type.getTypeName(), NO_KIND));
+        }
+        return writtenClass(type);
     }
 
     private static ObjectNode enumeration(Class<?> type) {

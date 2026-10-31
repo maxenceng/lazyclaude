@@ -2,15 +2,20 @@ package dev.maxenceng.lazyclaude.sidecar;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.util.DefaultIndenter;
+import tools.jackson.core.util.DefaultPrettyPrinter;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.cfg.EnumFeature;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.NullNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -19,15 +24,21 @@ import tools.jackson.databind.node.ObjectNode;
  * The one place Jackson is used for the protocol: it parses lines and params, and writes the Views the contexts answer with. Views and
  * Payloads carry no annotation, so how they are written is decided here (ADR 0050): a record that is one of a sealed type's variants
  * is an object led by its {@code kind}, a record of one component is that component, any other record is an object of its
- * components, and anything else (a path, an instant, an enum constant) is its text.
+ * components, an enum constant is its name, and anything else (a path, an instant) is its text. Params are read the same way: an enum
+ * by its name, a path by {@link Path#of}.
  */
 final class SidecarJson {
 
     private static final JsonMapper MAPPER = JsonMapper.builder()
             .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES)
             .enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES)
+            .disable(EnumFeature.READ_ENUMS_USING_TO_STRING)
+            .addModule(new SimpleModule().addDeserializer(Path.class, new PathParamDeserializer()))
             .build();
     private static final String NEWLINE = "\n";
+    private static final String INDENT = "  ";
+    private static final DefaultPrettyPrinter PRETTY =
+            new DefaultPrettyPrinter().withObjectIndenter(new DefaultIndenter(INDENT, NEWLINE));
     private static final String INVALID_PARAMS = "invalid params: %s";
     private static final String NOT_AN_OBJECT = "they are not an object";
 
@@ -41,9 +52,9 @@ final class SidecarJson {
         return MAPPER.writeValueAsString(message);
     }
 
-    /** A tree as the committed files show it: indented, keys in the order they were set, ending in a newline. */
+    /** A tree as the committed files show it: indented, keys in the order they were set, lines ending in {@code \n} on every OS. */
     static String pretty(JsonNode tree) {
-        return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(tree) + NEWLINE;
+        return MAPPER.writer().with(PRETTY).writeValueAsString(tree) + NEWLINE;
     }
 
     static ArrayNode array(List<? extends JsonNode> items) {

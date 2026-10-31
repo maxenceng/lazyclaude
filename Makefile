@@ -98,7 +98,8 @@ package: ## Build the runnable jar into target/lazyclaude.jar
 	$(MVN) -q package -DskipTests
 
 protocol-schema: package ## Write docs/protocol/protocol.schema.json from the sidecar's Views and Payloads
-	@$(JAVA) -jar $(JAR) --protocol-schema > docs/protocol/protocol.schema.json
+	@$(JAVA) -jar $(JAR) --protocol-schema > target/protocol.schema.json
+	@mv target/protocol.schema.json docs/protocol/protocol.schema.json
 
 run: package ## Start the TUI in this terminal
 	@$(JAVA) --enable-native-access=ALL-UNNAMED -jar $(JAR)

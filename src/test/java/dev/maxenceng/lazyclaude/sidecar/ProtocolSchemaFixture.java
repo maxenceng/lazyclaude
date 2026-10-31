@@ -21,8 +21,12 @@ public final class ProtocolSchemaFixture {
         return protocolSchema().path("$defs").path(name);
     }
 
-    public static String schemaOf(ProtocolMethod<?> method) {
+    public static String schemaOf(ProtocolMethod<?, ?> method) {
         return ProtocolSchema.text(List.of(method), List.of());
+    }
+
+    public static JsonNode definitionOf(ProtocolMethod<?, ?> method, String name) {
+        return SidecarJson.parse(schemaOf(method)).path("$defs").path(name);
     }
 
     public static String committedProtocolSchema() throws IOException {
