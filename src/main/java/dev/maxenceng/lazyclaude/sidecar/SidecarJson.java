@@ -31,6 +31,7 @@ final class SidecarJson {
     private static final String KIND = "kind";
     private static final String VIEW = "View";
     private static final String INVALID_PARAMS = "invalid params: %s";
+    private static final String NOT_AN_OBJECT = "they are not an object";
 
     private SidecarJson() {}
 
@@ -46,8 +47,11 @@ final class SidecarJson {
         return MAPPER.createObjectNode();
     }
 
-    /** @throws JsonRpcFaultException when {@code params} are not a {@code type}, or leave out a component of it */
+    /** @throws JsonRpcFaultException when {@code params} are missing, are not an object, or leave out a component of {@code type} */
     static <T> T params(JsonNode params, Class<T> type) {
+        if (!params.isObject()) {
+            throw new JsonRpcFaultException(ErrorCode.INVALID_PARAMS, INVALID_PARAMS.formatted(NOT_AN_OBJECT));
+        }
         try {
             return MAPPER.treeToValue(params, type);
         } catch (JacksonException e) {

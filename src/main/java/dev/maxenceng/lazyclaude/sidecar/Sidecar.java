@@ -15,8 +15,6 @@ import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 
-import tools.jackson.databind.JsonNode;
-
 /**
  * The backend a desktop frontend drives: JSON-RPC 2.0, one message per line, requests answered on the sidecar's own executor in any
  * order, matched by {@code id}. It ends when stdin does (ADR 0050).
@@ -28,6 +26,7 @@ public final class Sidecar {
     private static final int STDIN_FAILED = 1;
     private static final String UNKNOWN_METHOD = "unknown method: %s";
     private static final String FAILED = "%s failed";
+    private static final String UNANSWERED = "notification %s not handled: %s";
     private static final String CANNOT_READ_STDIN = "cannot read stdin";
     private static final String INTERNAL_MESSAGE = "internal error";
     private static final System.Logger LOG = System.getLogger(Sidecar.class.getName());
@@ -61,7 +60,7 @@ public final class Sidecar {
     private static void answer(String line, Map<String, SidecarMethod> methods, SidecarOutput output) {
         try {
             switch (JsonRpcReader.read(line)) {
-                case JsonRpcRequest request -> output.send(respondTo(request, methods));
+                case JsonRpcRequest request -> respondTo(request, methods, output);
                 case JsonRpcNotification notification -> handle(notification, methods);
             }
         } catch (JsonRpcFaultException unreadable) {
@@ -69,26 +68,42 @@ public final class Sidecar {
         }
     }
 
-    private static JsonNode respondTo(JsonRpcRequest request, Map<String, SidecarMethod> methods) {
+    /** The result is queued before what the method does afterwards, which fails only into the log: the request has its answer. */
+    private static void respondTo(JsonRpcRequest request, Map<String, SidecarMethod> methods, SidecarOutput output) {
+        SidecarAnswer answer;
         try {
-            return JsonRpcMessages.result(request.id(), invoke(request, methods));
+            answer = invoke(request, methods);
         } catch (JsonRpcFaultException fault) {
-            return JsonRpcMessages.fault(request.id(), fault.code(), fault.getMessage());
+            output.send(JsonRpcMessages.fault(request.id(), fault.code(), fault.getMessage()));
+            return;
         } catch (RuntimeException failure) {
             LOG.log(System.Logger.Level.ERROR, FAILED.formatted(request.method()), failure);
-            return JsonRpcMessages.fault(request.id(), ErrorCode.INTERNAL_ERROR, shortMessage(failure));
+            output.send(JsonRpcMessages.fault(request.id(), ErrorCode.INTERNAL_ERROR, shortMessage(failure)));
+            return;
         }
+        output.send(JsonRpcMessages.result(request.id(), answer.result()));
+        runAfterwards(request, answer);
     }
 
     private static void handle(JsonRpcNotification notification, Map<String, SidecarMethod> methods) {
         try {
-            invoke(notification, methods);
+            runAfterwards(notification, invoke(notification, methods));
+        } catch (JsonRpcFaultException fault) {
+            LOG.log(System.Logger.Level.DEBUG, UNANSWERED.formatted(notification.method(), fault.getMessage()));
         } catch (RuntimeException failure) {
             LOG.log(System.Logger.Level.ERROR, FAILED.formatted(notification.method()), failure);
         }
     }
 
-    private static JsonNode invoke(JsonRpcCall call, Map<String, SidecarMethod> methods) {
+    private static void runAfterwards(JsonRpcCall call, SidecarAnswer answer) {
+        try {
+            answer.afterwards().run();
+        } catch (RuntimeException failure) {
+            LOG.log(System.Logger.Level.ERROR, FAILED.formatted(call.method()), failure);
+        }
+    }
+
+    private static SidecarAnswer invoke(JsonRpcCall call, Map<String, SidecarMethod> methods) {
         return Optional.ofNullable(methods.get(call.method()))
                 .orElseThrow(() -> new JsonRpcFaultException(ErrorCode.METHOD_NOT_FOUND, UNKNOWN_METHOD.formatted(call.method())))
                 .call(call.params());

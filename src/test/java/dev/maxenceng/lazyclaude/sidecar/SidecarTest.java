@@ -5,9 +5,11 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFix
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.boardForOtherProject;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.boardForProject;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.callOfAnotherVersion;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.changed;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.errorResponse;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.exitCodeOf;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.failingAndReleasing;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.faultWithCode;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.linesWritten;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.noProject;
@@ -19,6 +21,7 @@ import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.payload;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.ready;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.releasing;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.request;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.requestWithoutParams;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.resultOf;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.signalAtOnce;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.ticketBoard;
@@ -95,6 +98,21 @@ class SidecarTest {
     }
 
     @Test
+    void answers_null_params_with_the_invalid_params_code() {
+        assertThat(linesWritten(board, request(3, "board/boardFor", "null")).get(1)).startsWith(faultWithCode("3", -32602));
+    }
+
+    @Test
+    void answers_a_request_without_params_with_the_invalid_params_code() {
+        assertThat(linesWritten(board, requestWithoutParams(3, "board/boardFor")).get(1)).startsWith(faultWithCode("3", -32602));
+    }
+
+    @Test
+    void answers_a_call_of_another_json_rpc_version_with_the_invalid_request_code() {
+        assertThat(linesWritten(board, callOfAnotherVersion()).get(1)).startsWith(faultWithCode("null", -32600));
+    }
+
+    @Test
     void answers_params_that_are_not_an_object_with_the_invalid_params_code() {
         assertThat(linesWritten(board, request(3, "board/boardFor", "\"here\"")).get(1)).startsWith(faultWithCode("3", -32602));
     }
@@ -167,7 +185,19 @@ class SidecarTest {
         doAnswer(signalAtOnce()).when(board).subscribe(any(), any());
 
         assertThat(linesWritten(board, watchProject(1)))
-                .containsExactlyInAnyOrder(ready(), resultOf(1, ticketlessBoard()), changed(ticketlessBoard()));
+                .as("a change pushed before the watch's answer would be overwritten by the older board it carries")
+                .containsExactly(ready(), resultOf(1, ticketlessBoard()), changed(ticketlessBoard()));
+    }
+
+    @Test
+    void opens_the_watch_again_on_the_next_request_when_it_failed_to_start() {
+        CountDownLatch failed = new CountDownLatch(1);
+        when(board.boardFor(payload())).thenReturn(boardViewOf()).thenAnswer(waitingFor(failed, boardViewOf()));
+        doAnswer(failingAndReleasing(failed)).doNothing().when(board).subscribe(any(), any());
+
+        linesWritten(board, watchProject(1), watchProject(2));
+
+        verify(board, times(2)).subscribe(any(), any());
     }
 
     @Test

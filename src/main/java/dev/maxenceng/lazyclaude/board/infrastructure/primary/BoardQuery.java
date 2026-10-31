@@ -4,7 +4,7 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 
-/** What the shell asks of `board`: the board of a working directory, as a view. It only reads. */
+/** What a frontend asks of `board`: the board of a working directory, as a view. It only reads. */
 public final class BoardQuery {
 
     private final BoardApplicationService boards;

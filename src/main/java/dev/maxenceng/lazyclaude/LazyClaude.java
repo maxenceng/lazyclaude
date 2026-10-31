@@ -105,6 +105,10 @@ public final class LazyClaude {
 
     static void main(String[] arguments) throws Exception {
         boolean sidecar = Arrays.asList(arguments).contains(SIDECAR);
+        OutputStream protocol = System.out;
+        if (sidecar) {
+            System.setOut(System.err);
+        }
         WarningRepository warningRepository = new WarningRepository();
         Path home = Path.of(System.getProperty(USER_HOME));
         int exit = configured(
@@ -115,7 +119,7 @@ public final class LazyClaude {
                 System.err,
                 configuration -> {
                     if (sidecar) {
-                        serve(warningRepository);
+                        serve(protocol, warningRepository);
                     } else {
                         open(configuration, warningRepository);
                     }
@@ -126,12 +130,10 @@ public final class LazyClaude {
     }
 
     /**
-     * Answers the desktop frontend on stdin and stdout until stdin closes (ADR 0050). Stdout is the protocol's alone, so anything else
-     * that prints to it, a library included, is sent to stderr instead.
+     * Answers the desktop frontend on stdin and {@code protocol}, the real stdout, until stdin closes (ADR 0050). {@code main} sends
+     * {@code System.out} to stderr before anything is built, so nothing else, a library included, prints into the protocol.
      */
-    private static void serve(WarningRepository warningRepository) {
-        OutputStream protocol = System.out;
-        System.setOut(System.err);
+    private static void serve(OutputStream protocol, WarningRepository warningRepository) {
         System.exit(new Sidecar(boardQuery(warningRepository)).run(System.in, protocol));
     }
 

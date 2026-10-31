@@ -5,7 +5,7 @@ import dev.maxenceng.lazyclaude.board.domain.BoardReading;
 import dev.maxenceng.lazyclaude.board.domain.UnavailableBoard;
 import dev.maxenceng.lazyclaude.board.published.ProjectRoot;
 
-/** A project's board as the shell reads it: its tickets, or why its issues could not be read; either way the root it was read from. */
+/** A project's board as a frontend reads it: its tickets, or why its issues could not be read; either way the root it was read from. */
 public sealed interface BoardReadingView extends BoardLookupView permits BoardView, UnavailableBoardView {
 
     ProjectRoot root();

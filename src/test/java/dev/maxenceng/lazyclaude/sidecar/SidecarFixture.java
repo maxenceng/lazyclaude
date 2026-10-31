@@ -60,6 +60,14 @@ public final class SidecarFixture {
         return "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"%s\",\"params\":%s}".formatted(id, method, params);
     }
 
+    public static String requestWithoutParams(int id, String method) {
+        return "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"%s\"}".formatted(id, method);
+    }
+
+    public static String callOfAnotherVersion() {
+        return "{\"jsonrpc\":\"1.0\",\"id\":1,\"method\":\"board/boardFor\",\"params\":{\"from\":\"/work/app\"}}";
+    }
+
     public static String boardForProject(int id) {
         return request(id, "board/boardFor", "{\"from\":\"/work/app\"}");
     }
@@ -141,6 +149,13 @@ public final class SidecarFixture {
         return call -> {
             call.<Runnable>getArgument(1).run();
             return null;
+        };
+    }
+
+    public static Answer<Object> failingAndReleasing(CountDownLatch released) {
+        return _ -> {
+            released.countDown();
+            throw new IllegalStateException("the watch could not start");
         };
     }
 

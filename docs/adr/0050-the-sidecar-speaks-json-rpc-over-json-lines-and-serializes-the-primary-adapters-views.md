@@ -28,7 +28,7 @@ what is already there.
   (`board/boardFor`, `session/startTicket`). The protocol grows when a primary adapter grows.
 - **A domain outcome is a result.** Refused and unavailable Views travel as results, as the TUI gets them. `error`
   carries only faults: an unparseable line, an unknown method, invalid params, and an uncaught exception, which gets a
-  short message while its stack trace goes to stderr. The codes are JSON-RPC's standard ones plus one internal code.
+  short message while its stack trace goes to stderr. The codes are JSON-RPC's standard ones, its internal error included; none is the sidecar's own.
 - **Watches are requests and pushes.** `board/watch`, `docs/watch`, `session/watch` and `warning/watch` each answer the
   current View (where the primary adapter only signals a change, the sidecar reads the View again itself), then push `<context>/changed` notifications carrying the next one in full, the latest winning. Calling
   a watch again returns the current View and opens nothing new. A watch nobody asked for never runs. Rejected:

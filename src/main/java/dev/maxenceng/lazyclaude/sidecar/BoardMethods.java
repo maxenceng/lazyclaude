@@ -10,6 +10,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardWatchPayload;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
 
 import tools.jackson.databind.JsonNode;
 
@@ -33,25 +34,34 @@ final class BoardMethods {
         return Map.of(BOARD_FOR, this::boardFor, WATCH, this::watch);
     }
 
-    private JsonNode boardFor(JsonNode params) {
-        return SidecarJson.tree(board.boardFor(SidecarJson.params(params, BoardPayload.class)));
+    private SidecarAnswer boardFor(JsonNode params) {
+        return SidecarAnswer.of(SidecarJson.tree(board.boardFor(SidecarJson.params(params, BoardPayload.class))));
     }
 
+    /** The watch opens once the current board is queued, so no {@code board/changed} reaches the frontend before the board it changes. */
     // deferred: a change between this read and the watch starting is pushed only at the next change — close it when a ticket edited as the frontend connects is seen stale.
-    private JsonNode watch(JsonNode params) {
+    private SidecarAnswer watch(JsonNode params) {
         BoardLookupView current = board.boardFor(SidecarJson.params(params, BoardPayload.class));
-        if (current instanceof BoardReadingView read) {
-            watchOnce(read.root().value());
-        }
-        return SidecarJson.tree(current);
+        JsonNode result = SidecarJson.tree(current);
+        return switch (current) {
+            case BoardReadingView read -> new SidecarAnswer(result, () -> watchOnce(read.root().value()));
+            case NoProjectView _ -> SidecarAnswer.of(result);
+        };
     }
 
+    /** A watch that failed to open is forgotten, so the next {@code board/watch} of the project tries again. */
     private void watchOnce(Path root) {
         if (watched.add(root)) {
-            board.subscribe(new BoardWatchPayload(root), () -> pushBoardOf(root));
+            try {
+                board.subscribe(new BoardWatchPayload(root), () -> pushBoardOf(root));
+            } catch (RuntimeException failure) {
+                watched.remove(root);
+                throw failure;
+            }
         }
     }
 
+    // deferred: an unavailable board is never pushed again, so its first reason stays — close it when the shell's read-after-a-change rule moves into board.
     private void pushBoardOf(Path root) {
         board.boardReadAgainFor(new BoardPayload(root))
                 .ifPresent(view -> output.send(JsonRpcMessages.notification(CHANGED, SidecarJson.tree(view))));

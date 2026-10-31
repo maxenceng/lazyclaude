@@ -2,9 +2,9 @@ package dev.maxenceng.lazyclaude.sidecar;
 
 import tools.jackson.databind.JsonNode;
 
-/** One protocol method: the params of a call in, its result out. */
+/** One protocol method: the params of a call in, its answer out. */
 @FunctionalInterface
 interface SidecarMethod {
 
-    JsonNode call(JsonNode params);
+    SidecarAnswer call(JsonNode params);
 }

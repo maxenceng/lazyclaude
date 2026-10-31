@@ -7,7 +7,7 @@ import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.resultOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
-import java.util.stream.Stream;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -51,9 +51,11 @@ class SidecarProtocolTest {
             sidecar.nextLine();
             sidecar.send(request(1, "board/watch", "{\"from\":\"%s\"}".formatted(sidecar.projectPath())));
 
-            assertThat(Stream.of(sidecar.nextLine(), sidecar.nextLine()))
-                    .anyMatch(line -> line.startsWith("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"kind\":\"board\""))
-                    .anyMatch(line -> line.startsWith("{\"jsonrpc\":\"2.0\",\"method\":\"board/changed\",\"params\":{\"kind\":\"board\""));
+            assertThat(List.of(sidecar.nextLine(), sidecar.nextLine()))
+                    .as("the watch's answer comes before any change it pushes")
+                    .satisfiesExactly(
+                            line -> assertThat(line).startsWith("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"kind\":\"board\""),
+                            line -> assertThat(line).startsWith("{\"jsonrpc\":\"2.0\",\"method\":\"board/changed\",\"params\":{\"kind\":\"board\""));
         }
     }
 
