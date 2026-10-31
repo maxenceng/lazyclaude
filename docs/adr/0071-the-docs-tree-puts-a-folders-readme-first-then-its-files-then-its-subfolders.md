@@ -22,12 +22,13 @@ panel by name alone put `docs/README.md` after every folder whose name sorts bef
 - **Names still compare segment by segment**, so `adr/…` comes before `adr-old/…`. A folder with no `README.md`
   orders its files and subfolders by name, as before.
 - **The rule is `DocumentPath`'s comparison.** `DocsPort.paths` hands paths over in that order and `DocsTree.of` keeps
-  it, as ADR 0018 decided.
+  it, as ADR 0018 decided. `DocsTree` holds a level's files apart from its folders, so its shape agrees with the
+  files-before-subfolders tier rather than depending on it; the tier is what makes the flat list read in tree order.
 - **`README.md` is matched exactly**, by case, as the site build does; `index.md` gets no special place, because the
   site is built from `README.md`.
 
 ## Consequences
 
 - The panel opens on `docs/README.md` and shows each folder's index first, as the site does, with no `nav:` to parse.
-- A folder whose index is named differently (`readme.md`, `index.md`) sorts among its files by name; switching the
-  site to `index.md` means changing this rule with it.
+- A folder whose index is named differently (`readme.md`, `index.md`) sorts among its files by name. README-as-index
+  is the convention the panel follows for every project, whether or not it builds a site.

@@ -143,7 +143,9 @@ class DocumentPathTest {
     }
 
     @Test
-    void shouldOrderAFolderBeforeTheFolderItStartsWith() {
-        assertThat(adrPath()).isLessThan(deepPath());
+    void shouldOrderAFolderNamedReadmeAmongTheFolders() {
+        assertThat(documentPath())
+                .as("only a file named README.md heads a level, not a folder of that name")
+                .isLessThan(new DocumentPath("README.md/0000-first.md"));
     }
 }
