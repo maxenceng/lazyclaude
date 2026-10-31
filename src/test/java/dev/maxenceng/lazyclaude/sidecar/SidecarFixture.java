@@ -29,6 +29,7 @@ public final class SidecarFixture {
 
     private static final String NEWLINE = "\n";
     private static final Duration PATIENCE = Duration.ofSeconds(10);
+    private static final Duration OVERLAP = Duration.ofMillis(200);
 
     private SidecarFixture() {}
 
@@ -211,14 +212,15 @@ public final class SidecarFixture {
         };
     }
 
-    public static Answer<Object> failingAndReleasing(CountDownLatch released) {
+    public static Answer<Object> failingAfterReleasing(CountDownLatch released) {
         return _ -> {
             released.countDown();
+            Thread.sleep(OVERLAP);
             throw new IllegalStateException("the watch could not start");
         };
     }
 
-    public static Answer<BoardReadingView> waitingFor(CountDownLatch released, BoardReadingView answer) {
+    public static <V> Answer<V> waitingFor(CountDownLatch released, V answer) {
         return _ -> {
             if (!released.await(PATIENCE.toSeconds(), TimeUnit.SECONDS)) {
                 throw new IllegalStateException("the other request was never answered");

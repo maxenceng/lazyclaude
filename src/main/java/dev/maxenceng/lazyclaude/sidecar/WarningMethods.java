@@ -42,7 +42,8 @@ final class WarningMethods {
         return new SidecarAnswer(SidecarJson.tree(WATCH.answer(params, _ -> warnings.held())), this::watchOnce);
     }
 
-    private void watchOnce() {
+    /** A watch that failed to open is forgotten before another {@code warning/watch} is let in, so that one tries again. */
+    private synchronized void watchOnce() {
         if (watching.compareAndSet(false, true)) {
             try {
                 warnings.watch(view -> output.send(CHANGED.message(view)));

@@ -30,11 +30,13 @@ import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.sessionsPar
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.startedHost;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.ticketHostedParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.typedPtyInputParams;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.failingAfterReleasing;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.linesWritten;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.notification;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.ready;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.request;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.resultOf;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.waitingFor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -44,6 +46,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -172,6 +175,18 @@ class SessionSidecarTest {
                 .filteredOn(line -> line.contains("\"result\""))
                 .hasSize(2);
         verify(sessions, times(1)).subscribe(any(), any());
+    }
+
+    @Test
+    void opens_the_watch_again_on_a_request_that_overlaps_one_failing_to_start() {
+        CountDownLatch failing = new CountDownLatch(1);
+        when(sessions.sessionsFor(any())).thenReturn(emptySessionsView()).thenAnswer(waitingFor(failing, emptySessionsView()));
+        doAnswer(failingAfterReleasing(failing)).doNothing().when(sessions).subscribe(any(), any());
+
+        linesWritten(sessions, hosting, request(1, "session/watch", sessionsParams()), request(2, "session/watch", sessionsParams()));
+
+        verify(sessions, times(2).description("a watch that let the second request in before forgetting the failed claim leaves the project unwatched"))
+                .subscribe(any(), any());
     }
 
     @Test

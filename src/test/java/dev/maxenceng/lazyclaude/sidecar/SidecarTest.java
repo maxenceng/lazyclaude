@@ -12,7 +12,7 @@ import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.callOfAnotherVersi
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.changed;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.errorResponse;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.exitCodeOf;
-import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.failingAndReleasing;
+import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.failingAfterReleasing;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.faultWithCode;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.linesWritten;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.noProject;
@@ -197,14 +197,15 @@ class SidecarTest {
     }
 
     @Test
-    void opens_the_watch_again_on_the_next_request_when_it_failed_to_start() {
-        CountDownLatch failed = new CountDownLatch(1);
-        when(board.boardFor(payload())).thenReturn(boardViewOf()).thenAnswer(waitingFor(failed, boardViewOf()));
-        doAnswer(failingAndReleasing(failed)).doNothing().when(board).subscribe(any(), any());
+    void opens_the_watch_again_on_a_request_that_overlaps_one_failing_to_start() {
+        CountDownLatch failing = new CountDownLatch(1);
+        when(board.boardFor(payload())).thenReturn(boardViewOf()).thenAnswer(waitingFor(failing, boardViewOf()));
+        doAnswer(failingAfterReleasing(failing)).doNothing().when(board).subscribe(any(), any());
 
         linesWritten(board, watchProject(1), watchProject(2));
 
-        verify(board, times(2)).subscribe(any(), any());
+        verify(board, times(2).description("a watch that let the second request in before forgetting the failed claim leaves the project unwatched"))
+                .subscribe(any(), any());
     }
 
     @Test

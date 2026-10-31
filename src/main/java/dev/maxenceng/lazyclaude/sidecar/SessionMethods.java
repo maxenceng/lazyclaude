@@ -99,8 +99,8 @@ final class SessionMethods {
         return new SidecarAnswer(SidecarJson.tree(current), () -> watchOnce(payload));
     }
 
-    /** A watch that failed to open is forgotten, so the next {@code session/watch} of the project tries again. */
-    private void watchOnce(SessionPayload payload) {
+    /** A watch that failed to open is forgotten before another {@code session/watch} of the project is let in, so that one tries again. */
+    private synchronized void watchOnce(SessionPayload payload) {
         if (watching.add(payload.root())) {
             try {
                 sessions.subscribe(payload, view -> output.send(CHANGED.message(view)));
