@@ -4,6 +4,7 @@ import static dev.maxenceng.lazyclaude.sidecar.ProtocolCoverageFixture.notYetOnT
 import static dev.maxenceng.lazyclaude.sidecar.ProtocolCoverageFixture.operations;
 import static dev.maxenceng.lazyclaude.sidecar.ProtocolCoverageFixture.protocolMethods;
 import static dev.maxenceng.lazyclaude.sidecar.ProtocolCoverageFixture.servedByAWatch;
+import static dev.maxenceng.lazyclaude.sidecar.ProtocolCoverageFixture.servedUnderAnotherName;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -18,6 +19,7 @@ class ProtocolCoverageTest {
         List<String> unaccounted = operations().stream()
                 .filter(operation -> !protocolMethods().contains(operation))
                 .filter(operation -> !servedByAWatch().contains(operation))
+                .filter(operation -> !servedUnderAnotherName().contains(operation))
                 .filter(operation -> !notYetOnTheProtocol().contains(operation))
                 .toList();
 
@@ -28,7 +30,8 @@ class ProtocolCoverageTest {
 
     @Test
     void an_operation_listed_as_not_yet_on_the_protocol_is_not_a_protocol_method() {
-        List<String> listedAndServed = Stream.concat(notYetOnTheProtocol().stream(), servedByAWatch().stream())
+        List<String> listedAndServed = Stream.of(notYetOnTheProtocol(), servedByAWatch(), servedUnderAnotherName())
+                .flatMap(List::stream)
                 .filter(protocolMethods()::contains)
                 .toList();
 
@@ -37,7 +40,7 @@ class ProtocolCoverageTest {
 
     @Test
     void every_operation_listed_as_not_yet_on_the_protocol_still_exists() {
-        assertThat(operations()).as("an operation that was removed or renamed goes off the list").containsAll(notYetOnTheProtocol()).containsAll(servedByAWatch());
+        assertThat(operations()).as("an operation that was removed or renamed goes off the list").containsAll(notYetOnTheProtocol()).containsAll(servedByAWatch()).containsAll(servedUnderAnotherName());
     }
 
     @Test

@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executors;
 
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 import dev.maxenceng.lazyclaude.board.application.TicketCaptureApplicationService;
@@ -63,6 +64,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.NotifySendRepos
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TimerRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptCacheFile;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchRepository;
@@ -102,6 +104,7 @@ public final class LazyClaude {
     private static final List<String> NOTIFY_SEND = List.of("notify-send");
     private static final List<String> GDBUS = List.of("gdbus");
     private static final Duration NOTIFY_PATIENCE = Duration.ofSeconds(5);
+    private static final String REPAINT_THREAD = "session-repaint";
     private static final String GH = "gh";
     private static final Duration GH_PATIENCE = Duration.ofSeconds(30);
 
@@ -127,7 +130,7 @@ public final class LazyClaude {
                 System.err,
                 configuration -> {
                     if (sidecar) {
-                        serve(protocol, warningRepository);
+                        serve(protocol, warningRepository, configuration.desktopNotifications());
                     } else {
                         open(configuration, warningRepository);
                     }
@@ -141,8 +144,14 @@ public final class LazyClaude {
      * Answers the desktop frontend on stdin and {@code protocol}, the real stdout, until stdin closes (ADR 0050). {@code main} sends
      * {@code System.out} to stderr before anything is built, so nothing else, a library included, prints into the protocol.
      */
-    private static void serve(OutputStream protocol, WarningRepository warningRepository) {
-        System.exit(new Sidecar(boardQuery(warningRepository)).run(System.in, protocol));
+    private static void serve(OutputStream protocol, WarningRepository warningRepository, boolean desktopNotifications) {
+        SessionApplicationService sessionService = sessionService(warningRepository, desktopNotifications);
+        Sidecar sidecar = new Sidecar(
+                boardQuery(warningRepository),
+                new SessionQuery(sessionService),
+                new HostedSessionCommand(sessionService),
+                new WarningQuery(new WarningApplicationService(warningRepository, warningRepository)));
+        System.exit(sidecar.run(System.in, protocol));
     }
 
     private static BoardQuery boardQuery(WarningRepository warningRepository) {
@@ -245,6 +254,7 @@ public final class LazyClaude {
                 new WorktreeRepository(),
                 new NotifySendRepository(NOTIFY_SEND, GDBUS, NOTIFY_PATIENCE),
                 desktopNotifications,
+                new TimerRepository(Executors.newSingleThreadScheduledExecutor(task -> Thread.ofPlatform().name(REPAINT_THREAD).daemon().unstarted(task))),
                 Clock.systemDefaultZone());
     }
 

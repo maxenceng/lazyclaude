@@ -3,11 +3,16 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.newLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.ticketLaunch;
+import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.escapeBytes;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newHostedPayload;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyInputPayload;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyResizePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.resumeHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.resumeTicketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ticketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.hostedSessionCommand;
+import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSizeOf;
+import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.resizedPaneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
@@ -113,5 +118,38 @@ class HostedSessionCommandTest {
         command.endAll();
 
         verify(hosts).end(id);
+    }
+
+    @Test
+    void shouldWriteTheBytesToThePtyUnchanged() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        HostedSessionCommand command = hostedSessionCommand(hosts, warnings);
+        SessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
+
+        command.write(ptyInputPayload(id));
+
+        verify(hosts).write(id, escapeBytes());
+    }
+
+    @Test
+    void shouldResizeThePtyToTheColumnsAndRows() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        HostedSessionCommand command = hostedSessionCommand(hosts, warnings);
+        SessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
+
+        command.resizePty(ptyResizePayload(id));
+
+        verify(hosts).resize(id, resizedPaneSize());
+    }
+
+    @Test
+    void shouldShrinkThePtyByOneRowToHaveItRepainted() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        HostedSessionCommand command = hostedSessionCommand(hosts, warnings);
+        SessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
+
+        command.repaint(new RepaintPayload(id));
+
+        verify(hosts).resize(id, paneSizeOf(100, 29));
     }
 }

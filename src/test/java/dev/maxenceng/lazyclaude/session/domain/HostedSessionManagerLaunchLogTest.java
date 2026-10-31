@@ -24,9 +24,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
@@ -75,11 +77,14 @@ class HostedSessionManagerLaunchLogTest {
     @Captor
     private ArgumentCaptor<Consumer<ExitCode>> exited;
 
+    @Mock
+    private SessionExitListener exitListener;
+
     private HostedSessionManager manager;
 
     @BeforeEach
     void setUp() {
-        manager = new HostedSessionManager(hosts, records, warnings, worktrees, log, clock());
+        manager = new HostedSessionManager(hosts, records, warnings, worktrees, log, mock(TimerPort.class), clock());
     }
 
     @Test
@@ -220,6 +225,31 @@ class HostedSessionManagerLaunchLogTest {
         exited.getValue().accept(new ExitCode(143));
 
         verify(log, times(1)).change(any(), any(), any());
+    }
+
+    @Test
+    void shouldTellTheExitListenerTheCodeOfASessionWhoseClaudeExitedByItself() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        manager.onExit(exitListener);
+        SessionId started = idOf(manager.startUnlinked(project(), paneSize()));
+        verify(hosts).spawn(any(), any(), exited.capture());
+
+        exited.getValue().accept(new ExitCode(3));
+
+        verify(exitListener).exited(started, new ExitCode(3));
+    }
+
+    @Test
+    void shouldTellTheExitListenerNothingOfASessionLazyclaudeEnded() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        manager.onExit(exitListener);
+        manager.startUnlinked(project(), paneSize());
+        verify(hosts).spawn(any(), any(), exited.capture());
+
+        manager.endAll();
+        exited.getValue().accept(new ExitCode(143));
+
+        verifyNoInteractions(exitListener);
     }
 
     @Test

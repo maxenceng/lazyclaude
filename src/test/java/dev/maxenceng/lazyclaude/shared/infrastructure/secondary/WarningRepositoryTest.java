@@ -154,4 +154,39 @@ class WarningRepositoryTest {
 
         assertThat(received).containsExactly(new Warnings(List.of(otherWarning())));
     }
+
+    @Test
+    void shouldHoldNothingBeforeAnyWarningIsRaised() {
+        assertThat(repository.held()).isEmpty();
+    }
+
+    @Test
+    void shouldHoldEveryWarningRaisedAndNotWithdrawn() {
+        repository.raise(warning());
+        repository.raise(otherWarning());
+        repository.withdraw(otherWarning());
+
+        assertThat(repository.held()).contains(warnings());
+    }
+
+    @Test
+    void shouldTellANoneHeldListenerAtOnceWhenNoWarningIsHeld() {
+        AtomicInteger told = new AtomicInteger();
+
+        repository.onNoneHeld(told::incrementAndGet);
+
+        assertThat(told)
+                .as("a listener that arrives after the last warning was withdrawn would otherwise keep showing it")
+                .hasValue(1);
+    }
+
+    @Test
+    void shouldNotTellANoneHeldListenerAtOnceWhileAWarningIsHeld() {
+        repository.raise(warning());
+        AtomicInteger told = new AtomicInteger();
+
+        repository.onNoneHeld(told::incrementAndGet);
+
+        assertThat(told).hasValue(0);
+    }
 }

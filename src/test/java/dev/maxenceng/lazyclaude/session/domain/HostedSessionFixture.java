@@ -2,13 +2,23 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.earlierStartedAt;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
+import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
+import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.resizedPaneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
+import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.mockito.stubbing.Answer;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
@@ -20,7 +30,27 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class HostedSessionFixture {
 
+    private static final Duration OVERTAKING = Duration.ofMillis(200);
+
     private HostedSessionFixture() {}
+
+    public static Duration repaintGap() {
+        return Duration.ofMillis(50);
+    }
+
+    public static Answer<Object> resizingMeanwhile(
+            HostedSessionManager manager, SessionId id, AtomicReference<Thread> resizing, AtomicBoolean overtook) {
+        return _ -> {
+            resizing.set(Thread.ofVirtual().start(() -> manager.resize(id, resizedPaneSize())));
+            overtook.set(resizing.get().join(OVERTAKING));
+            return null;
+        };
+    }
+
+    public static SessionId startedSession(HostedSessionManager manager, HostPort hosts) {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        return idOf(manager.startUnlinked(project(), paneSize()));
+    }
 
     public static HostedSession.HostedSessionBuilder hostedSessionBuilder() {
         return HostedSession.builder()

@@ -23,7 +23,7 @@ import tools.jackson.databind.node.ObjectNode;
  * The JSON Schema of the protocol, written from the Payloads and Views by the rules {@link SidecarJson} writes them with (ADR 0073).
  * Results and notification params are written; params are read by Jackson into the Payload's components, so a Payload is an object of
  * all of them. The writer looks at a value's runtime class and this at a declared type, so a declared type whose values could be
- * written another way than it states (an interface, an abstract class, an array) is refused rather than guessed.
+ * written another way than it states (an interface, an abstract class, an array other than bytes) is refused rather than guessed.
  */
 final class ProtocolSchema {
 
@@ -50,12 +50,15 @@ final class ProtocolSchema {
     private static final String ONE_OF = "oneOf";
     private static final String CONST = "const";
     private static final String ENUM = "enum";
+    private static final String CONTENT_ENCODING = "contentEncoding";
+    private static final String BASE64 = "base64";
     private static final String DISCRIMINATOR = "discriminator";
     private static final String PROPERTY_NAME = "propertyName";
     private static final String PROPERTIES = "properties";
     private static final String REQUIRED = "required";
     private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
     private static final String METHODS = "methods";
+    private static final String INPUTS = "inputs";
     private static final String NOTIFICATIONS = "notifications";
     private static final String PARAMS = "params";
     private static final String RESULT = "result";
@@ -63,7 +66,7 @@ final class ProtocolSchema {
             Set.of(int.class, long.class, short.class, byte.class, Integer.class, Long.class, Short.class, Byte.class);
     private static final String CANNOT_STATE = "the protocol cannot state %s: %s";
     private static final String NOT_JSON = "its shape has to change before it is written as JSON";
-    private static final String NO_RECORD_PARAMS = "a Payload component that is or holds a record or a sealed type is not read yet";
+    private static final String NO_SEALED_PARAMS = "a Payload component that is or holds a sealed type is not read yet";
     private static final String NOT_WRITTEN_ONE_WAY = "its values are written by their own class, which it does not name";
     private static final String NO_KIND = "a variant that is not a record or a sealed type carries no kind";
     private static final String HOLDS_ITSELF = "a record of one component is written as that component, so it cannot hold itself";
@@ -81,13 +84,17 @@ final class ProtocolSchema {
 
     private ProtocolSchema() {}
 
-    static String text(List<ProtocolMethod<?, ?>> methods, List<ProtocolNotification<?>> notifications) {
-        return SidecarJson.pretty(new ProtocolSchema().root(methods, notifications));
+    static String text(
+            List<ProtocolMethod<?, ?>> methods, List<ProtocolInput<?>> inputs, List<ProtocolNotification<?>> notifications) {
+        return SidecarJson.pretty(new ProtocolSchema().root(methods, inputs, notifications));
     }
 
-    private ObjectNode root(List<ProtocolMethod<?, ?>> methods, List<ProtocolNotification<?>> notifications) {
+    private ObjectNode root(
+            List<ProtocolMethod<?, ?>> methods, List<ProtocolInput<?>> inputs, List<ProtocolNotification<?>> notifications) {
         ObjectNode methodProperties = SidecarJson.object();
         methods.forEach(method -> methodProperties.set(method.name(), call(method)));
+        ObjectNode inputProperties = SidecarJson.object();
+        inputs.forEach(input -> inputProperties.set(input.name(), taken(input)));
         ObjectNode notificationProperties = SidecarJson.object();
         notificationProperties.set(JsonRpcMessages.readyName(), ready());
         notifications.forEach(notification -> notificationProperties.set(notification.name(), push(notification)));
@@ -98,6 +105,7 @@ final class ProtocolSchema {
         root.put(TYPE, OBJECT);
         ObjectNode properties = root.putObject(PROPERTIES);
         properties.set(METHODS, closedObject(methodProperties));
+        properties.set(INPUTS, closedObject(inputProperties));
         properties.set(NOTIFICATIONS, closedObject(notificationProperties));
         root.set(REQUIRED, names(properties));
         root.put(ADDITIONAL_PROPERTIES, false);
@@ -110,6 +118,12 @@ final class ProtocolSchema {
         ObjectNode properties = SidecarJson.object();
         properties.set(PARAMS, definePayload(method.params()));
         properties.set(RESULT, written(method.result()));
+        return closedObject(properties);
+    }
+
+    private ObjectNode taken(ProtocolInput<?> input) {
+        ObjectNode properties = SidecarJson.object();
+        properties.set(PARAMS, definePayload(input.params()));
         return closedObject(properties);
     }
 
@@ -151,17 +165,18 @@ final class ProtocolSchema {
     }
 
     private JsonNode read(RecordComponent component) {
-        if (holdsARecord(component.getGenericType())) {
-            // deferred: a Payload cannot take a record or a sealed type — close it when a method takes one, with a test of how Jackson reads it.
-            throw new UnschemableTypeException(CANNOT_STATE.formatted(OF.formatted(component.getName(), component.getDeclaringRecord().getSimpleName()), NO_RECORD_PARAMS));
+        if (holdsASealedType(component.getGenericType())) {
+            // deferred: a Payload cannot take a sealed type — close it when a method takes one, with a test of how Jackson reads it.
+            throw new UnschemableTypeException(CANNOT_STATE.formatted(OF.formatted(component.getName(), component.getDeclaringRecord().getSimpleName()), NO_SEALED_PARAMS));
         }
         return written(component.getGenericType());
     }
 
-    private static boolean holdsARecord(Type type) {
+    private static boolean holdsASealedType(Type type) {
         return switch (type) {
-            case ParameterizedType generic -> Arrays.stream(generic.getActualTypeArguments()).anyMatch(ProtocolSchema::holdsARecord);
-            case Class<?> plain -> plain.isRecord() || plain.isSealed();
+            case ParameterizedType generic -> Arrays.stream(generic.getActualTypeArguments()).anyMatch(ProtocolSchema::holdsASealedType);
+            case Class<?> plain -> plain.isSealed()
+                    || plain.isRecord() && Arrays.stream(plain.getRecordComponents()).anyMatch(held -> holdsASealedType(held.getGenericType()));
             default -> false;
         };
     }
@@ -202,6 +217,11 @@ final class ProtocolSchema {
         }
         if (Number.class.isAssignableFrom(type) || type.isPrimitive()) {
             return typed(NUMBER);
+        }
+        if (type == byte[].class) {
+            ObjectNode bytes = typed(STRING);
+            bytes.put(CONTENT_ENCODING, BASE64);
+            return bytes;
         }
         if (Map.class.isAssignableFrom(type) || Optional.class.equals(type) || Collection.class.isAssignableFrom(type) || type.isArray()) {
             throw new UnschemableTypeException(CANNOT_STATE.formatted(type.getTypeName(), NOT_JSON));

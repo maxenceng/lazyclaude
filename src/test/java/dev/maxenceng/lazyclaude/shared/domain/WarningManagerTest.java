@@ -4,9 +4,11 @@ import static dev.maxenceng.lazyclaude.shared.domain.WarningsFixture.warnings;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
@@ -60,5 +62,12 @@ class WarningManagerTest {
         verify(warnings)
                 .raise(new Warning(
                         "docs-watch stopped (java.lang.IllegalStateException: gone); what it kept current no longer updates."));
+    }
+
+    @Test
+    void shouldAnswerWhatTheWatchHolds() {
+        when(watch.held()).thenReturn(Optional.of(warnings()));
+
+        assertThat(manager.held()).contains(warnings());
     }
 }

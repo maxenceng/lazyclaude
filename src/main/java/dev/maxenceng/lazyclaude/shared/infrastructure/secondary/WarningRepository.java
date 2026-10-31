@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.shared.domain.Warning;
@@ -57,9 +58,19 @@ public final class WarningRepository implements WarningPort, WarningWatchPort {
     }
 
     @Override
+    public Optional<Warnings> held() {
+        synchronized (lock) {
+            return raised.isEmpty() ? Optional.empty() : Optional.of(new Warnings(List.copyOf(raised)));
+        }
+    }
+
+    @Override
     public void onNoneHeld(Runnable listener) {
         synchronized (lock) {
             noneHeld.add(listener);
+            if (raised.isEmpty()) {
+                listener.run();
+            }
         }
     }
 }

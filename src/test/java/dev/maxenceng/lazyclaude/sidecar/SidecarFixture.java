@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
+import static org.mockito.Mockito.mock;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +21,9 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
 import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
+import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
 
 public final class SidecarFixture {
 
@@ -32,13 +37,37 @@ public final class SidecarFixture {
     }
 
     public static List<String> linesWritten(BoardQuery board, String... received) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        new Sidecar(board).run(stdin(received), out);
-        return out.toString(StandardCharsets.UTF_8).lines().toList();
+        return linesWritten(sidecarOver(board), received);
+    }
+
+    public static List<String> linesWritten(SessionQuery sessions, HostedSessionCommand hosting, String... received) {
+        return linesWritten(sidecarOver(sessions, hosting), received);
+    }
+
+    public static List<String> linesWritten(WarningQuery warnings, String... received) {
+        return linesWritten(sidecarOver(warnings), received);
     }
 
     public static int exitCodeOf(BoardQuery board, String... received) {
-        return new Sidecar(board).run(stdin(received), new ByteArrayOutputStream());
+        return sidecarOver(board).run(stdin(received), new ByteArrayOutputStream());
+    }
+
+    private static List<String> linesWritten(Sidecar sidecar, String... received) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        sidecar.run(stdin(received), out);
+        return out.toString(StandardCharsets.UTF_8).lines().toList();
+    }
+
+    private static Sidecar sidecarOver(BoardQuery board) {
+        return new Sidecar(board, mock(SessionQuery.class), mock(HostedSessionCommand.class), mock(WarningQuery.class));
+    }
+
+    private static Sidecar sidecarOver(SessionQuery sessions, HostedSessionCommand hosting) {
+        return new Sidecar(mock(BoardQuery.class), sessions, hosting, mock(WarningQuery.class));
+    }
+
+    private static Sidecar sidecarOver(WarningQuery warnings) {
+        return new Sidecar(mock(BoardQuery.class), mock(SessionQuery.class), mock(HostedSessionCommand.class), warnings);
     }
 
     public static Path projectPath() {
@@ -67,6 +96,14 @@ public final class SidecarFixture {
 
     public static String request(int id, String method, String params) {
         return "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"%s\",\"params\":%s}".formatted(id, method, params);
+    }
+
+    public static Duration observedRepaintGap() {
+        return Duration.ofMillis(30);
+    }
+
+    public static String notification(String method, String params) {
+        return "{\"jsonrpc\":\"2.0\",\"method\":\"%s\",\"params\":%s}".formatted(method, params);
     }
 
     public static String requestWithoutParams(int id, String method) {

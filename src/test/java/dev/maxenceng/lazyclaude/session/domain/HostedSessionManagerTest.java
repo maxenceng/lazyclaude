@@ -24,6 +24,7 @@ import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -91,7 +92,7 @@ class HostedSessionManagerTest {
 
     @BeforeEach
     void setUp() {
-        manager = new HostedSessionManager(hosts, records, warnings, worktrees, log, clock());
+        manager = new HostedSessionManager(hosts, records, warnings, worktrees, log, mock(TimerPort.class), clock());
     }
 
     @Test
@@ -214,7 +215,7 @@ class HostedSessionManagerTest {
     void shouldKeepTheInstantItSpawnedASessionAtToTheMillisecond() {
         when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         HostedSessionManager spawning = new HostedSessionManager(
-                hosts, records, warnings, worktrees, log, Clock.fixed(now().plus(Duration.ofNanos(1)), ZoneOffset.UTC));
+                hosts, records, warnings, worktrees, log, mock(TimerPort.class), Clock.fixed(now().plus(Duration.ofNanos(1)), ZoneOffset.UTC));
 
         spawning.startUnlinked(project(), paneSize());
 

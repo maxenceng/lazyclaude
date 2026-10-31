@@ -1,6 +1,6 @@
 # The sidecar protocol
 
-`protocol.schema.json` is the JSON Schema of every method's params and result and every notification's params that
+`protocol.schema.json` is the JSON Schema of every method's params and result, every input's params (a call that is never answered) and every notification's params that
 `lazyclaude --sidecar` speaks. A frontend generates its TypeScript types from it. Each sealed View names its `kind` as a
 discriminator, so a generated union narrows on it.
 

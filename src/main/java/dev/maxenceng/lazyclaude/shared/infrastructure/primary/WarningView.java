@@ -3,7 +3,7 @@ package dev.maxenceng.lazyclaude.shared.infrastructure.primary;
 import dev.maxenceng.lazyclaude.shared.domain.Warnings;
 
 /** The warnings as the status line shows them: the newest one's text, and how many have been raised. */
-public record WarningView(String text, int count) {
+public record WarningView(String text, int count) implements WarningsView {
 
     static WarningView from(Warnings warnings) {
         return builder().text(warnings.newest().text()).count(warnings.count()).build();

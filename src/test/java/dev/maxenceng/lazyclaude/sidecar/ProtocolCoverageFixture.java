@@ -65,11 +65,25 @@ public final class ProtocolCoverageFixture {
     }
 
     public static Set<String> protocolMethods() {
-        return Sidecar.protocolMethods().stream().map(ProtocolMethod::name).collect(Collectors.toSet());
+        return Stream.concat(
+                        Sidecar.protocolMethods().stream().map(ProtocolMethod::name),
+                        Sidecar.protocolInputs().stream().map(ProtocolInput::name))
+                .collect(Collectors.toSet());
     }
 
     public static List<String> servedByAWatch() {
-        return List.of("board/subscribe", "board/boardAfterChange");
+        return List.of(
+                "board/subscribe",
+                "board/boardAfterChange",
+                "session/sessionsFor",
+                "session/subscribe",
+                "warning/held",
+                "warning/subscribe",
+                "warning/onNoneHeld");
+    }
+
+    public static List<String> servedUnderAnotherName() {
+        return List.of("session/write", "session/resizePty", "session/onOutput", "session/onExit", "session/endAll");
     }
 
     public static List<String> notYetOnTheProtocol() {
@@ -95,7 +109,6 @@ public final class ProtocolCoverageFixture {
 "review/threadsInDiff",
 "review/threadsOf",
 "session/configuration",
-"session/endAll",
 "session/followsPointer",
 "session/knowTickets",
 "session/onScreenChange",
@@ -103,19 +116,11 @@ public final class ProtocolCoverageFixture {
 "session/refresh",
 "session/remove",
 "session/resize",
-"session/resume",
-"session/resumeInTicketWorktree",
 "session/screenOf",
 "session/send",
-"session/sessionsFor",
-"session/startTicket",
-"session/startUnlinked",
-"session/subscribe",
 "session/verbChoiceFor",
 "session/watching",
 "session/worktreeOf",
-"warning/onNoneHeld",
-"warning/subscribe",
 "warning/threadStopped");
     }
 }

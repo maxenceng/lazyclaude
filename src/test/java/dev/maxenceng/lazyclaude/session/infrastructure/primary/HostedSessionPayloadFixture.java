@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.escapeBytes;
+import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.typedBytes;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.EmulatorInputPayloadFixture.typedA;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
@@ -33,6 +35,26 @@ public final class HostedSessionPayloadFixture {
 
     public static ResizePayload resizePayload(SessionId id) {
         return new ResizePayload(id, resizedPaneSize());
+    }
+
+    public static PtyInputPayload ptyInputPayload(SessionId id) {
+        return new PtyInputPayload(id, escapeBytes());
+    }
+
+    public static PtyInputPayload typedPtyInputPayload(SessionId id) {
+        return new PtyInputPayload(id, typedBytes());
+    }
+
+    public static PtyOutputView ptyOutputView(SessionId id) {
+        return PtyOutputView.builder().session(id).data(escapeBytes()).build();
+    }
+
+    public static SessionExitView sessionExitView(SessionId id, int code) {
+        return SessionExitView.builder().session(id).code(code).build();
+    }
+
+    public static PtyResizePayload ptyResizePayload(SessionId id) {
+        return new PtyResizePayload(id, resizedPaneSize().width(), resizedPaneSize().height());
     }
 
     public static TicketHostedPayload ticketHostedPayload(Verb verb) {

@@ -21,11 +21,13 @@ import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
 import dev.maxenceng.lazyclaude.session.domain.PtyListener;
+import dev.maxenceng.lazyclaude.session.domain.SessionExitListener;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.TicketDoneEndedListener;
 import dev.maxenceng.lazyclaude.session.domain.TicketStart;
 import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
+import dev.maxenceng.lazyclaude.session.domain.TimerPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
 import dev.maxenceng.lazyclaude.session.domain.Watched;
@@ -65,8 +67,9 @@ public final class SessionApplicationService {
             WorktreePort worktrees,
             DesktopNotificationPort notifications,
             boolean desktopNotifications,
+            TimerPort timer,
             Clock clock) {
-        this.hosted = new HostedSessionManager(hosts, sessions, warnings, worktrees, launchLog, clock);
+        this.hosted = new HostedSessionManager(hosts, sessions, warnings, worktrees, launchLog, timer, clock);
         this.worktreeing = new WorktreeManager(worktrees);
         this.notifying = new DesktopNotificationManager(notifications, warnings);
         this.desktopNotifications = desktopNotifications;
@@ -168,6 +171,14 @@ public final class SessionApplicationService {
 
     public void onPty(PtyListener listener) {
         hosted.onPty(listener);
+    }
+
+    public void repaint(SessionId id) {
+        hosted.repaint(id);
+    }
+
+    public void onExit(SessionExitListener listener) {
+        hosted.onExit(listener);
     }
 
     public void endAll() {

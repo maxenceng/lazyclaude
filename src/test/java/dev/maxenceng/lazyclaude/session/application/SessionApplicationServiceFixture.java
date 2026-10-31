@@ -21,6 +21,7 @@ import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.SpawnedEarlierClock;
+import dev.maxenceng.lazyclaude.session.domain.TimerPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
@@ -128,6 +129,7 @@ public final class SessionApplicationServiceFixture {
                 worktrees,
                 notifications,
                 desktopNotifications,
+                mock(TimerPort.class),
                 new SpawnedEarlierClock());
     }
 }
