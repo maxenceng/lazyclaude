@@ -27,11 +27,11 @@ final class SealedViewDeserializer extends ValueDeserializer<Object> {
     public Object deserialize(JsonParser parser, DeserializationContext context) {
         JsonNode node = context.readTree(parser);
         String kind = node.path(ViewShape.KIND).asString();
-        Class<?> variant = variants(type)
+        return variants(type)
                 .filter(candidate -> ViewShape.kindOf(candidate).equals(kind))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException(NO_VARIANT.formatted(type.getSimpleName(), kind)));
-        return context.readTreeAsValue(withoutKind(node), variant);
+                .map(variant -> context.readTreeAsValue(withoutKind(node), variant))
+                .orElseGet(() -> context.reportInputMismatch(type, NO_VARIANT.formatted(type.getSimpleName(), kind)));
     }
 
     private static Stream<Class<?>> variants(Class<?> sealed) {

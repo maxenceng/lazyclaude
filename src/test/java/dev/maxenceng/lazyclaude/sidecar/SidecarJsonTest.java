@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.sidecar;
 
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.loadingPendingView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.openPendingView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.pendingCommentPayload;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.unavailableDiffView;
@@ -15,6 +16,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyInputPayload;
@@ -117,5 +119,14 @@ class SidecarJsonTest {
                         SidecarJson.parse("{\"diff\":{\"kind\":\"nonsense\"},\"threads\":{\"kind\":\"loadingThreads\"}}"),
                         ThreadsInDiffPayload.class))
                 .isInstanceOfSatisfying(JsonRpcFaultException.class, fault -> assertThat(fault.code()).isEqualTo(ErrorCode.INVALID_PARAMS));
+    }
+
+    @Test
+    void reads_a_payload_holding_a_variant_of_a_sealed_type_the_writer_wrote_with_its_kind() {
+        PendingCommentPayload payload = pendingCommentPayload();
+
+        assertThat(SidecarJson.params(SidecarJson.tree(payload), PendingCommentPayload.class))
+                .as("the writer leads a variant with its kind even where the declared type is the variant")
+                .isEqualTo(payload);
     }
 }

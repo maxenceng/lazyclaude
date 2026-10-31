@@ -90,9 +90,11 @@ class ProtocolSchemaTest {
     }
 
     @Test
-    void refuses_a_payload_component_that_is_a_sealed_type() {
-        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/sealed", SealedPayload.class, BoardView.class)))
-                .isInstanceOf(UnschemableTypeException.class);
+    void states_a_payload_component_that_is_a_sealed_type_as_its_alternatives() {
+        assertThat(definitionOf(new ProtocolMethod<>("x/sealed", SealedPayload.class, BoardView.class), "sidecar.SealedPayload")
+                        .path("properties").path("inner").path("$ref").asString())
+                .as("the reader reads a sealed type by its kind, so a Payload may hold one")
+                .isEqualTo("#/$defs/board.BoardLookupView");
     }
 
     @Test
@@ -123,10 +125,10 @@ class ProtocolSchemaTest {
     }
 
     @Test
-    void refuses_a_payload_component_that_is_a_record_holding_a_sealed_type() {
-        assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/wrapped", WrappedSealedPayload.class, BoardView.class)))
-                .as("Jackson cannot choose the variant of a sealed type it is not told the kind of")
-                .isInstanceOf(UnschemableTypeException.class);
+    void states_a_payload_component_that_is_a_record_holding_a_sealed_type() {
+        assertThat(definitionOf(new ProtocolMethod<>("x/wrapped", WrappedSealedPayload.class, BoardView.class), "sidecar.WrappedSealedPayload")
+                        .path("properties").path("inner").path("$ref").asString())
+                .isEqualTo("#/$defs/sidecar.SealedPayload");
     }
 
     @Test
@@ -178,5 +180,14 @@ class ProtocolSchemaTest {
         assertThatThrownBy(() -> schemaOf(new ProtocolMethod<>("x/node", BoardPayload.class, NodeView.class)))
                 .as("it unwraps into itself without end")
                 .isInstanceOf(UnschemableTypeException.class);
+    }
+
+    @Test
+    void states_a_method_that_answers_nothing_as_a_null_result() {
+        assertThat(SidecarJson.parse(schemaOf(new ProtocolMethod<>("x/nothing", NoParams.class, Void.class)))
+                        .at("/properties/methods/properties/x~1nothing/properties/result/type")
+                        .asString())
+                .as("a request refreshed with no View to answer is told it was taken: null, not a made-up result")
+                .isEqualTo("null");
     }
 }
