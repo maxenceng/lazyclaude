@@ -166,6 +166,16 @@ class ArchitectureTest {
             .callMethod(CompletableFuture.class, "runAsync", Runnable.class)
             .allowEmptyShould(true);
 
+    // Every context's Query and Command is built once, by the composition root, and handed whole to the shell or the sidecar (ADR 0077).
+    @ArchTest
+    static final ArchRule only_the_composition_root_builds_a_query_or_a_command = noClasses()
+            .that()
+            .resideInAPackage(ROOT + ".*..")
+            .should()
+            .callConstructorWhere(target(owner(resideInAPackage("..infrastructure.primary..")
+                    .and(nameMatching(".*\\.[A-Za-z]+(Query|Command)")))))
+            .allowEmptyShould(true);
+
     // A key is only ever read from the terminal; a click that acts as a key calls the operation that key calls (ADR 0051).
     @ArchTest
     static final ArchRule a_key_is_never_replayed = noClasses()
