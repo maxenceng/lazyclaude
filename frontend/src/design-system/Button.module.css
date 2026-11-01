@@ -1,0 +1,13 @@
+.button {
+  padding: var(--space-2) var(--space-4);
+  background: var(--selected);
+  color: var(--text-on-light);
+  border: 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button:focus-visible {
+  outline: var(--focus-edge) solid var(--focus);
+  outline-offset: 2px;
+}

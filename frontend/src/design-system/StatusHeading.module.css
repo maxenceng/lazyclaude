@@ -1,0 +1,15 @@
+.heading {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-weight: 600;
+  font-size: var(--size-small);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  border-bottom: 1px solid var(--seam);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}

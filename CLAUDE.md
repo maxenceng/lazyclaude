@@ -32,6 +32,8 @@ Use `make`, never `mvn` directly — the Makefile selects the Java 25 toolchain.
 - `make rules` — PMD and Checkstyle: no `for` loop, no magic number (ADR 0025)
 - `make adr-check` — fail on a duplicate or missing ADR number, or a stale ADR index; run it before choosing one
 - `make adr-index` — rewrite `docs/adr/README.md` after adding or superseding an ADR
+- `make frontend` — the desktop frontend's checks: regenerate the protocol types and fail on a diff, then
+  `tsc`, ESLint, Vitest, `cargo clippy` and `cargo test`
 - `make verify` — everything CI runs, in CI's order; `make ci` is its first step
 - `make verify-report` — the same run, into a log, printing the exit code and the totals
 - `make pr-checks` — wait for CI on this branch's PR and exit on its verdict
@@ -42,12 +44,20 @@ Use `make`, never `mvn` directly — the Makefile selects the Java 25 toolchain.
 dev.maxenceng.lazyclaude.LazyClaude                  composition root: runs the Launch its arguments pick (shell, sidecar, schema)
 dev.maxenceng.lazyclaude.shell                       the TamboUI application: screens and keys
 dev.maxenceng.lazyclaude.<context>.{published, domain, application, infrastructure.{primary, secondary}}
+frontend/src-tauri/                                  the desktop frontend's relay (Rust): spawns the sidecar, carries its lines
+frontend/src/<context>/                              its React screens, one folder per context, none importing another
+frontend/src/protocol/                               the client and the types generated from docs/protocol/; nothing else imports them
 ```
 
 One module per direct subpackage of the root, its kind declared by `@ApplicationModule` in its
 `package-info` (ADR 0011): a context, a kernel (`shared`, `error`), or the shell.
 `board` is the first — `docs/context-map.md` lists the ones expected, and a context is created by
 the first ticket refined into it. `published` only exists once another module — the shell or a context — reads it.
+
+The `ddd-frontend` skill applies to `frontend/` in part (ADR 0057). Kept: a folder per context, no context
+importing another, the design system and its tokens, the lint rules, `architecture.test.ts`, the four states,
+generated code never edited. Replaced: `src/api/` by `src/protocol/`, and an HTTP error by a JSON-RPC `error`
+shown as an `Alert` with Retry. Dropped: i18n, MSW and TanStack Query; tests mock `src/protocol/`.
 
 ## Hard rules
 

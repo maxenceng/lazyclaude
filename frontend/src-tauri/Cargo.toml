@@ -1,0 +1,23 @@
+[package]
+name = "lazyclaude"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[lib]
+name = "lazyclaude_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lazyclaude"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
