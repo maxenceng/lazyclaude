@@ -1,0 +1,91 @@
+<!doctype html><html><head><meta charset=utf-8>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Saira+Stencil+One&family=JetBrains+Mono:wght@400;700&display=swap" rel=stylesheet>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden}
+body{display:grid;grid-template-rows:auto 1fr 28px;}
+.app{display:grid;grid-template-columns:440px 1fr;min-height:0}
+.left{display:grid;grid-template-rows:1.6fr 0.8fr 0.7fr;min-height:0}
+.right{display:grid;grid-template-rows:1.15fr 1fr;min-height:0}
+.pane{overflow:hidden;min-height:0}
+.row{display:flex;gap:10px;align-items:baseline;white-space:nowrap;overflow:hidden}
+.title{overflow:hidden;text-overflow:ellipsis;flex:1}
+.mk{width:12px;display:inline-block;text-align:center}
+.num{font-variant-numeric:tabular-nums}
+.age{width:28px;text-align:right}
+.keys span{margin-right:22px}
+pre{white-space:pre}
+ul{list-style:none}
+
+body{background:#141516;color:#d9d6cf;font:15px/1.45 Barlow,sans-serif}
+.status{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:22px;padding:8px 14px;background:#0c0c0d;border-bottom:1px solid #2a2b2e;font-size:13px}
+.andon{display:flex;gap:8px}
+.lamp{width:118px;height:46px;display:flex;flex-direction:column;justify-content:center;padding:0 12px;background:#26272a;color:#5c5d60}
+.lamp b{font:24px/1 "Saira Stencil One"}.lamp i{font-style:normal;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.lamp.red{background:#e03c31;color:#1c0806}.lamp.amber{background:#f2a900;color:#231800}.lamp.green{background:#1f3d29;color:#2fa84f}
+.app,.left,.right{gap:1px;background:#2a2b2e}
+.pane{background:#1c1d1f;padding-bottom:8px}.pane.focused{box-shadow:inset 0 0 0 2px #f2a900}
+h2{font:13px "Saira Stencil One";letter-spacing:.12em;text-transform:uppercase;color:#8a8780;padding:10px 16px 4px}
+.row{padding:3px 16px;font-size:14px}
+.st{display:flex;justify-content:space-between;padding:8px 16px 2px;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#8a8780;border-bottom:1px solid #2a2b2e}
+.row.selected{background:#d9d6cf;color:#141516}
+.num{width:44px;font-weight:600}
+.mk{width:14px;height:14px;line-height:14px;font-size:11px;font-weight:600}
+.mkp{background:#e03c31;color:#1c0806}.mki{background:#f2a900;color:#231800}.mky{background:#2fa84f;color:#08170d}
+.t-done{color:#6b6963}.dim{color:#7a776f}
+.main{padding:0}.facts{display:flex;gap:16px;padding:12px 26px 0;font-size:13px;color:#8a8780;text-transform:uppercase;letter-spacing:.08em}
+h1{font-size:28px;line-height:1.18;font-weight:600;padding:8px 26px 18px;max-width:900px}
+h3{font:12px "Saira Stencil One";letter-spacing:.12em;color:#8a8780;padding:0 26px 8px}
+.crit li{padding:4px 26px;font-size:15px}.crit li::before{content:"□ ";color:#8a8780}
+code{font:13px "JetBrains Mono",monospace;color:#f2c766}
+.dock{background:#111213}.tabs{display:flex;gap:1px;background:#2a2b2e}
+.tab{padding:7px 14px;font-size:13px;background:#1c1d1f;color:#8a8780;display:flex;gap:8px;align-items:center}.tab.active{background:#111213;color:#d9d6cf}
+.term{font:14px/1.5 "JetBrains Mono",monospace;padding:14px 22px}.term .sel{color:#f2a900}
+.keys{background:#0c0c0d;color:#8a8780;font-size:12.5px;padding:6px 14px;border-top:1px solid #2a2b2e}
+
+</style></head><body>
+<header class=status><div class=andon><div class="lamp red"><b>1</b><i>permission</i></div><div class="lamp amber"><b>2</b><i>input</i></div><div class="lamp green"><b>9</b><i>your turn</i></div><div class="lamp off"><b>—</b></div><div class="lamp off"><b>—</b></div></div><div class=counts><span class="mk mkp">!</span> 1 <span class="mk mki">?</span> 1 <span class="mk mky">•</span> 1</div><div class=proj>lazyclaude · ~/projects/lazyclaude</div></header>
+<div class=app>
+<div class=left>
+<section class="pane board focused"><h2>Board</h2><div class="st st-in-progress"><span>in progress</span><span class=n>1</span></div>
+<div class="row t-in-progress selected"><span class="mk mkp">!</span><span class=num>#1</span><span class=title>The desktop frontend starts its sidecar and shows the Board</span></div>
+<div class="st st-todo"><span>todo</span><span class=n>5</span></div>
+<div class="row t-todo"><span class="mk mki">?</span><span class=num>#2</span><span class=title>Hosted sessions run in the desktop frontend's panes</span></div>
+<div class="row t-todo"><span class=mk></span><span class=num>#3</span><span class=title>The desktop frontend shows the Docs panel</span></div>
+<div class="row t-todo"><span class=mk></span><span class=num>#4</span><span class=title>The desktop frontend shows the Review screen</span></div>
+<div class="row t-todo"><span class=mk></span><span class=num>#5</span><span class=title>The desktop frontend captures a draft ticket</span></div>
+<div class="row t-todo"><span class=mk></span><span class=num>#6</span><span class=title>The desktop frontend ships as a deb and an AppImage</span></div>
+<div class="st st-done"><span>done</span><span class=n>3</span></div>
+<div class="row t-done"><span class=mk></span><span class=num>#9</span><span class=title>Only the composition root builds a context's Query or Command</span></div>
+<div class="row t-done"><span class=mk></span><span class=num>#8</span><span class=title>Docs and review are read and written over the sidecar</span></div>
+<div class="row t-done"><span class=mk></span><span class=num>#7</span><span class=title>Hosted sessions run over the sidecar</span></div></section>
+<section class="pane sessions"><h2>Sessions</h2><div class=row><span class="mk mkp">!</span><span class=title>start #1</span><span class=dim>waiting for permission</span><span class="dim age">2m</span></div>
+<div class=row><span class="mk mki">?</span><span class=title>refine #2</span><span class=dim>waiting for input</span><span class="dim age">9m</span></div>
+<div class=row><span class="mk mky">•</span><span class=title>done #9</span><span class=dim>your turn</span><span class="dim age">1h</span></div><div class="row dim"><span class=mk>+</span><span class=title>New session on #1</span></div></section>
+<section class="pane docs"><h2>Docs</h2><div class=row><span class=title>README.md</span></div>
+<div class=row><span class=title>adr/</span></div>
+<div class=row><span class=title>context-map.md</span></div>
+<div class=row><span class=title>glossary.md</span></div>
+<div class=row><span class=title>protocol/</span></div>
+<div class=row><span class=title>research/</span></div>
+<div class=row><span class=title>roadmap/</span></div></section>
+</div>
+<div class=right>
+<section class="pane main"><div class=facts><span class=num>#1</span><span>in-progress</span><span>desktop</span><span>feature</span></div>
+<h1>The desktop frontend starts its sidecar and shows the Board</h1>
+<h3>Acceptance criteria</h3><ul class=crit><li><code>frontend/</code> holds a Tauri 2 app, <code>src-tauri/</code> the relay and <code>src/</code> React and TypeScript, built with pnpm.</li>
+<li>The relay spawns <code>java -jar &lt;jar&gt; --sidecar</code> in the project directory.</li>
+<li>The relay hands the page every waiting stdout line in one <code>Channel</code> message, and keeps the <code>ready</code> line for a reloaded page.</li>
+<li>A <code>ready</code> whose <code>protocol</code> is not the one the client was generated for shows a refusal naming both.</li>
+<li>The Board shows <code>board/watch</code>'s View and each <code>board/changed</code> after it.</li>
+<li>When the sidecar exits unasked, the window says so, shows stderr's last lines and offers a restart.</li></ul></section>
+<section class="pane dock"><div class=tabs><span class="tab active"><span class="mk mkp">!</span> start #1</span><span class=tab><span class="mk mki">?</span> refine #2</span><span class=tab><span class="mk mky">•</span> done #9</span></div><pre class=term><span class=dim>●</span> Write(frontend/src-tauri/src/relay.rs)
+  <span class=dim>⎿</span> 64 lines
+
+<b>Do you want to create relay.rs?</b>
+<span class=sel>❯ 1. Yes</span>
+  2. Yes, allow all edits during this session (shift+tab)
+  3. No, and tell Claude what to do differently (esc)</pre></section>
+</div></div>
+<footer class=keys><span>j/k move</span><span>enter open</span><span>n new session</span><span>c capture</span><span>z zoom</span><span>alt+hjkl focus</span><span>? keys</span><span>q quit</span></footer>
+</body></html>
