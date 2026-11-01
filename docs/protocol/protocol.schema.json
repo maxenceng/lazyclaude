@@ -85,6 +85,19 @@
           "required" : [ "params", "result" ],
           "additionalProperties" : false
         },
+        "session/configuration" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/sidecar.NoParams"
+            },
+            "result" : {
+              "$ref" : "#/$defs/session.ConfigurationView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
         "session/watch" : {
           "type" : "object",
           "properties" : {
@@ -365,7 +378,7 @@
           "additionalProperties" : false
         }
       },
-      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startTicket", "session/resume", "session/resumeInTicketWorktree", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/threadsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/pendingInDiff", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
+      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startTicket", "session/resume", "session/resumeInTicketWorktree", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/threadsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/pendingInDiff", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
       "additionalProperties" : false
     },
     "inputs" : {
@@ -1855,6 +1868,22 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
+    "session.Chord" : {
+      "type" : "object",
+      "properties" : {
+        "modifiers" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.Modifier"
+          }
+        },
+        "key" : {
+          "$ref" : "#/$defs/session.KeyInput"
+        }
+      },
+      "required" : [ "modifiers", "key" ],
+      "additionalProperties" : false
+    },
     "session.ClaudeVersion" : {
       "oneOf" : [ {
         "$ref" : "#/$defs/session.Version"
@@ -1864,6 +1893,25 @@
       "discriminator" : {
         "propertyName" : "kind"
       }
+    },
+    "session.ConfigurationView" : {
+      "type" : "object",
+      "properties" : {
+        "chords" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.ReservedChordView"
+          }
+        },
+        "desktopNotifications" : {
+          "type" : "boolean"
+        },
+        "mouse" : {
+          "type" : "boolean"
+        }
+      },
+      "required" : [ "chords", "desktopNotifications", "mouse" ],
+      "additionalProperties" : false
     },
     "session.FirstPrompt" : {
       "type" : "object",
@@ -1918,6 +1966,16 @@
       "required" : [ "id", "pid", "live", "busyOrWaiting", "ticket" ],
       "additionalProperties" : false
     },
+    "session.KeyInput" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.TypedCharacter"
+      }, {
+        "$ref" : "#/$defs/session.PressedKey"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
     "session.LiveSessionView" : {
       "type" : "object",
       "properties" : {
@@ -1954,6 +2012,14 @@
       },
       "required" : [ "id", "pid", "name", "directory", "startedAt", "age", "version", "state", "links" ],
       "additionalProperties" : false
+    },
+    "session.Modifier" : {
+      "type" : "string",
+      "enum" : [ "CTRL", "ALT", "SHIFT" ]
+    },
+    "session.NamedKey" : {
+      "type" : "string",
+      "enum" : [ "ENTER", "ESCAPE", "BACKSPACE", "TAB", "DELETE", "INSERT", "UP", "DOWN", "LEFT", "RIGHT", "HOME", "END", "PAGE_UP", "PAGE_DOWN", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12" ]
     },
     "session.NewHostedPayload" : {
       "type" : "object",
@@ -2081,6 +2147,19 @@
       "required" : [ "id", "title", "opening", "reading", "directory", "lastActivity", "age", "startedAt", "links", "interrupted" ],
       "additionalProperties" : false
     },
+    "session.PressedKey" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "pressedKey"
+        },
+        "key" : {
+          "$ref" : "#/$defs/session.NamedKey"
+        }
+      },
+      "required" : [ "kind", "key" ],
+      "additionalProperties" : false
+    },
     "session.PtyInputPayload" : {
       "type" : "object",
       "properties" : {
@@ -2143,6 +2222,23 @@
         }
       },
       "required" : [ "session" ],
+      "additionalProperties" : false
+    },
+    "session.ReservedAction" : {
+      "type" : "string",
+      "enum" : [ "FOCUS_LEFT", "FOCUS_DOWN", "FOCUS_UP", "FOCUS_RIGHT", "HIDE_MAIN_VIEW", "ZOOM", "NEXT_WAITING" ]
+    },
+    "session.ReservedChordView" : {
+      "type" : "object",
+      "properties" : {
+        "action" : {
+          "$ref" : "#/$defs/session.ReservedAction"
+        },
+        "chord" : {
+          "$ref" : "#/$defs/session.Chord"
+        }
+      },
+      "required" : [ "action", "chord" ],
       "additionalProperties" : false
     },
     "session.ResumeHostedPayload" : {
@@ -2325,6 +2421,19 @@
       "discriminator" : {
         "propertyName" : "kind"
       }
+    },
+    "session.TypedCharacter" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "typedCharacter"
+        },
+        "codePoint" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "codePoint" ],
+      "additionalProperties" : false
     },
     "session.Unknown" : {
       "type" : "object",
