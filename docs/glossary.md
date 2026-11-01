@@ -44,8 +44,8 @@ words mean.
 | Frontend | What drives a backend and draws it: the TUI, which calls it in-process, or the desktop frontend, which drives a sidecar. Each emulates its own terminal (ADR 0049). | `shell`, `sidecar` |
 | Sidecar | The backend run as a child process of the desktop frontend, `lazyclaude --sidecar`, in the project's directory. It ends when its stdin closes, and its hosted sessions end with it (ADR 0048). | `sidecar` |
 | Protocol | The JSON-RPC 2.0 messages, one per line, that a frontend and its sidecar exchange: one method per `*Query`/`*Command` operation, inputs it takes and never answers (`pty/input`, `pty/resize`, `session/repaint`), `*/changed`, `review/mergedChanged`, `pty/output` and `session/exited` notifications, `ready` first (ADR 0050, ADR 0074). An *input* is that kind of call; what a hosted `claude` is sent is its pty's bytes. | `sidecar` |
-| Desktop frontend | The Tauri window, React over xterm.js, that drives a sidecar: the Board, the hosted session pane, Docs and Review, the TUI's screens and keys with the mouse. Not the *desktop notification*, which either frontend may fire. | `frontend/` (expected) |
-| Relay | The desktop frontend's Rust half: it spawns the sidecar, carries its lines both ways in batches and keeps `ready` for a reloaded page. It knows none of the protocol's methods. | `frontend/src-tauri/` (expected) |
+| Desktop frontend | The Tauri window, React over xterm.js, that drives a sidecar: the Board, the hosted session pane, Docs and Review, the TUI's screens and keys with the mouse. Not the *desktop notification*, which either frontend may fire. | `frontend/` |
+| Relay | The desktop frontend's Rust half: it spawns the sidecar, carries its lines both ways in batches and keeps `ready` for a reloaded page. It knows none of the protocol's methods. | `frontend/src-tauri/` |
 | Bundle | The desktop frontend as installed, a deb or an AppImage: the relay with the runtime, the jar and pty4j's natives beside it, built by `make bundle` (ADR 0059). Not `make package`'s jar. | `frontend/` (expected) |
 | Runtime | The jlink image of Temurin 25 the bundle starts the sidecar on. | `frontend/` (expected) |
 

@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude;
 
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.defaultConfigurationView;
 import static org.mockito.Mockito.mock;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
@@ -7,6 +8,7 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureComman
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
@@ -43,10 +45,35 @@ public final class ContextsFixture {
                 review,
                 mock(PendingReviewCommand.class),
                 warnings,
-                mock(WarningCommand.class));
+                mock(WarningCommand.class),
+                defaultConfigurationView());
+    }
+
+    public static Contexts sidecarContexts(ConfigurationView configuration) {
+        return sidecarContexts(
+                configuration,
+                mock(BoardQuery.class),
+                mock(SessionQuery.class),
+                mock(HostedSessionCommand.class),
+                mock(WarningQuery.class),
+                mock(DocsQuery.class),
+                mock(ReviewQuery.class),
+                mock(PendingReviewCommand.class));
     }
 
     public static Contexts sidecarContexts(
+            BoardQuery board,
+            SessionQuery sessions,
+            HostedSessionCommand hosting,
+            WarningQuery warnings,
+            DocsQuery docs,
+            ReviewQuery review,
+            PendingReviewCommand pendingReview) {
+        return sidecarContexts(defaultConfigurationView(), board, sessions, hosting, warnings, docs, review, pendingReview);
+    }
+
+    public static Contexts sidecarContexts(
+            ConfigurationView configuration,
             BoardQuery board,
             SessionQuery sessions,
             HostedSessionCommand hosting,
@@ -67,6 +94,7 @@ public final class ContextsFixture {
                 review,
                 pendingReview,
                 warnings,
-                mock(WarningCommand.class));
+                mock(WarningCommand.class),
+                configuration);
     }
 }

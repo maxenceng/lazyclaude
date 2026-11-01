@@ -1,0 +1,48 @@
+:root {
+  --ground: #141516;
+  --pane: #1c1d1f;
+  --pane-sunk: #111213;
+  --bar: #0c0c0d;
+  --seam: #2a2b2e;
+
+  --text: #d9d6cf;
+  --dim: #8a8780;
+  --dim-done: #87847d;
+  --text-on-light: #141516;
+
+  --lamp-permission: #e03c31;
+  --lamp-permission-ink: #1c0806;
+  --lamp-input: #f2a900;
+  --lamp-input-ink: #231800;
+  --lamp-turn: #2fa84f;
+  --lamp-turn-ink: #08170d;
+  --lamp-turn-tile: #1f3d29;
+  --lamp-off: #26272a;
+  --lamp-off-ink: #76777a;
+
+  --focus: #5aa9e6;
+  --selected: #d9d6cf;
+
+  --font-read: Barlow, system-ui, sans-serif;
+  --font-stencil: 'Saira Stencil One', Barlow, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --size-micro: 11px;
+  --size-small: 12px;
+  --size-label: 13px;
+  --size-body: 14px;
+  --size-base: 15px;
+  --size-lamp: 24px;
+  --size-title: 28px;
+
+  --space-1: 3px;
+  --space-2: 6px;
+  --space-3: 10px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  --focus-edge: 2px;
+  --lamp-tile-width: 118px;
+  --lamp-tile-height: 46px;
+  --lamp-marker: 14px;
+}

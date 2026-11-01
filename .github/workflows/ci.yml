@@ -29,12 +29,56 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v10.3.3
 
+      - name: Set up Node
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: '12.14.0'
+
+      - name: Get the pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the pnpm store
+        uses: actions/cache@v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      # Rust 1.99.1 with clippy, pinned so a new stable lint cannot fail a build nobody touched.
+      - name: Set up Rust
+        run: rustup toolchain install 1.99.1 --profile minimal --component clippy --no-self-update --force && rustup default 1.99.1
+
+      - name: Cache cargo registry
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-${{ runner.os }}-${{ hashFiles('frontend/src-tauri/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Install Tauri's Linux build packages
+        run: >
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends
+          build-essential pkg-config libwebkit2gtk-4.1-dev libsoup-3.0-dev
+          libjavascriptcoregtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev libssl-dev
+
       # The Makefile holds the list, so a guard added to `ci` runs here with no second edit.
       - name: Lint, guards, tests and duplication
         run: make ci
 
       - name: Docs build with no broken link
         run: make docs
+
+      - name: Frontend types, lint, tests and relay
+        run: make frontend
 
       - name: Nothing was skipped
         run: make no-skipped-tests

@@ -27,6 +27,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhPullRequestsRe
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.GhThreadRepository;
 import dev.maxenceng.lazyclaude.review.infrastructure.secondary.PullRequestWatchRepository;
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulators;
@@ -43,6 +44,7 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepositor
 /**
  * Every context's Query and Command, built once and handed whole to whichever frontend lazyclaude opens, the shell or the sidecar,
  * so a context is wired in one place however many frontends read it (ADR 0077). Each frontend reads the ones it drives.
+ * {@code configuration} is what the contexts were built over, read once: a second read would raise its warnings again.
  */
 public record Contexts(
         BoardQuery board,
@@ -57,13 +59,14 @@ public record Contexts(
         ReviewQuery review,
         PendingReviewCommand pendingReview,
         WarningQuery warnings,
-        WarningCommand warning) {
+        WarningCommand warning,
+        ConfigurationView configuration) {
 
     private static final String GH = "gh";
     private static final Duration GH_PATIENCE = Duration.ofSeconds(30);
 
     /** The emulators of hosted sessions are built idle: only a frontend that draws them asks them to run. */
-    static Contexts of(WarningRepository warnings, SessionApplicationService sessions) {
+    static Contexts of(WarningRepository warnings, SessionApplicationService sessions, ConfigurationView configuration) {
         HostedEmulators emulators = HostedEmulators.over(sessions);
         WarningApplicationService warningService = new WarningApplicationService(warnings, warnings);
         PendingReviewApplicationService pendingReview =
@@ -93,6 +96,7 @@ public record Contexts(
                         pendingReview),
                 new PendingReviewCommand(pendingReview),
                 new WarningQuery(warningService),
-                new WarningCommand(warningService));
+                new WarningCommand(warningService),
+                configuration);
     }
 }

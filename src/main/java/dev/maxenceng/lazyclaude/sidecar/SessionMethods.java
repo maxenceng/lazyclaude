@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyInputPayload;
@@ -27,7 +28,8 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * The {@code session/} and {@code pty/} methods: one per operation of {@link SessionQuery} and {@link HostedSessionCommand}, named
- * after it, except that the pty's bytes travel as {@code pty/input}, {@code pty/resize} and {@code pty/output} (ADR 0050). There is
+ * after it, and {@code session/configuration}, which answers the configuration read at start-up, not a second read of the file
+ * that would raise its warnings again. The pty's bytes travel as {@code pty/input}, {@code pty/resize} and {@code pty/output} (ADR 0050). There is
  * no method to end a session: closing stdin ends every one.
  */
 final class SessionMethods {
@@ -41,6 +43,8 @@ final class SessionMethods {
                     ResumeTicketHostedPayload.class,
                     HostStart.class,
                     HostedSessionCommand::resumeInTicketWorktree));
+    private static final ServedMethod<ConfigurationView, NoParams, ConfigurationView> CONFIGURATION =
+            ServedMethod.of("session/configuration", NoParams.class, ConfigurationView.class, (held, _) -> held);
     private static final ProtocolMethod<SessionPayload, SessionsView> WATCH =
             new ProtocolMethod<>("session/watch", SessionPayload.class, SessionsView.class);
     private static final List<ServedInput<HostedSessionCommand, ?>> INPUTS = List.of(
@@ -53,18 +57,22 @@ final class SessionMethods {
 
     private final SessionQuery sessions;
     private final HostedSessionCommand hosting;
+    private final ConfigurationView configuration;
     private final SidecarOutput output;
     private final Set<Path> watching = ConcurrentHashMap.newKeySet();
 
-    SessionMethods(SessionQuery sessions, HostedSessionCommand hosting, SidecarOutput output) {
+    SessionMethods(SessionQuery sessions, HostedSessionCommand hosting, ConfigurationView configuration, SidecarOutput output) {
         this.sessions = sessions;
         this.hosting = hosting;
+        this.configuration = configuration;
         this.output = output;
     }
 
     static Protocol protocol() {
         return new Protocol(
-                Stream.concat(STARTS.stream().map(ServedMethod::method), Stream.of(WATCH)).<ProtocolMethod<?, ?>>map(declared -> declared).toList(),
+                Stream.concat(STARTS.stream().map(ServedMethod::method), Stream.of(CONFIGURATION.method(), WATCH))
+                        .<ProtocolMethod<?, ?>>map(declared -> declared)
+                        .toList(),
                 INPUTS.stream().<ProtocolInput<?>>map(ServedInput::input).toList(),
                 List.of(CHANGED, OUTPUT, EXITED));
     }
@@ -76,6 +84,7 @@ final class SessionMethods {
         return Stream.of(
                         STARTS.stream().map(start -> start.boundTo(hosting)),
                         INPUTS.stream().map(input -> input.boundTo(hosting)),
+                        Stream.of(CONFIGURATION.boundTo(configuration)),
                         Stream.of(Map.<String, SidecarMethod>entry(WATCH.name(), this::watch)))
                 .flatMap(served -> served)
                 .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
