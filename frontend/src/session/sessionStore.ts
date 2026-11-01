@@ -1,5 +1,5 @@
-import type { Client, SessionsView, Store } from '../protocol';
-import { createStore } from '../protocol';
+import type { Client, SessionsView } from '../protocol';
+import { createStore, type Store } from '../shared/store';
 
 export interface SessionStore {
   readonly sessions: Store<SessionsView | undefined>;

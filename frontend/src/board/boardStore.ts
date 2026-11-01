@@ -1,5 +1,5 @@
-import type { BoardLookupView, BoardView, Client, Store } from '../protocol';
-import { createStore } from '../protocol';
+import type { BoardLookupView, BoardView, Client } from '../protocol';
+import { createStore, type Store } from '../shared/store';
 
 export type BoardState =
   | { kind: 'loading' }

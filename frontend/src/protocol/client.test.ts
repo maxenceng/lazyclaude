@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createClient, RpcError } from './client';
 import { PROTOCOL_VERSION } from './generated/protocol';
 import type { Attached, Relay, RelayMessage } from './relay';
@@ -49,6 +49,10 @@ async function readyClient() {
 }
 
 describe('the protocol client', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('sends nothing until the sidecar is ready, then sends what waited', async () => {
     const relay = new FakeRelay();
     const client = createClient(relay);
@@ -149,5 +153,19 @@ describe('the protocol client', () => {
     const { relay, client } = await readyClient();
     relay.push('not json');
     expect(client.status.get()).toEqual({ kind: 'ready' });
+  });
+
+  it('numbers a reloaded page past the ids the page before it sent to the same sidecar', async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const before = await readyClient();
+    void before.client.call('board/watch', { from: '.' });
+    void before.client.call('board/watch', { from: '.' });
+    vi.setSystemTime(1_001);
+    const after = await readyClient();
+    void after.client.call('board/watch', { from: '.' });
+    await Promise.resolve();
+    const earlier = before.relay.sentRequests().map((request) => request.id);
+    const later = after.relay.sentRequests()[0]!.id;
+    expect(earlier.every((id) => id < later)).toBe(true);
   });
 });

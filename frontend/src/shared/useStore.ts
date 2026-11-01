@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { Store } from '../protocol';
+import type { Store } from './store';
 
 /** One store read: the snapshot, and a rerender when it changes. */
 export function useStore<T>(store: Store<T>): T {

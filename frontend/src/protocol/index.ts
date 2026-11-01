@@ -13,6 +13,4 @@ export type {
   SessionSessionsView as SessionsView,
 } from './generated/protocol';
 export type { Relay, RelayMessage } from './relay';
-export { createStore } from './store';
-export type { Store } from './store';
 export { tauriRelay } from './tauri';

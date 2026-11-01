@@ -1,12 +1,13 @@
 //! What the relay runs and where: the jar `make` builds unless the environment names another, in the project directory.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const BUILT_JAR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target/lazyclaude.jar");
 
-pub fn jar(named: Option<String>) -> PathBuf {
+/// A relative name is read from the launch directory, since the sidecar runs in the project directory.
+pub fn jar(named: Option<String>, launch_dir: &Path) -> PathBuf {
     named
-        .map(PathBuf::from)
+        .map(|name| launch_dir.join(name))
         .unwrap_or_else(|| PathBuf::from(BUILT_JAR))
 }
 
@@ -22,10 +23,18 @@ mod tests {
     #[test]
     fn the_environment_names_the_jar_over_the_built_one() {
         assert_eq!(
-            jar(Some("/tmp/other.jar".into())),
+            jar(Some("/tmp/other.jar".into()), Path::new("/here")),
             PathBuf::from("/tmp/other.jar")
         );
-        assert!(jar(None).ends_with("target/lazyclaude.jar"));
+        assert!(jar(None, Path::new("/here")).ends_with("target/lazyclaude.jar"));
+    }
+
+    #[test]
+    fn a_relative_jar_is_read_from_the_launch_directory() {
+        assert_eq!(
+            jar(Some("target/other.jar".into()), Path::new("/here")),
+            PathBuf::from("/here/target/other.jar")
+        );
     }
 
     #[test]

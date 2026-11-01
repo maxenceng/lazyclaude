@@ -45,7 +45,7 @@ describe('the app', () => {
     const client = fakeClient({ kind: 'ready' });
     const app = createApp(client);
     app.start();
-    expect(app.reserved.get()).toEqual([]);
+    expect(app.reserved()).toEqual([]);
     expect(client.calls.map((call) => call.method)).toContain('session/configuration');
     const index = client.calls.findIndex((call) => call.method === 'session/configuration');
     expect(client.calls[index]?.params).toEqual({});
@@ -57,10 +57,10 @@ describe('the app', () => {
     });
     await Promise.resolve();
     await Promise.resolve();
-    expect(app.reserved.get()).toHaveLength(1);
+    expect(app.reserved()).toHaveLength(1);
   });
 
-  it('reserves no chord when the configuration cannot be read', async () => {
+  it('holds the fault when the configuration cannot be read, reserving no chord', async () => {
     const client = fakeClient({ kind: 'ready' });
     const app = createApp(client);
     app.start();
@@ -68,6 +68,32 @@ describe('the app', () => {
     client.failNext(new Error('refused'));
     await Promise.resolve();
     await Promise.resolve();
-    expect(app.reserved.get()).toEqual([]);
+    expect(app.configuration.get()).toEqual({ kind: 'fault', message: 'refused' });
+    expect(app.reserved()).toEqual([]);
+  });
+
+  it('watches the sessions once a board that started empty fills through a change', async () => {
+    const client = fakeClient({ kind: 'ready' });
+    createApp(client).start();
+    client.answerNext(boardFixture([]));
+    await Promise.resolve();
+    await Promise.resolve();
+    client.push('board/changed', boardFixture([ticketFixture({ id: 'PROJ-1' })]));
+    expect(client.calls.map((call) => call.method)).toContain('session/watch');
+  });
+
+  it('watches the sessions after a retry that reads the board', async () => {
+    const client = fakeClient({ kind: 'ready' });
+    const app = createApp(client);
+    app.start();
+    client.failNext(new Error('gh timed out'));
+    client.answerNext({ chords: [], desktopNotifications: true, mouse: true });
+    await Promise.resolve();
+    await Promise.resolve();
+    void app.load();
+    client.answerNext(boardFixture([ticketFixture({ id: 'PROJ-1' })]));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(client.calls.map((call) => call.method)).toContain('session/watch');
   });
 });

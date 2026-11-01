@@ -8,13 +8,13 @@ import { createBoardStore } from './boardStore';
 import { boardFixture, ticketFixture } from './fixtures';
 import { createSelection } from './selection';
 
-function setup(lampOf: (ticket: string) => 'permission' | undefined = () => undefined) {
+function setup(markerOf: (ticket: string) => 'permission' | undefined = () => undefined) {
   const client = fakeClient();
   const board = createBoardStore(client);
   const selection = createSelection();
   const onOpen = vi.fn();
   const loaded = board.load();
-  render(<BoardScreen board={board} selection={selection} lampOf={lampOf} onOpen={onOpen} onRetry={() => void board.load()} />);
+  render(<BoardScreen board={board} selection={selection} markerOf={markerOf} onOpen={onOpen} onRetry={() => void board.load()} />);
   return { client, board, selection, onOpen, loaded };
 }
 

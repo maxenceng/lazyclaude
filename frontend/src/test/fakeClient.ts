@@ -1,5 +1,5 @@
 import type { Client, Status } from '../protocol';
-import { createStore } from '../protocol';
+import { createStore } from '../shared/store';
 
 type Handler = (params: never) => void;
 

@@ -20,13 +20,13 @@ import type { Selection } from './selection';
 interface Props {
   board: BoardStore;
   selection: Selection;
-  lampOf: (ticket: string) => LampColour | undefined;
+  markerOf: (ticket: string) => LampColour | undefined;
   onOpen: (ticket: string) => void;
   onRetry: () => void;
 }
 
 /** The Board: the tickets by status with the one under the cursor detailed beside them. */
-export function BoardScreen({ board, selection, lampOf, onOpen, onRetry }: Props) {
+export function BoardScreen({ board, selection, markerOf, onOpen, onRetry }: Props) {
   const state = useStore(board.state);
   const chosen = useStore(selection.selected);
   const populated = state.kind === 'populated' ? state.view : undefined;
@@ -41,7 +41,7 @@ export function BoardScreen({ board, selection, lampOf, onOpen, onRetry }: Props
         {populated === undefined ? (
           <Unread state={state} onRetry={onRetry} />
         ) : (
-          <Tickets view={populated} cursor={cursor} lampOf={lampOf} onPress={press} />
+          <Tickets view={populated} cursor={cursor} markerOf={markerOf} onPress={press} />
         )}
       </Pane>
       <Pane title="Ticket" focused={false}>
@@ -78,11 +78,11 @@ function Unread({ state, onRetry }: { state: BoardState; onRetry: () => void }) 
 interface TicketsProps {
   view: BoardView;
   cursor: string | undefined;
-  lampOf: (ticket: string) => LampColour | undefined;
+  markerOf: (ticket: string) => LampColour | undefined;
   onPress: (ticket: string) => void;
 }
 
-function Tickets({ view, cursor, lampOf, onPress }: TicketsProps) {
+function Tickets({ view, cursor, markerOf, onPress }: TicketsProps) {
   return (
     <>
       {orderedGroups(view).map((group) => (
@@ -96,7 +96,7 @@ function Tickets({ view, cursor, lampOf, onPress }: TicketsProps) {
                 title={ticket.title}
                 selected={ticket.id === cursor}
                 done={group.status === 'DONE'}
-                lamp={lampOf(ticket.id)}
+                lamp={markerOf(ticket.id)}
                 onSelect={() => onPress(ticket.id)}
               />
             ))}

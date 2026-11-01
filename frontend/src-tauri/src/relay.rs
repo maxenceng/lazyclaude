@@ -36,7 +36,6 @@ pub struct Attached {
 
 struct Running {
     generation: u64,
-    stdin: Option<ChildStdin>,
     channel: Option<Channel<RelayMessage>>,
     lines: Lines,
     stderr: Tail,
@@ -50,13 +49,14 @@ pub struct Relay {
     jar: PathBuf,
     project: PathBuf,
     running: Arc<Mutex<Running>>,
+    /// Apart from `running`, so a write blocked on a full pipe never stops stdout being drained. Taken after `running`, never before.
+    stdin: Arc<Mutex<Option<ChildStdin>>>,
 }
 
 impl Relay {
     pub fn new(jar: PathBuf, project: PathBuf) -> Self {
         let running = Running {
             generation: 0,
-            stdin: None,
             channel: None,
             lines: Lines::default(),
             stderr: Tail::new(STDERR_LINES),
@@ -68,6 +68,7 @@ impl Relay {
             jar,
             project,
             running: Arc::new(Mutex::new(running)),
+            stdin: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -75,7 +76,9 @@ impl Relay {
         let first = {
             let mut running = self.lock();
             running.channel = Some(channel);
-            !running.spawned
+            let first = !running.spawned;
+            running.spawned = true;
+            first
         };
         if first {
             self.spawn();
@@ -91,8 +94,8 @@ impl Relay {
         {
             let mut running = self.lock();
             running.channel = Some(channel);
-            running.stdin = None;
         }
+        *self.stdin() = None;
         self.spawn();
         Attached {
             ready: None,
@@ -101,8 +104,8 @@ impl Relay {
     }
 
     pub fn send(&self, line: &str) -> Result<(), String> {
-        let mut running = self.lock();
-        let stdin = running.stdin.as_mut().ok_or("the sidecar is not running")?;
+        let mut stdin = self.stdin();
+        let stdin = stdin.as_mut().ok_or("the sidecar is not running")?;
         stdin
             .write_all(line.as_bytes())
             .and_then(|()| stdin.write_all(b"\n"))
@@ -114,11 +117,17 @@ impl Relay {
     pub fn close(&self) {
         let mut running = self.lock();
         running.closing = true;
-        running.stdin = None;
+        *self.stdin() = None;
     }
 
     fn lock(&self) -> MutexGuard<'_, Running> {
         self.running
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn stdin(&self) -> MutexGuard<'_, Option<ChildStdin>> {
+        self.stdin
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
@@ -154,7 +163,7 @@ impl Relay {
     }
 
     fn watch(&self, mut child: Child, generation: u64) {
-        self.lock().stdin = child.stdin.take();
+        *self.stdin() = child.stdin.take();
         let stdout = child.stdout.take();
         let stderr = child.stderr.take();
         let relay = self.clone();
@@ -223,7 +232,7 @@ impl Relay {
             code,
             stderr: running.stderr.lines(),
         };
-        running.stdin = None;
+        *self.stdin() = None;
         running.exit = Some(exit.clone());
         if let Some(channel) = &running.channel {
             let _ = channel.send(RelayMessage::Exited(exit));

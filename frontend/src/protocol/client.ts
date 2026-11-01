@@ -9,7 +9,7 @@ import {
   type Result,
 } from './generated/protocol';
 import type { Attached, Relay, RelayMessage } from './relay';
-import { createStore, type Store } from './store';
+import { createStore, type Store } from '../shared/store';
 
 export type Status =
   | { kind: 'connecting' }
@@ -48,6 +48,7 @@ interface Incoming {
 }
 
 const READY = 'ready';
+const IDS_PER_MILLISECOND = 1000;
 
 export interface Client {
   readonly status: Store<Status>;
@@ -63,7 +64,8 @@ export function createClient(relay: Relay): Client {
   const pending = new Map<number, Pending>();
   const waiting: Array<() => void> = [];
   const handlers = new Map<string, Set<(params: never) => void>>();
-  let nextId = 1;
+  // A page reloaded onto a running sidecar starts past the ids the page before it may still have in flight.
+  let nextId = Date.now() * IDS_PER_MILLISECOND;
 
   const failAll = () => {
     const error = new SidecarUnavailableError(status.get());

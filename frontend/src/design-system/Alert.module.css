@@ -6,7 +6,7 @@
   margin: var(--space-4);
   padding: var(--space-4);
   background: var(--pane-sunk);
-  border: 1px solid var(--lamp-permission);
+  border: 1px solid var(--text);
 }
 
 .title {

@@ -47,6 +47,14 @@ describe('the window-level key handler', () => {
     expect(press('r', { ctrlKey: true }).defaultPrevented).toBe(true);
   });
 
+  it('swallows every key the TUI leaves in a packaged build, so the webview moves no focus and scrolls nothing', () => {
+    const taken = vi.fn();
+    remove = installKeys(taken, { packaged: true });
+    const unbound = [press('Tab'), press('ArrowDown'), press(' '), press('PageDown'), press('F7'), press('I', { ctrlKey: true, shiftKey: true })];
+    expect(unbound.map((event) => event.defaultPrevented)).toEqual([true, true, true, true, true, true]);
+    expect(taken).not.toHaveBeenCalled();
+  });
+
   it('lets a development build reload', () => {
     remove = installKeys(() => {}, { packaged: false });
     expect(press('F5').defaultPrevented).toBe(false);

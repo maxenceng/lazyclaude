@@ -53,4 +53,15 @@ describe('the window', () => {
     render(<App app={createApp(client)} packaged={false} onOpen={() => {}} />);
     expect(screen.getByRole('alert')).toHaveTextContent('The backend stopped');
   });
+
+  it('shows a configuration it cannot read as an alert whose retry reads it again', async () => {
+    const { client } = await readyApp();
+    await act(async () => {
+      client.failNext(new Error('the configuration is unreadable'));
+      await Promise.resolve();
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('the configuration is unreadable');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Retry' }));
+    expect(client.calls.filter((call) => call.method === 'session/configuration')).toHaveLength(2);
+  });
 });

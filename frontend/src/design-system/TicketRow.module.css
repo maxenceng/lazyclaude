@@ -22,6 +22,10 @@
   color: var(--dim-done);
 }
 
+.selected.done {
+  color: var(--text-on-light);
+}
+
 .noLamp {
   display: inline-block;
   width: var(--lamp-marker);

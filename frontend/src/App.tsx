@@ -3,9 +3,9 @@ import type { App as AppStores } from './app';
 import { BoardScreen } from './board/BoardScreen';
 import { selectedIn } from './board/rows';
 import { ConnectionScreen } from './connection/ConnectionScreen';
-import { AppFrame, Count, KeyBar, Lamp, Pane, StatusLine, Text } from './design-system';
+import { Alert, AppFrame, Button, Count, KeyBar, Lamp, Pane, StatusLine, Text } from './design-system';
 import { installKeys } from './keys/installKeys';
-import { lampOfTicket, lampsOf } from './session/lamps';
+import { markerOfTicket, markersOf } from './session/markers';
 import { useStore } from './shared/useStore';
 
 const BOARD_KEYS = ['j/k move', 'enter open'];
@@ -22,6 +22,7 @@ export function App({ app, packaged, onOpen }: Props) {
   const status = useStore(app.client.status);
   const sessions = useStore(app.sessions.sessions);
   const board = useStore(app.board.state);
+  const configuration = useStore(app.configuration);
 
   useEffect(
     () =>
@@ -40,36 +41,47 @@ export function App({ app, packaged, onOpen }: Props) {
             }
           }
         },
-        { packaged, reserved: app.reserved.get },
+        { packaged, reserved: app.reserved },
       ),
     [app, packaged, onOpen],
   );
 
-  const lamps = sessions === undefined ? [] : lampsOf(sessions);
+  const markers = sessions === undefined ? [] : markersOf(sessions);
   const project = board.kind === 'populated' ? board.view.root : 'lazyclaude';
 
   return (
     <AppFrame
       statusLine={
         <StatusLine
-          tiles={lamps.map((lamp) => (
-            <Lamp key={lamp.session} colour={lamp.colour} size="tile" number={lamp.ticket} />
+          tiles={markers.map((marker) => (
+            <Lamp key={marker.session} colour={marker.colour} size="tile" number={marker.ticket} />
           ))}
           counts={COLOURS.map((colour) => (
-            <Count key={colour} colour={colour} count={lamps.filter((lamp) => lamp.colour === colour).length} />
+            <Count key={colour} colour={colour} count={markers.filter((marker) => marker.colour === colour).length} />
           ))}
           project={project}
         />
       }
       keyBar={<KeyBar keys={BOARD_KEYS} />}
     >
-      {status.kind === 'ready' ? (
+      {status.kind === 'ready' && configuration.kind === 'fault' ? (
+        <>
+          <Pane title="Board" focused>
+            <Alert title="The configuration could not be read" action={<Button onClick={() => void app.load()}>Retry</Button>}>
+              {configuration.message}
+            </Alert>
+          </Pane>
+          <Pane title="Ticket" focused={false}>
+            <Text tone="dim">No ticket selected.</Text>
+          </Pane>
+        </>
+      ) : status.kind === 'ready' ? (
         <BoardScreen
           board={app.board}
           selection={app.selection}
-          lampOf={(ticket) => (sessions === undefined ? undefined : lampOfTicket(sessions, ticket))}
+          markerOf={(ticket) => (sessions === undefined ? undefined : markerOfTicket(sessions, ticket))}
           onOpen={onOpen}
-          onRetry={() => void app.board.load()}
+          onRetry={() => void app.load()}
         />
       ) : (
         <>

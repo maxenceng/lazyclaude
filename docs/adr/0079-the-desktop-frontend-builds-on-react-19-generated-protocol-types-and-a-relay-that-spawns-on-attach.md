@@ -21,17 +21,23 @@ its three behaviours. The first Board made each of these choices; each could be 
   `src/protocol/generated/`, checked in. The generator prefixes a context (`BoardBoardView`); `src/protocol/index.ts`
   re-exports the short names, and nothing else imports the generated file (`architecture.test.ts`).
 - **The front-end architecture rules** in `architecture.test.ts`: `board` and `session` are contexts and never import
-  each other; `protocol`, `design-system`, `shared`, `keys` and `connection` are shared; `App.tsx` composes the contexts,
+  each other; `protocol`, `design-system`, `shared`, `keys`, `connection` and `test` are shared; `App.tsx` composes the contexts,
   handing the Board a session lamp lookup.
 - **The relay spawns the sidecar on the page's first attach**, not at window creation, so the page's `Channel` exists
   before the first line. It runs `java --enable-native-access=ALL-UNNAMED -jar`, as `make run` does; the default jar is
   the repository's `target/lazyclaude.jar`, compiled in, until the bundle (ADR 0059) carries its own.
 - **The sidecar's exit travels in the same `Channel`** as its lines, `{kind: "exited", code, stderr}`, with the last 20
   stderr lines. It is the relay's only message of its own; it is not a protocol method.
-- **Lamps come from `session/watch`**, since the Board View carries no session state, joined to tickets by id.
+- **Lamps come from `session/watch`**, since the Board View carries no session state, joined to tickets by id. A
+  ticket's lamp is the strongest marker among the live sessions any of whose links name it. The watch starts the first
+  time the board is populated, by its answer, a `board/changed` or a Retry.
 - **No reserved chord is taken until `session/configuration` answers** (ADR 0078). The Board's fixed keys work from the
   first keypress; a default `alt+h` bound before the answer would be wrong for a rebound `config.yml`. A reserved chord
-  is matched before the fixed keys, so a chord rebound onto one of them wins.
+  is matched before the fixed keys, so a chord rebound onto one of them wins. A `session/configuration` that fails is
+  shown as an `Alert` with Retry in the Board's place, not left as a board whose reserved chords silently do nothing.
+- **A packaged build prevents every key outside a pane**, bound or not, so no unbound key moves focus, scrolls,
+  reloads, caret-browses or opens the inspector. A development build prevents only the bound keys and leaves the rest
+  to the webview, its reload and inspector included.
 - **`mouse: false` leaves the window's clicks alone.** ADR 0051's setting turns a terminal's mouse capture off; a
   window's click is not captured from a terminal, so the desktop frontend reads the flag and ignores it.
 - **The in-progress status heads the Board**, before the View's order, because the Board answers "what am I on". Every
@@ -41,6 +47,8 @@ its three behaviours. The first Board made each of these choices; each could be 
 
 ## Consequences
 
+- The marker's mapping and strength are written twice, in `SessionState` and in `session/markers.ts`, because
+  `LiveSessionView` does not put its marker on the wire. A change to the order has to land in both.
 - A TypeScript 7 upgrade waits for typescript-eslint.
 - A webview reload gets `ready` back but not the lines sent while no page was attached; the page reads afresh.
 - Packaging must embed the built page (`tauri build`, or `cargo build --features custom-protocol`); a plain debug build

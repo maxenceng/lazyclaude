@@ -1,5 +1,5 @@
-import type { BoardView, Store } from '../protocol';
-import { createStore } from '../protocol';
+import type { BoardView } from '../protocol';
+import { createStore, type Store } from '../shared/store';
 import { moveSelection } from './rows';
 
 export interface Selection {
