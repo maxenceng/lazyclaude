@@ -44,7 +44,7 @@ fi
 
 report "JAVA_HOME" "${JAVA_HOME:-<unset, falling back to PATH>}"
 
-for tool in claude gh uv; do
+for tool in claude gh uv node pnpm cargo; do
 	if command -v "${tool}" >/dev/null 2>&1; then
 		report "${tool}" "$("${tool}" --version 2>&1 | head -1)"
 	else

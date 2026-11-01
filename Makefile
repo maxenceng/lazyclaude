@@ -22,7 +22,7 @@ JAVA := $(if $(JAVA_HOME),$(JAVA_HOME)/bin/java,java)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help doctor build test contract test-one arch fmt lint dup config-check adr-check adr-index protocol-schema
+.PHONY: help doctor build test contract test-one arch fmt lint dup config-check adr-check adr-index protocol-schema frontend
 .PHONY: docs docs-serve ticket-check guard-fixtures guard-harness no-skipped-tests test-comment-check var-check
 .PHONY: package run ci verify verify-report pr-checks clean
 
@@ -101,6 +101,20 @@ protocol-schema: package ## Write docs/protocol/protocol.schema.json from the si
 	@$(JAVA) -jar $(JAR) --protocol-schema > target/protocol.schema.json
 	@mv target/protocol.schema.json docs/protocol/protocol.schema.json
 
+# Generated TypeScript is compared before and after regenerating, so a stale or missing file fails even uncommitted.
+frontend: GENERATED := frontend/src/protocol/generated
+frontend: ## Install, regenerate the protocol types and fail on drift, then tsc, ESLint, Vitest, clippy and cargo test
+	cd frontend && pnpm install --frozen-lockfile
+	@before=$$(cat $(GENERATED)/* 2>/dev/null | sha256sum); \
+		(cd frontend && pnpm generate) || exit 1; \
+		[ "$$before" = "$$(cat $(GENERATED)/* | sha256sum)" ] \
+		|| { echo "$(GENERATED) was stale: it is regenerated now, commit it"; exit 1; }
+	cd frontend && pnpm typecheck
+	cd frontend && pnpm lint
+	cd frontend && pnpm test
+	cd frontend/src-tauri && cargo clippy --all-targets -- -D warnings
+	cd frontend/src-tauri && cargo test
+
 run: package ## Start the TUI in this terminal
 	@$(JAVA) --enable-native-access=ALL-UNNAMED -jar $(JAR)
 
@@ -111,6 +125,7 @@ ci: lint config-check adr-check ticket-check test-comment-check var-check guard-
 verify: ## Everything CI runs, in the order CI runs it
 	$(MAKE) ci
 	$(MAKE) docs
+	$(MAKE) frontend
 	$(MAKE) no-skipped-tests
 	$(MAKE) package
 
