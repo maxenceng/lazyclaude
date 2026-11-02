@@ -57,7 +57,8 @@ the first ticket refined into it. `published` only exists once another module â€
 The `ddd-frontend` skill applies to `frontend/` in part (ADR 0057). Kept: a folder per context, no context
 importing another, the design system and its tokens, the lint rules, `architecture.test.ts`, the four states,
 generated code never edited. Replaced: `src/api/` by `src/protocol/`, and an HTTP error by a JSON-RPC `error`
-shown as an `Alert` with Retry. Dropped: i18n, MSW and TanStack Query; tests mock `src/protocol/`.
+shown as an `Alert` with Retry. Dropped: MSW and TanStack Query; tests mock `src/protocol/`. Copy goes through i18n, English only (ADR 0080).
+`keys/` and `connection/` are the composition side: no context imports them (ADR 0082).
 
 ## Hard rules
 

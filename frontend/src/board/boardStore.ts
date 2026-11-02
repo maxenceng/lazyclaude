@@ -1,12 +1,6 @@
-import type { BoardLookupView, BoardView, Client } from '../protocol';
+import type { BoardLookupView, Client } from '../protocol';
 import { createStore, type Store } from '../shared/store';
-
-export type BoardState =
-  | { kind: 'loading' }
-  | { kind: 'empty' }
-  | { kind: 'unavailable'; cause: 'noProject' | 'unavailableBoard'; reason: string }
-  | { kind: 'fault'; message: string }
-  | { kind: 'populated'; view: BoardView };
+import { type BoardState, EmptyBoard, FaultedBoard, LoadingBoard, PopulatedBoard, UnavailableBoard, UnavailableCause } from './boardState';
 
 export interface BoardStore {
   readonly state: Store<BoardState>;
@@ -15,29 +9,30 @@ export interface BoardStore {
 
 const PROJECT_DIRECTORY = '.';
 
-function stateOf(view: BoardLookupView): BoardState {
+const stateOf = (view: BoardLookupView): BoardState => {
   switch (view.kind) {
     case 'board':
-      return view.groups.every((group) => group.tickets.length === 0) && view.unreadable.length === 0 ? { kind: 'empty' } : { kind: 'populated', view };
+      return view.groups.every((group) => group.tickets.length === 0) && view.unreadable.length === 0 ? new EmptyBoard() : new PopulatedBoard(view);
     case 'unavailableBoard':
+      return new UnavailableBoard(UnavailableCause.UnavailableBoard, view.reason);
     case 'noProject':
-      return { kind: 'unavailable', cause: view.kind, reason: view.reason };
+      return new UnavailableBoard(UnavailableCause.NoProject, view.reason);
   }
-}
+};
 
 /** The Board's one read: `board/watch`'s answer, then every `board/changed` after it. */
-export function createBoardStore(client: Client): BoardStore {
-  const state = createStore<BoardState>({ kind: 'loading' });
+export const createBoardStore = (client: Client): BoardStore => {
+  const state = createStore<BoardState>(new LoadingBoard());
   client.subscribe('board/changed', (view) => state.set(stateOf(view)));
   return {
     state,
     async load() {
-      state.set({ kind: 'loading' });
+      state.set(new LoadingBoard());
       try {
         state.set(stateOf(await client.call('board/watch', { from: PROJECT_DIRECTORY })));
       } catch (error) {
-        state.set({ kind: 'fault', message: error instanceof Error ? error.message : String(error) });
+        state.set(new FaultedBoard(error instanceof Error ? error.message : String(error)));
       }
     },
   };
-}
+};

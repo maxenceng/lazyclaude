@@ -1,5 +1,8 @@
 export { createClient, RpcError, SidecarUnavailableError } from './client';
-export type { Client, Status } from './client';
+export type { Client } from './client';
+export { Connecting, Exited, Ready, Refused, StatusKind } from './status';
+export type { Status, Unready } from './status';
+export { RelayMessageKind } from './relay';
 export { PROTOCOL_VERSION } from './generated/protocol';
 export type {
   BoardBoardLookupView as BoardLookupView,

@@ -9,11 +9,11 @@ export interface Selection {
 }
 
 /** The ticket the cursor is on, held by id so a changed board keeps it where it can. */
-export function createSelection(): Selection {
+export const createSelection = (): Selection => {
   const selected = createStore<string | undefined>(undefined);
   return {
     selected,
     select: (ticket) => selected.set(ticket),
     move: (view, delta) => selected.set(moveSelection(view, selected.get(), delta)),
   };
-}
+};

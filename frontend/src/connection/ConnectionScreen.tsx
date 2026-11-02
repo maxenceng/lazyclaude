@@ -1,28 +1,26 @@
+import { useTranslation } from 'react-i18next';
 import { Alert, Busy, Button, Text } from '../design-system';
-import type { Status } from '../protocol';
+import { StatusKind, type Unready } from '../protocol';
 
 interface Props {
-  status: Exclude<Status, { kind: 'ready' }>;
+  status: Unready;
   onRestart: () => void;
 }
 
 /** What the window says while the sidecar is not there to show a board. */
-export function ConnectionScreen({ status, onRestart }: Props) {
+export const ConnectionScreen = ({ status, onRestart }: Props) => {
+  const { t } = useTranslation();
   switch (status.kind) {
-    case 'connecting':
-      return <Busy>Starting the backend…</Busy>;
-    case 'refused':
+    case StatusKind.Connecting:
+      return <Busy>{t('connection.connecting')}</Busy>;
+    case StatusKind.Refused:
+      return <Alert title={t('connection.refusedTitle')}>{t('connection.refused', { actual: status.actual, expected: status.expected })}</Alert>;
+    case StatusKind.Exited:
       return (
-        <Alert title="This backend cannot be used">
-          The backend speaks protocol {status.actual}; this window was built for protocol {status.expected}.
-        </Alert>
-      );
-    case 'exited':
-      return (
-        <Alert title="The backend stopped" action={<Button onClick={onRestart}>Restart</Button>}>
-          {status.code === null ? 'It ended with no exit code.' : `It ended with exit code ${status.code}.`}
+        <Alert title={t('connection.exitedTitle')} action={<Button onClick={onRestart}>{t('connection.restart')}</Button>}>
+          {status.code === null ? t('connection.exitedWithoutCode') : t('connection.exitedWithCode', { code: status.code })}
           {status.stderr.length === 0 ? null : <Text mono>{status.stderr.join('\n')}</Text>}
         </Alert>
       );
   }
-}
+};

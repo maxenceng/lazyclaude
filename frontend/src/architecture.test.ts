@@ -4,9 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = resolve(__dirname);
 const CONTEXTS = ['board', 'session'];
-const SHARED = ['protocol', 'design-system', 'shared', 'test', 'keys', 'connection'];
+const SHARED = ['protocol', 'design-system', 'i18n', 'shared', 'test'];
+const COMPOSITION = ['keys', 'connection'];
 
-function sourceFiles(directory: string): string[] {
+const sourceFiles = (directory: string): string[] => {
   return readdirSync(directory).flatMap((name) => {
     const path = join(directory, name);
     if (statSync(path).isDirectory()) {
@@ -14,7 +15,7 @@ function sourceFiles(directory: string): string[] {
     }
     return /\.(ts|tsx)$/.test(name) ? [path] : [];
   });
-}
+};
 
 interface Import {
   file: string;
@@ -22,14 +23,14 @@ interface Import {
   target: string;
 }
 
-function importsOf(file: string): Import[] {
+const importsOf = (file: string): Import[] => {
   const text = readFileSync(file, 'utf8');
   return [...text.matchAll(/(?:from|import)\s+['"](\.[^'"]*)['"]/g)].map((match) => {
     const from = relative(SRC, file);
     const target = relative(SRC, resolve(dirname(file), match[1] ?? ''));
     return { file: from, from: from.split(sep)[0] ?? '', target };
   });
-}
+};
 
 const imports = sourceFiles(SRC)
   .filter((file) => !file.endsWith('architecture.test.ts'))
@@ -52,13 +53,18 @@ describe('the frontend architecture', () => {
     expect(offenders.map((entry) => entry.file)).toEqual([]);
   });
 
-  it('keeps the design system free of contexts, the protocol and everything else', () => {
-    const offenders = imports.filter((entry) => entry.from === 'design-system' && folderOf(entry.target) !== 'design-system');
+  it('keeps the design system free of contexts, the protocol and everything else but its copy', () => {
+    const offenders = imports.filter((entry) => entry.from === 'design-system' && !['design-system', 'i18n'].includes(folderOf(entry.target)));
     expect(offenders.map((entry) => entry.file)).toEqual([]);
   });
 
   it('keeps the shared folders free of contexts', () => {
     const offenders = imports.filter((entry) => SHARED.includes(entry.from) && CONTEXTS.includes(folderOf(entry.target)));
+    expect(offenders.map((entry) => entry.file)).toEqual([]);
+  });
+
+  it('keeps contexts and shared folders from importing the composition side', () => {
+    const offenders = imports.filter((entry) => [...CONTEXTS, ...SHARED].includes(entry.from) && COMPOSITION.includes(folderOf(entry.target)));
     expect(offenders.map((entry) => entry.file)).toEqual([]);
   });
 });

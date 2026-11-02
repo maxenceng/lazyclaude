@@ -1,7 +1,7 @@
 import styles from './KeyBar.module.css';
 
 /** The keys that work where focus is, along the bottom. */
-export function KeyBar({ keys }: { keys: readonly string[] }) {
+export const KeyBar = ({ keys }: { keys: readonly string[] }) => {
   return (
     <footer className={styles.bar}>
       {keys.map((key) => (
@@ -11,4 +11,4 @@ export function KeyBar({ keys }: { keys: readonly string[] }) {
       ))}
     </footer>
   );
-}
+};

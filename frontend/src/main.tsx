@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { createApp } from './app';
 import './design-system/global.css';
+import './i18n/i18n';
 import { createClient, tauriRelay } from './protocol';
 
 const app = createApp(createClient(tauriRelay));

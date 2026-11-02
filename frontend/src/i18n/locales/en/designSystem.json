@@ -1,0 +1,21 @@
+{
+  "lamp": {
+    "permission": "waiting for permission",
+    "input": "waiting for input",
+    "turn": "your turn",
+    "off": "no session waits on you",
+    "shortPermission": "permission",
+    "shortInput": "input",
+    "shortTurn": "turn",
+    "noTicket": "no ticket",
+    "noNumber": "—",
+    "tile": "{{number}}: {{meaning}}"
+  },
+  "statusLine": {
+    "tiles": "live sessions",
+    "counts": "sessions by state"
+  },
+  "unreadableRow": {
+    "row": "{{id}} — {{reason}}"
+  }
+}

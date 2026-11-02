@@ -8,7 +8,7 @@ interface Props {
 }
 
 /** A region of the screen between hairline seams; the focused one has an edge. */
-export function Pane({ title, focused, children }: Props) {
+export const Pane = ({ title, focused, children }: Props) => {
   const heading = useId();
   return (
     <section className={focused ? `${styles.pane} ${styles.focused}` : styles.pane} aria-labelledby={heading}>
@@ -18,4 +18,4 @@ export function Pane({ title, focused, children }: Props) {
       {children}
     </section>
   );
-}
+};

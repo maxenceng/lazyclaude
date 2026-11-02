@@ -6,11 +6,11 @@ interface Props {
 }
 
 /** A status's name over its tickets, with how many there are. */
-export function StatusHeading({ status, count }: Props) {
+export const StatusHeading = ({ status, count }: Props) => {
   return (
     <div className={styles.heading}>
       <span>{status}</span>
       <span className={styles.count}>{count}</span>
     </div>
   );
-}
+};

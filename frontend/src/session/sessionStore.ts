@@ -7,7 +7,7 @@ export interface SessionStore {
 }
 
 /** The live sessions behind the lamps; undefined until the watch answers, and when it cannot. */
-export function createSessionStore(client: Client): SessionStore {
+export const createSessionStore = (client: Client): SessionStore => {
   const sessions = createStore<SessionsView | undefined>(undefined);
   client.subscribe('session/changed', (view) => sessions.set(view));
   return {
@@ -20,4 +20,4 @@ export function createSessionStore(client: Client): SessionStore {
       }
     },
   };
-}
+};

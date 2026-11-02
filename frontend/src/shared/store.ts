@@ -5,7 +5,7 @@ export interface Store<T> {
 }
 
 /** The shape `useSyncExternalStore` reads: a snapshot, and a way to hear it change. */
-export function createStore<T>(initial: T): Store<T> {
+export const createStore = <T>(initial: T): Store<T> => {
   let value = initial;
   const listeners = new Set<() => void>();
   return {
@@ -19,4 +19,4 @@ export function createStore<T>(initial: T): Store<T> {
       return () => listeners.delete(listener);
     },
   };
-}
+};

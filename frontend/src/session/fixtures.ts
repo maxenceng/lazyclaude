@@ -1,6 +1,6 @@
 import type { LiveSessionView, SessionsView } from '../protocol';
 
-export function sessionFixture(overrides: { id?: string; state?: LiveSessionView['state']; ticket?: string | undefined; tickets?: string[] } = {}): LiveSessionView {
+export const sessionFixture = (overrides: { id?: string; state?: LiveSessionView['state']; ticket?: string | undefined; tickets?: string[] } = {}): LiveSessionView => {
   const tickets = overrides.tickets ?? (overrides.ticket === undefined ? [] : [overrides.ticket]);
   return {
     id: overrides.id ?? 's',
@@ -13,8 +13,8 @@ export function sessionFixture(overrides: { id?: string; state?: LiveSessionView
     state: overrides.state ?? { kind: 'busy' },
     links: tickets.map((ticket) => ({ ticket, verb: 'start' })),
   };
-}
+};
 
-export function sessionsFixture(live: LiveSessionView[]): SessionsView {
+export const sessionsFixture = (live: LiveSessionView[]): SessionsView => {
   return { live, past: [], hosted: [] };
-}
+};

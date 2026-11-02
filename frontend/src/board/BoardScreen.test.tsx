@@ -1,6 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { LampColour } from '../design-system';
 import { RpcError } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
 import { BoardScreen } from './BoardScreen';
@@ -8,7 +9,7 @@ import { createBoardStore } from './boardStore';
 import { boardFixture, ticketFixture } from './fixtures';
 import { createSelection } from './selection';
 
-function setup(markerOf: (ticket: string) => 'permission' | undefined = () => undefined) {
+const setup = (markerOf: (ticket: string) => LampColour | undefined = () => undefined) => {
   const client = fakeClient();
   const board = createBoardStore(client);
   const selection = createSelection();
@@ -16,7 +17,7 @@ function setup(markerOf: (ticket: string) => 'permission' | undefined = () => un
   const loaded = board.load();
   render(<BoardScreen board={board} selection={selection} markerOf={markerOf} onOpen={onOpen} onRetry={() => void board.load()} />);
   return { client, board, selection, onOpen, loaded };
-}
+};
 
 const tickets = boardFixture([
   ticketFixture({ id: 'PROJ-1', title: 'Shows the Board', status: 'IN_PROGRESS' }),
@@ -24,12 +25,12 @@ const tickets = boardFixture([
   ticketFixture({ id: 'PROJ-3', title: 'Already shipped', status: 'DONE' }),
 ]);
 
-async function answer(client: ReturnType<typeof fakeClient>, loaded: Promise<void>, result: unknown) {
+const answer = async (client: ReturnType<typeof fakeClient>, loaded: Promise<void>, result: unknown) => {
   await act(async () => {
     client.answerNext(result);
     await loaded;
   });
-}
+};
 
 describe('the Board', () => {
   it('says it is reading while the watch has not answered', () => {
@@ -128,7 +129,7 @@ describe('the Board', () => {
   });
 
   it('lights the lamp beside a ticket whose session waits on you', async () => {
-    const { client, loaded } = setup((ticket) => (ticket === 'PROJ-2' ? 'permission' : undefined));
+    const { client, loaded } = setup((ticket) => (ticket === 'PROJ-2' ? LampColour.Permission : undefined));
     await answer(client, loaded, tickets);
     expect(within(screen.getByRole('button', { name: /PROJ-2/ })).getByRole('img')).toHaveAccessibleName('waiting for permission');
     expect(within(screen.getByRole('button', { name: /PROJ-1/ })).queryByRole('img')).not.toBeInTheDocument();

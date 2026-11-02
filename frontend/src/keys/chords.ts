@@ -1,23 +1,73 @@
 import type { ConfigurationView } from '../protocol';
-import type { Action, KeyPress } from './bindings';
+import { Action, type KeyPress } from './bindings';
 
-export interface Binding {
-  action: Action;
-  modifiers: { ctrl: boolean; alt: boolean; shift: boolean };
-  key: { kind: 'character'; character: string } | { kind: 'named'; name: string };
+export enum KeyKind {
+  Character = 'character',
+  Named = 'named',
+}
+
+/** A typed character, stored lower case so a shifted press still reads as it. */
+export class CharacterKey {
+  readonly kind = KeyKind.Character;
+
+  constructor(readonly character: string) {}
+
+  matches(key: string): boolean {
+    return key.toLowerCase() === this.character;
+  }
+}
+
+/** A key with a name, as `KeyboardEvent.key` spells it. */
+export class NamedKey {
+  readonly kind = KeyKind.Named;
+
+  constructor(readonly name: string) {}
+
+  matches(key: string): boolean {
+    return key === this.name;
+  }
+}
+
+export type ChordKey = CharacterKey | NamedKey;
+
+/** The exact set of modifiers a chord is pressed with; Meta is never one of them. */
+export class Modifiers {
+  constructor(
+    readonly ctrl: boolean,
+    readonly alt: boolean,
+    readonly shift: boolean,
+  ) {}
+
+  heldIn(press: KeyPress): boolean {
+    return !press.metaKey && press.ctrlKey === this.ctrl && press.altKey === this.alt && press.shiftKey === this.shift;
+  }
+}
+
+/** A reserved chord from `config.yml` and the action it stands for. */
+export class Binding {
+  constructor(
+    readonly action: Action,
+    readonly modifiers: Modifiers,
+    readonly key: ChordKey,
+  ) {}
+
+  /** Pressed when the key and the modifier set are exactly its own. */
+  matches(press: KeyPress): boolean {
+    return this.modifiers.heldIn(press) && this.key.matches(press.key);
+  }
 }
 
 type Reserved = ConfigurationView['chords'][number]['action'];
-type NamedKey = Extract<ConfigurationView['chords'][number]['chord']['key'], { kind: 'pressedKey' }>['key'];
+type PressedKeyName = Extract<ConfigurationView['chords'][number]['chord']['key'], { kind: 'pressedKey' }>['key'];
 
 const ACTIONS: Readonly<Record<Reserved, Action>> = {
-  FOCUS_LEFT: 'focusLeft',
-  FOCUS_RIGHT: 'focusRight',
-  FOCUS_DOWN: 'focusDown',
-  FOCUS_UP: 'focusUp',
-  HIDE_MAIN_VIEW: 'toggleMainView',
-  ZOOM: 'zoom',
-  NEXT_WAITING: 'nextWaiting',
+  FOCUS_LEFT: Action.FocusLeft,
+  FOCUS_RIGHT: Action.FocusRight,
+  FOCUS_DOWN: Action.FocusDown,
+  FOCUS_UP: Action.FocusUp,
+  HIDE_MAIN_VIEW: Action.ToggleMainView,
+  ZOOM: Action.Zoom,
+  NEXT_WAITING: Action.NextWaiting,
 };
 
 const NAMES: Readonly<Record<string, string>> = {
@@ -37,30 +87,14 @@ const NAMES: Readonly<Record<string, string>> = {
   PAGE_DOWN: 'PageDown',
 };
 
-function keyName(key: NamedKey): string {
-  return NAMES[key] ?? key;
-}
+const keyName = (key: PressedKeyName): string => NAMES[key] ?? key;
 
-export function bindingsOf(configuration: ConfigurationView): Binding[] {
-  return configuration.chords.map(({ action, chord }) => ({
-    action: ACTIONS[action],
-    modifiers: {
-      ctrl: chord.modifiers.includes('CTRL'),
-      alt: chord.modifiers.includes('ALT'),
-      shift: chord.modifiers.includes('SHIFT'),
-    },
-    key:
-      chord.key.kind === 'typedCharacter'
-        ? { kind: 'character', character: String.fromCodePoint(chord.key.codePoint) }
-        : { kind: 'named', name: keyName(chord.key.key) },
-  }));
-}
-
-/** A chord is pressed when the key and the modifier set are exactly its own; characters are stored lower case, so a shifted one is compared lower case. */
-export function matches(binding: Binding, press: KeyPress): boolean {
-  const { ctrl, alt, shift } = binding.modifiers;
-  if (press.metaKey || press.ctrlKey !== ctrl || press.altKey !== alt || press.shiftKey !== shift) {
-    return false;
-  }
-  return binding.key.kind === 'character' ? press.key.toLowerCase() === binding.key.character : press.key === binding.key.name;
-}
+export const bindingsOf = (configuration: ConfigurationView): Binding[] =>
+  configuration.chords.map(
+    ({ action, chord }) =>
+      new Binding(
+        ACTIONS[action],
+        new Modifiers(chord.modifiers.includes('CTRL'), chord.modifiers.includes('ALT'), chord.modifiers.includes('SHIFT')),
+        chord.key.kind === 'typedCharacter' ? new CharacterKey(String.fromCodePoint(chord.key.codePoint)) : new NamedKey(keyName(chord.key.key)),
+      ),
+  );

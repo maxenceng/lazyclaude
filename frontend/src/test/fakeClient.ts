@@ -1,4 +1,4 @@
-import type { Client, Status } from '../protocol';
+import { type Client, Ready, type Status } from '../protocol';
 import { createStore } from '../shared/store';
 
 type Handler = (params: never) => void;
@@ -14,7 +14,7 @@ export interface FakeClient extends Client {
 }
 
 /** A client whose calls wait for the test to answer them, in the order they were made. */
-export function fakeClient(initial: Status = { kind: 'ready' }): FakeClient {
+export const fakeClient = (initial: Status = new Ready()): FakeClient => {
   const status = createStore<Status>(initial);
   const waiting: Array<{ resolve(value: unknown): void; reject(error: Error): void }> = [];
   const handlers = new Map<string, Set<Handler>>();
@@ -47,4 +47,4 @@ export function fakeClient(initial: Status = { kind: 'ready' }): FakeClient {
     setStatus: (next) => status.set(next),
   };
   return fake;
-}
+};

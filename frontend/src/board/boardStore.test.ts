@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { RpcError } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
 import { boardFixture, ticketFixture } from './fixtures';
+import { EmptyBoard, FaultedBoard, LoadingBoard, PopulatedBoard, UnavailableBoard, UnavailableCause } from './boardState';
 import { createBoardStore } from './boardStore';
 
 describe('the board store', () => {
   it('is loading until the watch answers', () => {
     const store = createBoardStore(fakeClient());
     void store.load();
-    expect(store.state.get()).toEqual({ kind: 'loading' });
+    expect(store.state.get()).toEqual(new LoadingBoard());
   });
 
   it('asks board/watch from the project directory the sidecar runs in', () => {
@@ -24,7 +25,7 @@ describe('the board store', () => {
     const view = boardFixture([ticketFixture({ id: 'PROJ-1' })]);
     client.answerNext(view);
     await loaded;
-    expect(store.state.get()).toEqual({ kind: 'populated', view });
+    expect(store.state.get()).toEqual(new PopulatedBoard(view));
   });
 
   it('shows each board/changed after it', async () => {
@@ -35,7 +36,7 @@ describe('the board store', () => {
     await loaded;
     const next = boardFixture([ticketFixture({ id: 'PROJ-2' })]);
     client.push('board/changed', next);
-    expect(store.state.get()).toEqual({ kind: 'populated', view: next });
+    expect(store.state.get()).toEqual(new PopulatedBoard(next));
   });
 
   it('is empty when the board has no ticket', async () => {
@@ -44,7 +45,7 @@ describe('the board store', () => {
     const loaded = store.load();
     client.answerNext(boardFixture([]));
     await loaded;
-    expect(store.state.get()).toEqual({ kind: 'empty' });
+    expect(store.state.get()).toEqual(new EmptyBoard());
   });
 
   it('is empty when its statuses are all without a ticket', async () => {
@@ -53,7 +54,7 @@ describe('the board store', () => {
     const loaded = store.load();
     client.answerNext({ ...boardFixture([]), groups: [{ status: 'TODO', tickets: [] }] });
     await loaded;
-    expect(store.state.get()).toEqual({ kind: 'empty' });
+    expect(store.state.get()).toEqual(new EmptyBoard());
   });
 
   it('is not empty when only unreadable tickets are on it', async () => {
@@ -71,7 +72,7 @@ describe('the board store', () => {
     const loaded = store.load();
     client.answerNext({ kind: 'unavailableBoard', root: '/p', reason: 'gh is not signed in' });
     await loaded;
-    expect(store.state.get()).toEqual({ kind: 'unavailable', cause: 'unavailableBoard', reason: 'gh is not signed in' });
+    expect(store.state.get()).toEqual(new UnavailableBoard(UnavailableCause.UnavailableBoard, 'gh is not signed in'));
   });
 
   it('shows the reason a directory belongs to no project', async () => {
@@ -80,7 +81,7 @@ describe('the board store', () => {
     const loaded = store.load();
     client.answerNext({ kind: 'noProject', reason: 'not a lazyclaude project' });
     await loaded;
-    expect(store.state.get()).toEqual({ kind: 'unavailable', cause: 'noProject', reason: 'not a lazyclaude project' });
+    expect(store.state.get()).toEqual(new UnavailableBoard(UnavailableCause.NoProject, 'not a lazyclaude project'));
   });
 
   it('shows a JSON-RPC error as a fault with its message', async () => {
@@ -89,7 +90,7 @@ describe('the board store', () => {
     const loaded = store.load();
     client.failNext(new RpcError(-32603, 'internal error'));
     await loaded;
-    expect(store.state.get()).toEqual({ kind: 'fault', message: 'internal error' });
+    expect(store.state.get()).toEqual(new FaultedBoard('internal error'));
   });
 
   it('loads again after a fault when asked', async () => {
@@ -99,7 +100,7 @@ describe('the board store', () => {
     client.failNext(new RpcError(-32603, 'internal error'));
     await first;
     void store.load();
-    expect(store.state.get()).toEqual({ kind: 'loading' });
+    expect(store.state.get()).toEqual(new LoadingBoard());
     expect(client.calls).toHaveLength(2);
   });
 });

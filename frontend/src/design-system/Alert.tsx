@@ -8,7 +8,7 @@ interface Props {
 }
 
 /** A fault the user can act on: what failed, then the action. */
-export function Alert({ title, children, action }: Props) {
+export const Alert = ({ title, children, action }: Props) => {
   return (
     <div role="alert" className={styles.alert}>
       <strong className={styles.title}>{title}</strong>
@@ -16,4 +16,4 @@ export function Alert({ title, children, action }: Props) {
       {action}
     </div>
   );
-}
+};

@@ -5,6 +5,7 @@ import { App } from './App';
 import { createApp } from './app';
 import { boardFixture, ticketFixture } from './board/fixtures';
 import { sessionFixture, sessionsFixture } from './session/fixtures';
+import { Exited, Ready } from './protocol';
 import { fakeClient } from './test/fakeClient';
 
 const board = boardFixture([
@@ -12,8 +13,8 @@ const board = boardFixture([
   ticketFixture({ id: 'PROJ-2', title: 'Second', status: 'TODO' }),
 ]);
 
-async function readyApp() {
-  const client = fakeClient({ kind: 'ready' });
+const readyApp = async () => {
+  const client = fakeClient(new Ready());
   const app = createApp(client);
   app.start();
   const onOpen = vi.fn();
@@ -23,7 +24,7 @@ async function readyApp() {
     await Promise.resolve();
   });
   return { client, onOpen };
-}
+};
 
 describe('the window', () => {
   it('takes j and k to move the cursor and enter to open the ticket under it', async () => {
@@ -49,7 +50,7 @@ describe('the window', () => {
   });
 
   it('shows the connection screen instead of the board while the backend is down', () => {
-    const client = fakeClient({ kind: 'exited', code: 1, stderr: ['boom'] });
+    const client = fakeClient(new Exited(1, ['boom']));
     render(<App app={createApp(client)} packaged={false} onOpen={() => {}} />);
     expect(screen.getByRole('alert')).toHaveTextContent('The backend stopped');
   });

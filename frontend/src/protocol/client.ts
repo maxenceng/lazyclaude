@@ -8,14 +8,9 @@ import {
   PROTOCOL_VERSION,
   type Result,
 } from './generated/protocol';
-import type { Attached, Relay, RelayMessage } from './relay';
+import { type Attached, type Relay, type RelayMessage, RelayMessageKind } from './relay';
+import { Connecting, Exited, Ready, Refused, type Status, StatusKind } from './status';
 import { createStore, type Store } from '../shared/store';
-
-export type Status =
-  | { kind: 'connecting' }
-  | { kind: 'ready' }
-  | { kind: 'refused'; expected: number; actual: number }
-  | { kind: 'exited'; code: number | null; stderr: string[] };
 
 export class RpcError extends Error {
   constructor(
@@ -29,7 +24,7 @@ export class RpcError extends Error {
 
 export class SidecarUnavailableError extends Error {
   constructor(status: Status) {
-    super(status.kind === 'refused' ? 'the sidecar speaks another protocol' : 'the sidecar is not running');
+    super(status.kind === StatusKind.Refused ? 'the sidecar speaks another protocol' : 'the sidecar is not running');
     this.name = 'SidecarUnavailableError';
   }
 }
@@ -59,8 +54,8 @@ export interface Client {
   subscribe<N extends NotificationName>(name: N, handler: (params: NotificationParams<N>) => void): () => void;
 }
 
-export function createClient(relay: Relay): Client {
-  const status = createStore<Status>({ kind: 'connecting' });
+export const createClient = (relay: Relay): Client => {
+  const status = createStore<Status>(new Connecting());
   const pending = new Map<number, Pending>();
   const waiting: Array<() => void> = [];
   const handlers = new Map<string, Set<(params: never) => void>>();
@@ -76,9 +71,9 @@ export function createClient(relay: Relay): Client {
 
   const deliver = (write: () => void) => {
     const current = status.get();
-    if (current.kind === 'ready') {
+    if (current.isReady()) {
       write();
-    } else if (current.kind === 'connecting') {
+    } else if (!current.isClosed()) {
       waiting.push(write);
     }
   };
@@ -88,11 +83,11 @@ export function createClient(relay: Relay): Client {
   const onReady = (params: unknown) => {
     const actual = (params as { protocol: number }).protocol;
     if (actual !== PROTOCOL_VERSION) {
-      status.set({ kind: 'refused', expected: PROTOCOL_VERSION, actual });
+      status.set(new Refused(PROTOCOL_VERSION, actual));
       failAll();
       return;
     }
-    status.set({ kind: 'ready' });
+    status.set(new Ready());
     waiting.splice(0).forEach((send) => send());
   };
 
@@ -119,12 +114,12 @@ export function createClient(relay: Relay): Client {
   };
 
   const onExit = (code: number | null, stderr: string[]) => {
-    status.set({ kind: 'exited', code, stderr });
+    status.set(new Exited(code, stderr));
     failAll();
   };
 
   const onMessage = (message: RelayMessage) => {
-    if (message.kind === 'lines') {
+    if (message.kind === RelayMessageKind.Lines) {
       message.lines.forEach(onLine);
     } else {
       onExit(message.code, message.stderr);
@@ -147,12 +142,12 @@ export function createClient(relay: Relay): Client {
     },
     async restart() {
       failAll();
-      status.set({ kind: 'connecting' });
+      status.set(new Connecting());
       onAttached(await relay.restart(onMessage));
     },
     call(method, params) {
       const current = status.get();
-      if (current.kind === 'refused' || current.kind === 'exited') {
+      if (current.isClosed()) {
         return Promise.reject(new SidecarUnavailableError(current));
       }
       const id = nextId++;
@@ -176,4 +171,4 @@ export function createClient(relay: Relay): Client {
       return () => set.delete(handler);
     },
   };
-}
+};

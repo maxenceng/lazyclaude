@@ -1,9 +1,14 @@
+export enum RelayMessageKind {
+  Lines = 'lines',
+  Exited = 'exited',
+}
+
 export interface Exit {
   code: number | null;
   stderr: string[];
 }
 
-export type RelayMessage = { kind: 'lines'; lines: string[] } | ({ kind: 'exited' } & Exit);
+export type RelayMessage = { kind: RelayMessageKind.Lines; lines: string[] } | ({ kind: RelayMessageKind.Exited } & Exit);
 
 export interface Attached {
   ready: string | null;

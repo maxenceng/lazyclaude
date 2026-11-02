@@ -81,3 +81,6 @@
 - 0077 [Every context is wired once and handed whole to the shell or the sidecar](0077-every-context-is-wired-once-and-handed-whole-to-the-shell-or-the-sidecar.md) — Accepted.
 - 0078 [The sidecar answers the configuration read at start-up, as a list of chords](0078-the-sidecar-answers-the-configuration-read-at-start-up-as-a-list-of-chords.md) — Accepted.
 - 0079 [The desktop frontend builds on React 19, generated protocol types and a relay that spawns on attach](0079-the-desktop-frontend-builds-on-react-19-generated-protocol-types-and-a-relay-that-spawns-on-attach.md) — Accepted.
+- 0080 [The desktop frontend reads its copy through i18n](0080-the-desktop-frontend-reads-its-copy-through-i18n.md) — Accepted.
+- 0081 [The desktop frontend's states are classes over an enum kind, and its functions are arrows](0081-the-desktop-frontend-s-states-are-classes-over-an-enum-kind-and-its-functions-are-arrows.md) — Accepted.
+- 0082 [The desktop frontend's composition side is imported by no context](0082-the-desktop-frontend-s-composition-side-is-imported-by-no-context.md) — Accepted.

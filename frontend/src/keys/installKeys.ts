@@ -11,7 +11,7 @@ interface Options {
  * A packaged build prevents every other key too, so none moves focus, scrolls, reloads or opens the inspector; a
  * development build leaves them to the webview.
  */
-export function installKeys(onAction: (action: Action) => void, options: Options = {}): () => void {
+export const installKeys = (onAction: (action: Action) => void, options: Options = {}): () => void => {
   const handler = (event: KeyboardEvent) => {
     const action = actionOf(event, options.reserved?.());
     if (action !== undefined) {
@@ -23,4 +23,4 @@ export function installKeys(onAction: (action: Action) => void, options: Options
   };
   window.addEventListener('keydown', handler);
   return () => window.removeEventListener('keydown', handler);
-}
+};

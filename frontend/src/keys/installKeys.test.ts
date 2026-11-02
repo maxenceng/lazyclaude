@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Action } from './bindings';
+import { Action } from './bindings';
 import { bindingsOf } from './chords';
 import { installKeys } from './installKeys';
 
-function press(key: string, init: KeyboardEventInit = {}) {
+const press = (key: string, init: KeyboardEventInit = {}) => {
   const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true, ...init });
   window.dispatchEvent(event);
   return event;
-}
+};
 
 describe('the window-level key handler', () => {
   let remove = () => {};
@@ -18,7 +18,7 @@ describe('the window-level key handler', () => {
     remove = installKeys((action) => taken.push(action));
     const event = press('j');
     expect(event.defaultPrevented).toBe(true);
-    expect(taken).toEqual(['moveDown']);
+    expect(taken).toEqual([Action.MoveDown]);
   });
 
   it('prevents a bound key even when no screen acts on it yet', () => {
@@ -71,6 +71,6 @@ describe('the window-level key handler', () => {
       mouse: true,
     });
     expect(press('x', { altKey: true }).defaultPrevented).toBe(true);
-    expect(taken).toEqual(['zoom']);
+    expect(taken).toEqual([Action.Zoom]);
   });
 });

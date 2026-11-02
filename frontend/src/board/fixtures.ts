@@ -1,6 +1,6 @@
 import type { BoardView, TicketView } from '../protocol';
 
-export function ticketFixture(overrides: Partial<TicketView> = {}): TicketView {
+export const ticketFixture = (overrides: Partial<TicketView> = {}): TicketView => {
   return {
     id: 'PROJ-1',
     branch: 'proj-1-a-ticket',
@@ -13,9 +13,9 @@ export function ticketFixture(overrides: Partial<TicketView> = {}): TicketView {
     verbs: [],
     ...overrides,
   };
-}
+};
 
-export function boardFixture(tickets: TicketView[], unreadable: BoardView['unreadable'] = []): BoardView {
+export const boardFixture = (tickets: TicketView[], unreadable: BoardView['unreadable'] = []): BoardView => {
   const statuses = [...new Set(tickets.map((ticket) => ticket.status))];
   return {
     kind: 'board',
@@ -23,4 +23,4 @@ export function boardFixture(tickets: TicketView[], unreadable: BoardView['unrea
     unreadable,
     groups: statuses.map((status) => ({ status, tickets: tickets.filter((ticket) => ticket.status === status) })),
   };
-}
+};

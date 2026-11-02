@@ -1,0 +1,25 @@
+{
+  "app": {
+    "project": "lazyclaude",
+    "boardTitle": "Board",
+    "ticketTitle": "Ticket",
+    "noTicketSelected": "No ticket selected."
+  },
+  "keyBar": {
+    "move": "j/k move",
+    "open": "enter open"
+  },
+  "configuration": {
+    "fault": "The configuration could not be read",
+    "retry": "Retry"
+  },
+  "connection": {
+    "connecting": "Starting the backend…",
+    "refusedTitle": "This backend cannot be used",
+    "refused": "The backend speaks protocol {{actual}}; this window was built for protocol {{expected}}.",
+    "exitedTitle": "The backend stopped",
+    "exitedWithCode": "It ended with exit code {{code}}.",
+    "exitedWithoutCode": "It ended with no exit code.",
+    "restart": "Restart"
+  }
+}

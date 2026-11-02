@@ -5,7 +5,7 @@ export { Button } from './Button';
 export { Detail } from './Detail';
 export { Count } from './Count';
 export { KeyBar } from './KeyBar';
-export { Lamp, type LampColour } from './Lamp';
+export { Lamp, LampColour } from './Lamp';
 export { Pane } from './Pane';
 export { StatusHeading } from './StatusHeading';
 export { StatusLine } from './StatusLine';

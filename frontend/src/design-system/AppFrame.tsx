@@ -8,7 +8,7 @@ interface Props {
 }
 
 /** The window: status line over the panes over the key bar, panes divided by seams. */
-export function AppFrame({ statusLine, keyBar, children }: Props) {
+export const AppFrame = ({ statusLine, keyBar, children }: Props) => {
   return (
     <div className={styles.frame}>
       {statusLine}
@@ -16,4 +16,4 @@ export function AppFrame({ statusLine, keyBar, children }: Props) {
       {keyBar}
     </div>
   );
-}
+};

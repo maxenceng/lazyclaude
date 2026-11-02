@@ -4,7 +4,7 @@ Date: 2026-10-27
 
 ## Status
 
-Accepted. Builds on ADR 0049 and ADR 0050.
+Accepted. Builds on ADR 0049 and ADR 0050. Amended by ADR 0080 (copy through i18n) and ADR 0082 (the composition side).
 
 ## Context
 

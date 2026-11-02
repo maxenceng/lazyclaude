@@ -11,7 +11,7 @@ interface Props {
 }
 
 /** One ticket: its lamp, its number, its title. The selected row is a light bar; a press on it again opens it. */
-export function TicketRow({ id, title, selected, done, lamp, onSelect }: Props) {
+export const TicketRow = ({ id, title, selected, done, lamp, onSelect }: Props) => {
   const classes = [styles.row, selected ? styles.selected : '', done ? styles.done : ''].join(' ');
   return (
     <li>
@@ -22,4 +22,4 @@ export function TicketRow({ id, title, selected, done, lamp, onSelect }: Props) 
       </button>
     </li>
   );
-}
+};

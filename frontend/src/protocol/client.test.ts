@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createClient, RpcError } from './client';
 import { PROTOCOL_VERSION } from './generated/protocol';
-import type { Attached, Relay, RelayMessage } from './relay';
+import { type Attached, type Relay, type RelayMessage, RelayMessageKind } from './relay';
+import { Connecting, Exited, Ready, Refused } from './status';
 
 class FakeRelay implements Relay {
   sent: string[] = [];
@@ -24,11 +25,11 @@ class FakeRelay implements Relay {
   }
 
   push(...lines: string[]) {
-    this.onMessage({ kind: 'lines', lines });
+    this.onMessage({ kind: RelayMessageKind.Lines, lines });
   }
 
   exit(code: number | null, stderr: string[]) {
-    this.onMessage({ kind: 'exited', code, stderr });
+    this.onMessage({ kind: RelayMessageKind.Exited, code, stderr });
   }
 
   sentRequests() {
@@ -40,13 +41,13 @@ const ready = (protocol: number) => JSON.stringify({ jsonrpc: '2.0', method: 're
 const answer = (id: number, result: unknown) => JSON.stringify({ jsonrpc: '2.0', id, result });
 const noProject = { kind: 'noProject', reason: 'not a project' };
 
-async function readyClient() {
+const readyClient = async () => {
   const relay = new FakeRelay();
   const client = createClient(relay);
   await client.connect();
   relay.push(ready(PROTOCOL_VERSION));
   return { relay, client };
-}
+};
 
 describe('the protocol client', () => {
   afterEach(() => {
@@ -110,7 +111,7 @@ describe('the protocol client', () => {
     await client.connect();
     const call = client.call('board/watch', { from: '.' });
     relay.push(ready(PROTOCOL_VERSION + 1));
-    expect(client.status.get()).toEqual({ kind: 'refused', expected: PROTOCOL_VERSION, actual: PROTOCOL_VERSION + 1 });
+    expect(client.status.get()).toEqual(new Refused(PROTOCOL_VERSION, PROTOCOL_VERSION + 1));
     await expect(call).rejects.toBeInstanceOf(Error);
     expect(relay.sent).toEqual([]);
   });
@@ -120,7 +121,7 @@ describe('the protocol client', () => {
     relay.attachedWith = { ready: ready(PROTOCOL_VERSION), exit: null };
     const client = createClient(relay);
     await client.connect();
-    expect(client.status.get()).toEqual({ kind: 'ready' });
+    expect(client.status.get()).toEqual(new Ready());
   });
 
   it('reports the exit of the sidecar with its stderr and fails the calls waiting', async () => {
@@ -128,7 +129,7 @@ describe('the protocol client', () => {
     const call = client.call('board/watch', { from: '.' });
     await Promise.resolve();
     relay.exit(1, ['out of memory']);
-    expect(client.status.get()).toEqual({ kind: 'exited', code: 1, stderr: ['out of memory'] });
+    expect(client.status.get()).toEqual(new Exited(1, ['out of memory']));
     await expect(call).rejects.toBeInstanceOf(Error);
   });
 
@@ -137,22 +138,22 @@ describe('the protocol client', () => {
     relay.attachedWith = { ready: null, exit: { code: null, stderr: ['no java'] } };
     const client = createClient(relay);
     await client.connect();
-    expect(client.status.get()).toEqual({ kind: 'exited', code: null, stderr: ['no java'] });
+    expect(client.status.get()).toEqual(new Exited(null, ['no java']));
   });
 
   it('connects again on restart and waits for the new ready', async () => {
     const { relay, client } = await readyClient();
     relay.exit(1, []);
     await client.restart();
-    expect(client.status.get()).toEqual({ kind: 'connecting' });
+    expect(client.status.get()).toEqual(new Connecting());
     relay.push(ready(PROTOCOL_VERSION));
-    expect(client.status.get()).toEqual({ kind: 'ready' });
+    expect(client.status.get()).toEqual(new Ready());
   });
 
   it('ignores a line that is not JSON', async () => {
     const { relay, client } = await readyClient();
     relay.push('not json');
-    expect(client.status.get()).toEqual({ kind: 'ready' });
+    expect(client.status.get()).toEqual(new Ready());
   });
 
   it('numbers a reloaded page past the ids the page before it sent to the same sidecar', async () => {

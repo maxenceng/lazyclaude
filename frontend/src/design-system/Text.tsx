@@ -8,6 +8,6 @@ interface Props {
 }
 
 /** Words that are read; mono only for code and a session's lines. */
-export function Text({ tone = 'plain', mono = false, children }: Props) {
+export const Text = ({ tone = 'plain', mono = false, children }: Props) => {
   return <p className={[styles[tone], mono ? styles.mono : ''].join(' ')}>{children}</p>;
-}
+};

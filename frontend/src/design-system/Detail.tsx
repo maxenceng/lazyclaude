@@ -7,7 +7,7 @@ interface Props {
 }
 
 /** What is selected: its facts in a row, its title, its text. */
-export function Detail({ facts, title, body }: Props) {
+export const Detail = ({ facts, title, body }: Props) => {
   return (
     <article className={styles.detail}>
       <div className={styles.facts}>
@@ -19,4 +19,4 @@ export function Detail({ facts, title, body }: Props) {
       {body === undefined ? null : <p className={styles.body}>{body}</p>}
     </article>
   );
-}
+};

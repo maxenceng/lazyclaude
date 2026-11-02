@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actionOf, type KeyPress } from './bindings';
+import { Action, actionOf, type KeyPress } from './bindings';
 
 const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
   key,
@@ -12,32 +12,32 @@ const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
 
 describe('the keys the TUI binds', () => {
   it.each([
-    ['j', 'moveDown'],
-    ['k', 'moveUp'],
-    ['h', 'panelLeft'],
-    ['l', 'panelRight'],
-    ['g', 'top'],
-    ['G', 'bottom'],
-    ['Enter', 'open'],
-    ['q', 'quit'],
-    ['R', 'refresh'],
-    ['c', 'capture'],
-    ['d', 'removeWorktree'],
-    ['p', 'review'],
-    ['n', 'newTicketSession'],
-    ['N', 'newSession'],
-    ['m', 'toggleMainView'],
-    ['z', 'zoom'],
-    ['w', 'nextWaiting'],
-    ['Escape', 'back'],
+    ['j', Action.MoveDown],
+    ['k', Action.MoveUp],
+    ['h', Action.PanelLeft],
+    ['l', Action.PanelRight],
+    ['g', Action.Top],
+    ['G', Action.Bottom],
+    ['Enter', Action.Open],
+    ['q', Action.Quit],
+    ['R', Action.Refresh],
+    ['c', Action.Capture],
+    ['d', Action.RemoveWorktree],
+    ['p', Action.Review],
+    ['n', Action.NewTicketSession],
+    ['N', Action.NewSession],
+    ['m', Action.ToggleMainView],
+    ['z', Action.Zoom],
+    ['w', Action.NextWaiting],
+    ['Escape', Action.Back],
   ])('%s is taken as %s', (key, action) => {
     expect(actionOf(press(key, { shiftKey: key !== key.toLowerCase() }))).toBe(action);
   });
 
   it.each([
-    ['c', 'quit'],
-    ['d', 'halfPageDown'],
-    ['u', 'halfPageUp'],
+    ['c', Action.Quit],
+    ['d', Action.HalfPageDown],
+    ['u', Action.HalfPageUp],
   ])('ctrl+%s is taken as %s', (key, action) => {
     expect(actionOf(press(key, { ctrlKey: true }))).toBe(action);
   });
