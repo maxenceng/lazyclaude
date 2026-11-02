@@ -1,5 +1,6 @@
 //! Spawns the sidecar and carries its lines both ways. It knows no JSON-RPC method: only that the first line is `ready`.
 
+use std::ffi::OsString;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
@@ -7,7 +8,6 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 
 use serde::Serialize;
-use tauri::ipc::Channel;
 
 use crate::lines::{Lines, Tail};
 
@@ -27,6 +27,43 @@ pub struct Exit {
     pub stderr: Vec<String>,
 }
 
+/// Where the page's messages go: the attached page's `Channel` in the window, a recorder in a test.
+pub type OnMessage = Arc<dyn Fn(RelayMessage) + Send + Sync>;
+
+/// The process the relay runs: `java -jar <jar> --sidecar` in the project directory, a stand-in in a test.
+#[derive(Clone)]
+pub struct Sidecar {
+    program: OsString,
+    args: Vec<OsString>,
+    directory: PathBuf,
+}
+
+impl Sidecar {
+    pub fn java(jar: PathBuf, project: PathBuf) -> Self {
+        Self {
+            program: "java".into(),
+            args: vec![
+                "--enable-native-access=ALL-UNNAMED".into(),
+                "-jar".into(),
+                jar.into_os_string(),
+                "--sidecar".into(),
+            ],
+            directory: project,
+        }
+    }
+
+    fn command(&self) -> Command {
+        let mut command = Command::new(&self.program);
+        command.args(&self.args).current_dir(&self.directory);
+        command
+    }
+
+    fn describe(&self) -> String {
+        let args: Vec<_> = self.args.iter().map(|arg| arg.to_string_lossy()).collect();
+        format!("{} {}", self.program.to_string_lossy(), args.join(" "))
+    }
+}
+
 /// What a page learns when it attaches: the `ready` line if it went by already, and the exit if the sidecar is gone.
 #[derive(Serialize)]
 pub struct Attached {
@@ -36,7 +73,7 @@ pub struct Attached {
 
 struct Running {
     generation: u64,
-    channel: Option<Channel<RelayMessage>>,
+    channel: Option<OnMessage>,
     lines: Lines,
     stderr: Tail,
     exit: Option<Exit>,
@@ -46,15 +83,14 @@ struct Running {
 
 #[derive(Clone)]
 pub struct Relay {
-    jar: PathBuf,
-    project: PathBuf,
+    sidecar: Sidecar,
     running: Arc<Mutex<Running>>,
     /// Apart from `running`, so a write blocked on a full pipe never stops stdout being drained. Taken after `running`, never before.
     stdin: Arc<Mutex<Option<ChildStdin>>>,
 }
 
 impl Relay {
-    pub fn new(jar: PathBuf, project: PathBuf) -> Self {
+    pub fn new(sidecar: Sidecar) -> Self {
         let running = Running {
             generation: 0,
             channel: None,
@@ -65,14 +101,13 @@ impl Relay {
             spawned: false,
         };
         Self {
-            jar,
-            project,
+            sidecar,
             running: Arc::new(Mutex::new(running)),
             stdin: Arc::new(Mutex::new(None)),
         }
     }
 
-    pub fn attach(&self, channel: Channel<RelayMessage>) -> Attached {
+    pub fn attach(&self, channel: OnMessage) -> Attached {
         let first = {
             let mut running = self.lock();
             running.channel = Some(channel);
@@ -90,7 +125,7 @@ impl Relay {
         }
     }
 
-    pub fn restart(&self, channel: Channel<RelayMessage>) -> Attached {
+    pub fn restart(&self, channel: OnMessage) -> Attached {
         {
             let mut running = self.lock();
             running.channel = Some(channel);
@@ -143,12 +178,9 @@ impl Relay {
             running.stderr = Tail::new(STDERR_LINES);
             running.generation
         };
-        let spawned = Command::new("java")
-            .arg("--enable-native-access=ALL-UNNAMED")
-            .arg("-jar")
-            .arg(&self.jar)
-            .arg("--sidecar")
-            .current_dir(&self.project)
+        let spawned = self
+            .sidecar
+            .command()
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -156,7 +188,7 @@ impl Relay {
         match spawned {
             Ok(child) => self.watch(child, generation),
             Err(error) => {
-                let reason = format!("cannot run java on {}: {error}", self.jar.display());
+                let reason = format!("cannot run {}: {error}", self.sidecar.describe());
                 self.finish(generation, None, Some(reason));
             }
         }
@@ -198,7 +230,7 @@ impl Relay {
                 continue;
             }
             if let Some(channel) = &running.channel {
-                let _ = channel.send(RelayMessage::Lines { lines });
+                channel(RelayMessage::Lines { lines });
             }
         }
     }
@@ -235,7 +267,142 @@ impl Relay {
         *self.stdin() = None;
         running.exit = Some(exit.clone());
         if let Some(channel) = &running.channel {
-            let _ = channel.send(RelayMessage::Exited(exit));
+            channel(RelayMessage::Exited(exit));
+        }
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use std::path::Path;
+    use std::sync::mpsc::{self, Receiver};
+    use std::time::{Duration, Instant};
+
+    const WAIT: Duration = Duration::from_secs(10);
+    const READY: &str = r#"{"jsonrpc":"2.0","method":"ready","params":{"protocol":1}}"#;
+    const CHANGED: &str = r#"{"jsonrpc":"2.0","method":"board/changed","params":{}}"#;
+
+    fn stand_in(script: &str, marker: &Path) -> Relay {
+        Relay::new(Sidecar {
+            program: "sh".into(),
+            args: vec![
+                "-c".into(),
+                script.into(),
+                "stand-in".into(),
+                marker.as_os_str().to_owned(),
+            ],
+            directory: std::env::temp_dir(),
+        })
+    }
+
+    fn recorder() -> (OnMessage, Receiver<RelayMessage>) {
+        let (sender, receiver) = mpsc::channel();
+        let sender = Mutex::new(sender);
+        let on_message: OnMessage = Arc::new(move |message| {
+            let _ = sender
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .send(message);
+        });
+        (on_message, receiver)
+    }
+
+    fn lines(receiver: &Receiver<RelayMessage>) -> Vec<String> {
+        match receiver.recv_timeout(WAIT).expect("a message from the relay") {
+            RelayMessage::Lines { lines } => lines,
+            RelayMessage::Exited(exit) => panic!("the stand-in exited: {:?} {:?}", exit.code, exit.stderr),
+        }
+    }
+
+    fn marker(name: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!("lazyclaude-relay-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        path
+    }
+
+    fn appears(path: &Path) -> bool {
+        let deadline = Instant::now() + WAIT;
+        while Instant::now() < deadline {
+            if path.exists() {
+                return true;
+            }
+            thread::sleep(Duration::from_millis(20));
+        }
+        false
+    }
+
+    #[test]
+    fn lines_written_together_reach_the_page_in_one_message_as_they_were_written() {
+        let script = format!("printf '%s\\n%s\\nthird\\n' '{READY}' '{CHANGED}'; read rest");
+        let relay = stand_in(&script, &marker("batch"));
+        let (on_message, receiver) = recorder();
+
+        relay.attach(on_message);
+
+        assert_eq!(lines(&receiver), vec![READY, CHANGED, "third"]);
+        relay.close();
+    }
+
+    #[test]
+    fn a_line_sent_reaches_the_sidecar_stdin_whole() {
+        let script = format!("printf '%s\\n' '{READY}'; read line; printf 'echo:%s\\n' \"$line\"; read rest");
+        let relay = stand_in(&script, &marker("send"));
+        let (on_message, receiver) = recorder();
+        relay.attach(on_message);
+        assert_eq!(lines(&receiver), vec![READY]);
+
+        relay.send(CHANGED).expect("the stand-in's stdin is open");
+
+        assert_eq!(lines(&receiver), vec![format!("echo:{CHANGED}")]);
+        relay.close();
+    }
+
+    #[test]
+    fn a_page_attaching_later_is_handed_the_ready_line_kept_past_later_lines() {
+        let script = format!("printf '%s\\n' '{READY}'; read line; printf 'later\\n'; read rest");
+        let relay = stand_in(&script, &marker("reattach"));
+        let (on_message, receiver) = recorder();
+        relay.attach(on_message);
+        assert_eq!(lines(&receiver), vec![READY]);
+        relay.send("go").expect("the stand-in's stdin is open");
+        assert_eq!(lines(&receiver), vec!["later"]);
+
+        let (reloaded, _) = recorder();
+        let attached = relay.attach(reloaded);
+
+        assert_eq!(attached.ready.as_deref(), Some(READY));
+        assert!(attached.exit.is_none());
+        relay.close();
+    }
+
+    #[test]
+    fn closing_the_relay_closes_the_sidecar_stdin() {
+        let closed = marker("close");
+        let relay = stand_in(&format!("printf '%s\\n' '{READY}'; cat >/dev/null; touch \"$1\""), &closed);
+        let (on_message, receiver) = recorder();
+        relay.attach(on_message);
+        assert_eq!(lines(&receiver), vec![READY]);
+
+        relay.close();
+
+        assert!(appears(&closed), "the stand-in saw end of file on stdin and ran on to its marker");
+        let _ = std::fs::remove_file(&closed);
+    }
+
+    #[test]
+    fn an_unasked_exit_reaches_the_page_with_its_code_and_stderr() {
+        let relay = stand_in("echo 'out of memory' >&2; exit 3", &marker("exit"));
+        let (on_message, receiver) = recorder();
+
+        relay.attach(on_message);
+
+        match receiver.recv_timeout(WAIT).expect("a message from the relay") {
+            RelayMessage::Exited(exit) => {
+                assert_eq!(exit.code, Some(3));
+                assert_eq!(exit.stderr, vec!["out of memory"]);
+            }
+            RelayMessage::Lines { lines } => panic!("unexpected lines {lines:?}"),
         }
     }
 }

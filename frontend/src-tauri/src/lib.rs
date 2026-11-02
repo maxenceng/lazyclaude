@@ -2,18 +2,26 @@ pub mod launch;
 pub mod lines;
 mod relay;
 
-use relay::{Attached, Relay, RelayMessage};
+use std::sync::Arc;
+
+use relay::{Attached, OnMessage, Relay, RelayMessage, Sidecar};
 use tauri::ipc::Channel;
 use tauri::{Manager, State, WindowEvent};
 
 #[tauri::command(async)]
 fn relay_attach(relay: State<Relay>, on_message: Channel<RelayMessage>) -> Attached {
-    relay.attach(on_message)
+    relay.attach(to_page(on_message))
 }
 
 #[tauri::command(async)]
 fn relay_restart(relay: State<Relay>, on_message: Channel<RelayMessage>) -> Attached {
-    relay.restart(on_message)
+    relay.restart(to_page(on_message))
+}
+
+fn to_page(channel: Channel<RelayMessage>) -> OnMessage {
+    Arc::new(move |message| {
+        let _ = channel.send(message);
+    })
 }
 
 #[tauri::command(async)]
@@ -26,7 +34,7 @@ pub fn run() {
     let jar = launch::jar(std::env::var("LAZYCLAUDE_SIDECAR").ok(), &launch_dir);
     let project = launch::project(std::env::args().nth(1), launch_dir);
     tauri::Builder::default()
-        .manage(Relay::new(jar, project))
+        .manage(Relay::new(Sidecar::java(jar, project)))
         .invoke_handler(tauri::generate_handler![
             relay_attach,
             relay_restart,
