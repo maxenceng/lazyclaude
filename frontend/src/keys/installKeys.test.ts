@@ -9,6 +9,12 @@ const press = (key: string, init: KeyboardEventInit = {}) => {
   return event;
 };
 
+const rightClick = () => {
+  const event = new MouseEvent('contextmenu', { cancelable: true, bubbles: true });
+  window.dispatchEvent(event);
+  return event;
+};
+
 describe('the window-level key handler', () => {
   let remove = () => {};
   afterEach(() => remove());
@@ -72,5 +78,20 @@ describe('the window-level key handler', () => {
     });
     expect(press('x', { altKey: true }).defaultPrevented).toBe(true);
     expect(taken).toEqual([Action.Zoom]);
+  });
+
+  it('prevents the right-click menu in a packaged build', () => {
+    remove = installKeys(() => {}, { packaged: true });
+    expect(rightClick().defaultPrevented).toBe(true);
+  });
+
+  it('leaves the right-click menu to a development build', () => {
+    remove = installKeys(() => {});
+    expect(rightClick().defaultPrevented).toBe(false);
+  });
+
+  it('stops preventing the right-click menu once removed', () => {
+    installKeys(() => {}, { packaged: true })();
+    expect(rightClick().defaultPrevented).toBe(false);
   });
 });

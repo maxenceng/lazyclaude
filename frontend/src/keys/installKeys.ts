@@ -8,8 +8,8 @@ interface Options {
 
 /**
  * One `keydown` handler for the window: every key the TUI binds is prevented and reported; returns how to remove it.
- * A packaged build prevents every other key too, so none moves focus, scrolls, reloads or opens the inspector; a
- * development build leaves them to the webview.
+ * A packaged build prevents every other key too, so none moves focus, scrolls, reloads or opens the inspector, and
+ * prevents the right-click menu with its Reload; a development build leaves both to the webview.
  */
 export const installKeys = (onAction: (action: Action) => void, options: Options = {}): () => void => {
   const handler = (event: KeyboardEvent) => {
@@ -21,6 +21,15 @@ export const installKeys = (onAction: (action: Action) => void, options: Options
       event.preventDefault();
     }
   };
+  const menu = (event: MouseEvent) => {
+    if (options.packaged === true) {
+      event.preventDefault();
+    }
+  };
   window.addEventListener('keydown', handler);
-  return () => window.removeEventListener('keydown', handler);
+  window.addEventListener('contextmenu', menu);
+  return () => {
+    window.removeEventListener('keydown', handler);
+    window.removeEventListener('contextmenu', menu);
+  };
 };
