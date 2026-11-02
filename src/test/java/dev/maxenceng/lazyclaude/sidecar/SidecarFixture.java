@@ -25,6 +25,7 @@ import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
@@ -55,6 +56,10 @@ public final class SidecarFixture {
 
     public static List<String> linesWritten(DocsQuery docs, String... received) {
         return linesWritten(sidecarOver(docs), received);
+    }
+
+    public static List<String> linesWritten(ConfigurationView configuration, String... received) {
+        return linesWritten(new Sidecar(sidecarContexts(configuration)), received);
     }
 
     public static List<String> linesWritten(ReviewQuery review, String... received) {

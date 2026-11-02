@@ -1,0 +1,13 @@
+.plain {
+  padding: var(--space-3) var(--space-4);
+}
+
+.dim {
+  padding: var(--space-3) var(--space-4);
+  color: var(--dim);
+}
+
+.mono {
+  font: var(--size-body) / 1.5 var(--font-mono);
+  white-space: pre-wrap;
+}

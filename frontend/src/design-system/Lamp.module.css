@@ -1,0 +1,63 @@
+.marker {
+  display: inline-block;
+  width: var(--lamp-marker);
+  height: var(--lamp-marker);
+  line-height: var(--lamp-marker);
+  text-align: center;
+  font-size: var(--size-micro);
+  font-weight: 600;
+  flex: none;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: var(--lamp-tile-width);
+  height: var(--lamp-tile-height);
+  padding: 0 var(--space-3);
+  flex: none;
+}
+
+.number {
+  font: var(--size-lamp) / 1 var(--font-stencil);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meaning {
+  font-style: normal;
+  font-size: var(--size-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.permission {
+  background: var(--lamp-permission);
+  color: var(--lamp-permission-ink);
+}
+
+.input {
+  background: var(--lamp-input);
+  color: var(--lamp-input-ink);
+}
+
+.turn.marker {
+  background: var(--lamp-turn);
+  color: var(--lamp-turn-ink);
+}
+
+.turn.tile {
+  background: var(--lamp-turn-tile);
+  color: var(--lamp-turn);
+}
+
+.off {
+  background: var(--lamp-off);
+  color: var(--lamp-off-ink);
+}
+
+.marker.off {
+  background: transparent;
+}

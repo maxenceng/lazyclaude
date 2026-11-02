@@ -64,7 +64,7 @@ final class ConfigurationLoader {
 
     /** Every context, wired over {@code configuration}. */
     Contexts contexts(ConfigurationView configuration) {
-        return Contexts.of(warnings, sessionService(configuration.desktopNotifications()));
+        return Contexts.of(warnings, sessionService(configuration.desktopNotifications()), configuration);
     }
 
     private SessionApplicationService sessionService(boolean desktopNotifications) {

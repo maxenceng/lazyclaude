@@ -1,0 +1,30 @@
+@import '@fontsource/barlow/latin-400.css';
+@import '@fontsource/barlow/latin-600.css';
+@import '@fontsource/saira-stencil-one/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import './tokens.css';
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--ground);
+  color: var(--text);
+  font: var(--size-base) / 1.45 var(--font-read);
+  overflow: hidden;
+  color-scheme: dark;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}

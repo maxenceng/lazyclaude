@@ -1,0 +1,45 @@
+.row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--space-1) var(--space-4);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: var(--size-body);
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: default;
+}
+
+.selected {
+  background: var(--selected);
+  color: var(--text-on-light);
+}
+
+.done {
+  color: var(--dim-done);
+}
+
+.selected.done {
+  color: var(--text-on-light);
+}
+
+.noLamp {
+  display: inline-block;
+  width: var(--lamp-marker);
+  flex: none;
+}
+
+.id {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
