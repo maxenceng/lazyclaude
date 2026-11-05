@@ -37,6 +37,14 @@ const NO_NESTED_FUNCTIONS = [
   },
 ];
 
+// ADR 0088: a pattern is named at module level, so its name says what it matches.
+const NAMED_PATTERNS = [
+  {
+    selector: 'Literal[regex]:not(Program > VariableDeclaration > VariableDeclarator > Literal, Program > ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > Literal)',
+    message: 'Name this pattern in a module-level const that says what it matches.',
+  },
+];
+
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'src-tauri', 'src/protocol/generated'] },
   ...tseslint.configs.strictTypeChecked,
@@ -50,14 +58,14 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       '@typescript-eslint/no-confusing-void-expression': 'off',
-      'no-restricted-syntax': ['error', ...HTML_ELEMENT_STYLING, ...LITERAL_COPY, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS],
+      'no-restricted-syntax': ['error', ...HTML_ELEMENT_STYLING, ...LITERAL_COPY, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS, ...NAMED_PATTERNS],
       'func-style': ['error', 'expression'],
       'react/jsx-no-comment-textnodes': 'off',
     },
   },
   {
     files: ['src/design-system/**'],
-    rules: { 'no-restricted-syntax': ['error', ...LITERAL_COPY, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS] },
+    rules: { 'no-restricted-syntax': ['error', ...LITERAL_COPY, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS, ...NAMED_PATTERNS] },
   },
   {
     files: ['**/*.test.ts', '**/*.test.tsx', 'src/test/**'],

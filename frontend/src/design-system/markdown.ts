@@ -86,6 +86,14 @@ const BULLET = /^\s*[-*+]\s+(.*)$/;
 const NUMBERED = /^\s*\d+[.)]\s+(.*)$/;
 const QUOTE = /^\s{0,3}>\s?(.*)$/;
 const TABLE_RULE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+const TABLE_ROW = /^(.*\|.*)$/;
+const LEADING_PIPE = /^\|/;
+const TRAILING_PIPE = /\|$/;
+const LINE_BREAK = /\r\n?/g;
+/** What GitHub drops from a heading to make its slug: anything but a letter, digit, combining mark, `_`, `-` or a space. */
+const NOT_IN_SLUG = /[^\p{L}\p{N}\p{M}_\s-]/gu;
+/** A space in a heading, which its slug writes as `-`. */
+const SLUG_SPACE = /\s/g;
 const INLINE = /(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)|!?\[((?:[^\][]|\[[^\]]*\])*)\]\(\s*<?([^\s)>]*)>?(?:\s+"[^"]*")?\s*\)|\*\*(.+?)\*\*|__(.+?)__|\*([^*\s][^*]*?)\*|\b_([^_\s][^_]*?)_\b/;
 
 const plain = (inlines: Inline[]): string => {
@@ -118,16 +126,16 @@ export const inlineOf = (source: string): Inline[] => {
 const slugged = (text: string): string => {
   return plain(inlineOf(text))
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\p{M}_\s-]/gu, '')
+    .replace(NOT_IN_SLUG, '')
     .trim()
-    .replace(/\s/g, '-');
+    .replace(SLUG_SPACE, '-');
 };
 
 const cells = (line: string): string[] => {
   return line
     .trim()
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
+    .replace(LEADING_PIPE, '')
+    .replace(TRAILING_PIPE, '')
     .split('|')
     .map((cell) => cell.trim());
 };
@@ -183,7 +191,7 @@ const readBlock = (lines: string[], start: number): Reading => {
   }
   const following = lines[start + 1];
   if (line.includes('|') && following !== undefined && TABLE_RULE.test(following)) {
-    const rows = readRun(lines, start + 2, /^(.*\|.*)$/);
+    const rows = readRun(lines, start + 2, TABLE_ROW);
     return { blocks: [{ kind: BlockKind.Table, header: cells(line), rows: rows.map(cells) }], next: start + 2 + rows.length };
   }
   const end = lines.findIndex((candidate, index) => index > start && (candidate.trim() === '' || startsBlock(candidate, lines[index + 1])));
@@ -216,7 +224,7 @@ const withSlugs = (blocks: Block[]): Block[] => {
 };
 
 /** A document's blocks, its headings carrying the slug a link's fragment names. */
-export const blocksOf = (source: string): Block[] => withSlugs(blocksFrom(source.replace(/\r\n?/g, '\n').split('\n'), 0));
+export const blocksOf = (source: string): Block[] => withSlugs(blocksFrom(source.replace(LINE_BREAK, '\n').split('\n'), 0));
 
 /** The slugs of a document's headings, in order. */
 export const headingSlugs = (source: string): string[] => {
