@@ -40,11 +40,6 @@ export class Emulator {
       this.mouseReported.set(this.kept.reportsMouse());
     });
     this.subscriptions.push(
-      deps.client.subscribe('pty/output', (view) => {
-        if (view.session === session) {
-          terminal.write(fromBase64(view.data));
-        }
-      }),
       disposer(terminal.onData((data) => this.send(bytesOfText(data)))),
       disposer(terminal.onBinary((data) => this.binary(data))),
     );
@@ -52,6 +47,11 @@ export class Emulator {
     if (recalled !== undefined) {
       terminal.write(recalled.restoration(), () => deps.client.send('session/repaint', { session }));
     }
+  }
+
+  /** What `claude` wrote, as the base64 text of `pty/output`. */
+  write(data: string): void {
+    this.terminal.write(fromBase64(data));
   }
 
   /** Puts the terminal into `container`, fits it and tells `claude` the size it came to. */

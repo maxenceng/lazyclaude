@@ -20,15 +20,14 @@ const emulate = (overrides: Partial<EmulatorDeps> = {}) => {
   return { client, memory, fit, emulator, term: emulator.terminal };
 };
 
-const output = (session: string, text: string) => ({ session, data: toBase64(bytesOfText(text)) });
+const encoded = (text: string) => toBase64(bytesOfText(text));
 
 describe('a hosted session\'s emulator', () => {
   beforeEach(() => sessionStorage.clear());
 
-  it('is written the output of its own session and of no other', async () => {
-    const { client, term } = emulate();
-    client.push('pty/output', output('s1', 'mine'));
-    client.push('pty/output', output('s2', 'theirs'));
+  it('is written the output it is given, decoded from base64', async () => {
+    const { emulator, term } = emulate();
+    emulator.write(encoded('mine'));
     await written(term);
     expect(term.buffer.active.getLine(0)?.translateToString(true)).toBe('mine');
   });
@@ -46,15 +45,15 @@ describe('a hosted session\'s emulator', () => {
   });
 
   it('keeps its modes in the memory as claude sets them', async () => {
-    const { client, memory, term } = emulate();
-    client.push('pty/output', output('s1', CLAUDE_START));
+    const { emulator, memory, term } = emulate();
+    emulator.write(encoded(CLAUDE_START));
     await written(term);
     expect(memory.recall('s1')?.restoration()).toContain('\x1b[?2004h');
   });
 
   it('writes the kept modes into the emulator of a reloaded page and then asks for a repaint', async () => {
     const before = emulate();
-    before.client.push('pty/output', output('s1', CLAUDE_START));
+    before.emulator.write(encoded(CLAUDE_START));
     await written(before.term);
     const after = emulate();
     expect(after.client.sent.filter((sent) => sent.input === 'session/repaint')).toEqual([]);
@@ -66,7 +65,7 @@ describe('a hosted session\'s emulator', () => {
 
   it('sends a paste bracketed after a reload, the way it was before', async () => {
     const before = emulate();
-    before.client.push('pty/output', output('s1', CLAUDE_START));
+    before.emulator.write(encoded(CLAUDE_START));
     await written(before.term);
     const after = emulate();
     await written(after.term);
@@ -93,27 +92,21 @@ describe('a hosted session\'s emulator', () => {
   });
 
   it('tells while claude reports the mouse and when it stops', async () => {
-    const { client, term, emulator } = emulate();
-    client.push('pty/output', output('s1', CLAUDE_START));
+    const { term, emulator } = emulate();
+    emulator.write(encoded(CLAUDE_START));
     await written(term);
     expect(emulator.mouseReported.get()).toBe(true);
-    client.push('pty/output', output('s1', CLAUDE_STOPS_REPORTING_THE_MOUSE));
+    emulator.write(encoded(CLAUDE_STOPS_REPORTING_THE_MOUSE));
     await written(term);
     expect(emulator.mouseReported.get()).toBe(false);
   });
 
   it('forgets the modes of a session that ended', async () => {
-    const { client, memory, term, emulator } = emulate();
-    client.push('pty/output', output('s1', CLAUDE_START));
+    const { memory, term, emulator } = emulate();
+    emulator.write(encoded(CLAUDE_START));
     await written(term);
     emulator.end();
     expect(memory.recall('s1')).toBeUndefined();
-  });
-
-  it('is written nothing once it has ended', () => {
-    const { client, emulator } = emulate();
-    emulator.end();
-    expect(() => client.push('pty/output', output('s1', 'late'))).not.toThrow();
   });
 });
 
@@ -173,7 +166,7 @@ describe('the keys of a hosted session\'s pane', () => {
     ['shift+insert', 'Insert', { shiftKey: true }],
   ])('pastes the clipboard through term.paste() on %s, bracketed while claude asked for it', async (_name, key, held) => {
     const { client, term, emulator } = emulate({ clipboard: { readText: () => Promise.resolve('pasted'), writeText: () => Promise.resolve() } });
-    client.push('pty/output', output('s1', '\x1b[?2004h'));
+    emulator.write(encoded('\x1b[?2004h'));
     await written(term);
     const event = keydown(key, held);
     expect(emulator.handleKey(event)).toBe(false);
