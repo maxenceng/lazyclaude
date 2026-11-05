@@ -47,6 +47,15 @@ describe('a typeset document', () => {
     expect((scroll.mock.contexts[0] as HTMLElement).tagName).toBe('ARTICLE');
   });
 
+  it('keeps its place when the same document is read again with new text', () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const target = { fragment: 'part', opened: 1 };
+    const { rerender } = render(<Markdown source={SOURCE} onLink={() => {}} target={target} />);
+    rerender(<Markdown source={`${SOURCE}\nMore.\n`} onLink={() => {}} target={{ ...target }} />);
+    expect(scroll).toHaveBeenCalledTimes(1);
+  });
+
   it('scrolls nowhere without a target', () => {
     const scroll = vi.fn();
     Element.prototype.scrollIntoView = scroll;

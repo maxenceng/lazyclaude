@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, SessionRow as Row, StatusHeading, TicketList } from '../design-system';
+import { Alert, Button, SessionRow as Row, StatusHeading, Rows } from '../design-system';
 import type { PastSessionView } from '../protocol';
 import { type SessionRow, SessionRowKind } from './sessionRows';
 import type { StartFailure } from './hosting';
@@ -54,11 +54,11 @@ interface RowListProps {
 const RowList = ({ entries, cursor, onPress }: RowListProps) => {
   const { t } = useTranslation('session');
   return (
-    <TicketList>
+    <Rows>
       {entries.map(({ row, index }) => (
         <Row key={index} {...labelled(row, t)} selected={index === cursor} lamp={lampOf(row)} onSelect={() => onPress(index)} />
       ))}
-    </TicketList>
+    </Rows>
   );
 };
 
@@ -79,11 +79,11 @@ export const SessionsList = ({ rows, cursor, focused, picker, failure, onPress, 
       {picker === undefined ? null : (
         <div>
           <StatusHeading status={t('picker.title')} count={picker.verbs.length} />
-          <TicketList>
+          <Rows>
             {picker.verbs.map((verb, index) => (
               <Row key={verb} label={t(`verb.${verb}`)} detail="" selected={index === picker.cursorAt()} lamp={undefined} onSelect={() => onPickVerb(index)} />
             ))}
-          </TicketList>
+          </Rows>
         </div>
       )}
       {ticketRows.length === 0 ? null : (

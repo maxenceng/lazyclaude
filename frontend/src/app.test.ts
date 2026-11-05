@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { boardFixture, ticketFixture } from './board/fixtures';
+import { readFixture, treeFixture } from './docs/fixtures';
 import { AppModel } from './app';
+import { Focus } from './layout';
 import { FaultedConfiguration } from './keys/configurationState';
 import { Connecting, Exited, Ready } from './protocol';
 import { fakeClient } from './test/fakeClient';
@@ -108,5 +110,20 @@ describe('the app', () => {
     await Promise.resolve();
     expect(client.calls.map((call) => call.method)).toContain('docs/watch');
     expect(client.calls.find((call) => call.method === 'docs/watch')?.params).toEqual({ root: '/p' });
+  });
+
+  it('shows the document a ticket\'s link opens in the main view, focusing the Docs panel', async () => {
+    const client = fakeClient(new Ready());
+    const app = new AppModel(client, testPlatform());
+    app.start();
+    client.answerNext(boardFixture([ticketFixture({ id: 'PROJ-1' })]));
+    await Promise.resolve();
+    await Promise.resolve();
+    client.answerNext(treeFixture([readFixture('README.md', '# Docs'), readFixture('guide.md', '# Guide')]));
+    await Promise.resolve();
+    app.docs.followFromTicket('docs/guide.md');
+    expect(app.layout.get().focus).toBe(Focus.Docs);
+    expect(app.layout.get().showsDocument()).toBe(true);
+    expect(app.docs.selectedKey()?.path).toBe('guide.md');
   });
 });

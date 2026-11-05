@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import styles from './DocRow.module.css';
+import styles from './DocsTreeRow.module.css';
 
 interface Props {
   name: string;
@@ -11,7 +11,7 @@ interface Props {
 }
 
 /** One line of the Docs panel: a document's file name, or a folder's header with its count. The selected row is a light bar; a press on it again opens it. */
-export const DocRow = ({ name, depth, selected, onSelect, folder }: Props) => {
+export const DocsTreeRow = ({ name, depth, selected, onSelect, folder }: Props) => {
   const classes = [styles.row, selected ? styles.selected : '', folder === undefined ? '' : styles.folder].join(' ');
   return (
     <li>

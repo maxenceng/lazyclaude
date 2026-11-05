@@ -41,8 +41,20 @@ describe('where a link in a document goes', () => {
     expect(linkTarget('src/main.rs', undefined, ROOT)).toEqual({ kind: LinkKind.Outside, path: '/p/src/main.rs' });
   });
 
-  it('takes an absolute path as it is, outside the tree', () => {
-    expect(linkTarget('/etc/hosts', 'intro.md', ROOT)).toEqual({ kind: LinkKind.Outside, path: '/etc/hosts' });
+  it('starts a path beginning with a slash at the project root, as GitHub does', () => {
+    expect(linkTarget('/docs/adr/0001-first.md', 'guide/intro.md', ROOT)).toEqual({ kind: LinkKind.Document, path: 'adr/0001-first.md', fragment: undefined });
+    expect(linkTarget('/src/main.rs', 'intro.md', ROOT)).toEqual({ kind: LinkKind.Outside, path: '/p/src/main.rs' });
+  });
+
+  it('keeps a file under docs that is not markdown, or a folder, outside the tree', () => {
+    expect(linkTarget('diagram.svg', 'guide/intro.md', ROOT)).toEqual({ kind: LinkKind.Outside, path: '/p/docs/guide/diagram.svg' });
+    expect(linkTarget('../adr/', 'guide/intro.md', ROOT)).toEqual({ kind: LinkKind.Outside, path: '/p/docs/adr' });
+    expect(linkTarget('../adr', 'guide/intro.md', ROOT)).toEqual({ kind: LinkKind.Outside, path: '/p/docs/adr' });
+  });
+
+  it('follows no fragment of a ticket\'s own body anywhere', () => {
+    expect(linkTarget('#section', undefined, ROOT)).toEqual({ kind: LinkKind.TicketHeading, href: '#section' });
+    expect(linkTarget('', undefined, ROOT)).toEqual({ kind: LinkKind.TicketHeading, href: '' });
   });
 
   it('keeps a link to the docs folder itself outside the tree', () => {

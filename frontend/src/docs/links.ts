@@ -1,4 +1,5 @@
 const DOCS_FOLDER = 'docs';
+const MARKDOWN = '.md';
 const WEB_LINK = /^https?:\/\//i;
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
@@ -7,6 +8,7 @@ export enum LinkKind {
   Outside = 'outside',
   Browser = 'browser',
   Refused = 'refused',
+  TicketHeading = 'ticketHeading',
 }
 
 /** A document of the tree, by its path under `docs/`, and the heading it asks for. */
@@ -33,7 +35,13 @@ export interface RefusedLink {
   href: string;
 }
 
-export type LinkTarget = DocumentLink | OutsideLink | BrowserLink | RefusedLink;
+/** A link that is only a fragment, in a ticket's body: it names a heading of the ticket, which nothing here scrolls to. */
+export interface TicketHeadingLink {
+  kind: LinkKind.TicketHeading;
+  href: string;
+}
+
+export type LinkTarget = DocumentLink | OutsideLink | BrowserLink | RefusedLink | TicketHeadingLink;
 
 const decoded = (text: string): string => {
   try {
@@ -57,7 +65,8 @@ const normalised = (segments: string[]): string[] => {
 
 /**
  * Where a link goes. `from` is the document that holds it, by its path under `docs/`, or undefined for text that is not
- * a document (a ticket's body), whose links start at the project `root`.
+ * a document (a ticket's body), whose links start at the project `root`. A path starting with `/` starts at the project
+ * root, as GitHub reads it. Only a markdown path under `docs/` names a document; any other path there is outside the tree.
  */
 export const linkTarget = (href: string, from: string | undefined, root: string): LinkTarget => {
   if (WEB_LINK.test(href)) {
@@ -71,15 +80,12 @@ export const linkTarget = (href: string, from: string | undefined, root: string)
   const fragment = hash === -1 || hash === href.length - 1 ? undefined : decoded(href.slice(hash + 1));
   const query = beforeFragment.indexOf('?');
   const file = decoded(query === -1 ? beforeFragment : beforeFragment.slice(0, query));
-  if (file === '' && from !== undefined) {
-    return { kind: LinkKind.Document, path: from, fragment };
+  if (file === '') {
+    return from === undefined ? { kind: LinkKind.TicketHeading, href } : { kind: LinkKind.Document, path: from, fragment };
   }
-  if (file.startsWith('/')) {
-    return { kind: LinkKind.Outside, path: file };
-  }
-  const base = from === undefined ? [] : [DOCS_FOLDER, ...from.split('/').slice(0, -1)];
+  const base = from === undefined || file.startsWith('/') ? [] : [DOCS_FOLDER, ...from.split('/').slice(0, -1)];
   const resolved = normalised([...base, ...file.split('/')]);
-  if (resolved[0] === DOCS_FOLDER && resolved.length > 1) {
+  if (resolved[0] === DOCS_FOLDER && resolved.length > 1 && resolved[resolved.length - 1]?.endsWith(MARKDOWN) === true) {
     return { kind: LinkKind.Document, path: resolved.slice(1).join('/'), fragment };
   }
   return { kind: LinkKind.Outside, path: [root, ...resolved].join('/') };

@@ -9,7 +9,7 @@ import {
   Pane,
   StatusHeading,
   Text,
-  TicketList,
+  Rows,
   TicketRow,
   UnreadableRow,
 } from '../design-system';
@@ -127,7 +127,7 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
       {orderedGroups(view).map((group) => (
         <div key={group.status}>
           <StatusHeading status={t(`status.${group.status}`)} count={group.tickets.length} />
-          <TicketList>
+          <Rows>
             {(isFolded(group.status) ? [] : group.tickets).map((ticket) => (
               <TicketRow
                 key={ticket.id}
@@ -139,17 +139,17 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
                 onSelect={() => onPress(ticket.id)}
               />
             ))}
-          </TicketList>
+          </Rows>
         </div>
       ))}
       {view.unreadable.length === 0 ? null : (
         <div>
           <StatusHeading status={t('board.unreadable')} count={view.unreadable.length} />
-          <TicketList>
+          <Rows>
             {view.unreadable.map((ticket) => (
               <UnreadableRow key={ticket.id} id={ticket.id} reason={ticket.reason} />
             ))}
-          </TicketList>
+          </Rows>
         </div>
       )}
     </>

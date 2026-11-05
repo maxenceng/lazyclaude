@@ -12,7 +12,7 @@ const setup = () => {
   const client = fakeClient();
   const opener = new RecordingOpener();
   const warnings: string[] = [];
-  const controller = new DocsController({ client, root: () => '/p', opener, warn: (text) => warnings.push(text) });
+  const controller = new DocsController({ client, root: () => '/p', opener, warn: (text) => warnings.push(text), onOpened: () => {} });
   const onFocus = vi.fn();
   const onRetry = vi.fn(() => void controller.load());
   const loaded = controller.load();
@@ -112,7 +112,7 @@ describe('the document in the main view', () => {
     const { client, loaded } = setup();
     await answer(client, loaded, tree);
     await userEvent.click(screen.getByRole('button', { name: 'blank.md' }));
-    expect(screen.getByText('empty document')).toBeInTheDocument();
+    expect(screen.getByText('Empty document.')).toBeInTheDocument();
   });
 
   it('shows an unreadable document by its path and reason', async () => {

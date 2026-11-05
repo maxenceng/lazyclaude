@@ -20,11 +20,16 @@ method. They carry no reason for a path they do not list, and the sidecar has no
 ## Decision
 
 - **No link navigates the webview.** Every `<a>` the markdown primitive renders cancels the click and hands its `href` to the
-  page; so does the middle button. Raw HTML in a document or a ticket is text, never markup.
+  page; the middle button's click is cancelled and follows nothing. Raw HTML in a document or a ticket is text, never markup.
 - **A relative link is resolved against the document that holds it, then against `docs/`.** A path that lands under
   `docs/` names a document by its path under `docs/`, opens in the main view and selects its row in the tree, unfolding
-  the folders above it. Anything else is outside the tree. A ticket's body has no document, so its relative links start
-  at the project root; `docs/guide/intro.md` there is the same document.
+  the folders above it, and the main view shows it, so the Docs panel takes focus whichever pane held the link. Only a
+  markdown path names a document; any other file or folder under `docs/`, as anything else, is outside the tree. A path
+  starting with `/` starts at the project root, as GitHub reads it. A ticket's body has no document, so its relative
+  links start at the project root; `docs/guide/intro.md` there is the same document. A link that is only a fragment, in a
+  ticket's body, names a heading of the ticket; it is not followed, and the window warns that it was not.
+- **`docs` owns every link the window follows**, a ticket's included: the opener and the four kinds of link sit in one
+  place, and the board only hands an `href` up. A second markdown surface reads its links through the same controller.
 - **The tree's selection is the only state.** There is no history and no back: following a link moves the selection, as
   `j` would. The selection is a row by kind and path, so it survives the tree being read again; it may name a path the
   tree does not list.
@@ -39,7 +44,8 @@ method. They carry no reason for a path they do not list, and the sidecar has no
   the window warns that it did not. A failure of the opener is a warning with its reason, never silence. The capability
   grants `opener:allow-open-url` for `http://**` and `https://**` and `opener:allow-open-path` for `/**`; a document is the
   developer's own and a path inside the project is the common case, but a narrower scope would need the project root at
-  build time.
+  build time. The opener is configured with `requireLiteralLeadingDot: false`, or `/**` would refuse every path with a
+  component starting with `.`, such as `.github/` or a project under `~/.local/`.
 - **The markdown is a small renderer of our own** in `design-system/markdown.ts`: headings, paragraphs, fenced code, lists,
   quotes, rules, pipe tables, and inline code, links, strong and emphasis. Rejected: `react-markdown` or `marked`, each a
   tree of packages for the few blocks these documents use, and each needing a sanitiser or plugins to keep raw HTML out and
@@ -49,7 +55,9 @@ method. They carry no reason for a path they do not list, and the sidecar has no
 
 - Nested lists, reference-style links, footnotes and raw HTML are shown as the text they are written as, until a document
   needs them.
-- A link to a document the tree lists but the sidecar could not read shows that document's own reason.
+- A link to a document the tree lists but the sidecar could not read shows that document's own reason, and no warning
+  about its fragment.
+- A folder's name and its count of documents are derived again in `docs/rows.ts`, since `FolderView` serializes neither.
 - The opener is behind `LinkOpener`, as the clipboard is behind `Clipboard`; tests record what it was asked to open.
 - Checked by the tests in `docs/` and the window's, not in the packaged window: the packaged `xdg-open` and browser hand-offs
   are untried.

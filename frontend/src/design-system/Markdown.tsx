@@ -110,7 +110,7 @@ export const Markdown = ({ source, onLink, target }: Props) => {
     }
     const heading = [...article.current.querySelectorAll('h1, h2, h3, h4, h5, h6')].find((candidate) => candidate.id === fragment);
     (heading ?? article.current).scrollIntoView({ block: 'start' });
-  }, [targeted, opened, fragment, source]);
+  }, [targeted, opened, fragment]);
   return (
     <article ref={article} className={styles.markdown}>
       {blocks.map((block, index) => (

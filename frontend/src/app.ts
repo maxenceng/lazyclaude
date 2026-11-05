@@ -38,7 +38,7 @@ export class AppModel {
     this.sessionStore = new SessionStore(client);
     this.configuration = new ConfigurationStore(client);
     this.warnings = new WarningStore(client);
-    this.docs = new DocsController({ client, root: () => this.board.root(), opener: platform.opener, warn: (text) => this.warnings.raise(text) });
+    this.docs = new DocsController({ client, root: () => this.board.root(), opener: platform.opener, warn: (text) => this.warnings.raise(text), onOpened: () => this.focusOn(Focus.Docs) });
     this.windowFocus = new WindowFocus(platform.focus);
     this.watching = new WatchingReporter(client);
     this.hosting = new Hosting({

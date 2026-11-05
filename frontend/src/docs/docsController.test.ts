@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fakeClient } from '../test/fakeClient';
 import { RecordingOpener } from './recordingOpener';
 import { DocsController } from './docsController';
-import { emptyFixture, folderFixture, readFixture, treeFixture } from './fixtures';
+import { emptyFixture, folderFixture, readFixture, treeFixture, unreadableFixture } from './fixtures';
 import { RowKind } from './rows';
 import { ShownKind } from './shownDocument';
 
@@ -15,7 +15,7 @@ const setup = async (tree = TREE) => {
   const client = fakeClient();
   const opener = new RecordingOpener();
   const warnings: string[] = [];
-  const controller = new DocsController({ client, root: () => '/p', opener, warn: (text) => warnings.push(text) });
+  const controller = new DocsController({ client, root: () => '/p', opener, warn: (text) => warnings.push(text), onOpened: () => {} });
   const loading = controller.load();
   client.answerNext(tree);
   await loading;
@@ -63,6 +63,33 @@ describe('following a link in the docs', () => {
     expect(controller.shown()).toMatchObject({ kind: ShownKind.Missing, path: 'guide/gone.md' });
     expect(controller.rows().map((row) => row.path)).toContain('guide/intro.md');
     expect(warnings).toEqual([]);
+  });
+
+  it('says nothing of a fragment when the document it names cannot be read, since its reason is shown', async () => {
+    const { controller, warnings } = await setup(treeFixture([readFixture('README.md', '# Docs'), unreadableFixture('locked.md', 'Permission denied')]));
+    controller.follow('locked.md#part');
+    expect(controller.shown()).toMatchObject({ kind: ShownKind.Found, document: { path: 'locked.md' } });
+    expect(warnings).toEqual([]);
+  });
+
+  it('says the fragment was not found in an empty document', async () => {
+    const { controller, warnings } = await setup();
+    controller.follow('blank.md#part');
+    expect(warnings).toEqual(['No heading "part" in blank.md; opened at its top.']);
+  });
+
+  it('opens a file under docs that the tree does not list with the system opener', async () => {
+    const { controller, opener } = await setup();
+    controller.follow('guide/diagram.svg');
+    expect(opener.paths).toEqual(['/p/docs/guide/diagram.svg']);
+    expect(controller.selectedKey()).toEqual({ kind: RowKind.Document, path: 'README.md' });
+  });
+
+  it('warns and opens nothing for a fragment in a ticket\'s body', async () => {
+    const { controller, opener, warnings } = await setup();
+    controller.followFromTicket('#notes');
+    expect(opener.paths).toEqual([]);
+    expect(warnings).toEqual(["Did not follow #notes: a ticket's own headings are not followed."]);
   });
 
   it('opens a link outside the tree with the system opener, resolved from the project root', async () => {
@@ -149,6 +176,22 @@ describe('the selection in the docs tree', () => {
     controller.press({ kind: RowKind.Document, path: 'blank.md' });
     client.push('docs/changed', treeFixture([readFixture('README.md', 'x'), readFixture('zzz.md', 'z')]));
     expect(controller.selectedKey()?.path).toBe('zzz.md');
+  });
+
+  it('stays on the first row it started on when a later read puts another document first', async () => {
+    const { controller, client } = await setup();
+    client.push('docs/changed', treeFixture([readFixture('AAA.md', 'a'), readFixture('README.md', 'x'), emptyFixture('blank.md')]));
+    expect(controller.selectedKey()?.path).toBe('README.md');
+  });
+
+  it('moves to the row that took its place among the rows shown after a fold', async () => {
+    const guide = folderFixture('guide', [readFixture('guide/intro.md', 'i'), readFixture('guide/more.md', 'm')]);
+    const { controller, client } = await setup(treeFixture([readFixture('README.md', 'x')], [guide, folderFixture('x', []), folderFixture('y', []), folderFixture('z', [])]));
+    controller.press({ kind: RowKind.Folder, path: 'guide' });
+    controller.activate();
+    controller.press({ kind: RowKind.Folder, path: 'x' });
+    client.push('docs/changed', treeFixture([readFixture('README.md', 'x')], [guide, folderFixture('y', []), folderFixture('z', [])]));
+    expect(controller.selectedKey()).toEqual({ kind: RowKind.Folder, path: 'y' });
   });
 
   it('keeps no history: a link followed and a move later leave only the selection', async () => {

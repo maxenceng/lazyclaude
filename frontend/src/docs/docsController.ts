@@ -9,8 +9,6 @@ import type { LinkOpener } from './opener';
 import { type DocsRow, RowKind, documentIn, visibleRows } from './rows';
 import { FoundDocument, MissingDocument, NoDocument, type ShownDocument } from './shownDocument';
 
-const PROJECT_DIRECTORY = '.';
-
 export interface DocsDeps {
   client: Client;
   /** The project's root, none before the board is read. */
@@ -18,6 +16,8 @@ export interface DocsDeps {
   opener: LinkOpener;
   /** Puts a warning on the status line. */
   warn: (text: string) => void;
+  /** A link opened a document, so the main view is to show it, whichever pane held the link. */
+  onOpened: () => void;
 }
 
 const keyOf = (row: DocsRow): RowKey => ({ kind: row.kind, path: row.path });
@@ -39,6 +39,9 @@ export class DocsController {
   constructor(private readonly deps: DocsDeps) {
     this.store = new DocsStore(deps.client);
     this.store.state.subscribe(() => this.treeRead());
+    this.folded.subscribe(() => {
+      this.known = this.rows();
+    });
   }
 
   load(): Promise<void> {
@@ -110,16 +113,23 @@ export class DocsController {
   /** A link in the shown document. */
   follow(href: string): void {
     const key = this.selectedKey();
-    const from = key !== undefined && key.kind === RowKind.Document ? key.path : undefined;
-    this.route(linkTarget(href, from, this.deps.root() ?? PROJECT_DIRECTORY));
+    this.route(href, key !== undefined && key.kind === RowKind.Document ? key.path : undefined);
   }
 
   /** A link in a ticket's body, which starts at the project's root. */
   followFromTicket(href: string): void {
-    this.route(linkTarget(href, undefined, this.deps.root() ?? PROJECT_DIRECTORY));
+    this.route(href, undefined);
   }
 
-  private route(target: LinkTarget): void {
+  /** Nothing holding a link is shown before the board names the root, so without one there is nothing to follow. */
+  private route(href: string, from: string | undefined): void {
+    const root = this.deps.root();
+    if (root !== undefined) {
+      this.open(linkTarget(href, from, root));
+    }
+  }
+
+  private open(target: LinkTarget): void {
     switch (target.kind) {
       case LinkKind.Document:
         return this.openDocument(target);
@@ -129,6 +139,8 @@ export class DocsController {
         return this.opened(target.url, this.deps.opener.openUrl(target.url));
       case LinkKind.Refused:
         return this.deps.warn(i18n.t('docs:links.refused', { href: target.href }));
+      case LinkKind.TicketHeading:
+        return this.deps.warn(i18n.t('docs:links.ticketHeading', { href: target.href }));
     }
   }
 
@@ -137,11 +149,12 @@ export class DocsController {
     const document = tree === undefined ? undefined : documentIn(tree, link.path);
     const text = document === undefined ? undefined : contentOf(document);
     const found = link.fragment !== undefined && text !== undefined && headingSlugs(text).includes(link.fragment);
-    if (link.fragment !== undefined && !found && document !== undefined) {
+    if (link.fragment !== undefined && !found && document?.kind === 'readDocument') {
       this.deps.warn(i18n.t('docs:links.fragmentNotFound', { fragment: link.fragment, path: link.path }));
     }
     this.folded.set(new Set([...this.folded.get()].filter((path) => !ancestorsOf(link.path).includes(path))));
     this.selection.set(this.selection.get().on({ kind: RowKind.Document, path: link.path }, found ? link.fragment : undefined));
+    this.deps.onOpened();
   }
 
   private opened(target: string, opening: Promise<void>): void {
@@ -162,6 +175,11 @@ export class DocsController {
     const was = this.keyIn(before);
     const now = this.rows();
     this.known = now;
+    const first = now[0];
+    if (this.selection.get().row === undefined && first !== undefined) {
+      this.selection.set(this.selection.get().pinned(keyOf(first)));
+      return;
+    }
     if (was === undefined || now.some((row) => sameKey(row, was))) {
       return;
     }

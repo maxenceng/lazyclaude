@@ -18,6 +18,7 @@ export interface DocsRow {
 
 const fileName = (path: string): string => path.slice(path.lastIndexOf('/') + 1);
 
+// deferred: the count rule also lives in the sidecar's FolderView — closed when the protocol carries a folder's count.
 const countIn = (folder: FolderView): number => folder.documents.length + folder.folders.reduce((sum, child) => sum + countIn(child), 0);
 
 const rowsIn = (documents: DocumentView[], folders: FolderView[], depth: number, folded: ReadonlySet<string>): DocsRow[] => {

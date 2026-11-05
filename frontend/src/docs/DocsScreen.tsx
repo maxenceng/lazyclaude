@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Alert, Busy, Button, Detail, DocRow, Document, Pane, Text, TicketList } from '../design-system';
+import { Alert, Busy, Button, Detail, DocsTreeRow, Document, Pane, Text, Rows } from '../design-system';
 import { useStore } from '../shared/useStore';
 import type { DocsController } from './docsController';
 import { type DocsState, DocsStateKind } from './docsState';
@@ -26,9 +26,9 @@ export const DocsPane = ({ docs, focused, onFocus, onRetry }: TreeProps) => {
   return (
     <Pane title={t('docs.title')} focused={focused}>
       {state.kind === DocsStateKind.Populated ? (
-        <TicketList>
+        <Rows>
           {docs.rows().map((row) => (
-            <DocRow
+            <DocsTreeRow
               key={`${row.kind}:${row.path}`}
               name={row.name}
               depth={row.depth}
@@ -40,7 +40,7 @@ export const DocsPane = ({ docs, focused, onFocus, onRetry }: TreeProps) => {
               }}
             />
           ))}
-        </TicketList>
+        </Rows>
       ) : (
         <Unread state={state} onRetry={onRetry} />
       )}
