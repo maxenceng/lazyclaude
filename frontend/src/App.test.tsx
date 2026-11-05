@@ -6,6 +6,7 @@ import { AppModel } from './app';
 import { boardFixture, ticketFixture } from './board/fixtures';
 import { Exited, Ready } from './protocol';
 import { bytesOfText, toBase64 } from './protocol';
+import { folderFixture, readFixture, treeFixture } from './docs/fixtures';
 import { hostedFixture, pastFixture, sessionFixture, sessionsFixture } from './session/fixtures';
 import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './session/recordings';
 import { fakeClient } from './test/fakeClient';
@@ -43,6 +44,10 @@ const readyApp = async (packaged = false) => {
     await Promise.resolve();
   });
   await settle();
+  await act(async () => {
+    client.answer('docs/watch', treeFixture([]));
+    await Promise.resolve();
+  });
   return { client, app, platform, user: userEvent.setup() };
 };
 
@@ -112,6 +117,63 @@ describe('the window', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('the configuration is unreadable');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Retry' }));
     expect(client.calls.filter((call) => call.method === 'session/configuration')).toHaveLength(2);
+  });
+});
+
+const docsRead = (started: Started) => {
+  act(() => {
+    started.client.push(
+      'docs/changed',
+      treeFixture(
+        [readFixture('README.md', '# Readme\n\nSee [setup](guide/intro.md#setup) and [nowhere](guide/intro.md#nowhere).')],
+        [folderFixture('guide', [readFixture('guide/intro.md', '# Intro\n\n## Setup\n\nText.')])],
+      ),
+    );
+  });
+};
+
+describe('the Docs panel in the window', () => {
+  it('shows the tree under the Board and the document the main view shows once a row is pressed', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    expect(within(screen.getByRole('region', { name: 'Docs' })).getAllByRole('button').map((row) => row.textContent)).toEqual(['README.md', 'guide1', 'intro.md']);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    expect(screen.getByRole('region', { name: 'Document' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Readme' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Ticket' })).toBeNull();
+  });
+
+  it('moves over the tree with j and k while it has focus, and gives the main view back to the ticket on the Board', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    await started.user.keyboard('jj');
+    expect(screen.getByRole('button', { name: 'intro.md' })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('heading', { level: 1, name: 'Intro' })).toBeInTheDocument();
+    await started.user.keyboard('{Escape}');
+    expect(screen.getByRole('region', { name: 'Ticket' })).toBeInTheDocument();
+  });
+
+  it('follows a link to a heading, and says on the status line when the heading is not there', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    await started.user.click(screen.getByRole('link', { name: 'nowhere' }));
+    expect(screen.getByRole('button', { name: 'intro.md' })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByText(/No heading "nowhere" in guide\/intro.md; opened at its top\./)).toBeInTheDocument();
+  });
+
+  it('opens a web link through the system browser and shows its refusal as a warning', async () => {
+    const started = await readyApp();
+    started.platform.opener.failure = new Error('no browser');
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    await act(async () => {
+      started.app.docs.follow('https://example.com');
+      await settle();
+    });
+    expect(started.platform.opener.urls).toEqual(['https://example.com']);
+    expect(screen.getByText(/Could not open https:\/\/example.com: no browser/)).toBeInTheDocument();
   });
 });
 

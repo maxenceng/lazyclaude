@@ -1,4 +1,5 @@
 import { BoardController } from './board/boardController';
+import { DocsController } from './docs/docsController';
 import type { Action, KeyPress } from './keys/bindings';
 import type { Binding } from './keys/chords';
 import { ConfigurationStore } from './keys/configurationStore';
@@ -17,6 +18,7 @@ import { WindowFocus } from './window/windowFocus';
 /** One window: the contexts it composes, the layout over them, and the rule that loads them whenever the sidecar becomes ready. */
 export class AppModel {
   readonly board: BoardController;
+  readonly docs: DocsController;
   readonly sessionStore: SessionStore;
   readonly hosting: Hosting;
   readonly sessions: SessionsController;
@@ -36,6 +38,7 @@ export class AppModel {
     this.sessionStore = new SessionStore(client);
     this.configuration = new ConfigurationStore(client);
     this.warnings = new WarningStore(client);
+    this.docs = new DocsController({ client, root: () => this.board.root(), opener: platform.opener, warn: (text) => this.warnings.raise(text) });
     this.windowFocus = new WindowFocus(platform.focus);
     this.watching = new WatchingReporter(client);
     this.hosting = new Hosting({
@@ -55,7 +58,7 @@ export class AppModel {
       onOpened: () => this.focusOn(Focus.Dock),
       onPicking: () => this.layout.set(this.layout.get().leaveZoom()),
     });
-    this.keys = new KeyRouter(this.board, this.sessions, this.layout);
+    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout);
     this.hosting.dock.subscribe(() => this.dockChanged());
     this.layout.subscribe(() => this.tellWatching());
     this.hosting.dock.subscribe(() => this.tellWatching());
@@ -139,5 +142,6 @@ export class AppModel {
     this.watched = true;
     // deferred: the session watch links sessions to the tickets known now, not to ones created later — close it when a new ticket's session shows no lamp.
     void this.sessionStore.watch(project.root, project.ticketIds);
+    void this.docs.load();
   }
 }

@@ -1,4 +1,5 @@
 import type { BoardController } from './board/boardController';
+import type { DocsController } from './docs/docsController';
 import { Action } from './keys/bindings';
 import { Focus, type Layout } from './layout';
 import type { SessionsController } from './session/sessionsController';
@@ -19,6 +20,7 @@ const FOCUS_KEYS: readonly Action[] = [
 export class KeyRouter {
   constructor(
     private readonly board: BoardController,
+    private readonly docs: DocsController,
     private readonly sessions: SessionsController,
     private readonly layout: Store<Layout>,
   ) {}
@@ -66,7 +68,9 @@ export class KeyRouter {
 
   /** Opens the row under the sessions' cursor, or moves focus to the sessions of the ticket under the Board's. */
   open(): void {
-    if (this.focus() === Focus.Sessions) {
+    if (this.focus() === Focus.Docs) {
+      this.docs.activate();
+    } else if (this.focus() === Focus.Sessions) {
       this.sessions.activate();
     } else if (this.board.selectedTicket() !== undefined) {
       this.sessions.moveTo(0);
@@ -110,7 +114,7 @@ export class KeyRouter {
       case Action.FocusRight:
         return this.change((current) => current.focusOn(Focus.Sessions));
       case Action.FocusDown:
-        return this.sessions.hosting.hasTabs() ? this.change((current) => current.focusOn(Focus.Dock)) : undefined;
+        return this.focusDown();
       case Action.FocusUp:
         return this.change((current) => current.goUp(current.focus === Focus.Dock ? Focus.Sessions : Focus.Board));
       case Action.Zoom:
@@ -124,8 +128,18 @@ export class KeyRouter {
     }
   }
 
+  private focusDown(): void {
+    if (this.focus() === Focus.Board) {
+      this.change((current) => current.focusOn(Focus.Docs));
+    } else if (this.sessions.hosting.hasTabs()) {
+      this.change((current) => current.focusOn(Focus.Dock));
+    }
+  }
+
   private move(delta: number): void {
-    if (this.focus() === Focus.Sessions) {
+    if (this.focus() === Focus.Docs) {
+      this.docs.move(delta);
+    } else if (this.focus() === Focus.Sessions) {
       this.sessions.move(delta);
     } else if (this.board.move(delta)) {
       this.sessions.moveTo(0);

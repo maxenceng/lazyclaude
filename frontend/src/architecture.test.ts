@@ -3,7 +3,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const SRC = resolve(__dirname);
-const CONTEXTS = ['board', 'session'];
+const CONTEXTS = ['board', 'docs', 'session'];
 const SHARED = ['protocol', 'design-system', 'i18n', 'shared', 'test'];
 const COMPOSITION = ['keys', 'connection', 'window'];
 

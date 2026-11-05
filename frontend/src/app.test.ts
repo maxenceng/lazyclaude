@@ -99,4 +99,14 @@ describe('the app', () => {
     await Promise.resolve();
     expect(client.calls.map((call) => call.method)).toContain('session/watch');
   });
+
+  it('reads the docs of the project once the board is read', async () => {
+    const client = fakeClient(new Ready());
+    new AppModel(client, testPlatform()).start();
+    client.answerNext(boardFixture([ticketFixture({ id: 'PROJ-1' })]));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(client.calls.map((call) => call.method)).toContain('docs/watch');
+    expect(client.calls.find((call) => call.method === 'docs/watch')?.params).toEqual({ root: '/p' });
+  });
 });

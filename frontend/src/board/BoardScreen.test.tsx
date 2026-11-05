@@ -14,14 +14,15 @@ const setup = (markerOf: (ticket: string) => LampColour | undefined = () => unde
   const board = new BoardStore(client);
   const selection = new Selection();
   const onOpen = vi.fn();
+  const onLink = vi.fn();
   const loaded = board.load();
   render(
     <>
       <BoardPane board={board} selection={selection} focused markerOf={markerOf} onOpen={onOpen} onFocus={() => {}} onRetry={() => void board.load()} />
-      <TicketPane board={board} selection={selection} focused={false} />
+      <TicketPane board={board} selection={selection} focused={false} onLink={onLink} />
     </>,
   );
-  return { client, board, selection, onOpen, loaded };
+  return { client, board, selection, onOpen, onLink, loaded };
 };
 
 const tickets = boardFixture([
@@ -98,6 +99,13 @@ describe('the Board', () => {
     const { client, loaded } = setup();
     await answer(client, loaded, tickets);
     expect(screen.queryByText('unreadable')).not.toBeInTheDocument();
+  });
+
+  it('typesets a ticket\'s body as markdown and hands its links to the page', async () => {
+    const { client, loaded, onLink } = setup();
+    await answer(client, loaded, boardFixture([ticketFixture({ id: 'PROJ-1', body: { kind: 'body', value: 'Read [the guide](docs/guide.md).' } })]));
+    await userEvent.click(screen.getByRole('link', { name: 'the guide' }));
+    expect(onLink).toHaveBeenCalledWith('docs/guide.md');
   });
 
   it('selects the ticket that heads the board and details it', async () => {

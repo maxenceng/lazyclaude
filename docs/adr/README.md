@@ -88,3 +88,4 @@
 - 0084 [`session` decides what a new session from a ticket opens and where a past one resumes](0084-session-decides-what-a-new-session-from-a-ticket-opens-and-where-a-past-one-resumes.md) — Accepted.
 - 0085 [The desktop window composes a controller per context, and keeps behaviour with state in classes](0085-the-desktop-window-composes-a-controller-per-context-and-keeps-state-in-classes.md) — Accepted.
 - 0086 [The desktop window reaches the clipboard through Tauri's plugin](0086-the-desktop-window-reaches-the-clipboard-through-tauri-s-plugin.md) — Accepted.
+- 0087 [The desktop window follows a document's links itself and opens the rest through Tauri's opener](0087-the-desktop-window-follows-a-documents-links-itself-and-opens-the-rest-through-tauris-opener.md) — Accepted.

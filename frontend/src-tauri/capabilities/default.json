@@ -1,7 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The main window may call the relay's commands, listen to window events, and read and write the clipboard as text.",
+  "description": "The main window may call the relay's commands, listen to window events, read and write the clipboard as text, and open a link in the system browser or a path in its default application.",
   "windows": ["main"],
-  "permissions": ["core:default", "clipboard-manager:allow-read-text", "clipboard-manager:allow-write-text"]
+  "permissions": [
+    "core:default",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text",
+    { "identifier": "opener:allow-open-url", "allow": [{ "url": "http://**" }, { "url": "https://**" }] },
+    { "identifier": "opener:allow-open-path", "allow": [{ "path": "/**" }] }
+  ]
 }

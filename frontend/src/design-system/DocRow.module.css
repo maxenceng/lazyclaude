@@ -1,0 +1,48 @@
+.row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--space-1) var(--space-4);
+  padding-left: calc(var(--space-4) + var(--depth) * var(--space-4));
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: var(--size-body);
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: default;
+}
+
+.selected {
+  background: var(--selected);
+  color: var(--text-on-light);
+}
+
+.folder {
+  font-weight: 600;
+}
+
+.folder::before {
+  content: '▾';
+  flex: none;
+}
+
+.folder[aria-expanded='false']::before {
+  content: '▸';
+}
+
+.name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+}
+
+.selected .count {
+  color: var(--text-on-light);
+}

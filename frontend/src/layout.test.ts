@@ -46,4 +46,22 @@ describe('the window\'s layout', () => {
   it('leaves the zoom when the main view is toggled', () => {
     expect(new Layout().focusOn(Focus.Dock).toggleZoom().toggleMainView().arrangement(true)).toBe('noMain');
   });
+
+  it('gives the main view to the document while the Docs panel has focus, and back to the ticket when the Board or the sessions do', () => {
+    expect(new Layout().showsDocument()).toBe(false);
+    const docs = new Layout().focusOn(Focus.Docs);
+    expect(docs.showsDocument()).toBe(true);
+    expect(docs.focusOn(Focus.Board).showsDocument()).toBe(false);
+    expect(docs.focusOn(Focus.Sessions).showsDocument()).toBe(false);
+  });
+
+  it('keeps the document in the main view while focus is in the dock', () => {
+    expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Dock).showsDocument()).toBe(true);
+    expect(new Layout().focusOn(Focus.Dock).showsDocument()).toBe(false);
+  });
+
+  it('keeps the document through a zoom and the main view being hidden and shown', () => {
+    const layout = new Layout().focusOn(Focus.Docs).toggleMainView().toggleMainView().focusOn(Focus.Dock).toggleZoom().leaveZoom();
+    expect(layout.showsDocument()).toBe(true);
+  });
 });

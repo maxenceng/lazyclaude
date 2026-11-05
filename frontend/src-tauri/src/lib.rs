@@ -71,6 +71,7 @@ pub fn run() {
     let project = launch::project(std::env::args().nth(1), launch_dir);
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(Relay::new(Sidecar::java(jar, project)))
         .manage(Pulse::new(Instant::now(), SILENCE_LIMIT))
         .setup(|app| {

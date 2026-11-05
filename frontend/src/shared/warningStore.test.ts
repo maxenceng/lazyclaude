@@ -38,4 +38,13 @@ describe('the warning on the status line', () => {
     await watching;
     expect(store.warning.get()).toBeUndefined();
   });
+
+  it('shows a warning the window raised itself, until the backend says something', () => {
+    const client = fakeClient();
+    const store = new WarningStore(client);
+    store.raise('Could not open /p/x: no such file');
+    expect(store.warning.get()).toEqual({ text: 'Could not open /p/x: no such file', count: 1 });
+    client.push('warning/changed', { kind: 'noWarning' });
+    expect(store.warning.get()).toBeUndefined();
+  });
 });

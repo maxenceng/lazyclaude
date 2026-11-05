@@ -34,8 +34,22 @@
   grid-template-areas: 'dock';
 }
 
-.board {
+.left {
   grid-area: board;
+  display: grid;
+  grid-template-rows: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1px;
+  background: var(--seam);
+  min-height: 0;
+  min-width: 0;
+}
+
+.left:has(> :only-child) {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.board,
+.docs {
   min-height: 0;
   min-width: 0;
 }
