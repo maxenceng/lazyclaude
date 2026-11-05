@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { LampColour } from '../design-system';
 import { RpcError } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
-import { BoardScreen } from './BoardScreen';
+import { BoardPane, TicketPane } from './BoardScreen';
 import { createBoardStore } from './boardStore';
 import { boardFixture, ticketFixture } from './fixtures';
 import { createSelection } from './selection';
@@ -15,7 +15,12 @@ const setup = (markerOf: (ticket: string) => LampColour | undefined = () => unde
   const selection = createSelection();
   const onOpen = vi.fn();
   const loaded = board.load();
-  render(<BoardScreen board={board} selection={selection} markerOf={markerOf} onOpen={onOpen} onRetry={() => void board.load()} />);
+  render(
+    <>
+      <BoardPane board={board} selection={selection} focused markerOf={markerOf} onOpen={onOpen} onFocus={() => {}} onRetry={() => void board.load()} />
+      <TicketPane board={board} selection={selection} focused={false} />
+    </>,
+  );
   return { client, board, selection, onOpen, loaded };
 };
 

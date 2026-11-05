@@ -20,20 +20,21 @@ export interface HostingDeps {
 /** A start the sidecar could not answer: what it said, and the same start again. */
 export interface StartFailure {
   message: string;
-  retry: () => Promise<void>;
+  retry: () => Promise<boolean>;
 }
 
 export interface Hosting {
   readonly dock: Store<Dock>;
   readonly failure: Store<StartFailure | undefined>;
+  readonly mouseReported: Store<boolean>;
   emulatorOf(session: string): Emulator | undefined;
   select(session: string): void;
   selectPrevious(): boolean;
   selectNext(): boolean;
-  startUnlinked(root: string): Promise<void>;
-  startTicket(root: string, ticket: string, branch: string, verb: Verb): Promise<void>;
-  resume(root: string, session: string, recordedDirectory: string): Promise<void>;
-  resumeInTicketWorktree(root: string, session: string, recordedDirectory: string, branch: string): Promise<void>;
+  startUnlinked(root: string): Promise<boolean>;
+  startTicket(root: string, ticket: string, branch: string, verb: Verb): Promise<boolean>;
+  resume(root: string, session: string, recordedDirectory: string): Promise<boolean>;
+  resumeInTicketWorktree(root: string, session: string, recordedDirectory: string, branch: string): Promise<boolean>;
 }
 
 /** The hosted sessions: their tabs, one emulator each, the starts that open them and the pushes that feed and close them. */
@@ -43,6 +44,11 @@ export const createHosting = (deps: HostingDeps): Hosting => {
   const failure = createStore<StartFailure | undefined>(undefined);
   const emulators = new Map<string, Emulator>();
   const ended = new Set<string>();
+  const mouseReported = createStore(false);
+  const refreshMouse = () => {
+    const selected = dock.get().selectedTab();
+    mouseReported.set(selected !== undefined && emulators.get(selected)?.mouseReported.get() === true);
+  };
 
   const emulatorFor = (session: string): Emulator => {
     const existing = emulators.get(session);
@@ -52,6 +58,7 @@ export const createHosting = (deps: HostingDeps): Hosting => {
     const { terminal, fit } = deps.newTerminal();
     const emulator = new Emulator(session, terminal, { client, memory: deps.memory, fit, reserved: deps.reserved, clipboard: deps.clipboard });
     emulators.set(session, emulator);
+    emulator.mouseReported.subscribe(refreshMouse);
     return emulator;
   };
 
@@ -65,6 +72,7 @@ export const createHosting = (deps: HostingDeps): Hosting => {
         emulators.get(session)?.end();
         emulators.delete(session);
       });
+    refreshMouse();
   };
 
   const paneSize = (): PaneSize => {
@@ -72,19 +80,23 @@ export const createHosting = (deps: HostingDeps): Hosting => {
     return fitted === undefined ? DEFAULT_PANE : { width: fitted.terminal.cols, height: fitted.terminal.rows };
   };
 
-  const opened = (start: HostStart) => {
-    if (start.kind === 'startedHost') {
-      ended.delete(start.id);
-      settle(dock.get().opened(start.id));
+  const opened = (start: HostStart): boolean => {
+    if (start.kind !== 'startedHost') {
+      return false;
     }
+    ended.delete(start.id);
+    settle(dock.get().opened(start.id));
+    return true;
   };
 
-  const start = async (ask: () => Promise<HostStart>): Promise<void> => {
+  const start = async (ask: () => Promise<HostStart>): Promise<boolean> => {
     try {
-      opened(await ask());
+      const started = opened(await ask());
       failure.set(undefined);
+      return started;
     } catch (error) {
       failure.set({ message: error instanceof Error ? error.message : String(error), retry: () => start(ask) });
+      return false;
     }
   };
 
@@ -107,18 +119,24 @@ export const createHosting = (deps: HostingDeps): Hosting => {
   return {
     dock,
     failure,
+    mouseReported,
     emulatorOf: (session) => emulators.get(session),
-    select: (session) => dock.set(dock.get().select(session)),
+    select(session) {
+      dock.set(dock.get().select(session));
+      refreshMouse();
+    },
     selectPrevious() {
       const previous = dock.get().previous();
       if (previous !== undefined) {
         dock.set(previous);
+        refreshMouse();
       }
       return previous !== undefined;
     },
     selectNext() {
       const before = dock.get().selectedTab();
       dock.set(dock.get().next());
+      refreshMouse();
       return dock.get().selectedTab() !== before;
     },
     startUnlinked: (root) => start(() => client.call('session/startUnlinked', { root, size: paneSize() })),

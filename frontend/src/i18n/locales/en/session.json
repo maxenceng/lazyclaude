@@ -1,0 +1,33 @@
+{
+  "sessions": {
+    "title": "sessions",
+    "older": "older sessions"
+  },
+  "row": {
+    "hosted": "hosted",
+    "live": "running elsewhere",
+    "new": "new session",
+    "starting": "starting",
+    "untitled": "session {{id}}"
+  },
+  "picker": {
+    "title": "start with"
+  },
+  "verb": {
+    "REFINE": "refine",
+    "START": "start",
+    "REVIEW": "review",
+    "DESIGN": "design",
+    "RESPOND": "respond",
+    "DONE": "done"
+  },
+  "failure": {
+    "title": "The session could not be started",
+    "retry": "Retry"
+  },
+  "dock": {
+    "title": "Dock",
+    "terminal": "session terminal",
+    "starting": "starting"
+  }
+}

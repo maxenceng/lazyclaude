@@ -181,4 +181,20 @@ describe('the keys of a hosted session\'s pane', () => {
     await vi.waitFor(() => expect(client.sent).toHaveLength(1));
     expect(textOf(client.sent[0]?.params)).toBe('pasted');
   });
+
+  it('drops a paste the clipboard refuses, sending nothing', async () => {
+    const { client, emulator } = emulate({ clipboard: { readText: () => Promise.reject(new Error('denied')), writeText: () => Promise.resolve() } });
+    emulator.handleKey(keydown('V', { ctrlKey: true, shiftKey: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(client.sent).toEqual([]);
+  });
+
+  it('drops a copy the clipboard refuses', async () => {
+    const { term, emulator } = emulate({ clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.reject(new Error('denied')) } });
+    term.write('selected');
+    await written(term);
+    term.select(0, 0, 8);
+    expect(emulator.handleKey(keydown('C', { ctrlKey: true, shiftKey: true }))).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 });

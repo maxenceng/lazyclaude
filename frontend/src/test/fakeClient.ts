@@ -6,6 +6,8 @@ type Handler = (params: never) => void;
 export interface FakeClient extends Client {
   calls: Array<{ method: string; params: unknown }>;
   answerNext(result: unknown): void;
+  answer(method: string, result: unknown): void;
+  fail(method: string, error: Error): void;
   failNext(error: Error): void;
   push(name: string, params: unknown): void;
   sent: Array<{ input: string; params: unknown }>;
@@ -16,7 +18,11 @@ export interface FakeClient extends Client {
 /** A client whose calls wait for the test to answer them, in the order they were made. */
 export const fakeClient = (initial: Status = new Ready()): FakeClient => {
   const status = createStore<Status>(initial);
-  const waiting: Array<{ resolve(value: unknown): void; reject(error: Error): void }> = [];
+  const waiting: Array<{ method: string; resolve(value: unknown): void; reject(error: Error): void }> = [];
+  const take = (method: string) => {
+    const at = waiting.findIndex((call) => call.method === method);
+    return at === -1 ? undefined : waiting.splice(at, 1)[0];
+  };
   const handlers = new Map<string, Set<Handler>>();
   const fake: FakeClient = {
     status,
@@ -30,7 +36,7 @@ export const fakeClient = (initial: Status = new Ready()): FakeClient => {
     },
     call(method, params) {
       fake.calls.push({ method, params });
-      return new Promise((resolve, reject) => waiting.push({ resolve: resolve, reject }));
+      return new Promise((resolve, reject) => waiting.push({ method, resolve, reject }));
     },
     send(input, params) {
       fake.sent.push({ input, params });
@@ -42,6 +48,8 @@ export const fakeClient = (initial: Status = new Ready()): FakeClient => {
       return () => set.delete(handler);
     },
     answerNext: (result) => waiting.shift()?.resolve(result),
+    answer: (method, result) => take(method)?.resolve(result),
+    fail: (method, error) => take(method)?.reject(error),
     failNext: (error) => waiting.shift()?.reject(error),
     push: (name, params) => handlers.get(name)?.forEach((handler) => handler(params as never)),
     setStatus: (next) => status.set(next),

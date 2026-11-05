@@ -94,4 +94,39 @@ describe('the window-level key handler', () => {
     installKeys(() => {}, { packaged: true })();
     expect(rightClick().defaultPrevented).toBe(false);
   });
+
+  describe('a key typed into a terminal', () => {
+    const terminal = () => {
+      const surface = document.body.appendChild(document.createElement('div'));
+      surface.setAttribute('data-terminal', '');
+      return surface.appendChild(document.createElement('textarea'));
+    };
+
+    const pressIn = (target: HTMLElement, key: string, init: KeyboardEventInit = {}) => {
+      const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true, ...init });
+      target.dispatchEvent(event);
+      return event;
+    };
+
+    it('is left to the terminal: neither taken nor prevented, whatever the TUI binds', () => {
+      const taken = vi.fn();
+      remove = installKeys(taken, { packaged: true });
+      const event = pressIn(terminal(), 'j');
+      expect(event.defaultPrevented).toBe(false);
+      expect(taken).not.toHaveBeenCalled();
+    });
+
+    it('leaves a reload key to the terminal too, which sends it to claude and cancels it itself', () => {
+      remove = installKeys(() => {}, { packaged: true });
+      expect(pressIn(terminal(), 'F5').defaultPrevented).toBe(false);
+    });
+
+    it('still has the right-click menu prevented in a packaged build', () => {
+      remove = installKeys(() => {}, { packaged: true });
+      const target = terminal();
+      const event = new MouseEvent('contextmenu', { cancelable: true, bubbles: true });
+      target.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+    });
+  });
 });

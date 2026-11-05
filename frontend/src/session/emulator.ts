@@ -112,16 +112,25 @@ export class Emulator {
 
   private async copy(): Promise<void> {
     const selection = this.terminal.getSelection();
-    if (selection !== '') {
+    if (selection === '') {
+      return;
+    }
+    try {
       await this.deps.clipboard.writeText(selection);
+    } catch {
+      // deferred: a clipboard the webview refuses is dropped without a word — close it when the status line can carry the window's own warnings.
     }
   }
 
   /** Text goes through `term.paste()`, so it arrives bracketed whenever `claude` asked for bracketed paste. */
   private async paste(): Promise<void> {
-    const text = await this.deps.clipboard.readText();
-    if (text !== '') {
-      this.terminal.paste(text);
+    try {
+      const text = await this.deps.clipboard.readText();
+      if (text !== '') {
+        this.terminal.paste(text);
+      }
+    } catch {
+      // deferred: a clipboard the webview refuses is dropped without a word — close it when the status line can carry the window's own warnings.
     }
   }
 

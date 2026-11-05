@@ -5,7 +5,7 @@ import { createStore } from '../shared/store';
 import { fakeClient } from '../test/fakeClient';
 import { createHosting, type HostingDeps } from './hosting';
 import { createModeMemory } from './modeMemory';
-import { CLAUDE_START } from './recordings';
+import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './recordings';
 import { sessionFixture, sessionsFixture } from './fixtures';
 import type { SessionsView } from '../protocol';
 
@@ -179,5 +179,40 @@ describe('the hosted sessions', () => {
     hosted.select('s2');
     expect(hosted.selectPrevious()).toBe(true);
     expect(hosted.dock.get().selectedTab()).toBe('s1');
+  });
+
+  it('tells whether the selected tab\'s claude reports the mouse, for the shift+drag hint', async () => {
+    const { client, sessions, hosted } = hosting();
+    sessions.set(hostedIn('s1', 's2'));
+    expect(hosted.mouseReported.get()).toBe(false);
+    client.push('pty/output', { session: 's1', data: encoded(CLAUDE_START) });
+    await written(hosted.emulatorOf('s1')!.terminal);
+    expect(hosted.mouseReported.get()).toBe(true);
+    hosted.select('s2');
+    expect(hosted.mouseReported.get()).toBe(false);
+    hosted.select('s1');
+    expect(hosted.mouseReported.get()).toBe(true);
+    client.push('pty/output', { session: 's1', data: encoded(CLAUDE_STOPS_REPORTING_THE_MOUSE) });
+    await written(hosted.emulatorOf('s1')!.terminal);
+    expect(hosted.mouseReported.get()).toBe(false);
+  });
+
+  it('tells no mouse is reported once the tab closes', async () => {
+    const { client, sessions, hosted } = hosting();
+    sessions.set(hostedIn('s1'));
+    client.push('pty/output', { session: 's1', data: encoded(CLAUDE_START) });
+    await written(hosted.emulatorOf('s1')!.terminal);
+    client.push('session/exited', { session: 's1', code: 0 });
+    expect(hosted.mouseReported.get()).toBe(false);
+  });
+
+  it('says whether a start opened a tab', async () => {
+    const { client, hosted } = hosting();
+    const refused = hosted.startUnlinked('/p');
+    client.answerNext({ kind: 'notStartedHost' });
+    expect(await refused).toBe(false);
+    const started = hosted.startUnlinked('/p');
+    client.answerNext({ kind: 'startedHost', id: 's1' });
+    expect(await started).toBe(true);
   });
 });
