@@ -16,6 +16,7 @@ import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.changingAtO
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.exitingAtOnce;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.newHostedParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.noSessions;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.noWatchedSessionParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.notStartedHost;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.outputtingAtOnce;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.ptyInputParams;
@@ -30,6 +31,7 @@ import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.sessionsPar
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.startedHost;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.ticketHostedParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.typedPtyInputParams;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.watchedSessionParams;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.failingAfterReleasing;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.linesWritten;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.notification;
@@ -55,9 +57,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RepaintPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 
@@ -69,6 +74,9 @@ class SessionSidecarTest {
 
     @Mock
     private HostedSessionCommand hosting;
+
+    @Mock
+    private WatchedSessionCommand watching;
 
     @Test
     void answers_an_unlinked_start_with_the_started_session() {
@@ -141,6 +149,20 @@ class SessionSidecarTest {
         assertThat(linesWritten(sessions, hosting, notification("session/repaint", repaintParams()))).containsExactly(ready());
 
         verify(hosting).repaint(new RepaintPayload(sessionId()));
+    }
+
+    @Test
+    void tells_session_which_session_is_watched_and_answers_nothing() {
+        assertThat(linesWritten(watching, notification("session/watching", watchedSessionParams()))).containsExactly(ready());
+
+        verify(watching).watching(new WatchedSessionPayload(sessionId()));
+    }
+
+    @Test
+    void tells_session_that_no_session_is_watched() {
+        assertThat(linesWritten(watching, notification("session/watching", noWatchedSessionParams()))).containsExactly(ready());
+
+        verify(watching).watching(new NoWatchedSessionPayload());
     }
 
     @Test

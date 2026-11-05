@@ -22,12 +22,15 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 
 import tools.jackson.databind.JsonNode;
 
 /**
- * The {@code session/} and {@code pty/} methods: one per operation of {@link SessionQuery} and {@link HostedSessionCommand}, named
+ * The {@code session/} and {@code pty/} methods: one per operation of {@link SessionQuery}, {@link HostedSessionCommand} and
+ * {@link WatchedSessionCommand}, named
  * after it, and {@code session/configuration}, which answers the configuration read at start-up, not a second read of the file
  * that would raise its warnings again. The pty's bytes travel as {@code pty/input}, {@code pty/resize} and {@code pty/output} (ADR 0050). There is
  * no method to end a session: closing stdin ends every one.
@@ -51,19 +54,28 @@ final class SessionMethods {
             ServedInput.of("pty/input", PtyInputPayload.class, HostedSessionCommand::write),
             ServedInput.of("pty/resize", PtyResizePayload.class, HostedSessionCommand::resizePty),
             ServedInput.of("session/repaint", RepaintPayload.class, HostedSessionCommand::repaint));
+    private static final ServedInput<WatchedSessionCommand, WatchedPayload> WATCHING =
+            ServedInput.of("session/watching", WatchedPayload.class, WatchedSessionCommand::watching);
     private static final ProtocolNotification<SessionsView> CHANGED = new ProtocolNotification<>("session/changed", SessionsView.class);
     private static final ProtocolNotification<PtyOutputView> OUTPUT = new ProtocolNotification<>("pty/output", PtyOutputView.class);
     private static final ProtocolNotification<SessionExitView> EXITED = new ProtocolNotification<>("session/exited", SessionExitView.class);
 
     private final SessionQuery sessions;
     private final HostedSessionCommand hosting;
+    private final WatchedSessionCommand watched;
     private final ConfigurationView configuration;
     private final SidecarOutput output;
     private final Set<Path> watching = ConcurrentHashMap.newKeySet();
 
-    SessionMethods(SessionQuery sessions, HostedSessionCommand hosting, ConfigurationView configuration, SidecarOutput output) {
+    SessionMethods(
+            SessionQuery sessions,
+            HostedSessionCommand hosting,
+            WatchedSessionCommand watched,
+            ConfigurationView configuration,
+            SidecarOutput output) {
         this.sessions = sessions;
         this.hosting = hosting;
+        this.watched = watched;
         this.configuration = configuration;
         this.output = output;
     }
@@ -73,7 +85,9 @@ final class SessionMethods {
                 Stream.concat(STARTS.stream().map(ServedMethod::method), Stream.of(CONFIGURATION.method(), WATCH))
                         .<ProtocolMethod<?, ?>>map(declared -> declared)
                         .toList(),
-                INPUTS.stream().<ProtocolInput<?>>map(ServedInput::input).toList(),
+                Stream.concat(INPUTS.stream().map(ServedInput::input), Stream.of(WATCHING.input()))
+                        .<ProtocolInput<?>>map(declared -> declared)
+                        .toList(),
                 List.of(CHANGED, OUTPUT, EXITED));
     }
 
@@ -84,6 +98,7 @@ final class SessionMethods {
         return Stream.of(
                         STARTS.stream().map(start -> start.boundTo(hosting)),
                         INPUTS.stream().map(input -> input.boundTo(hosting)),
+                        Stream.of(WATCHING.boundTo(watched)),
                         Stream.of(CONFIGURATION.boundTo(configuration)),
                         Stream.of(Map.<String, SidecarMethod>entry(WATCH.name(), this::watch)))
                 .flatMap(served -> served)

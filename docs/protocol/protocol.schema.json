@@ -413,9 +413,19 @@
           },
           "required" : [ "params" ],
           "additionalProperties" : false
+        },
+        "session/watching" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.WatchedPayload"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
         }
       },
-      "required" : [ "pty/input", "pty/resize", "session/repaint" ],
+      "required" : [ "pty/input", "pty/resize", "session/repaint", "session/watching" ],
       "additionalProperties" : false
     },
     "notifications" : {
@@ -2074,6 +2084,16 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
+    "session.NoWatchedSessionPayload" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noWatchedSessionPayload"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
     "session.NotStartedHost" : {
       "type" : "object",
       "properties" : {
@@ -2518,6 +2538,29 @@
         }
       },
       "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "session.WatchedPayload" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.WatchedSessionPayload"
+      }, {
+        "$ref" : "#/$defs/session.NoWatchedSessionPayload"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.WatchedSessionPayload" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "watchedSessionPayload"
+        },
+        "session" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "session" ],
       "additionalProperties" : false
     },
     "session.YourTurn" : {

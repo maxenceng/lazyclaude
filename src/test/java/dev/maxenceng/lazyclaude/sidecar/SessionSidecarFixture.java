@@ -92,6 +92,14 @@ public final class SessionSidecarFixture {
         return "{\"session\":\"%s\",\"cols\":120,\"rows\":40}".formatted(sessionId().value());
     }
 
+    public static String watchedSessionParams() {
+        return "{\"kind\":\"watchedSessionPayload\",\"session\":\"%s\"}".formatted(sessionId().value());
+    }
+
+    public static String noWatchedSessionParams() {
+        return "{\"kind\":\"noWatchedSessionPayload\"}";
+    }
+
     public static String repaintParams() {
         return "{\"session\":\"%s\"}".formatted(sessionId().value());
     }

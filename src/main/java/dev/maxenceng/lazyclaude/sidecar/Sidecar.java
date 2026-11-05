@@ -57,7 +57,8 @@ public final class Sidecar {
     Map<String, SidecarMethod> methods(SidecarOutput output) {
         return Stream.of(
                         new BoardMethods(contexts.board(), output).methods(),
-                        new SessionMethods(contexts.sessions(), contexts.hosting(), contexts.configuration(), output).methods(),
+                        new SessionMethods(contexts.sessions(), contexts.hosting(), contexts.watching(), contexts.configuration(), output)
+                                .methods(),
                         new WarningMethods(contexts.warnings(), output).methods(),
                         new DocsMethods(contexts.docs(), output).methods(),
                         new ReviewMethods(contexts.review(), contexts.pendingReview(), output).methods())

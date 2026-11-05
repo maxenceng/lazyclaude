@@ -52,8 +52,11 @@ final class TypeSchema {
         this.definitions = definitions;
     }
 
-    /** The schema of the params a Payload is read from. */
+    /** The schema of the params a Payload is read from; sealed params are read by their kind, as a sealed component is. */
     JsonNode read(Class<?> payload) {
+        if (payload.isSealed() && !payload.isRecord()) {
+            return written(payload);
+        }
         return definitions.define(payload, () -> {
             ObjectNode properties = SidecarJson.object();
             Arrays.stream(payload.getRecordComponents()).forEach(component -> properties.set(component.getName(), written(component.getGenericType())));

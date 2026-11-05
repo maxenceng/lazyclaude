@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardLookupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyOutputView;
@@ -94,6 +95,15 @@ class ProtocolSchemaTest {
         assertThat(definitionOf(new ProtocolMethod<>("x/sealed", SealedPayload.class, BoardView.class), "sidecar.SealedPayload")
                         .path("properties").path("inner").path("$ref").asString())
                 .as("the reader reads a sealed type by its kind, so a Payload may hold one")
+                .isEqualTo("#/$defs/board.BoardLookupView");
+    }
+
+    @Test
+    void states_sealed_params_as_the_union_of_their_variants() {
+        assertThat(SidecarJson.parse(schemaOf(new ProtocolMethod<>("x/sealedParams", BoardLookupView.class, BoardView.class)))
+                        .path("properties").path("methods").path("properties").path("x/sealedParams")
+                        .path("properties").path("params").path("$ref").asString())
+                .as("the reader reads sealed params by their kind, as it reads a sealed component")
                 .isEqualTo("#/$defs/board.BoardLookupView");
     }
 
