@@ -30,12 +30,12 @@ const settle = () => act(async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 });
 
-const readyApp = async () => {
+const readyApp = async (packaged = false) => {
   const client = fakeClient(new Ready());
   const platform = testPlatform();
   const app = createApp(client, platform);
   app.start();
-  render(<App app={app} packaged={false} />);
+  render(<App app={app} packaged={packaged} />);
   await act(async () => {
     client.answer('board/watch', board);
     client.answer('session/configuration', configuration);
@@ -352,5 +352,29 @@ describe('the dock\'s layout', () => {
     expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument();
     await ready.user.keyboard('{Alt>}z{/Alt}');
     expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+  });
+});
+
+describe('a packaged build', () => {
+  const pressInPane = (key: string, init: KeyboardEventInit = {}) => {
+    const textarea = screen.getByRole('group', { name: 'session terminal' }).querySelector('textarea')!;
+    const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true, ...init });
+    textarea.dispatchEvent(event);
+    return event;
+  };
+
+  it('swallows F5 and Ctrl+R in a pane, where xterm.js sends them to claude', async () => {
+    const ready = await readyApp(true);
+    await startedSession(ready);
+    expect(pressInPane('F5', { keyCode: 116 }).defaultPrevented).toBe(true);
+    expect(pressInPane('r', { ctrlKey: true, keyCode: 82 }).defaultPrevented).toBe(true);
+  });
+
+  it('shows no context menu over a pane', async () => {
+    const ready = await readyApp(true);
+    await startedSession(ready);
+    const event = new MouseEvent('contextmenu', { cancelable: true, bubbles: true });
+    screen.getByRole('group', { name: 'session terminal' }).dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
   });
 });

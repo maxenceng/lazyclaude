@@ -24,5 +24,5 @@ export type {
   BoardVerb as Verb,
 } from './generated/protocol';
 export type { Relay, RelayMessage } from './relay';
-export { tauriRelay } from './tauri';
+export { pageAlive, tauriRelay } from './tauri';
 export { binaryBytes, bytesOfText, fromBase64, toBase64 } from './bytes';

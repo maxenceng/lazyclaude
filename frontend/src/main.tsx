@@ -5,11 +5,15 @@ import { createApp } from './app';
 import './design-system/global.css';
 import './i18n/i18n';
 import { browserPlatform } from './platform';
-import { createClient, tauriRelay } from './protocol';
+import { createClient, pageAlive, tauriRelay } from './protocol';
+import { startHeartbeat } from './shared/heartbeat';
+
+const HEARTBEAT_MILLISECONDS = 1000;
 
 const app = createApp(createClient(tauriRelay), browserPlatform());
 app.start();
 void app.client.connect();
+startHeartbeat(pageAlive, HEARTBEAT_MILLISECONDS);
 
 const root = document.getElementById('root');
 if (root === null) {

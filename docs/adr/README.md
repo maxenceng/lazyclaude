@@ -84,3 +84,4 @@
 - 0080 [The desktop frontend reads its copy through i18n](0080-the-desktop-frontend-reads-its-copy-through-i18n.md) — Accepted.
 - 0081 [The desktop frontend's states are classes over an enum kind, and its functions are arrows](0081-the-desktop-frontend-s-states-are-classes-over-an-enum-kind-and-its-functions-are-arrows.md) — Accepted.
 - 0082 [The desktop frontend's composition side is imported by no context](0082-the-desktop-frontend-s-composition-side-is-imported-by-no-context.md) — Accepted.
+- 0083 [A hosted pane keeps the modes it saw, and the window reloads a page that stops answering](0083-a-hosted-pane-keeps-the-modes-it-saw-and-a-window-reloads-a-page-that-stops-answering.md) — Accepted.

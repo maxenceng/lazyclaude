@@ -15,3 +15,6 @@ export const tauriRelay: Relay = {
   restart: attachWith('relay_restart'),
   send: (line) => invoke('relay_send', { line }),
 };
+
+/** One beat of the page's heartbeat, for the window to hear (ADR 0083). */
+export const pageAlive = (): Promise<void> => invoke('page_alive');
