@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { RpcError } from '../protocol';
 import { RowKind } from './diffRows';
 import { added, diffFixture, fileFixture, hunk, kept, noLine, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
-import { Harness } from './sessionHarness';
+import { Harness, type Reads } from './sessionHarness';
 import { DiffStateKind } from './diffState';
 
 const diff = diffFixture([
@@ -10,14 +10,7 @@ const diff = diffFixture([
   fileFixture('src/b.ts', [hunk('@@ -1 +1 @@', [added(1, 'b')])]),
 ]);
 
-const readTo = async (harness: Harness, overrides: { threads?: unknown; pending?: unknown; placedThreads?: unknown; placedPending?: unknown } = {}) => {
-  harness.session.read();
-  await harness.answer('review/pendingOf', overrides.pending ?? { kind: 'noPendingReview' });
-  await harness.answer('review/threadsOf', overrides.threads ?? threadsFixture([]));
-  await harness.answer('review/diffOf', diff);
-  await harness.answer('review/threadsInDiff', overrides.placedThreads ?? []);
-  await harness.answer('review/pendingInDiff', overrides.placedPending ?? []);
-};
+const readTo = (harness: Harness, overrides: Omit<Reads, 'diff'> = {}) => harness.readAll({ ...overrides, diff });
 
 describe('a review being read', () => {
   it('asks for the pending review, the diff and the threads of the pull request, and is loading until they answer', () => {
@@ -233,7 +226,7 @@ describe('resolved threads of a review', () => {
 
 const written = (comments = [pendingCommentFixture({ id: 'C9', body: 'Saved' })], summary = '') => ({ kind: 'writtenReview', pending: openPending(comments, { summary }) });
 
-const withBoxOpen = async (harness: Harness, readOverrides: Parameters<typeof readTo>[1] = {}) => {
+const withBoxOpen = async (harness: Harness, readOverrides: Omit<Reads, 'diff'> = {}) => {
   await readTo(harness, readOverrides);
   const opening = harness.session.comment();
   harness.client.answerNext(anchored);
@@ -462,5 +455,72 @@ describe('the summary of a review', () => {
     harness.session.close();
     await harness.answer('review/submit', written());
     expect(harness.submitted).toBe(0);
+  });
+});
+
+describe('the mouse over a review', () => {
+  it('puts the cursor on the line pressed, and a second press on it, in the focused diff, is enter', async () => {
+    const harness = new Harness();
+    const comment = pendingCommentFixture({ id: 'C1', body: 'Rename this' });
+    await readWithComment(harness, comment);
+    harness.session.moveLine(2);
+    harness.session.pressLine(0, true);
+    expect(harness.session.cursor()).toBe(0);
+    expect(harness.session.box()).toBeUndefined();
+    void harness.session.releaseLine(0);
+    harness.session.pressLine(0, true);
+    expect(harness.session.box()).toMatchObject({ text: 'Rename this' });
+  });
+
+  it('takes a press on an unfocused diff for the first of two, even on the cursor line', async () => {
+    const harness = new Harness();
+    await readWithComment(harness, pendingCommentFixture({ id: 'C1' }));
+    harness.session.pressLine(0, false);
+    expect(harness.session.box()).toBeUndefined();
+  });
+
+  it('marks the range from the line pressed to the line released on, and asks nothing for a press and release on the same line', async () => {
+    const harness = new Harness();
+    await readTo(harness);
+    const callsBefore = harness.client.calls.length;
+    harness.session.pressLine(1, true);
+    void harness.session.releaseLine(1);
+    expect(harness.client.calls).toHaveLength(callsBefore);
+    harness.session.pressLine(2, true);
+    const marking = harness.session.releaseLine(0);
+    expect(harness.client.calls.at(-1)).toEqual({ method: 'review/anchorOf', params: { diff, first: 0, last: 2 } });
+    harness.client.answerNext(anchored);
+    await marking;
+    expect([0, 1, 2, 3].map((line) => harness.session.inRange(line))).toEqual([true, true, true, false]);
+  });
+
+  it('ends a drag at the next press, so a release the window never reported does not capture the next drag', async () => {
+    const harness = new Harness();
+    await readTo(harness);
+    const callsBefore = harness.client.calls.length;
+    harness.session.pressLine(0, true);
+    harness.session.pressLine(3, true);
+    void harness.session.releaseLine(3);
+    expect(harness.client.calls).toHaveLength(callsBefore);
+  });
+
+  it('selects a file by a press, and a second press on the selected file goes to its first line', async () => {
+    const harness = new Harness();
+    await readTo(harness);
+    harness.session.pressFile(1, false);
+    expect(harness.session.selectedFile()).toBe(1);
+    expect(harness.session.cursor()).toBe(0);
+    harness.session.pressFile(1, true);
+    expect(harness.session.cursor()).toBe(3);
+  });
+
+  it('selects a comment by a press, and a second press on the selected one goes to its line', async () => {
+    const harness = new Harness();
+    const thread = threadFixture({ id: 'T1' });
+    await readWithThread(harness, thread);
+    harness.session.pressComment(0, false);
+    expect(harness.session.cursor()).toBe(0);
+    harness.session.pressComment(0, true);
+    expect(harness.session.cursor()).toBe(2);
   });
 });

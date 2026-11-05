@@ -4,8 +4,14 @@ export enum Focus {
   Board = 'board',
   Docs = 'docs',
   Sessions = 'sessions',
+  Files = 'files',
+  Comments = 'comments',
+  Diff = 'diff',
   Dock = 'dock',
 }
+
+/** The panes that fill the main view: a ticket's sessions, and a review's diff. */
+const isMainView = (focus: Focus): boolean => focus === Focus.Sessions || focus === Focus.Diff;
 
 /**
  * Which pane has focus, whether the dock is zoomed over the window and whether the main view is hidden, as the TUI keeps them,
@@ -25,14 +31,14 @@ export class Layout {
 
   /** The pane takes focus; a main view that is hidden gives it to the dock, and a change of focus ends the zoom. */
   focusOn(requested: Focus): Layout {
-    const target = requested === Focus.Sessions && this.mainHidden ? Focus.Dock : requested;
+    const target = isMainView(requested) && this.mainHidden ? Focus.Dock : requested;
     const document = target === Focus.Dock ? this.documentShown : target === Focus.Docs;
     return new Layout(target, target === this.focus && this.zoomed, this.mainHidden, document);
   }
 
   /** Focus goes up to `above`, showing the main view again if that is where it goes. */
   goUp(above: Focus): Layout {
-    return new Layout(this.focus, this.zoomed, above === Focus.Sessions ? false : this.mainHidden, this.documentShown).focusOn(above);
+    return new Layout(this.focus, this.zoomed, isMainView(above) ? false : this.mainHidden, this.documentShown).focusOn(above);
   }
 
   toggleZoom(): Layout {
@@ -49,7 +55,7 @@ export class Layout {
   toggleMainView(): Layout {
     const hidden = !this.mainHidden;
     const hiding = new Layout(this.focus, false, hidden, this.documentShown);
-    return hidden && this.focus === Focus.Sessions ? hiding.focusOn(Focus.Dock) : hiding;
+    return hidden && isMainView(this.focus) ? hiding.focusOn(Focus.Dock) : hiding;
   }
 
   arrangement(hasDock: boolean): Arrangement {

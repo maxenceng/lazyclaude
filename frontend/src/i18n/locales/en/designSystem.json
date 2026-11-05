@@ -23,5 +23,11 @@
   },
   "dockTabs": {
     "label": "hosted sessions"
+  },
+  "fileRow": {
+    "openThreads_one": "{{count}} open thread",
+    "openThreads_other": "{{count}} open threads",
+    "pending_one": "{{count}} pending comment",
+    "pending_other": "{{count}} pending comments"
   }
 }

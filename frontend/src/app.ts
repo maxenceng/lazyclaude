@@ -7,6 +7,7 @@ import { KeyRouter } from './keyRouting';
 import { Focus, Layout } from './layout';
 import type { Platform } from './platform';
 import type { Client } from './protocol';
+import { ReviewController } from './review/reviewController';
 import { Hosting } from './session/hosting';
 import { SessionsController } from './session/sessionsController';
 import { SessionStore } from './session/sessionStore';
@@ -20,6 +21,7 @@ import { WindowFocus } from './window/windowFocus';
 export class AppModel {
   readonly board: BoardController;
   readonly docs: DocsController;
+  readonly review: ReviewController;
   readonly sessionStore: SessionStore;
   readonly hosting: Hosting;
   readonly sessions: SessionsController;
@@ -41,6 +43,13 @@ export class AppModel {
     this.configuration = new ConfigurationStore(client);
     this.warnings = new WarningStore(client);
     this.docs = new DocsController({ client, root: () => this.board.root(), opener: platform.opener, notices: this.notices, onOpened: () => this.focusOn(Focus.Docs) });
+    this.review = new ReviewController({
+      client,
+      root: () => this.board.root(),
+      notices: this.notices,
+      onOpened: () => this.layout.set(this.layout.get().goUp(Focus.Diff)),
+      onLeft: () => this.focusOn(Focus.Board),
+    });
     this.windowFocus = new WindowFocus(platform.focus);
     this.watching = new WatchingReporter(client);
     this.hosting = new Hosting({
@@ -61,7 +70,7 @@ export class AppModel {
       onOpened: () => this.focusOn(Focus.Dock),
       onPicking: () => this.layout.set(this.layout.get().leaveZoom()),
     });
-    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout);
+    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review);
     this.hosting.dock.subscribe(() => this.dockChanged());
     this.layout.subscribe(() => this.tellWatching());
     this.hosting.dock.subscribe(() => this.tellWatching());
@@ -75,6 +84,9 @@ export class AppModel {
   }
 
   press(action: Action): void {
+    if (this.review.isOpen()) {
+      this.notices.clear();
+    }
     this.keys.press(action);
   }
 
@@ -129,7 +141,7 @@ export class AppModel {
 
   private dockChanged(): void {
     if (!this.hosting.hasTabs() && this.layout.get().focus === Focus.Dock) {
-      this.focusOn(Focus.Board);
+      this.focusOn(this.review.isOpen() ? Focus.Diff : Focus.Board);
     }
   }
 
@@ -147,5 +159,6 @@ export class AppModel {
     // deferred: the session watch links sessions to the tickets known now, not to ones created later — close it when a new ticket's session shows no lamp.
     void this.sessionStore.watch(project.root, project.ticketIds);
     void this.docs.load();
+    void this.review.pullRequests.watch(project.root);
   }
 }

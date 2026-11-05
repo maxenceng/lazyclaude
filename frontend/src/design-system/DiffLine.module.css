@@ -1,0 +1,66 @@
+.line {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0 var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: var(--size-body) / 1.5 var(--font-mono);
+  cursor: default;
+  user-select: none;
+}
+
+.added {
+  background: var(--diff-added);
+}
+
+.removed {
+  background: var(--diff-removed);
+}
+
+.range {
+  background: var(--diff-range);
+}
+
+.cursor {
+  background: var(--selected);
+  color: var(--text-on-light);
+}
+
+.number {
+  flex: none;
+  min-width: 4ch;
+  text-align: right;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.cursor .number {
+  color: var(--text-on-light);
+}
+
+.sign {
+  flex: none;
+  width: 1ch;
+}
+
+.added .sign {
+  color: var(--ansi-green);
+}
+
+.removed .sign {
+  color: var(--ansi-red);
+}
+
+.cursor .sign {
+  color: var(--text-on-light);
+}
+
+.text {
+  flex: 1;
+  white-space: pre;
+  overflow: hidden;
+  tab-size: 4;
+}

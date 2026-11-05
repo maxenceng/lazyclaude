@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from './App';
@@ -493,5 +493,164 @@ describe('a packaged build', () => {
     const event = new MouseEvent('contextmenu', { cancelable: true, bubbles: true });
     screen.getByRole('group', { name: 'session terminal' }).dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
+  });
+});
+
+const reviewDiff = {
+  kind: 'readDiff',
+  files: [
+    {
+      path: 'src/a.ts',
+      status: { kind: 'modifiedFile' },
+      hunks: [{ header: '@@ -1 +1,2 @@', lines: [{ kind: 'contextLine', content: 'one', oldNumber: 1, newNumber: 1 }, { kind: 'addedLine', content: 'deux', newNumber: 2 }] }],
+    },
+  ],
+};
+
+const reviewOpened = async (answers: { pending?: unknown; threads?: unknown; diff?: unknown } = {}) => {
+  const ready = await readyApp();
+  await act(async () => {
+    ready.client.answer('review/watch', {
+      kind: 'openPullRequests',
+      pullRequests: [{ number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] }],
+    });
+    await settle();
+  });
+  await ready.user.keyboard('p');
+  await act(async () => {
+    ready.client.answer('review/pendingOf', answers.pending ?? { kind: 'noPendingReview' });
+    ready.client.answer('review/threadsOf', answers.threads ?? { kind: 'readThreads', threads: [] });
+    ready.client.answer('review/diffOf', answers.diff ?? reviewDiff);
+    await settle();
+  });
+  await act(async () => {
+    ready.client.answer('review/threadsInDiff', []);
+    ready.client.answer('review/pendingInDiff', []);
+    await settle();
+  });
+  return ready;
+};
+
+describe('the Review screen', () => {
+  it('opens on p for a ticket whose branch heads an open pull request, with Files, Comments and Review beside the diff', async () => {
+    await reviewOpened();
+    expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Files' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Comments' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Review' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'src/a.ts' })).toBeInTheDocument();
+    expect(keyBar()).toHaveTextContent('c comment');
+  });
+
+  it('is shown loading before the reads answer', async () => {
+    const ready = await readyApp();
+    await act(async () => {
+      ready.client.answer('review/watch', {
+        kind: 'openPullRequests',
+        pullRequests: [{ number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] }],
+      });
+      await settle();
+    });
+    await ready.user.keyboard('p');
+    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toHaveTextContent('Reading the diff');
+  });
+
+  it('does not open for a ticket without an open pull request', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('p');
+    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+  });
+
+  it('goes back to the Board on escape', async () => {
+    const ready = await reviewOpened();
+    await ready.user.keyboard('{Escape}');
+    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+  });
+
+  it('shows the refusal of a range across hunks on the status line', async () => {
+    const ready = await reviewOpened();
+    const lines = screen.getAllByRole('button').filter((button) => button.hasAttribute('data-line'));
+    fireEvent.mouseDown(lines[0]!);
+    fireEvent.mouseUp(lines[1]!);
+    await act(async () => {
+      ready.client.answer('review/anchorOf', { kind: 'refusedAnchor', reason: 'a range cannot span two hunks' });
+      await settle();
+    });
+    expect(screen.getByRole('banner')).toHaveTextContent('a range cannot span two hunks');
+  });
+
+  it('writes a comment from c: the popup opens, ctrl+s saves it, and the pending review the sidecar answers is shown', async () => {
+    const ready = await reviewOpened();
+    await ready.user.keyboard('c');
+    await act(async () => {
+      ready.client.answer('review/anchorOf', { kind: 'onDiffAnchor', path: 'src/a.ts', position: { kind: 'placedThread', side: 'RIGHT', first: 1, last: 1 } });
+      await settle();
+    });
+    await ready.user.keyboard('Rename this');
+    await ready.user.keyboard('{Control>}s{/Control}');
+    expect(ready.client.calls.at(-1)).toEqual({
+      method: 'review/comment',
+      params: { root: '/p', number: 7, path: 'src/a.ts', position: { kind: 'placedThread', side: 'RIGHT', first: 1, last: 1 }, body: 'Rename this' },
+    });
+    await act(async () => {
+      ready.client.answer('review/comment', { kind: 'writtenReview', pending: { kind: 'openPendingReview', summary: '', comments: [], headMove: { kind: 'heldHead' } } });
+      await settle();
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Review' })).toHaveTextContent('0 pending');
+  });
+
+  it('shows why a comment was not saved, in the popup', async () => {
+    const ready = await reviewOpened();
+    await ready.user.keyboard('c');
+    await act(async () => {
+      ready.client.answer('review/anchorOf', { kind: 'onDiffAnchor', path: 'src/a.ts', position: { kind: 'placedThread', side: 'RIGHT', first: 1, last: 1 } });
+      await settle();
+    });
+    await ready.user.keyboard('x{Control>}s{/Control}');
+    await act(async () => {
+      ready.client.answer('review/comment', { kind: 'refusedWrite', reason: 'GitHub is down' });
+      await settle();
+    });
+    expect(screen.getByRole('dialog')).toHaveTextContent('not saved (GitHub is down)');
+  });
+
+  it('submits the review as a Comment: S, the summary, ctrl+s, y', async () => {
+    const ready = await reviewOpened();
+    await ready.user.keyboard('S');
+    await ready.user.keyboard('Looks good');
+    await ready.user.keyboard('{Control>}s{/Control}');
+    expect(screen.getByRole('dialog', { name: 'Submit review as Comment?' })).toBeInTheDocument();
+    await ready.user.keyboard('y');
+    expect(ready.client.calls.at(-1)).toEqual({ method: 'review/submit', params: { root: '/p', number: 7, summary: 'Looks good' } });
+    await act(async () => {
+      ready.client.answer('review/submit', { kind: 'writtenReview', pending: { kind: 'noPendingReview' } });
+      await settle();
+    });
+    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+  });
+
+  it('shows why the submit was refused on the status line, and stays in the review', async () => {
+    const ready = await reviewOpened();
+    await ready.user.keyboard('S');
+    await ready.user.keyboard('{Control>}s{/Control}');
+    await ready.user.keyboard('y');
+    await act(async () => {
+      ready.client.answer('review/submit', { kind: 'refusedWrite', reason: 'nothing to submit' });
+      await settle();
+    });
+    expect(screen.getByRole('banner')).toHaveTextContent('not submitted (nothing to submit)');
+    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toBeInTheDocument();
+  });
+
+  it('takes j and k, in the diff, as the cursor, and h to Files', async () => {
+    const ready = await reviewOpened();
+    await ready.user.keyboard('j');
+    const lines = screen.getAllByRole('button').filter((button) => button.hasAttribute('data-line'));
+    expect(lines[1]).toHaveAttribute('aria-current', 'true');
+    await ready.user.keyboard('h');
+    await ready.user.keyboard('{Escape}');
+    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
   });
 });

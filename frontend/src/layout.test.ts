@@ -64,4 +64,18 @@ describe('the window\'s layout', () => {
     const layout = new Layout().focusOn(Focus.Docs).toggleMainView().toggleMainView().focusOn(Focus.Dock).toggleZoom().leaveZoom();
     expect(layout.showsDocument()).toBe(true);
   });
+
+  it('does not focus the diff of a review while the main view is hidden, and shows it again when focus goes up to it', () => {
+    expect(new Layout().focusOn(Focus.Dock).toggleMainView().focusOn(Focus.Diff).focus).toBe(Focus.Dock);
+    expect(new Layout().focusOn(Focus.Dock).toggleMainView().goUp(Focus.Diff).arrangement(true)).toBe('full');
+  });
+
+  it('moves focus off the diff of a review to the dock when the main view is hidden', () => {
+    expect(new Layout().focusOn(Focus.Diff).toggleMainView().focus).toBe(Focus.Dock);
+  });
+
+  it('shows no document while a review panel has focus', () => {
+    expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Files).showsDocument()).toBe(false);
+    expect(new Layout().focusOn(Focus.Comments).showsDocument()).toBe(false);
+  });
 });

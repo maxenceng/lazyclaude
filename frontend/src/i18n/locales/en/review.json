@@ -1,6 +1,70 @@
 {
+  "files": {
+    "title": "Files",
+    "letter": {
+      "addedFile": "A",
+      "modifiedFile": "M",
+      "deletedFile": "D",
+      "renamedFile": "R"
+    },
+    "renamed": "{{from}} → {{to}}"
+  },
+  "comments": {
+    "title": "Comments",
+    "loading": "Reading the threads…",
+    "none": "no threads",
+    "unknown": "threads unknown ({{reason}})",
+    "outdated": "{{file}}  outdated",
+    "placed": "{{file}}:{{lines}} {{author}}",
+    "placedWithoutAuthor": "{{file}}:{{lines}}",
+    "pendingPlaced": "{{file}}:{{lines}}"
+  },
+  "diff": {
+    "title": "PR #{{number}} {{title}}",
+    "loading": "Reading the diff…",
+    "unavailable": "PR unknown ({{reason}})",
+    "tooLarge": "diff too large for GitHub ({{reason}})",
+    "empty": "no changes",
+    "fault": "The diff could not be read",
+    "retry": "Retry"
+  },
+  "annotation": {
+    "lines": "L{{lines}}",
+    "you": "you",
+    "reply": "reply"
+  },
+  "panel": {
+    "title": "Review",
+    "loading": "Reading the pending review…",
+    "none": "no pending review",
+    "noSummary": "no summary",
+    "unknown": "pending unknown ({{reason}})",
+    "count": "{{count}} pending",
+    "writtenOn": "written on {{commit}},",
+    "headIs": "head is now {{commit}}"
+  },
+  "box": {
+    "comment": "Pending comment",
+    "reply": "Reply",
+    "summary": "Summary",
+    "label": "Comment text",
+    "saving": "saving…",
+    "notSaved": "not saved ({{reason}})",
+    "hint": "ctrl+s save · esc cancel"
+  },
+  "submit": {
+    "title": "Submit review as Comment?",
+    "hint": "y submit · esc keeps it pending",
+    "yes": "Submit",
+    "no": "Keep pending"
+  },
   "refused": {
     "notDeleted": "not deleted ({{reason}})",
     "notSubmitted": "not submitted ({{reason}})"
+  },
+  "keyBar": {
+    "diff": ["c comment", "v range", "enter edit", "x delete", "S submit", "j/k line", "J/K file", "^d/^u page", "r resolved", "R refresh", "esc back"],
+    "comments": ["c reply", "enter open", "x delete", "S submit", "j/k move", "r resolved", "R refresh", "esc back"],
+    "files": ["j/k move", "enter go to line", "S submit", "r resolved", "R refresh", "esc back"]
   }
 }

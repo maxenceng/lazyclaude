@@ -1,0 +1,69 @@
+.row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--space-1) var(--space-4);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: var(--size-body);
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: default;
+}
+
+.selected {
+  background: var(--selected);
+  color: var(--text-on-light);
+}
+
+.letter {
+  font: 600 var(--size-body) var(--font-mono);
+  flex: none;
+}
+
+.added {
+  color: var(--ansi-green);
+}
+
+.modified {
+  color: var(--ansi-yellow);
+}
+
+.deleted {
+  color: var(--ansi-red);
+}
+
+.renamed {
+  color: var(--ansi-blue);
+}
+
+.selected .letter {
+  color: var(--text-on-light);
+}
+
+.name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.threads,
+.pending {
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.threads {
+  color: var(--ansi-magenta);
+}
+
+.pending {
+  color: var(--ansi-bright-blue);
+}
+
+.selected .threads,
+.selected .pending {
+  color: var(--text-on-light);
+}

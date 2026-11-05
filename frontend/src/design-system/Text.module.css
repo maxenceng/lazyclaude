@@ -11,3 +11,13 @@
   font: var(--size-body) / 1.5 var(--font-mono);
   white-space: pre-wrap;
 }
+
+.warning {
+  padding: var(--space-3) var(--space-4);
+  color: var(--ansi-yellow);
+}
+
+.tight {
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
+}

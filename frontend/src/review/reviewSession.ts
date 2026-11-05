@@ -55,6 +55,7 @@ export class ReviewSession {
   private closed = false;
   private rangeStart: number | undefined;
   private rangeEnd: number | undefined;
+  private dragFrom: number | undefined;
   private open: CommentBox | undefined;
   private typedSummary: string | undefined;
   private confirming = false;
@@ -490,6 +491,43 @@ export class ReviewSession {
     const entry = this.selectedEntry();
     if (entry?.kind === EntryKind.Thread) {
       this.openBox(new CommentBox({ kind: TargetKind.Reply, thread: entry.placed.thread }));
+    }
+  }
+
+  /** A press on a diff line: the cursor goes to it and a drag starts from it; a second press on the cursor's line in the focused diff is `enter`. */
+  pressLine(line: number, focused: boolean): void {
+    const second = focused && this.line === line;
+    this.moveTo(line);
+    this.dragFrom = line;
+    if (second) {
+      this.enterInDiff();
+    }
+  }
+
+  /** The release of a drag, on the line nearest to where the pointer let go: the range between the two lines is marked unless they are one. */
+  async releaseLine(line: number): Promise<void> {
+    const from = this.dragFrom;
+    this.dragFrom = undefined;
+    if (from !== undefined && from !== line) {
+      await this.markRange(from, line);
+    }
+  }
+
+  /** A press on a file: it is selected, and a second press on the selected one goes to its first line. */
+  pressFile(index: number, focused: boolean): void {
+    const second = focused && index === this.fileSelected;
+    this.selectFile(index);
+    if (second) {
+      this.goToSelectedFile();
+    }
+  }
+
+  /** A press on a comment: it is selected, and a second press on the selected one is `enter`. */
+  pressComment(index: number, focused: boolean): void {
+    const second = focused && index === this.commentSelected;
+    this.selectComment(index);
+    if (second) {
+      this.enterOnComment();
     }
   }
 

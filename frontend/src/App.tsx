@@ -13,6 +13,8 @@ import { Action } from './keys/bindings';
 import { WindowKeys } from './keys/windowKeys';
 import { Focus } from './layout';
 import { StatusKind } from './protocol';
+import { CommentsPane, DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './review/ReviewScreen';
+import { ReviewKeyBar } from './review/ReviewKeyBar';
 import { DockScreen } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
@@ -57,6 +59,7 @@ export const App = ({ app, packaged }: Props) => {
   const warning = useStore(app.warnings.warning);
   const notice = useStore(app.notices.notice);
   const mouseReported = useStore(app.hosting.mouseReported);
+  const review = useStore(app.review.session);
   useStore(app.board.selection.selected);
 
   useEffect(() => {
@@ -71,6 +74,9 @@ export const App = ({ app, packaged }: Props) => {
     [Focus.Board]: <BoardKeyBar />,
     [Focus.Docs]: <DocsKeyBar />,
     [Focus.Sessions]: <SessionsKeyBar picking={false} />,
+    [Focus.Files]: <ReviewKeyBar panel="files" />,
+    [Focus.Comments]: <ReviewKeyBar panel="comments" />,
+    [Focus.Diff]: <ReviewKeyBar panel="diff" />,
     [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} />,
   }[layout.focus];
 
@@ -83,8 +89,20 @@ export const App = ({ app, packaged }: Props) => {
       </Alert>
     ) : undefined;
 
+  const reviewing =
+    review === undefined
+      ? undefined
+      : {
+          board: <FilesPane session={review} focused={layout.focus === Focus.Files} onFocus={() => app.focusOn(Focus.Files)} />,
+          docs: <CommentsPane session={review} focused={layout.focus === Focus.Comments} onFocus={() => app.focusOn(Focus.Comments)} />,
+          foot: <ReviewPanel session={review} />,
+          main: <DiffPane session={review} focused={layout.focus === Focus.Diff} onFocus={() => app.focusOn(Focus.Diff)} onRetry={() => review.read()} />,
+          arrangement: layout.arrangement(hasDock),
+        };
+
   const shown =
-    unready === undefined
+    reviewing ??
+    (unready === undefined
       ? {
           board: (
             <BoardPane
@@ -127,31 +145,35 @@ export const App = ({ app, packaged }: Props) => {
           ),
           arrangement: layout.arrangement(hasDock),
         }
-      : unboarded(unready, t);
+      : unboarded(unready, t));
 
   return (
-    <AppFrame
-      statusLine={
-        <StatusLine
-          tiles={markers.map((marker) => (
-            <Lamp key={marker.session} colour={marker.colour} size="tile" number={marker.ticket} />
-          ))}
-          counts={COLOURS.map((colour) => (
-            <Count key={colour} colour={colour} count={markers.filter((marker) => marker.colour === colour).length} />
-          ))}
-          project={project}
-          warning={warning}
-          notice={notice}
-        />
-      }
-      keyBar={picker === undefined ? keyBar : <SessionsKeyBar picking />}
-      board={shown.board}
-      docs={shown.docs}
-      main={shown.main}
-      dock={
-        hasDock ? <DockScreen hosting={app.hosting} sessions={sessions} focused={layout.focus === Focus.Dock} onFocus={() => app.focusOn(Focus.Dock)} /> : null
-      }
-      arrangement={shown.arrangement}
-    />
+    <>
+      <AppFrame
+        statusLine={
+          <StatusLine
+            tiles={markers.map((marker) => (
+              <Lamp key={marker.session} colour={marker.colour} size="tile" number={marker.ticket} />
+            ))}
+            counts={COLOURS.map((colour) => (
+              <Count key={colour} colour={colour} count={markers.filter((marker) => marker.colour === colour).length} />
+            ))}
+            project={project}
+            warning={warning}
+            notice={notice}
+          />
+        }
+        keyBar={picker === undefined ? keyBar : <SessionsKeyBar picking />}
+        board={shown.board}
+        docs={shown.docs}
+        foot={reviewing?.foot}
+        main={shown.main}
+        dock={
+          hasDock ? <DockScreen hosting={app.hosting} sessions={sessions} focused={layout.focus === Focus.Dock} onFocus={() => app.focusOn(Focus.Dock)} /> : null
+        }
+        arrangement={shown.arrangement}
+      />
+        {review === undefined ? null : <ReviewDialogs session={review} />}
+    </>
   );
 };
