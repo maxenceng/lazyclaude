@@ -127,7 +127,7 @@ describe('the private modes kept from what the emulator is written', () => {
   it('survives a round trip through JSON', async () => {
     const { term, kept } = tracked();
     await feed(term, CLAUDE_START);
-    const again = KeptModes.fromJSON(JSON.parse(JSON.stringify(kept)));
+    const again = KeptModes.fromJSON(JSON.parse(JSON.stringify(kept)) as ReturnType<KeptModes['toJSON']>);
     expect(again.restoration()).toBe(kept.restoration());
     expect(again.reportsMouse()).toBe(true);
   });

@@ -5,7 +5,7 @@
 export class Dock {
   constructor(
     readonly tabs: readonly string[] = [],
-    private readonly selected: string | undefined = undefined,
+    private readonly selected?: string,
     private readonly listed: ReadonlySet<string> = new Set(),
     private readonly closedIds: ReadonlySet<string> = new Set(),
   ) {}
