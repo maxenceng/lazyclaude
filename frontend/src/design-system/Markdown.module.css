@@ -81,13 +81,48 @@
   border-top: 1px solid var(--seam);
 }
 
+.tableScroll {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--seam) transparent;
+}
+
 .markdown table {
   border-collapse: collapse;
+  overflow-wrap: break-word;
+  font-variant-numeric: tabular-nums;
+}
+
+.markdown > .tableScroll,
+.markdown > .tableScroll + * {
+  margin-top: var(--space-4);
 }
 
 .markdown th,
 .markdown td {
-  border: 1px solid var(--seam);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-2) 0;
   text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--seam);
+}
+
+.markdown th:last-child,
+.markdown td:last-child {
+  padding-right: 0;
+}
+
+.markdown th {
+  color: var(--dim);
+  font-size: var(--size-label);
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom-color: var(--dim);
+}
+
+.markdown td:first-child {
+  min-width: 10ch;
+}
+
+.markdown tbody tr:last-child td {
+  border-bottom: 0;
 }

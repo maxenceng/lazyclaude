@@ -71,7 +71,8 @@ const blockElement = (block: Block, onLink: (href: string) => void): ReactNode =
       return <hr />;
     case BlockKind.Table:
       return (
-        <table>
+        <div className={styles.tableScroll}>
+          <table>
           <thead>
             <tr>
               {block.header.map((cell, index) => (
@@ -88,7 +89,8 @@ const blockElement = (block: Block, onLink: (href: string) => void): ReactNode =
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       );
   }
 };
