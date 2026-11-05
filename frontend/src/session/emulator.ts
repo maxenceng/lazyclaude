@@ -1,5 +1,7 @@
 import type { IDisposable, Terminal } from '@xterm/xterm';
+import { i18n } from '../i18n/i18n';
 import { binaryBytes, bytesOfText, type Client, fromBase64, toBase64 } from '../protocol';
+import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import type { ModeMemory } from './modeMemory';
 import { PaneKey, type PaneKeyPress, paneKeyOf } from './paneKeys';
@@ -17,7 +19,11 @@ export interface EmulatorDeps {
   /** What a reserved chord does, when the press is one; the composition side knows the chords and their meaning. */
   reserved: (press: PaneKeyPress) => (() => void) | undefined;
   clipboard: Clipboard;
+  /** The status line's notice, which says why the clipboard refused a copy or a paste. */
+  notices: NoticeStore;
 }
+
+const reasonOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 /** Where a reloaded emulator is on its way to `session/repaint`: its kept modes written, then fitted to its pane. */
 enum Repaint {
@@ -138,8 +144,8 @@ export class Emulator {
     }
     try {
       await this.deps.clipboard.writeText(selection);
-    } catch {
-      // deferred: a clipboard the webview refuses is dropped without a word — close it when the status line can carry the window's own warnings.
+    } catch (error: unknown) {
+      this.deps.notices.raise(i18n.t('session:clipboard.copyFailed', { reason: reasonOf(error) }));
     }
   }
 
@@ -150,8 +156,8 @@ export class Emulator {
       if (text !== '') {
         this.terminal.paste(text);
       }
-    } catch {
-      // deferred: a clipboard the webview refuses is dropped without a word — close it when the status line can carry the window's own warnings.
+    } catch (error: unknown) {
+      this.deps.notices.raise(i18n.t('session:clipboard.pasteFailed', { reason: reasonOf(error) }));
     }
   }
 

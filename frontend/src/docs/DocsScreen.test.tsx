@@ -2,6 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RpcError } from '../protocol';
+import { NoticeStore } from '../shared/noticeStore';
 import { fakeClient } from '../test/fakeClient';
 import { RecordingOpener } from './recordingOpener';
 import { DocsController } from './docsController';
@@ -11,8 +12,15 @@ import { emptyFixture, folderFixture, readFixture, treeFixture, unreadableFixtur
 const setup = () => {
   const client = fakeClient();
   const opener = new RecordingOpener();
-  const warnings: string[] = [];
-  const controller = new DocsController({ client, root: () => '/p', opener, warn: (text) => warnings.push(text), onOpened: () => {} });
+  const noticeStore = new NoticeStore();
+  const notices: string[] = [];
+  noticeStore.notice.subscribe(() => {
+    const text = noticeStore.notice.get();
+    if (text !== undefined) {
+      notices.push(text);
+    }
+  });
+  const controller = new DocsController({ client, root: () => '/p', opener, notices: noticeStore, onOpened: () => {} });
   const onFocus = vi.fn();
   const onRetry = vi.fn(() => void controller.load());
   const loaded = controller.load();
@@ -22,7 +30,7 @@ const setup = () => {
       <DocumentPane docs={controller} focused={false} />
     </>,
   );
-  return { client, controller, opener, warnings, loaded, onFocus, onRetry };
+  return { client, controller, opener, notices, noticeStore, loaded, onFocus, onRetry };
 };
 
 const answer = async (client: ReturnType<typeof fakeClient>, loaded: Promise<void>, result: unknown) => {

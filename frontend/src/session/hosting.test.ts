@@ -1,6 +1,7 @@
 import { Terminal } from '@xterm/xterm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { bytesOfText, RpcError, toBase64 } from '../protocol';
+import { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import { fakeClient } from '../test/fakeClient';
 import { Hosting, type HostingDeps } from './hosting';
@@ -28,6 +29,7 @@ const hosting = (overrides: Partial<HostingDeps> = {}) => {
     newTerminal: () => ({ terminal: new Terminal(), fit: { fit: vi.fn() } }),
     reserved: () => undefined,
     clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.resolve() },
+    notices: new NoticeStore(),
     ...overrides,
   };
   return { client, sessions, memory, hosted: new Hosting(deps) };

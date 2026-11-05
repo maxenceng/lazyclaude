@@ -1,6 +1,7 @@
 import { headingSlugs } from '../design-system';
 import { i18n } from '../i18n/i18n';
 import type { Client, DocumentView } from '../protocol';
+import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import { DocsSelection, type RowKey } from './docsSelection';
 import { DocsStore } from './docsStore';
@@ -14,8 +15,8 @@ export interface DocsDeps {
   /** The project's root, none before the board is read. */
   root: () => string | undefined;
   opener: LinkOpener;
-  /** Puts a warning on the status line. */
-  warn: (text: string) => void;
+  /** The status line's notice: what a link did not do, cleared by the next selection or link followed. */
+  notices: NoticeStore;
   /** A link opened a document, so the main view is to show it, whichever pane held the link. */
   onOpened: () => void;
 }
@@ -71,6 +72,7 @@ export class DocsController {
   }
 
   move(delta: number): void {
+    this.deps.notices.clear();
     const rows = this.rows();
     const key = this.keyIn(rows);
     if (rows.length === 0 || key === undefined) {
@@ -85,6 +87,7 @@ export class DocsController {
 
   /** A press on a row: the first selects it, a second on the selected row is `enter`. */
   press(key: RowKey): void {
+    this.deps.notices.clear();
     const current = this.selectedKey();
     if (current !== undefined && current.kind === key.kind && current.path === key.path) {
       this.activate();
@@ -95,6 +98,7 @@ export class DocsController {
 
   /** `enter`: a folder folds or unfolds, a document opens again at its top. */
   activate(): void {
+    this.deps.notices.clear();
     const key = this.selectedKey();
     if (key === undefined) {
       return;
@@ -123,6 +127,7 @@ export class DocsController {
 
   /** Nothing holding a link is shown before the board names the root, so without one there is nothing to follow. */
   private route(href: string, from: string | undefined): void {
+    this.deps.notices.clear();
     const root = this.deps.root();
     if (root !== undefined) {
       this.open(linkTarget(href, from, root));
@@ -138,9 +143,9 @@ export class DocsController {
       case LinkKind.Browser:
         return this.opened(target.url, this.deps.opener.openUrl(target.url));
       case LinkKind.Refused:
-        return this.deps.warn(i18n.t('docs:links.refused', { href: target.href }));
+        return this.deps.notices.raise(i18n.t('docs:links.refused', { href: target.href }));
       case LinkKind.TicketHeading:
-        return this.deps.warn(i18n.t('docs:links.ticketHeading', { href: target.href }));
+        return this.deps.notices.raise(i18n.t('docs:links.ticketHeading', { href: target.href }));
     }
   }
 
@@ -150,7 +155,7 @@ export class DocsController {
     const text = document === undefined ? undefined : contentOf(document);
     const found = link.fragment !== undefined && text !== undefined && headingSlugs(text).includes(link.fragment);
     if (link.fragment !== undefined && !found && document?.kind === 'readDocument') {
-      this.deps.warn(i18n.t('docs:links.fragmentNotFound', { fragment: link.fragment, path: link.path }));
+      this.deps.notices.raise(i18n.t('docs:links.fragmentNotFound', { fragment: link.fragment, path: link.path }));
     }
     this.folded.set(new Set([...this.folded.get()].filter((path) => !ancestorsOf(link.path).includes(path))));
     this.selection.set(this.selection.get().on({ kind: RowKind.Document, path: link.path }, found ? link.fragment : undefined));
@@ -160,7 +165,7 @@ export class DocsController {
   private opened(target: string, opening: Promise<void>): void {
     opening.catch((error: unknown) => {
       const reason = error instanceof Error ? error.message : String(error);
-      this.deps.warn(i18n.t('docs:links.openFailed', { target, reason }));
+      this.deps.notices.raise(i18n.t('docs:links.openFailed', { target, reason }));
     });
   }
 

@@ -55,6 +55,7 @@ export const App = ({ app, packaged }: Props) => {
   const cursor = useStore(app.sessions.cursor);
   const failure = useStore(app.hosting.failure);
   const warning = useStore(app.warnings.warning);
+  const notice = useStore(app.notices.notice);
   const mouseReported = useStore(app.hosting.mouseReported);
   useStore(app.board.selection.selected);
 
@@ -140,6 +141,7 @@ export const App = ({ app, packaged }: Props) => {
           ))}
           project={project}
           warning={warning}
+          notice={notice}
         />
       }
       keyBar={picker === undefined ? keyBar : <SessionsKeyBar picking />}

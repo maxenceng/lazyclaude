@@ -163,7 +163,7 @@ describe('the Docs panel in the window', () => {
     expect(screen.getByText(/No heading "nowhere" in guide\/intro.md; opened at its top\./)).toBeInTheDocument();
   });
 
-  it('opens a web link through the system browser and shows its refusal as a warning', async () => {
+  it('opens a web link through the system browser and shows its refusal as a notice', async () => {
     const started = await readyApp();
     started.platform.opener.failure = new Error('no browser');
     docsRead(started);
@@ -174,6 +174,18 @@ describe('the Docs panel in the window', () => {
     });
     expect(started.platform.opener.urls).toEqual(['https://example.com']);
     expect(screen.getByText(/Could not open https:\/\/example.com: no browser/)).toBeInTheDocument();
+  });
+
+  it('shows a link\'s notice beside the backend\'s warning, never over it, and clears it with the next ticket selected', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    act(() => started.client.push('warning/changed', { kind: 'warning', text: 'docs: watching by polling', count: 2 }));
+    act(() => started.app.docs.followFromTicket('#notes'));
+    expect(screen.getByText("Did not follow #notes: a ticket's own headings are not followed.")).toBeInTheDocument();
+    expect(screen.getByText('⚠ 2 · docs: watching by polling')).toBeInTheDocument();
+    await started.user.keyboard('{Escape}j');
+    expect(screen.queryByText("Did not follow #notes: a ticket's own headings are not followed.")).toBeNull();
+    expect(screen.getByText('⚠ 2 · docs: watching by polling')).toBeInTheDocument();
   });
 });
 

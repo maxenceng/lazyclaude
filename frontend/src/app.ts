@@ -12,6 +12,7 @@ import { SessionsController } from './session/sessionsController';
 import { SessionStore } from './session/sessionStore';
 import { WatchingReporter } from './session/watched';
 import { Store } from './shared/store';
+import { NoticeStore } from './shared/noticeStore';
 import { WarningStore } from './shared/warningStore';
 import { WindowFocus } from './window/windowFocus';
 
@@ -24,6 +25,7 @@ export class AppModel {
   readonly sessions: SessionsController;
   readonly configuration: ConfigurationStore;
   readonly warnings: WarningStore;
+  readonly notices: NoticeStore = new NoticeStore();
   readonly layout: Store<Layout> = new Store(new Layout());
   readonly windowFocus: WindowFocus;
   private readonly keys: KeyRouter;
@@ -38,7 +40,7 @@ export class AppModel {
     this.sessionStore = new SessionStore(client);
     this.configuration = new ConfigurationStore(client);
     this.warnings = new WarningStore(client);
-    this.docs = new DocsController({ client, root: () => this.board.root(), opener: platform.opener, warn: (text) => this.warnings.raise(text), onOpened: () => this.focusOn(Focus.Docs) });
+    this.docs = new DocsController({ client, root: () => this.board.root(), opener: platform.opener, notices: this.notices, onOpened: () => this.focusOn(Focus.Docs) });
     this.windowFocus = new WindowFocus(platform.focus);
     this.watching = new WatchingReporter(client);
     this.hosting = new Hosting({
@@ -47,6 +49,7 @@ export class AppModel {
       sessions: this.sessionStore.sessions,
       newTerminal: () => platform.newTerminal(),
       clipboard: platform.clipboard,
+      notices: this.notices,
       reserved: (press) => this.reservedInPane(press),
     });
     this.sessions = new SessionsController({
@@ -64,6 +67,7 @@ export class AppModel {
     this.hosting.dock.subscribe(() => this.tellWatching());
     this.windowFocus.focused.subscribe(() => this.tellWatching());
     this.board.store.state.subscribe(() => this.boardRead());
+    this.board.selection.selected.subscribe(() => this.notices.clear());
   }
 
   reserved(): readonly Binding[] {

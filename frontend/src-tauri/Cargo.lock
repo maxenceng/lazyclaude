@@ -2008,6 +2008,7 @@ dependencies = [
 name = "lazyclaude"
 version = "0.0.1"
 dependencies = [
+ "glob",
  "serde",
  "serde_json",
  "tauri",

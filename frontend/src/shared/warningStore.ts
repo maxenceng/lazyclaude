@@ -16,11 +16,6 @@ export class WarningStore {
     client.subscribe('warning/changed', (view) => this.warning.set(shown(view)));
   }
 
-  /** A warning of the window's own, such as a link that would not open; the next `warning/changed` replaces it. */
-  raise(text: string): void {
-    this.warning.set({ text, count: 1 });
-  }
-
   async watch(): Promise<void> {
     try {
       this.warning.set(shown(await this.client.call('warning/watch', {})));

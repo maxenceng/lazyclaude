@@ -1,5 +1,6 @@
 pub mod launch;
 pub mod lines;
+pub mod opening;
 mod pulse;
 mod relay;
 
@@ -8,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use pulse::{Pulse, Verdict, SILENCE_LIMIT};
 use relay::{Attached, OnMessage, Relay, RelayMessage, Sidecar};
-use tauri::ipc::Channel;
+use tauri::ipc::{CapabilityBuilder, Channel};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::{AppHandle, Manager, State, WindowEvent};
 
@@ -69,12 +70,22 @@ pub fn run() {
     let launch_dir = std::env::current_dir().unwrap_or_default();
     let jar = launch::jar(std::env::var("LAZYCLAUDE_SIDECAR").ok(), &launch_dir);
     let project = launch::project(std::env::args().nth(1), launch_dir);
+    let openable = opening::scope(&project);
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .manage(Relay::new(Sidecar::java(jar, project)))
         .manage(Pulse::new(Instant::now(), SILENCE_LIMIT))
-        .setup(|app| {
+        .setup(move |app| {
+            app.add_capability(
+                CapabilityBuilder::new("project-paths")
+                    .window("main")
+                    .permission_scoped(
+                        "opener:allow-open-path",
+                        vec![serde_json::json!({ "path": openable })],
+                        Vec::<serde_json::Value>::new(),
+                    ),
+            )?;
             if !cfg!(debug_assertions) {
                 offer_reload_when_silent(app.handle().clone());
             }

@@ -27,25 +27,33 @@ method. They carry no reason for a path they do not list, and the sidecar has no
   markdown path names a document; any other file or folder under `docs/`, as anything else, is outside the tree. A path
   starting with `/` starts at the project root, as GitHub reads it. A ticket's body has no document, so its relative
   links start at the project root; `docs/guide/intro.md` there is the same document. A link that is only a fragment, in a
-  ticket's body, names a heading of the ticket; it is not followed, and the window warns that it was not.
+  ticket's body, names a heading of the ticket; it is not followed, and a notice says it was not.
 - **`docs` owns every link the window follows**, a ticket's included: the opener and the four kinds of link sit in one
   place, and the board only hands an `href` up. A second markdown surface reads its links through the same controller.
+  Asked in review whether the opener cases belong to composition instead, the answer was the behaviour, which this already
+  is: a web address opens in the browser, another file in its application, a document in the tree.
 - **The tree's selection is the only state.** There is no history and no back: following a link moves the selection, as
   `j` would. The selection is a row by kind and path, so it survives the tree being read again; it may name a path the
   tree does not list.
 - **A fragment names a heading by its slug**, as GitHub writes it: lowercased, punctuation dropped, spaces to hyphens, a
   repeated slug numbered `-1`, `-2`. The TUI derives no slug, so this one is ours. A fragment with no matching heading
-  opens the document at its top and puts a warning on the status line.
+  opens the document at its top and raises a notice.
 - **A link to a markdown path under `docs/` the tree does not list shows as an unreadable document**: its path, and the
   reason `No document at this path in the docs tree.` The reason is the window's own words, since the sidecar says nothing.
   `docs/backlog/` is not listed, so a link there reads the same.
 - **Outside the tree, `tauri-plugin-opener` opens it.** A file or folder goes to `openPath`, which on Linux is `xdg-open`;
   an `http` or `https` address goes to `openUrl`, the system browser. No `mailto:`, `javascript:` or other scheme is opened:
-  the window warns that it did not. A failure of the opener is a warning with its reason, never silence. The capability
-  grants `opener:allow-open-url` for `http://**` and `https://**` and `opener:allow-open-path` for `/**`; a document is the
-  developer's own and a path inside the project is the common case, but a narrower scope would need the project root at
-  build time. The opener is configured with `requireLiteralLeadingDot: false`, or `/**` would refuse every path with a
-  component starting with `.`, such as `.github/` or a project under `~/.local/`.
+  a notice says it did not. A failure of the opener is a notice with its reason, never silence. The static capability
+  grants `opener:allow-open-url` for `http://**` and `https://**`. `opener:allow-open-path` is granted at launch, by a
+  runtime capability scoped to `<project>/**` (`src-tauri/src/opening.rs`), because a ticket's body is anyone's on a public
+  repository and could otherwise hand `xdg-open` any absolute path. The project is canonicalised and glob-escaped, since
+  the opener matches a path only after resolving its symlinks and `..`. A link outside the project is refused by the
+  opener, and that refusal is the notice's reason. The opener is configured with `requireLiteralLeadingDot: false`, or the
+  scope would refuse every path with a component starting with `.`, such as `.github/` or a project under `~/.local/`.
+- **What a link did not do is a notice, not a warning.** A warning is the backend's degraded mode, with its count; a
+  notice is the window's word on one gesture. It shows on the status line beside the warning, never replacing it, and the
+  next selection (a ticket or a row of the tree) or link followed clears it. A clipboard that refuses a copy or a paste
+  raises one too.
 - **The markdown is a small renderer of our own** in `design-system/markdown.ts`: headings, paragraphs, fenced code, lists,
   quotes, rules, pipe tables, and inline code, links, strong and emphasis. Rejected: `react-markdown` or `marked`, each a
   tree of packages for the few blocks these documents use, and each needing a sanitiser or plugins to keep raw HTML out and
@@ -55,9 +63,10 @@ method. They carry no reason for a path they do not list, and the sidecar has no
 
 - Nested lists, reference-style links, footnotes and raw HTML are shown as the text they are written as, until a document
   needs them.
-- A link to a document the tree lists but the sidecar could not read shows that document's own reason, and no warning
+- A link to a document the tree lists but the sidecar could not read shows that document's own reason, and no notice
   about its fragment.
 - A folder's name and its count of documents are derived again in `docs/rows.ts`, since `FolderView` serializes neither.
 - The opener is behind `LinkOpener`, as the clipboard is behind `Clipboard`; tests record what it was asked to open.
-- Checked by the tests in `docs/` and the window's, not in the packaged window: the packaged `xdg-open` and browser hand-offs
-  are untried.
+- Checked by the tests in `docs/` and the window's, not in the packaged window: the packaged `xdg-open` and browser hand-offs,
+  and the runtime path scope, are untried.
+- A notice the window raises on its own, with nothing selected or followed after it, stays until the next gesture does.

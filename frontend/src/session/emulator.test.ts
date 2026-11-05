@@ -1,6 +1,7 @@
 import { Terminal } from '@xterm/xterm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fromBase64, toBase64, bytesOfText } from '../protocol';
+import { NoticeStore } from '../shared/noticeStore';
 import { fakeClient } from '../test/fakeClient';
 import { Emulator, type EmulatorDeps } from './emulator';
 import { StorageModeMemory } from './modeMemory';
@@ -14,10 +15,10 @@ const emulate = (overrides: Partial<EmulatorDeps> = {}) => {
   const client = fakeClient();
   const memory = new StorageModeMemory(sessionStorage);
   const fit = { fit: vi.fn() };
-  const deps: EmulatorDeps = { client, memory, fit, reserved: () => undefined, clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.resolve() }, ...overrides };
+  const deps: EmulatorDeps = { client, memory, fit, reserved: () => undefined, clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.resolve() }, notices: new NoticeStore(), ...overrides };
   const emulator = new Emulator('s1', new Terminal(), deps);
   emulator.terminal.open(document.body.appendChild(document.createElement('div')));
-  return { client, memory, fit, emulator, term: emulator.terminal };
+  return { client, memory, fit, emulator, term: emulator.terminal, notices: deps.notices };
 };
 
 const encoded = (text: string) => toBase64(bytesOfText(text));
@@ -236,19 +237,21 @@ describe('the keys of a hosted session\'s pane', () => {
     expect(textOf(client.sent[0]?.params)).toBe('pasted');
   });
 
-  it('drops a paste the clipboard refuses, sending nothing', async () => {
-    const { client, emulator } = emulate({ clipboard: { readText: () => Promise.reject(new Error('denied')), writeText: () => Promise.resolve() } });
+  it('sends nothing for a paste the clipboard refuses, and says why on the status line', async () => {
+    const { client, emulator, notices } = emulate({ clipboard: { readText: () => Promise.reject(new Error('denied')), writeText: () => Promise.resolve() } });
     emulator.handleKey(keydown('V', { ctrlKey: true, shiftKey: true }));
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(client.sent).toEqual([]);
+    expect(notices.notice.get()).toBe('Could not paste: denied');
   });
 
-  it('drops a copy the clipboard refuses', async () => {
-    const { term, emulator } = emulate({ clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.reject(new Error('denied')) } });
+  it('says on the status line why the clipboard refused a copy', async () => {
+    const { term, emulator, notices } = emulate({ clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.reject(new Error('denied')) } });
     term.write('selected');
     await written(term);
     term.select(0, 0, 8);
     expect(emulator.handleKey(keydown('C', { ctrlKey: true, shiftKey: true }))).toBe(false);
     await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(notices.notice.get()).toBe('Could not copy: denied');
   });
 });
