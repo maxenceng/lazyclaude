@@ -1,0 +1,6 @@
+{
+  "refused": {
+    "notDeleted": "not deleted ({{reason}})",
+    "notSubmitted": "not submitted ({{reason}})"
+  }
+}
