@@ -87,3 +87,4 @@
 - 0083 [A hosted pane keeps the modes it saw, and the window reloads a page that stops answering](0083-a-hosted-pane-keeps-the-modes-it-saw-and-a-window-reloads-a-page-that-stops-answering.md) — Accepted.
 - 0084 [`session` decides what a new session from a ticket opens and where a past one resumes](0084-session-decides-what-a-new-session-from-a-ticket-opens-and-where-a-past-one-resumes.md) — Accepted.
 - 0085 [The desktop window composes a controller per context, and keeps behaviour with state in classes](0085-the-desktop-window-composes-a-controller-per-context-and-keeps-state-in-classes.md) — Accepted.
+- 0086 [The desktop window reaches the clipboard through Tauri's plugin](0086-the-desktop-window-reaches-the-clipboard-through-tauri-s-plugin.md) — Accepted.

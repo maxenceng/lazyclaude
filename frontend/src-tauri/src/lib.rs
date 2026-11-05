@@ -70,6 +70,7 @@ pub fn run() {
     let jar = launch::jar(std::env::var("LAZYCLAUDE_SIDECAR").ok(), &launch_dir);
     let project = launch::project(std::env::args().nth(1), launch_dir);
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(Relay::new(Sidecar::java(jar, project)))
         .manage(Pulse::new(Instant::now(), SILENCE_LIMIT))
         .setup(|app| {

@@ -11,7 +11,8 @@ import { pageAlive } from './window/tauri';
 
 const HEARTBEAT_MILLISECONDS = 1000;
 
-const app = new AppModel(new ProtocolClient(tauriRelay), new BrowserPlatform());
+const platform = new BrowserPlatform();
+const app = new AppModel(new ProtocolClient(tauriRelay), platform);
 app.start();
 void app.client.connect();
 new Heartbeat(pageAlive, HEARTBEAT_MILLISECONDS);
@@ -20,8 +21,13 @@ const root = document.getElementById('root');
 if (root === null) {
   throw new Error('index.html has no #root');
 }
-createRoot(root).render(
-  <StrictMode>
-    <App app={app} packaged={import.meta.env.PROD} />
-  </StrictMode>,
-);
+void platform
+  .terminalFontLoaded()
+  .catch(() => undefined)
+  .then(() =>
+    createRoot(root).render(
+      <StrictMode>
+        <App app={app} packaged={import.meta.env.PROD} />
+      </StrictMode>,
+    ),
+  );

@@ -4,7 +4,7 @@ import type { ModeMemory } from './session/modeMemory';
 import { StorageModeMemory } from './session/modeMemory';
 import { createXterm } from './session/xterm';
 import type { FocusSource } from './window/windowFocus';
-import { tauriFocus } from './window/tauri';
+import { TauriClipboard, tauriFocus } from './window/tauri';
 import type { Terminal } from '@xterm/xterm';
 
 /** What the window takes from the webview it runs in: where it keeps modes, the clipboard, terminals and the window's focus. */
@@ -18,10 +18,19 @@ export interface Platform {
 /** The Tauri webview: sessionStorage for modes, the navigator's clipboard, xterm.js in the design system's look, Tauri's window focus. */
 export class BrowserPlatform implements Platform {
   readonly memory: ModeMemory = new StorageModeMemory(sessionStorage);
-  readonly clipboard: Clipboard = navigator.clipboard;
+  readonly clipboard: Clipboard = new TauriClipboard();
   readonly focus: FocusSource = tauriFocus;
 
   newTerminal(): { terminal: Terminal; fit: { fit(): void } } {
     return createXterm(terminalLook(document.documentElement));
+  }
+
+  /**
+   * Loads the terminal's font: a `@font-face` font is only fetched once something uses it, and xterm.js measures its cells
+   * when it opens, so a pane opened first after a reload measured the fallback font and clipped its last row once the real one came.
+   */
+  terminalFontLoaded(): Promise<unknown> {
+    const look = terminalLook(document.documentElement);
+    return document.fonts.load(`${look.fontSize}px ${look.fontFamily}`);
   }
 }

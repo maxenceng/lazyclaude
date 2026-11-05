@@ -30,3 +30,5 @@ class ResizeObserverStub {
   disconnect() {}
 }
 Object.defineProperty(globalThis, 'ResizeObserver', { configurable: true, value: ResizeObserverStub });
+
+Element.prototype.scrollIntoView = () => {};

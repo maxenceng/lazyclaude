@@ -1,6 +1,6 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { AppModel } from './app';
 import { boardFixture, ticketFixture } from './board/fixtures';
@@ -167,6 +167,16 @@ describe('starting a session from the board', () => {
       verb: 'REVIEW',
       size: { width: 80, height: 24 },
     });
+  });
+
+  it('scrolls the preselected verb into view when the picker opens below a long ticket', async () => {
+    const scrolled = vi.spyOn(Element.prototype, 'scrollIntoView');
+    const ready = await readyApp();
+    await ready.user.keyboard('j');
+    await ready.user.keyboard('n');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'REVIEW' });
+    expect(scrolled.mock.contexts).toContain(screen.getByRole('button', { name: /review/ }));
+    scrolled.mockRestore();
   });
 
   it('leaves the verb picker on escape, starting nothing', async () => {
