@@ -164,10 +164,10 @@ describe('a hosted session\'s emulator', () => {
   });
 });
 
+const keydown = (key: string, init: KeyboardEventInit = {}) => new KeyboardEvent('keydown', { key, cancelable: true, ...init });
+
 describe('the keys of a hosted session\'s pane', () => {
   beforeEach(() => sessionStorage.clear());
-
-  const keydown = (key: string, init: KeyboardEventInit = {}) => new KeyboardEvent('keydown', { key, cancelable: true, ...init });
 
   it('keeps a reserved chord from claude, acts on it and cancels the webview\'s own action', () => {
     const act = vi.fn();

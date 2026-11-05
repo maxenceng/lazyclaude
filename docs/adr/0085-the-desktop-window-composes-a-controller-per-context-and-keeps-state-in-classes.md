@@ -24,14 +24,18 @@ route keys; and every store is already one `useSyncExternalStore` read, which a 
 - **The composition side wires and routes**: `app.ts` is `AppModel`, which builds the contexts and the layout and loads
   them when the sidecar is ready. `keyRouting.ts` is `KeyRouter`, which sends a key to the picker, the focused pane or the
   layout. `keys/ConfigurationStore` holds the configuration read.
-- **Behaviour that keeps state is a class with private methods**, not a factory returning closures over local variables:
-  `Hosting`, `AppModel`, `KeyRouter`, `SessionsController`, `BoardController`, `ConfigurationStore`, `WindowFocus`,
-  `Heartbeat`, `WarningStore`, `StorageModeMemory`, `ModeTracker`, `WatchingReporter`. A named helper is declared at
-  module level, not inside another function. A callback passed inline (a listener, a `map`) stays an inline arrow.
+- **Behaviour that keeps state is a class with private methods**, not a factory returning closures over local variables.
+  Every stateful piece of the frontend is one: `Store`, `ProtocolClient`, `BoardStore`, `SessionStore`, `Selection`,
+  `Hosting`, `AppModel`, `KeyRouter`, the controllers, `ConfigurationStore`, `WindowFocus`, `Heartbeat`, `WarningStore`,
+  `StorageModeMemory`, `ModeTracker`, `WatchingReporter`, `WindowKeys`, `BrowserPlatform`, and in tests `FakeClient` and
+  `TestPlatform`. A named helper is declared at module level, not inside another function. A callback passed inline (a
+  listener, a `map`, a JSX handler) stays an inline arrow.
+- **ESLint enforces it**, in source and tests alike: `no-restricted-syntax` refuses a function assigned to a variable
+  inside a function, and a function returning an object whose properties are functions. The rule was watched to fail on
+  `main`'s `createStore` and on the first `createHosting`.
 
 ## Consequences
 
-- `createStore`, `createBoardStore`, `createSessionStore`, `createSelection` and `installKeys` predate this and are still
-  closures; converting them is a follow-up ticket.
-- A component's own event handler (`BoardPane`'s `press`) stays inside it: it closes over props, and a class would not
-  read better.
+- `useStore` hands `useSyncExternalStore` stable arrows over the store's methods, since a method passed unbound loses its
+  `this`; anything else taking a method as a value does the same.
+- A component's handler is written inline in the JSX it serves; one too long for that is a sign the component should split.

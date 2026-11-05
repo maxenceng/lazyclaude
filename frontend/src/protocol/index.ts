@@ -1,4 +1,4 @@
-export { createClient, RpcError, SidecarUnavailableError } from './client';
+export { ProtocolClient, RpcError, SidecarUnavailableError } from './client';
 export type { Client } from './client';
 export { Connecting, Exited, Ready, Refused, StatusKind } from './status';
 export type { Status, Unready } from './status';

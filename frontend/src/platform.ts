@@ -11,13 +11,17 @@ import type { Terminal } from '@xterm/xterm';
 export interface Platform {
   memory: ModeMemory;
   clipboard: Clipboard;
-  newTerminal: () => { terminal: Terminal; fit: { fit(): void } };
+  newTerminal(): { terminal: Terminal; fit: { fit(): void } };
   focus: FocusSource;
 }
 
-export const browserPlatform = (): Platform => ({
-  memory: new StorageModeMemory(sessionStorage),
-  clipboard: { readText: () => navigator.clipboard.readText(), writeText: (text) => navigator.clipboard.writeText(text) },
-  newTerminal: () => createXterm(terminalLook(document.documentElement)),
-  focus: tauriFocus,
-});
+/** The Tauri webview: sessionStorage for modes, the navigator's clipboard, xterm.js in the design system's look, Tauri's window focus. */
+export class BrowserPlatform implements Platform {
+  readonly memory: ModeMemory = new StorageModeMemory(sessionStorage);
+  readonly clipboard: Clipboard = navigator.clipboard;
+  readonly focus: FocusSource = tauriFocus;
+
+  newTerminal(): { terminal: Terminal; fit: { fit(): void } } {
+    return createXterm(terminalLook(document.documentElement));
+  }
+}

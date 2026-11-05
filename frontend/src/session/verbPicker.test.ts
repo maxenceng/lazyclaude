@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { VerbPicker } from './verbPicker';
 
-describe('the verb picker over a ticket', () => {
-  const picker = () => new VerbPicker('PROJ-1', 'proj-1', ['REFINE', 'START', 'REVIEW']);
+const picker = () => new VerbPicker('PROJ-1', 'proj-1', ['REFINE', 'START', 'REVIEW']);
 
+describe('the verb picker over a ticket', () => {
   it('starts on the first verb', () => {
     expect(picker().selected()).toBe('REFINE');
   });

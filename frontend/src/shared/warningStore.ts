@@ -1,5 +1,5 @@
 import type { Client, WarningsView } from '../protocol';
-import { createStore, type Store } from './store';
+import { Store } from './store';
 
 export interface ShownWarning {
   text: string;
@@ -10,7 +10,7 @@ const shown = (view: WarningsView): ShownWarning | undefined => (view.kind === '
 
 /** The warning the status line shows: `warning/watch`'s answer, then every `warning/changed`. */
 export class WarningStore {
-  readonly warning: Store<ShownWarning | undefined> = createStore<ShownWarning | undefined>(undefined);
+  readonly warning: Store<ShownWarning | undefined> = new Store<ShownWarning | undefined>(undefined);
 
   constructor(private readonly client: Client) {
     client.subscribe('warning/changed', (view) => this.warning.set(shown(view)));

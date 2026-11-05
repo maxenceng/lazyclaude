@@ -1,30 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import { type FocusSource, WindowFocus } from './windowFocus';
 
-const source = (focused: boolean) => {
-  let notify: (focused: boolean) => void = () => {};
-  let unlistened = 0;
-  let answer: (focused: boolean) => void = () => {};
-  const fake: FocusSource = {
-    isFocused: () => new Promise((resolve) => (answer = resolve)),
-    onFocusChanged: (handler) => {
-      notify = handler;
-      return Promise.resolve(() => (unlistened += 1));
-    },
-  };
-  return { fake, changed: (next: boolean) => notify(next), answered: () => answer(focused), unlistened: () => unlistened };
-};
+/** A window whose focus answer and changes the test releases. */
+class FakeFocus implements FocusSource {
+  unlistened = 0;
+  private notify: (focused: boolean) => void = () => {};
+  private answer: (focused: boolean) => void = () => {};
+
+  constructor(private readonly focused: boolean) {}
+
+  isFocused(): Promise<boolean> {
+    return new Promise((resolve) => (this.answer = resolve));
+  }
+
+  onFocusChanged(handler: (focused: boolean) => void): Promise<() => void> {
+    this.notify = handler;
+    return Promise.resolve(() => (this.unlistened += 1));
+  }
+
+  changed(next: boolean): void {
+    this.notify(next);
+  }
+
+  answered(): void {
+    this.answer(this.focused);
+  }
+}
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('whether the window has focus', () => {
   it('is not focused until the window says so', () => {
-    expect(new WindowFocus(source(true).fake).focused.get()).toBe(false);
+    expect(new WindowFocus(new FakeFocus(true)).focused.get()).toBe(false);
   });
 
   it('takes the focus the window has at start', async () => {
-    const window = source(true);
-    const focus = new WindowFocus(window.fake);
+    const window = new FakeFocus(true);
+    const focus = new WindowFocus(window);
     await settle();
     window.answered();
     await settle();
@@ -32,8 +44,8 @@ describe('whether the window has focus', () => {
   });
 
   it('follows the window as it gains and loses focus', async () => {
-    const window = source(false);
-    const focus = new WindowFocus(window.fake);
+    const window = new FakeFocus(false);
+    const focus = new WindowFocus(window);
     await settle();
     window.changed(true);
     expect(focus.focused.get()).toBe(true);
@@ -42,8 +54,8 @@ describe('whether the window has focus', () => {
   });
 
   it('does not let the answer at start overwrite a change that came first', async () => {
-    const window = source(false);
-    const focus = new WindowFocus(window.fake);
+    const window = new FakeFocus(false);
+    const focus = new WindowFocus(window);
     await settle();
     window.changed(true);
     window.answered();
@@ -52,11 +64,11 @@ describe('whether the window has focus', () => {
   });
 
   it('stops listening once disposed', async () => {
-    const window = source(false);
-    const focus = new WindowFocus(window.fake);
+    const window = new FakeFocus(false);
+    const focus = new WindowFocus(window);
     await settle();
     focus.dispose();
     await settle();
-    expect(window.unlistened()).toBe(1);
+    expect(window.unlistened).toBe(1);
   });
 });

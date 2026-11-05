@@ -46,13 +46,21 @@ interface BoardProps extends ViewProps {
 export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus, onRetry }: BoardProps) => {
   const { t } = useTranslation('board');
   const { state, populated, cursor } = useBoardView({ board, selection });
-  const press = (id: string) => {
-    onFocus();
-    return id === cursor ? onOpen(id) : selection.select(id);
-  };
   return (
     <Pane title={t('board.title')} focused={focused}>
-      {populated === undefined ? <Unread state={state} onRetry={onRetry} /> : <Tickets view={populated} cursor={cursor} markerOf={markerOf} onPress={press} />}
+      {populated === undefined ? (
+        <Unread state={state} onRetry={onRetry} />
+      ) : (
+        <Tickets
+          view={populated}
+          cursor={cursor}
+          markerOf={markerOf}
+          onPress={(id) => {
+            onFocus();
+            return id === cursor ? onOpen(id) : selection.select(id);
+          }}
+        />
+      )}
     </Pane>
   );
 };

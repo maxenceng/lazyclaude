@@ -1,11 +1,6 @@
 import type { BoardLookupView, Client } from '../protocol';
-import { createStore, type Store } from '../shared/store';
+import { Store } from '../shared/store';
 import { type BoardState, EmptyBoard, FaultedBoard, LoadingBoard, PopulatedBoard, UnavailableBoard, UnavailableCause } from './boardState';
-
-export interface BoardStore {
-  readonly state: Store<BoardState>;
-  load(): Promise<void>;
-}
 
 const PROJECT_DIRECTORY = '.';
 
@@ -21,18 +16,19 @@ const stateOf = (view: BoardLookupView): BoardState => {
 };
 
 /** The Board's one read: `board/watch`'s answer, then every `board/changed` after it. */
-export const createBoardStore = (client: Client): BoardStore => {
-  const state = createStore<BoardState>(new LoadingBoard());
-  client.subscribe('board/changed', (view) => state.set(stateOf(view)));
-  return {
-    state,
-    async load() {
-      state.set(new LoadingBoard());
-      try {
-        state.set(stateOf(await client.call('board/watch', { from: PROJECT_DIRECTORY })));
-      } catch (error) {
-        state.set(new FaultedBoard(error instanceof Error ? error.message : String(error)));
-      }
-    },
-  };
-};
+export class BoardStore {
+  readonly state: Store<BoardState> = new Store<BoardState>(new LoadingBoard());
+
+  constructor(private readonly client: Client) {
+    client.subscribe('board/changed', (view) => this.state.set(stateOf(view)));
+  }
+
+  async load(): Promise<void> {
+    this.state.set(new LoadingBoard());
+    try {
+      this.state.set(stateOf(await this.client.call('board/watch', { from: PROJECT_DIRECTORY })));
+    } catch (error) {
+      this.state.set(new FaultedBoard(error instanceof Error ? error.message : String(error)));
+    }
+  }
+}

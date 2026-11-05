@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createClient, RpcError } from './client';
+import { ProtocolClient, RpcError } from './client';
 import { PROTOCOL_VERSION } from './generated/protocol';
 import { type Attached, type Relay, type RelayMessage, RelayMessageKind } from './relay';
 import { Connecting, Exited, Ready, Refused } from './status';
@@ -43,7 +43,7 @@ const noProject = { kind: 'noProject', reason: 'not a project' };
 
 const readyClient = async () => {
   const relay = new FakeRelay();
-  const client = createClient(relay);
+  const client = new ProtocolClient(relay);
   await client.connect();
   relay.push(ready(PROTOCOL_VERSION));
   return { relay, client };
@@ -56,7 +56,7 @@ describe('the protocol client', () => {
 
   it('sends nothing until the sidecar is ready, then sends what waited', async () => {
     const relay = new FakeRelay();
-    const client = createClient(relay);
+    const client = new ProtocolClient(relay);
     await client.connect();
     void client.call('board/watch', { from: '.' });
     await Promise.resolve();
@@ -107,7 +107,7 @@ describe('the protocol client', () => {
 
   it('refuses a sidecar speaking another protocol, naming both versions, and sends nothing', async () => {
     const relay = new FakeRelay();
-    const client = createClient(relay);
+    const client = new ProtocolClient(relay);
     await client.connect();
     const call = client.call('board/watch', { from: '.' });
     relay.push(ready(PROTOCOL_VERSION + 1));
@@ -119,7 +119,7 @@ describe('the protocol client', () => {
   it('takes the ready line kept for a page that reloaded', async () => {
     const relay = new FakeRelay();
     relay.attachedWith = { ready: ready(PROTOCOL_VERSION), exit: null };
-    const client = createClient(relay);
+    const client = new ProtocolClient(relay);
     await client.connect();
     expect(client.status.get()).toEqual(new Ready());
   });
@@ -136,7 +136,7 @@ describe('the protocol client', () => {
   it('reports an exit that happened before the page attached', async () => {
     const relay = new FakeRelay();
     relay.attachedWith = { ready: null, exit: { code: null, stderr: ['no java'] } };
-    const client = createClient(relay);
+    const client = new ProtocolClient(relay);
     await client.connect();
     expect(client.status.get()).toEqual(new Exited(null, ['no java']));
   });

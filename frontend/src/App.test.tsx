@@ -333,9 +333,9 @@ describe('a hosted session\'s pane', () => {
   });
 });
 
-describe('what the sidecar is told is watched', () => {
-  const watching = (client: Started['client']) => client.sent.filter((sent) => sent.input === 'session/watching').map((sent) => sent.params);
+const watching = (client: Started['client']) => client.sent.filter((sent) => sent.input === 'session/watching').map((sent) => sent.params);
 
+describe('what the sidecar is told is watched', () => {
   it('is none while no pane is focused', async () => {
     const { client } = await readyApp();
     expect(watching(client).at(-1)).toEqual({ kind: 'noWatchedSessionPayload' });
@@ -388,14 +388,14 @@ describe('the dock\'s layout', () => {
   });
 });
 
-describe('a packaged build', () => {
-  const pressInPane = (key: string, init: KeyboardEventInit = {}) => {
-    const textarea = screen.getByRole('group', { name: 'session terminal' }).querySelector('textarea')!;
-    const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true, ...init });
-    textarea.dispatchEvent(event);
-    return event;
-  };
+const pressInPane = (key: string, init: KeyboardEventInit = {}) => {
+  const textarea = screen.getByRole('group', { name: 'session terminal' }).querySelector('textarea')!;
+  const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true, ...init });
+  textarea.dispatchEvent(event);
+  return event;
+};
 
+describe('a packaged build', () => {
   it('swallows F5 and Ctrl+R in a pane, where xterm.js sends them to claude', async () => {
     const ready = await readyApp(true);
     await startedSession(ready);

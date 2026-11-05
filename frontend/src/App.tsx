@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { type ReactNode, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AppModel } from './app';
@@ -7,7 +8,7 @@ import { ConnectionScreen } from './connection/ConnectionScreen';
 import { Alert, AppFrame, Button, Count, Lamp, Pane, StatusLine, Text } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
-import { installKeys } from './keys/installKeys';
+import { WindowKeys } from './keys/windowKeys';
 import { Focus } from './layout';
 import { StatusKind } from './protocol';
 import { DockScreen } from './session/DockScreen';
@@ -17,6 +18,21 @@ import { SessionsList } from './session/SessionsList';
 import { useStore } from './shared/useStore';
 
 const COLOURS = [LampColour.Permission, LampColour.Input, LampColour.Turn] as const;
+
+/** What stands in for the Board while the backend is not there or its configuration is not read: `alternative`, and no ticket. */
+const unboarded = (alternative: ReactNode, t: TFunction) => ({
+  board: (
+    <Pane title={t('app.boardTitle')} focused>
+      {alternative}
+    </Pane>
+  ),
+  main: (
+    <Pane title={t('app.ticketTitle')} focused={false}>
+      <Text tone="dim">{t('app.noTicketSelected')}</Text>
+    </Pane>
+  ),
+  arrangement: 'noDock' as const,
+});
 
 interface Props {
   app: AppModel;
@@ -39,7 +55,10 @@ export const App = ({ app, packaged }: Props) => {
   const mouseReported = useStore(app.hosting.mouseReported);
   useStore(app.board.selection.selected);
 
-  useEffect(() => installKeys((action) => app.press(action), { packaged, reserved: () => app.reserved() }), [app, packaged]);
+  useEffect(() => {
+    const keys = new WindowKeys((action) => app.press(action), { packaged, reserved: () => app.reserved() });
+    return () => keys.remove();
+  }, [app, packaged]);
 
   const markers = sessions === undefined ? [] : markersOf(sessions);
   const project = board.shown()?.root ?? t('app.project');
@@ -50,59 +69,45 @@ export const App = ({ app, packaged }: Props) => {
     [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} />,
   }[layout.focus];
 
-  const unboarded = (alternative: ReactNode) => ({
-    board: (
-      <Pane title={t('app.boardTitle')} focused>
-        {alternative}
-      </Pane>
-    ),
-    main: (
-      <Pane title={t('app.ticketTitle')} focused={false}>
-        <Text tone="dim">{t('app.noTicketSelected')}</Text>
-      </Pane>
-    ),
-    arrangement: 'noDock' as const,
-  });
+  const unready =
+    status.kind !== StatusKind.Ready ? (
+      <ConnectionScreen status={status} onRestart={() => void app.client.restart()} />
+    ) : configuration.kind === ConfigurationKind.Fault ? (
+      <Alert title={t('configuration.fault')} action={<Button onClick={() => void app.load()}>{t('configuration.retry')}</Button>}>
+        {configuration.message}
+      </Alert>
+    ) : undefined;
 
-  const shown = (() => {
-    if (status.kind !== StatusKind.Ready) {
-      return unboarded(<ConnectionScreen status={status} onRestart={() => void app.client.restart()} />);
-    }
-    if (configuration.kind === ConfigurationKind.Fault) {
-      return unboarded(
-        <Alert title={t('configuration.fault')} action={<Button onClick={() => void app.load()}>{t('configuration.retry')}</Button>}>
-          {configuration.message}
-        </Alert>,
-      );
-    }
-    return {
-      board: (
-        <BoardPane
-          board={app.board.store}
-          selection={app.board.selection}
-          focused={layout.focus === Focus.Board}
-          markerOf={(ticket) => (sessions === undefined ? undefined : markerOfTicket(sessions, ticket))}
-          onOpen={() => app.press(Action.Open)}
-          onFocus={() => app.focusOn(Focus.Board)}
-          onRetry={() => void app.load()}
-        />
-      ),
-      main: (
-        <TicketPane board={app.board.store} selection={app.board.selection} focused={layout.focus === Focus.Sessions}>
-          <SessionsList
-            rows={app.sessions.rows()}
-            cursor={cursor}
-            focused={layout.focus === Focus.Sessions}
-            picker={picker}
-            failure={failure}
-            onPress={(index) => app.pressRow(index)}
-            onPickVerb={(index) => void app.sessions.pick(index)}
-          />
-        </TicketPane>
-      ),
-      arrangement: layout.arrangement(hasDock),
-    };
-  })();
+  const shown =
+    unready === undefined
+      ? {
+          board: (
+            <BoardPane
+              board={app.board.store}
+              selection={app.board.selection}
+              focused={layout.focus === Focus.Board}
+              markerOf={(ticket) => (sessions === undefined ? undefined : markerOfTicket(sessions, ticket))}
+              onOpen={() => app.press(Action.Open)}
+              onFocus={() => app.focusOn(Focus.Board)}
+              onRetry={() => void app.load()}
+            />
+          ),
+          main: (
+            <TicketPane board={app.board.store} selection={app.board.selection} focused={layout.focus === Focus.Sessions}>
+              <SessionsList
+                rows={app.sessions.rows()}
+                cursor={cursor}
+                focused={layout.focus === Focus.Sessions}
+                picker={picker}
+                failure={failure}
+                onPress={(index) => app.pressRow(index)}
+                onPickVerb={(index) => void app.sessions.pick(index)}
+              />
+            </TicketPane>
+          ),
+          arrangement: layout.arrangement(hasDock),
+        }
+      : unboarded(unready, t);
 
   return (
     <AppFrame

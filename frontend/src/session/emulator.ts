@@ -1,6 +1,6 @@
 import type { IDisposable, Terminal } from '@xterm/xterm';
 import { binaryBytes, bytesOfText, type Client, fromBase64, toBase64 } from '../protocol';
-import { createStore, type Store } from '../shared/store';
+import { Store } from '../shared/store';
 import type { ModeMemory } from './modeMemory';
 import { PaneKey, type PaneKeyPress, paneKeyOf } from './paneKeys';
 import { KeptModes, ModeTracker } from './privateModes';
@@ -28,7 +28,7 @@ enum Repaint {
 
 /** One hosted session's xterm.js: fed by its `pty/output`, sending its keys, pastes and mouse reports as `pty/input`, and keeping its private modes for a reload. */
 export class Emulator {
-  readonly mouseReported: Store<boolean> = createStore(false);
+  readonly mouseReported: Store<boolean> = new Store(false);
   private readonly kept = new KeptModes();
   private repaint = Repaint.None;
   private fitted = false;

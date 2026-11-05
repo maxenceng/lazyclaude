@@ -8,9 +8,20 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
+class MediaQueryStub {
+  readonly matches = false;
+
+  constructor(readonly media: string) {}
+
+  addEventListener() {}
+  removeEventListener() {}
+  addListener() {}
+  removeListener() {}
+}
+
 Object.defineProperty(window, 'matchMedia', {
   configurable: true,
-  value: (query: string) => ({ matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {} }),
+  value: (query: string) => new MediaQueryStub(query),
 });
 
 class ResizeObserverStub {

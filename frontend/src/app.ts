@@ -8,9 +8,9 @@ import type { Platform } from './platform';
 import type { Client } from './protocol';
 import { Hosting } from './session/hosting';
 import { SessionsController } from './session/sessionsController';
-import { createSessionStore, type SessionStore } from './session/sessionStore';
+import { SessionStore } from './session/sessionStore';
 import { WatchingReporter } from './session/watched';
-import { createStore, type Store } from './shared/store';
+import { Store } from './shared/store';
 import { WarningStore } from './shared/warningStore';
 import { WindowFocus } from './window/windowFocus';
 
@@ -22,7 +22,7 @@ export class AppModel {
   readonly sessions: SessionsController;
   readonly configuration: ConfigurationStore;
   readonly warnings: WarningStore;
-  readonly layout: Store<Layout> = createStore(new Layout());
+  readonly layout: Store<Layout> = new Store(new Layout());
   readonly windowFocus: WindowFocus;
   private readonly keys: KeyRouter;
   private readonly watching: WatchingReporter;
@@ -33,7 +33,7 @@ export class AppModel {
     platform: Platform,
   ) {
     this.board = new BoardController(client);
-    this.sessionStore = createSessionStore(client);
+    this.sessionStore = new SessionStore(client);
     this.configuration = new ConfigurationStore(client);
     this.warnings = new WarningStore(client);
     this.windowFocus = new WindowFocus(platform.focus);
@@ -42,7 +42,7 @@ export class AppModel {
       client,
       memory: platform.memory,
       sessions: this.sessionStore.sessions,
-      newTerminal: platform.newTerminal,
+      newTerminal: () => platform.newTerminal(),
       clipboard: platform.clipboard,
       reserved: (press) => this.reservedInPane(press),
     });

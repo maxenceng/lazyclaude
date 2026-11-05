@@ -50,17 +50,18 @@ export class UnlinkedRow {
 
 export type SessionRow = HostedRow | LiveRow | PastRow | NewRow | UnlinkedRow;
 
+const linkedTo = (links: readonly { ticket: string }[], ticket: string | undefined): boolean => ticket !== undefined && links.some((link) => link.ticket === ticket);
+
 /** The rows under `ticket`, or only the unlinked ones where no ticket is selected. */
 export const rowsFor = (view: SessionsView | undefined, ticket: string | undefined): SessionRow[] => {
   const hosted = (view?.hosted ?? []).filter((session) => ticket !== undefined && session.ticket === ticket);
   const hostedIds = new Set((view?.hosted ?? []).map((session) => session.live?.id ?? session.id));
-  const linked = (links: readonly { ticket: string }[]) => ticket !== undefined && links.some((link) => link.ticket === ticket);
   return [
     ...hosted.map((session) => new HostedRow(session.id, session.live?.name, session.live === null ? LampColour.Off : colourOf(session.live))),
     ...(view?.live ?? [])
-      .filter((session) => linked(session.links) && !hostedIds.has(session.id))
+      .filter((session) => linkedTo(session.links, ticket) && !hostedIds.has(session.id))
       .map((session) => new LiveRow(session.name, colourOf(session), session.age)),
-    ...(view?.past ?? []).filter((session) => linked(session.links)).map((session) => new PastRow(session)),
+    ...(view?.past ?? []).filter((session) => linkedTo(session.links, ticket)).map((session) => new PastRow(session)),
     ...(ticket === undefined ? [] : [new NewRow()]),
     // deferred: only the five newest sessions linked to no ticket are listed — close it when the desktop gets the TUI's expandable older row.
     ...(view?.past ?? [])

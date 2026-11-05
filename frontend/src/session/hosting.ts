@@ -1,6 +1,6 @@
 import type { Terminal } from '@xterm/xterm';
 import type { Client, HostStart, ListingPayload, PaneSize, SessionPayload, SessionsView, Verb } from '../protocol';
-import { createStore, type Store } from '../shared/store';
+import { Store } from '../shared/store';
 import { Dock } from './dock';
 import { type Clipboard, Emulator } from './emulator';
 import type { ModeMemory } from './modeMemory';
@@ -25,9 +25,9 @@ export interface StartFailure {
 
 /** The hosted sessions: their tabs, one emulator each, the starts that open them and the pushes that feed and close them. */
 export class Hosting {
-  readonly dock: Store<Dock> = createStore(new Dock());
-  readonly failure: Store<StartFailure | undefined> = createStore<StartFailure | undefined>(undefined);
-  readonly mouseReported: Store<boolean> = createStore(false);
+  readonly dock: Store<Dock> = new Store(new Dock());
+  readonly failure: Store<StartFailure | undefined> = new Store<StartFailure | undefined>(undefined);
+  readonly mouseReported: Store<boolean> = new Store(false);
   private readonly emulators = new Map<string, Emulator>();
   private readonly ended = new Set<string>();
 

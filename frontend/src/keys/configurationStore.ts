@@ -1,11 +1,11 @@
 import type { Client } from '../protocol';
-import { createStore, type Store } from '../shared/store';
+import { Store } from '../shared/store';
 import { bindingsOf, type Binding } from './chords';
 import { type ConfigurationState, FaultedConfiguration, ReadConfiguration, ReadingConfiguration } from './configurationState';
 
 /** The configuration read at start-up: the chords it reserves, or why it could not be read. */
 export class ConfigurationStore {
-  readonly state: Store<ConfigurationState> = createStore<ConfigurationState>(new ReadingConfiguration());
+  readonly state: Store<ConfigurationState> = new Store<ConfigurationState>(new ReadingConfiguration());
 
   constructor(private readonly client: Client) {}
 

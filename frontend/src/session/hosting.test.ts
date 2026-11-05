@@ -1,7 +1,7 @@
 import { Terminal } from '@xterm/xterm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { bytesOfText, RpcError, toBase64 } from '../protocol';
-import { createStore } from '../shared/store';
+import { Store } from '../shared/store';
 import { fakeClient } from '../test/fakeClient';
 import { Hosting, type HostingDeps } from './hosting';
 import { StorageModeMemory } from './modeMemory';
@@ -19,7 +19,7 @@ const hostedIn = (...ids: string[]): SessionsView => ({
 
 const hosting = (overrides: Partial<HostingDeps> = {}) => {
   const client = fakeClient();
-  const sessions = createStore<SessionsView | undefined>(undefined);
+  const sessions = new Store<SessionsView | undefined>(undefined);
   const memory = new StorageModeMemory(sessionStorage);
   const deps: HostingDeps = {
     client,

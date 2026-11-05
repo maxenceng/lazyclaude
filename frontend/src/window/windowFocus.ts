@@ -1,4 +1,4 @@
-import { createStore, type Store } from '../shared/store';
+import { Store } from '../shared/store';
 
 export interface FocusSource {
   isFocused(): Promise<boolean>;
@@ -10,7 +10,7 @@ export interface FocusSource {
  * taken not to, so a waiting session is never held back from notifying by a guess.
  */
 export class WindowFocus {
-  readonly focused: Store<boolean> = createStore(false);
+  readonly focused: Store<boolean> = new Store(false);
   private heard = false;
   private stopped = false;
   private unlisten: (() => void) | undefined;

@@ -47,18 +47,19 @@ export interface TerminalLook {
   fontSize: number;
 }
 
+const tokenOf = (style: CSSStyleDeclaration, name: string): string => style.getPropertyValue(`--${name}`).trim();
+
 /** The terminal's palette and type, read from the tokens in effect on `element`, so the 16 ANSI colours are the board's and no other. */
 export const terminalLook = (element: Element): TerminalLook => {
   const style = getComputedStyle(element);
-  const token = (name: string) => style.getPropertyValue(`--${name}`).trim();
   const [black, red, green, yellow, blue, magenta, cyan, white, brightBlack, brightRed, brightGreen, brightYellow, brightBlue, brightMagenta, brightCyan, brightWhite] =
-    COLOURS.map((colour) => token(`ansi-${colour}`));
+    COLOURS.map((colour) => tokenOf(style, `ansi-${colour}`));
   return {
     theme: {
-      background: token('terminal-ground'),
-      foreground: token('text'),
-      cursor: token('text'),
-      selectionBackground: token('terminal-selection'),
+      background: tokenOf(style, 'terminal-ground'),
+      foreground: tokenOf(style, 'text'),
+      cursor: tokenOf(style, 'text'),
+      selectionBackground: tokenOf(style, 'terminal-selection'),
       extendedAnsi: [],
       black: black ?? '',
       red: red ?? '',
@@ -77,7 +78,7 @@ export const terminalLook = (element: Element): TerminalLook => {
       brightCyan: brightCyan ?? '',
       brightWhite: brightWhite ?? '',
     },
-    fontFamily: token('font-mono'),
-    fontSize: Number.parseInt(token('size-terminal'), 10),
+    fontFamily: tokenOf(style, 'font-mono'),
+    fontSize: Number.parseInt(tokenOf(style, 'size-terminal'), 10),
   };
 };

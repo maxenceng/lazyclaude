@@ -5,14 +5,14 @@ import { LampColour } from '../design-system';
 import { RpcError } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
 import { BoardPane, TicketPane } from './BoardScreen';
-import { createBoardStore } from './boardStore';
+import { BoardStore } from './boardStore';
 import { boardFixture, ticketFixture } from './fixtures';
-import { createSelection } from './selection';
+import { Selection } from './selection';
 
 const setup = (markerOf: (ticket: string) => LampColour | undefined = () => undefined) => {
   const client = fakeClient();
-  const board = createBoardStore(client);
-  const selection = createSelection();
+  const board = new BoardStore(client);
+  const selection = new Selection();
   const onOpen = vi.fn();
   const loaded = board.load();
   render(

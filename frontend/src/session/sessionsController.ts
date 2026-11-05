@@ -1,5 +1,5 @@
 import type { Client, MergeState, NewSessionView, SessionPayload, TicketView } from '../protocol';
-import { createStore, type Store } from '../shared/store';
+import { Store } from '../shared/store';
 import type { Hosting } from './hosting';
 import { type SessionRow, SessionRowKind, rowsFor } from './sessionRows';
 import type { SessionStore } from './sessionStore';
@@ -24,8 +24,8 @@ export interface SessionsDeps {
 
 /** The selected ticket's sessions: the rows under it, the cursor over them, the verb picker, and what opening each row starts. */
 export class SessionsController {
-  readonly picker: Store<VerbPicker | undefined> = createStore<VerbPicker | undefined>(undefined);
-  readonly cursor: Store<number> = createStore(0);
+  readonly picker: Store<VerbPicker | undefined> = new Store<VerbPicker | undefined>(undefined);
+  readonly cursor: Store<number> = new Store(0);
 
   constructor(private readonly deps: SessionsDeps) {}
 

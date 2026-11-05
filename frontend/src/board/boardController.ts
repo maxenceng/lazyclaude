@@ -1,7 +1,7 @@
 import type { BoardView, Client, TicketView } from '../protocol';
-import { type BoardStore, createBoardStore } from './boardStore';
+import { BoardStore } from './boardStore';
 import { selectedIn, ticketIds } from './rows';
-import { createSelection, type Selection } from './selection';
+import { Selection } from './selection';
 
 /** The Board: its one read, the ticket the cursor is on, and the moves of that cursor. */
 export class BoardController {
@@ -9,8 +9,8 @@ export class BoardController {
   readonly selection: Selection;
 
   constructor(client: Client) {
-    this.store = createBoardStore(client);
-    this.selection = createSelection();
+    this.store = new BoardStore(client);
+    this.selection = new Selection();
   }
 
   shown(): BoardView | undefined {
