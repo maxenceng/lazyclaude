@@ -71,6 +71,7 @@ export type ReviewPullRequestsView =
   ReviewCheckingPullRequestsView | ReviewOpenPullRequestsView | ReviewUnavailablePullRequestsView;
 export type ReviewCheckOutcome = 'FAILED' | 'PENDING' | 'PASSED';
 export type ReviewPendingReviewWriteView = ReviewWrittenReviewView | ReviewRefusedWriteView;
+export type SessionWatchedPayload = SessionWatchedSessionPayload | SessionNoWatchedSessionPayload;
 
 /**
  * Every method and notification of the lazyclaude sidecar, generated from its Payloads and Views.
@@ -199,6 +200,9 @@ export interface LazyclaudeProtocol {
     };
     'session/repaint': {
       params: SessionRepaintPayload;
+    };
+    'session/watching': {
+      params: SessionWatchedPayload;
     };
   };
   notifications: {
@@ -716,6 +720,13 @@ export interface SessionPtyResizePayload {
 }
 export interface SessionRepaintPayload {
   session: string;
+}
+export interface SessionWatchedSessionPayload {
+  kind: 'watchedSessionPayload';
+  session: string;
+}
+export interface SessionNoWatchedSessionPayload {
+  kind: 'noWatchedSessionPayload';
 }
 export interface SessionPtyOutputView {
   session: string;

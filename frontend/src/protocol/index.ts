@@ -12,8 +12,16 @@ export type {
   BoardTicketView as TicketView,
   BoardUnavailableBoardView as UnavailableBoardView,
   SessionConfigurationView as ConfigurationView,
+  SessionHostStart as HostStart,
+  SessionHostedSessionView as HostedSessionView,
   SessionLiveSessionView as LiveSessionView,
+  SessionPastSessionView as PastSessionView,
+  SessionPaneSize as PaneSize,
+  SessionSessionExitView as SessionExitView,
   SessionSessionsView as SessionsView,
+  SessionWatchedPayload as WatchedPayload,
+  SharedWarningsView as WarningsView,
+  BoardVerb as Verb,
 } from './generated/protocol';
 export type { Relay, RelayMessage } from './relay';
 export { tauriRelay } from './tauri';
