@@ -1,0 +1,26 @@
+{
+  "docs": {
+    "title": "Docs",
+    "loading": "Reading the docs…",
+    "empty": "No documents under docs/.",
+    "unavailable": "The docs cannot be read",
+    "fault": "The docs could not be read",
+    "retry": "Retry"
+  },
+  "document": {
+    "title": "Document",
+    "noneSelected": "No document selected.",
+    "emptyDocument": "Empty document.",
+    "missing": "No document at this path in the docs tree."
+  },
+  "links": {
+    "fragmentNotFound": "No heading \"{{fragment}}\" in {{path}}; opened at its top.",
+    "openFailed": "Could not open {{target}}: {{reason}}",
+    "refused": "Did not open {{href}}: only http and https links and project paths are opened.",
+    "ticketHeading": "Did not follow {{href}}: a ticket's own headings are not followed."
+  },
+  "keyBar": {
+    "move": "j/k move",
+    "open": "enter open or fold"
+  }
+}

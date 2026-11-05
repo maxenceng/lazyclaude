@@ -5,6 +5,8 @@ import type { AppModel } from './app';
 import { BoardKeyBar } from './board/BoardKeyBar';
 import { BoardPane, TicketPane } from './board/BoardScreen';
 import { ConnectionScreen } from './connection/ConnectionScreen';
+import { DocsKeyBar } from './docs/DocsKeyBar';
+import { DocsPane, DocumentPane } from './docs/DocsScreen';
 import { Alert, AppFrame, Button, Count, Lamp, Pane, StatusLine, Text } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
@@ -31,6 +33,7 @@ const unboarded = (alternative: ReactNode, t: TFunction) => ({
       <Text tone="dim">{t('app.noTicketSelected')}</Text>
     </Pane>
   ),
+  docs: null,
   arrangement: 'noDock' as const,
 });
 
@@ -52,6 +55,7 @@ export const App = ({ app, packaged }: Props) => {
   const cursor = useStore(app.sessions.cursor);
   const failure = useStore(app.hosting.failure);
   const warning = useStore(app.warnings.warning);
+  const notice = useStore(app.notices.notice);
   const mouseReported = useStore(app.hosting.mouseReported);
   useStore(app.board.selection.selected);
 
@@ -65,6 +69,7 @@ export const App = ({ app, packaged }: Props) => {
   const hasDock = dock.tabs.length > 0;
   const keyBar = {
     [Focus.Board]: <BoardKeyBar />,
+    [Focus.Docs]: <DocsKeyBar />,
     [Focus.Sessions]: <SessionsKeyBar picking={false} />,
     [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} />,
   }[layout.focus];
@@ -92,8 +97,23 @@ export const App = ({ app, packaged }: Props) => {
               onRetry={() => void app.load()}
             />
           ),
-          main: (
-            <TicketPane board={app.board.store} selection={app.board.selection} focused={layout.focus === Focus.Sessions}>
+          docs: (
+            <DocsPane
+              docs={app.docs}
+              focused={layout.focus === Focus.Docs}
+              onFocus={() => app.focusOn(Focus.Docs)}
+              onRetry={() => void app.docs.load()}
+            />
+          ),
+          main: layout.showsDocument() ? (
+            <DocumentPane docs={app.docs} focused={false} />
+          ) : (
+            <TicketPane
+              board={app.board.store}
+              selection={app.board.selection}
+              focused={layout.focus === Focus.Sessions}
+              onLink={(href) => app.docs.followFromTicket(href)}
+            >
               <SessionsList
                 rows={app.sessions.rows()}
                 cursor={cursor}
@@ -121,10 +141,12 @@ export const App = ({ app, packaged }: Props) => {
           ))}
           project={project}
           warning={warning}
+          notice={notice}
         />
       }
       keyBar={picker === undefined ? keyBar : <SessionsKeyBar picking />}
       board={shown.board}
+      docs={shown.docs}
       main={shown.main}
       dock={
         hasDock ? <DockScreen hosting={app.hosting} sessions={sessions} focused={layout.focus === Focus.Dock} onFocus={() => app.focusOn(Focus.Dock)} /> : null

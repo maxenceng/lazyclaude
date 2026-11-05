@@ -1,0 +1,72 @@
+# 87. The desktop window follows a document's links itself and opens the rest through Tauri's opener
+
+Date: 2026-11-05
+
+## Status
+
+Accepted. Builds on ADR 0051 (the mouse; a second click is `enter`), ADR 0057 (the dumb relay) and ADR 0086 (a Tauri plugin
+for a platform capability the webview lacks).
+
+## Context
+
+The TUI shows a document's markdown and follows none of its links: it has no pointer to follow them with, and no way to open
+a browser from a terminal pane. The desktop frontend has both, and a webview that follows an `<a href>` navigates away from
+the application. A document's links are of four kinds: to another document of the tree, to a file outside it, to a web
+address, and to a heading by its fragment.
+
+`docs/watch` and `docs/changed` already carry every document's text, so a link to a document of the tree needs no new
+method. They carry no reason for a path they do not list, and the sidecar has no read of one document.
+
+## Decision
+
+- **No link navigates the webview.** Every `<a>` the markdown primitive renders cancels the click and hands its `href` to the
+  page; the middle button's click is cancelled and follows nothing. Raw HTML in a document or a ticket is text, never markup.
+- **A relative link is resolved against the document that holds it, then against `docs/`.** A path that lands under
+  `docs/` names a document by its path under `docs/`, opens in the main view and selects its row in the tree, unfolding
+  the folders above it, and the main view shows it, so the Docs panel takes focus whichever pane held the link. Only a
+  markdown path names a document; any other file or folder under `docs/`, as anything else, is outside the tree. A path
+  starting with `/` starts at the project root, as GitHub reads it. A ticket's body has no document, so its relative
+  links start at the project root; `docs/guide/intro.md` there is the same document. A link that is only a fragment, in a
+  ticket's body, names a heading of the ticket; it is not followed, and a notice says it was not.
+- **`docs` owns every link the window follows**, a ticket's included: the opener and the four kinds of link sit in one
+  place, and the board only hands an `href` up. A second markdown surface reads its links through the same controller.
+  Asked in review whether the opener cases belong to composition instead, the answer was the behaviour, which this already
+  is: a web address opens in the browser, another file in its application, a document in the tree.
+- **The tree's selection is the only state.** There is no history and no back: following a link moves the selection, as
+  `j` would. The selection is a row by kind and path, so it survives the tree being read again; it may name a path the
+  tree does not list.
+- **A fragment names a heading by its slug**, as GitHub writes it: lowercased, punctuation dropped, spaces to hyphens, a
+  repeated slug numbered `-1`, `-2`. The TUI derives no slug, so this one is ours. A fragment with no matching heading
+  opens the document at its top and raises a notice.
+- **A link to a markdown path under `docs/` the tree does not list shows as an unreadable document**: its path, and the
+  reason `No document at this path in the docs tree.` The reason is the window's own words, since the sidecar says nothing.
+  `docs/backlog/` is not listed, so a link there reads the same.
+- **Outside the tree, `tauri-plugin-opener` opens it.** A file or folder goes to `openPath`, which on Linux is `xdg-open`;
+  an `http` or `https` address goes to `openUrl`, the system browser. No `mailto:`, `javascript:` or other scheme is opened:
+  a notice says it did not. A failure of the opener is a notice with its reason, never silence. The static capability
+  grants `opener:allow-open-url` for `http://**` and `https://**`. `opener:allow-open-path` is granted at launch, by a
+  runtime capability scoped to `<project>/**` (`src-tauri/src/opening.rs`), because a ticket's body is anyone's on a public
+  repository and could otherwise hand `xdg-open` any absolute path. The project is canonicalised and glob-escaped, since
+  the opener matches a path only after resolving its symlinks and `..`. A link outside the project is refused by the
+  opener, and that refusal is the notice's reason. The opener is configured with `requireLiteralLeadingDot: false`, or the
+  scope would refuse every path with a component starting with `.`, such as `.github/` or a project under `~/.local/`.
+- **What a link did not do is a notice, not a warning.** A warning is the backend's degraded mode, with its count; a
+  notice is the window's word on one gesture. It shows on the status line beside the warning, never replacing it, and the
+  next selection (a ticket or a row of the tree) or link followed clears it. A clipboard that refuses a copy or a paste
+  raises one too.
+- **The markdown is a small renderer of our own** in `design-system/markdown.ts`: headings, paragraphs, fenced code, lists,
+  quotes, rules, pipe tables, and inline code, links, strong and emphasis. Rejected: `react-markdown` or `marked`, each a
+  tree of packages for the few blocks these documents use, and each needing a sanitiser or plugins to keep raw HTML out and
+  to give headings stable ids. One primitive sets a document and a ticket's body.
+
+## Consequences
+
+- Nested lists, reference-style links, footnotes and raw HTML are shown as the text they are written as, until a document
+  needs them.
+- A link to a document the tree lists but the sidecar could not read shows that document's own reason, and no notice
+  about its fragment.
+- A folder's name and its count of documents are derived again in `docs/rows.ts`, since `FolderView` serializes neither.
+- The opener is behind `LinkOpener`, as the clipboard is behind `Clipboard`; tests record what it was asked to open.
+- Checked by the tests in `docs/` and the window's, not in the packaged window: the packaged `xdg-open` and browser hand-offs,
+  and the runtime path scope, are untried.
+- A notice the window raises on its own, with nothing selected or followed after it, stays until the next gesture does.

@@ -9,7 +9,7 @@ import {
   Pane,
   StatusHeading,
   Text,
-  TicketList,
+  Rows,
   TicketRow,
   UnreadableRow,
 } from '../design-system';
@@ -67,16 +67,17 @@ export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus
 
 interface TicketProps extends ViewProps {
   focused: boolean;
+  onLink: (href: string) => void;
   children?: ReactNode;
 }
 
 /** The ticket under the cursor, detailed, and whatever the screen shows beneath it. */
-export const TicketPane = ({ board, selection, focused, children }: TicketProps) => {
+export const TicketPane = ({ board, selection, focused, onLink, children }: TicketProps) => {
   const { t } = useTranslation('board');
   const { ticket } = useBoardView({ board, selection });
   return (
     <Pane title={t('ticket.title')} focused={focused}>
-      {ticket === undefined ? <Text tone="dim">{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} />}
+      {ticket === undefined ? <Text tone="dim">{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} onLink={onLink} />}
       {children}
     </Pane>
   );
@@ -126,7 +127,7 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
       {orderedGroups(view).map((group) => (
         <div key={group.status}>
           <StatusHeading status={t(`status.${group.status}`)} count={group.tickets.length} />
-          <TicketList>
+          <Rows>
             {(isFolded(group.status) ? [] : group.tickets).map((ticket) => (
               <TicketRow
                 key={ticket.id}
@@ -138,24 +139,24 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
                 onSelect={() => onPress(ticket.id)}
               />
             ))}
-          </TicketList>
+          </Rows>
         </div>
       ))}
       {view.unreadable.length === 0 ? null : (
         <div>
           <StatusHeading status={t('board.unreadable')} count={view.unreadable.length} />
-          <TicketList>
+          <Rows>
             {view.unreadable.map((ticket) => (
               <UnreadableRow key={ticket.id} id={ticket.id} reason={ticket.reason} />
             ))}
-          </TicketList>
+          </Rows>
         </div>
       )}
     </>
   );
 };
 
-const TicketDetail = ({ ticket }: { ticket: TicketView }) => {
+const TicketDetail = ({ ticket, onLink }: { ticket: TicketView; onLink: (href: string) => void }) => {
   const { t } = useTranslation('board');
   const facts = [
     ticket.id,
@@ -163,5 +164,5 @@ const TicketDetail = ({ ticket }: { ticket: TicketView }) => {
     ticket.context.kind === 'contextName' ? ticket.context.value : undefined,
     ticket.type.kind === 'typeName' ? ticket.type.value : undefined,
   ].filter((fact): fact is string => fact !== undefined);
-  return <Detail facts={facts} title={ticket.title} body={ticket.body.kind === 'body' ? ticket.body.value : undefined} />;
+  return <Detail facts={facts} title={ticket.title} body={ticket.body.kind === 'body' ? ticket.body.value : undefined} onLink={onLink} />;
 };

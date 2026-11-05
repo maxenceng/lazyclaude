@@ -1,5 +1,6 @@
 import type { Terminal } from '@xterm/xterm';
 import type { Client, HostStart, ListingPayload, PaneSize, SessionPayload, SessionsView, Verb } from '../protocol';
+import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import { Dock } from './dock';
 import { type Clipboard, Emulator } from './emulator';
@@ -15,6 +16,7 @@ export interface HostingDeps {
   newTerminal: () => { terminal: Terminal; fit: { fit(): void } };
   reserved: (press: PaneKeyPress) => (() => void) | undefined;
   clipboard: Clipboard;
+  notices: NoticeStore;
 }
 
 /** A start the sidecar could not answer: what it said, and the same start again. */
@@ -97,8 +99,8 @@ export class Hosting {
       return existing;
     }
     const { terminal, fit } = this.deps.newTerminal();
-    const { client, memory, reserved, clipboard } = this.deps;
-    const emulator = new Emulator(session, terminal, { client, memory, fit, reserved, clipboard });
+    const { client, memory, reserved, clipboard, notices } = this.deps;
+    const emulator = new Emulator(session, terminal, { client, memory, fit, reserved, clipboard, notices });
     this.emulators.set(session, emulator);
     emulator.mouseReported.subscribe(() => this.refreshMouse());
     return emulator;

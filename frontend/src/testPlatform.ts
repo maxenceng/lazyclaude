@@ -2,6 +2,7 @@ import { Terminal } from '@xterm/xterm';
 import type { Platform } from './platform';
 import type { Clipboard } from './session/emulator';
 import { StorageModeMemory } from './session/modeMemory';
+import { RecordingOpener } from './docs/recordingOpener';
 import type { FocusSource } from './window/windowFocus';
 
 /** A clipboard in memory: what was copied, and the text a paste reads. */
@@ -44,6 +45,7 @@ export class TestPlatform implements Platform {
   readonly memory = new StorageModeMemory(sessionStorage);
   readonly fits: Array<{ fit: () => void }> = [];
   readonly clipboard = new MemoryClipboard();
+  readonly opener = new RecordingOpener();
   readonly focus: SetFocus;
 
   constructor(focused: boolean) {

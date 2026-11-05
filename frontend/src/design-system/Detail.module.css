@@ -19,8 +19,3 @@
   padding: var(--space-2) 0 var(--space-4);
   max-width: 900px;
 }
-
-.body {
-  white-space: pre-wrap;
-  max-width: 900px;
-}
