@@ -136,6 +136,21 @@ class SidecarProtocolTest {
     }
 
     @Test
+    void echoes_what_is_sent_to_a_hosted_claude_while_its_pty_is_resized() throws Exception {
+        try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
+            String session = sidecar.startedSession();
+
+            sidecar.send(notification("pty/resize", "{\"session\":\"%s\",\"cols\":90,\"rows\":20}".formatted(session)));
+            sidecar.send(notification("pty/input", "{\"session\":\"%s\",\"data\":\"eA==\"}".formatted(session)));
+
+            assertThat(sidecar.awaitResizes(1)).extracting(StubResize::size).containsExactly("20 90");
+            assertThat(sidecar.awaitOutputContaining("x"))
+                    .as("a byte the stand-in read as the resize landed is echoed, not dropped")
+                    .contains("x");
+        }
+    }
+
+    @Test
     void repaints_by_shrinking_the_pty_one_row_and_restoring_it_after_the_gap() throws Exception {
         try (SpawnedSidecar sidecar = SpawnedSidecar.inFixtureProject(root)) {
             String session = sidecar.startedSession();
