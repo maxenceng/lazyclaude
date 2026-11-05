@@ -1,6 +1,6 @@
 .line {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
   gap: var(--space-5);
   padding: var(--space-3) var(--space-4);
@@ -22,6 +22,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+.warning {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50vw;
+}
+
 .project {
   color: var(--dim);
   white-space: nowrap;
@@ -36,6 +44,6 @@
   }
 
   .line {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto auto 1fr;
   }
 }

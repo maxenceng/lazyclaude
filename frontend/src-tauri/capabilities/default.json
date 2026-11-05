@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The main window may call the relay's commands and listen to window events.",
+  "description": "The main window may call the relay's commands, listen to window events, and read and write the clipboard as text.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "clipboard-manager:allow-read-text", "clipboard-manager:allow-write-text"]
 }

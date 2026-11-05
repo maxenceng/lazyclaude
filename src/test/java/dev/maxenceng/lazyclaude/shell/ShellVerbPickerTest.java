@@ -20,19 +20,24 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOnTicket;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.startedTicketPayload;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.published.MergeState;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 
@@ -179,6 +184,18 @@ class ShellVerbPickerTest {
         shell.mergedPullRequestsChanged(noMergedPullRequestsView());
 
         assertThat(Screen.of(shell).text()).contains("│ › respond").doesNotContain("checking PR");
+    }
+
+    @Test
+    void shouldAskWithTheMergeUnknownUntilReviewsMergedReadLands() {
+        SessionQuery screens = blankScreens();
+        Shell shell = shellOnTicket(ticketViewIn(Status.IN_REVIEW), emptySessionsView(), hosting, screens);
+
+        shell.press(key('n'));
+
+        ArgumentCaptor<NewSessionPayload> asked = ArgumentCaptor.forClass(NewSessionPayload.class);
+        verify(screens, atLeastOnce()).newSessionFor(asked.capture());
+        assertThat(asked.getAllValues()).extracting(NewSessionPayload::merged).containsOnly(MergeState.UNKNOWN);
     }
 
     @Test

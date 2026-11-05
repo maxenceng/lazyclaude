@@ -1,0 +1,44 @@
+{
+  "sessions": {
+    "title": "sessions",
+    "older": "older sessions"
+  },
+  "row": {
+    "hosted": "hosted",
+    "live": "hosted in another window",
+    "new": "new session",
+    "starting": "starting",
+    "untitled": "session {{id}}"
+  },
+  "picker": {
+    "title": "start with"
+  },
+  "verb": {
+    "REFINE": "refine",
+    "START": "start",
+    "REVIEW": "review",
+    "DESIGN": "design",
+    "RESPOND": "respond",
+    "DONE": "done"
+  },
+  "failure": {
+    "title": "The session could not be started",
+    "retry": "Retry"
+  },
+  "dock": {
+    "title": "Dock",
+    "terminal": "session terminal",
+    "starting": "starting"
+  },
+  "keyBar": {
+    "move": "j/k move",
+    "open": "enter open",
+    "back": "esc back",
+    "new": "n new session",
+    "start": "enter start",
+    "cancel": "esc cancel",
+    "copy": "ctrl+shift+c copy",
+    "paste": "ctrl+shift+v paste",
+    "select": "shift+drag select"
+  }
+}

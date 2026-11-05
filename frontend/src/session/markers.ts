@@ -15,7 +15,7 @@ const STRENGTH: readonly LampColour[] = [LampColour.Permission, LampColour.Input
 
 const byStrength = (a: { colour: LampColour }, b: { colour: LampColour }) => STRENGTH.indexOf(a.colour) - STRENGTH.indexOf(b.colour);
 
-const colourOf = (session: LiveSessionView): LampColour => {
+export const colourOf = (session: LiveSessionView): LampColour => {
   switch (session.state.kind) {
     case 'waitingForPermission':
       return LampColour.Permission;

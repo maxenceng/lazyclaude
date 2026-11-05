@@ -5,10 +5,6 @@
     "ticketTitle": "Ticket",
     "noTicketSelected": "No ticket selected."
   },
-  "keyBar": {
-    "move": "j/k move",
-    "open": "enter open"
-  },
   "configuration": {
     "fault": "The configuration could not be read",
     "retry": "Retry"

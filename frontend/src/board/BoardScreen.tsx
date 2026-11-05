@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -19,38 +20,65 @@ import type { BoardStore } from './boardStore';
 import { isFolded, orderedGroups, selectedIn } from './rows';
 import type { Selection } from './selection';
 
-interface Props {
+interface ViewProps {
   board: BoardStore;
   selection: Selection;
-  markerOf: (ticket: string) => LampColour | undefined;
-  onOpen: (ticket: string) => void;
-  onRetry: () => void;
 }
 
-/** The Board: the tickets by status with the one under the cursor detailed beside them. */
-export const BoardScreen = ({ board, selection, markerOf, onOpen, onRetry }: Props) => {
-  const { t } = useTranslation('board');
+const useBoardView = ({ board, selection }: ViewProps) => {
   const state = useStore(board.state);
   const chosen = useStore(selection.selected);
   const populated = state.shown();
   const cursor = populated === undefined ? undefined : selectedIn(populated, chosen);
   const ticket = populated?.groups.flatMap((group) => group.tickets).find((candidate) => candidate.id === cursor);
+  return { state, populated, cursor, ticket };
+};
 
-  const press = (id: string) => (id === cursor ? onOpen(id) : selection.select(id));
+interface BoardProps extends ViewProps {
+  focused: boolean;
+  markerOf: (ticket: string) => LampColour | undefined;
+  onOpen: (ticket: string) => void;
+  onFocus: () => void;
+  onRetry: () => void;
+}
 
+/** The Board: the tickets by status. A press on the selected ticket opens it. */
+export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus, onRetry }: BoardProps) => {
+  const { t } = useTranslation('board');
+  const { state, populated, cursor } = useBoardView({ board, selection });
   return (
-    <>
-      <Pane title={t('board.title')} focused>
-        {populated === undefined ? (
-          <Unread state={state} onRetry={onRetry} />
-        ) : (
-          <Tickets view={populated} cursor={cursor} markerOf={markerOf} onPress={press} />
-        )}
-      </Pane>
-      <Pane title={t('ticket.title')} focused={false}>
-        {ticket === undefined ? <Text tone="dim">{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} />}
-      </Pane>
-    </>
+    <Pane title={t('board.title')} focused={focused}>
+      {populated === undefined ? (
+        <Unread state={state} onRetry={onRetry} />
+      ) : (
+        <Tickets
+          view={populated}
+          cursor={cursor}
+          markerOf={markerOf}
+          onPress={(id) => {
+            onFocus();
+            return id === cursor ? onOpen(id) : selection.select(id);
+          }}
+        />
+      )}
+    </Pane>
+  );
+};
+
+interface TicketProps extends ViewProps {
+  focused: boolean;
+  children?: ReactNode;
+}
+
+/** The ticket under the cursor, detailed, and whatever the screen shows beneath it. */
+export const TicketPane = ({ board, selection, focused, children }: TicketProps) => {
+  const { t } = useTranslation('board');
+  const { ticket } = useBoardView({ board, selection });
+  return (
+    <Pane title={t('ticket.title')} focused={focused}>
+      {ticket === undefined ? <Text tone="dim">{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} />}
+      {children}
+    </Pane>
   );
 };
 

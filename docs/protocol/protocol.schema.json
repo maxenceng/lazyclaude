@@ -59,11 +59,11 @@
           "required" : [ "params", "result" ],
           "additionalProperties" : false
         },
-        "session/resume" : {
+        "session/resumePast" : {
           "type" : "object",
           "properties" : {
             "params" : {
-              "$ref" : "#/$defs/session.ResumeHostedPayload"
+              "$ref" : "#/$defs/session.ResumePastPayload"
             },
             "result" : {
               "$ref" : "#/$defs/session.HostStart"
@@ -72,14 +72,14 @@
           "required" : [ "params", "result" ],
           "additionalProperties" : false
         },
-        "session/resumeInTicketWorktree" : {
+        "session/newSessionFor" : {
           "type" : "object",
           "properties" : {
             "params" : {
-              "$ref" : "#/$defs/session.ResumeTicketHostedPayload"
+              "$ref" : "#/$defs/session.NewSessionPayload"
             },
             "result" : {
-              "$ref" : "#/$defs/session.HostStart"
+              "$ref" : "#/$defs/session.NewSessionView"
             }
           },
           "required" : [ "params", "result" ],
@@ -378,7 +378,7 @@
           "additionalProperties" : false
         }
       },
-      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startTicket", "session/resume", "session/resumeInTicketWorktree", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/threadsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/pendingInDiff", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
+      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startTicket", "session/resumePast", "session/newSessionFor", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/threadsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/pendingInDiff", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
       "additionalProperties" : false
     },
     "inputs" : {
@@ -413,9 +413,19 @@
           },
           "required" : [ "params" ],
           "additionalProperties" : false
+        },
+        "session/watching" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.WatchedPayload"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
         }
       },
-      "required" : [ "pty/input", "pty/resize", "session/repaint" ],
+      "required" : [ "pty/input", "pty/resize", "session/repaint", "session/watching" ],
       "additionalProperties" : false
     },
     "notifications" : {
@@ -1976,6 +1986,16 @@
         "propertyName" : "kind"
       }
     },
+    "session.ListingPayload" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.TicketListingPayload"
+      }, {
+        "$ref" : "#/$defs/session.NoTicketListingPayload"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
     "session.LiveSessionView" : {
       "type" : "object",
       "properties" : {
@@ -2013,6 +2033,10 @@
       "required" : [ "id", "pid", "name", "directory", "startedAt", "age", "version", "state", "links" ],
       "additionalProperties" : false
     },
+    "session.MergeState" : {
+      "type" : "string",
+      "enum" : [ "MERGED", "NOT_MERGED", "UNKNOWN" ]
+    },
     "session.Modifier" : {
       "type" : "string",
       "enum" : [ "CTRL", "ALT", "SHIFT" ]
@@ -2034,11 +2058,53 @@
       "required" : [ "root", "size" ],
       "additionalProperties" : false
     },
+    "session.NewSessionPayload" : {
+      "type" : "object",
+      "properties" : {
+        "sessions" : {
+          "$ref" : "#/$defs/session.SessionPayload"
+        },
+        "ticket" : {
+          "type" : "string"
+        },
+        "verbs" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/board.Verb"
+          }
+        },
+        "merged" : {
+          "$ref" : "#/$defs/session.MergeState"
+        }
+      },
+      "required" : [ "sessions", "ticket", "verbs", "merged" ],
+      "additionalProperties" : false
+    },
+    "session.NewSessionView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.VerbChoiceView"
+      }, {
+        "$ref" : "#/$defs/session.UnlinkedStartView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
     "session.NoFirstPrompt" : {
       "type" : "object",
       "properties" : {
         "kind" : {
           "const" : "noFirstPrompt"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.NoTicketListingPayload" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noTicketListingPayload"
         }
       },
       "required" : [ "kind" ],
@@ -2069,6 +2135,16 @@
       "properties" : {
         "kind" : {
           "const" : "noWaitingReason"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.NoWatchedSessionPayload" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noWatchedSessionPayload"
         }
       },
       "required" : [ "kind" ],
@@ -2241,11 +2317,11 @@
       "required" : [ "action", "chord" ],
       "additionalProperties" : false
     },
-    "session.ResumeHostedPayload" : {
+    "session.ResumePastPayload" : {
       "type" : "object",
       "properties" : {
-        "root" : {
-          "type" : "string"
+        "sessions" : {
+          "$ref" : "#/$defs/session.SessionPayload"
         },
         "session" : {
           "type" : "string"
@@ -2253,33 +2329,14 @@
         "recordedDirectory" : {
           "type" : "string"
         },
-        "size" : {
-          "$ref" : "#/$defs/session.PaneSize"
-        }
-      },
-      "required" : [ "root", "session", "recordedDirectory", "size" ],
-      "additionalProperties" : false
-    },
-    "session.ResumeTicketHostedPayload" : {
-      "type" : "object",
-      "properties" : {
-        "session" : {
-          "type" : "string"
-        },
-        "recordedDirectory" : {
-          "type" : "string"
-        },
-        "root" : {
-          "type" : "string"
-        },
-        "branch" : {
-          "type" : "string"
+        "listing" : {
+          "$ref" : "#/$defs/session.ListingPayload"
         },
         "size" : {
           "$ref" : "#/$defs/session.PaneSize"
         }
       },
-      "required" : [ "session", "recordedDirectory", "root", "branch", "size" ],
+      "required" : [ "sessions", "session", "recordedDirectory", "listing", "size" ],
       "additionalProperties" : false
     },
     "session.SessionExitView" : {
@@ -2412,6 +2469,19 @@
       "required" : [ "ticket", "verb" ],
       "additionalProperties" : false
     },
+    "session.TicketListingPayload" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "ticketListingPayload"
+        },
+        "branch" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "branch" ],
+      "additionalProperties" : false
+    },
     "session.TranscriptReading" : {
       "oneOf" : [ {
         "$ref" : "#/$defs/session.ReadableTranscript"
@@ -2445,6 +2515,16 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
+    "session.UnlinkedStartView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unlinkedStart"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
     "session.UnreadableTranscript" : {
       "type" : "object",
       "properties" : {
@@ -2456,6 +2536,25 @@
         }
       },
       "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "session.VerbChoiceView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "verbChoice"
+        },
+        "verbs" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/board.Verb"
+          }
+        },
+        "preselected" : {
+          "$ref" : "#/$defs/board.Verb"
+        }
+      },
+      "required" : [ "kind", "verbs", "preselected" ],
       "additionalProperties" : false
     },
     "session.Version" : {
@@ -2518,6 +2617,29 @@
         }
       },
       "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "session.WatchedPayload" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.WatchedSessionPayload"
+      }, {
+        "$ref" : "#/$defs/session.NoWatchedSessionPayload"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.WatchedSessionPayload" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "watchedSessionPayload"
+        },
+        "session" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "session" ],
       "additionalProperties" : false
     },
     "session.YourTurn" : {

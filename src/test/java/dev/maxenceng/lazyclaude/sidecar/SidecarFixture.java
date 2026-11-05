@@ -28,6 +28,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningQuery;
 
 public final class SidecarFixture {
@@ -72,6 +73,10 @@ public final class SidecarFixture {
 
     public static int exitCodeOf(BoardQuery board, String... received) {
         return sidecarOver(board).run(stdin(received), new ByteArrayOutputStream());
+    }
+
+    public static List<String> linesWritten(WatchedSessionCommand watching, String... received) {
+        return linesWritten(new Sidecar(sidecarContexts(watching)), received);
     }
 
     private static List<String> linesWritten(Sidecar sidecar, String... received) {

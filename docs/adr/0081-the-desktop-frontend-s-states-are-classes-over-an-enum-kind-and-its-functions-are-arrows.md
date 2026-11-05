@@ -4,7 +4,8 @@ Date: 2026-11-02
 
 ## Status
 
-Accepted. Builds on ADR 0057 and ADR 0079.
+Accepted. Builds on ADR 0057 and ADR 0079. Amended by ADR 0085: behaviour that keeps state is a class with private
+methods, and no named function is declared inside another.
 
 ## Context
 

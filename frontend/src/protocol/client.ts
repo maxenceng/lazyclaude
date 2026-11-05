@@ -10,7 +10,7 @@ import {
 } from './generated/protocol';
 import { type Attached, type Relay, type RelayMessage, RelayMessageKind } from './relay';
 import { Connecting, Exited, Ready, Refused, type Status, StatusKind } from './status';
-import { createStore, type Store } from '../shared/store';
+import { Store } from '../shared/store';
 
 export class RpcError extends Error {
   constructor(
@@ -54,44 +54,87 @@ export interface Client {
   subscribe<N extends NotificationName>(name: N, handler: (params: NotificationParams<N>) => void): () => void;
 }
 
-export const createClient = (relay: Relay): Client => {
-  const status = createStore<Status>(new Connecting());
-  const pending = new Map<number, Pending>();
-  const waiting: Array<() => void> = [];
-  const handlers = new Map<string, Set<(params: never) => void>>();
+/** The sidecar's JSON-RPC over the relay: calls answered by id, inputs sent, pushes handed to their subscribers, and the status. */
+export class ProtocolClient implements Client {
+  readonly status: Store<Status> = new Store<Status>(new Connecting());
+  private readonly pending = new Map<number, Pending>();
+  private readonly waiting: Array<() => void> = [];
+  private readonly handlers = new Map<string, Set<(params: never) => void>>();
   // A page reloaded onto a running sidecar starts past the ids the page before it may still have in flight.
-  let nextId = Date.now() * IDS_PER_MILLISECOND;
+  private nextId = Date.now() * IDS_PER_MILLISECOND;
 
-  const failAll = () => {
-    const error = new SidecarUnavailableError(status.get());
-    pending.forEach((call) => call.reject(error));
-    pending.clear();
-    waiting.length = 0;
-  };
+  constructor(private readonly relay: Relay) {}
 
-  const deliver = (write: () => void) => {
-    const current = status.get();
+  async connect(): Promise<void> {
+    this.onAttached(await this.relay.attach((message) => this.onMessage(message)));
+  }
+
+  async restart(): Promise<void> {
+    this.failAll();
+    this.status.set(new Connecting());
+    this.onAttached(await this.relay.restart((message) => this.onMessage(message)));
+  }
+
+  call<M extends MethodName>(method: M, params: Params<M>): Promise<Result<M>> {
+    const current = this.status.get();
+    if (current.isClosed()) {
+      return Promise.reject(new SidecarUnavailableError(current));
+    }
+    const id = this.nextId++;
+    return new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.deliver(() => {
+        this.write({ id, method, params }).catch((error: unknown) => {
+          this.pending.delete(id);
+          reject(error instanceof Error ? error : new Error(String(error)));
+        });
+      });
+    });
+  }
+
+  send<I extends InputName>(input: I, params: InputParams<I>): void {
+    this.deliver(() => void this.write({ method: input, params }));
+  }
+
+  subscribe<N extends NotificationName>(name: N, handler: (params: NotificationParams<N>) => void): () => void {
+    const set = this.handlers.get(name) ?? new Set();
+    set.add(handler);
+    this.handlers.set(name, set);
+    return () => set.delete(handler);
+  }
+
+  private failAll(): void {
+    const error = new SidecarUnavailableError(this.status.get());
+    this.pending.forEach((call) => call.reject(error));
+    this.pending.clear();
+    this.waiting.length = 0;
+  }
+
+  private deliver(write: () => void): void {
+    const current = this.status.get();
     if (current.isReady()) {
       write();
     } else if (!current.isClosed()) {
-      waiting.push(write);
+      this.waiting.push(write);
     }
-  };
+  }
 
-  const write = (message: object) => relay.send(JSON.stringify({ jsonrpc: '2.0', ...message }));
+  private write(message: object): Promise<void> {
+    return this.relay.send(JSON.stringify({ jsonrpc: '2.0', ...message }));
+  }
 
-  const onReady = (params: unknown) => {
+  private onReady(params: unknown): void {
     const actual = (params as { protocol: number }).protocol;
     if (actual !== PROTOCOL_VERSION) {
-      status.set(new Refused(PROTOCOL_VERSION, actual));
-      failAll();
+      this.status.set(new Refused(PROTOCOL_VERSION, actual));
+      this.failAll();
       return;
     }
-    status.set(new Ready());
-    waiting.splice(0).forEach((send) => send());
-  };
+    this.status.set(new Ready());
+    this.waiting.splice(0).forEach((send) => send());
+  }
 
-  const onLine = (line: string) => {
+  private onLine(line: string): void {
     let message: Incoming;
     try {
       message = JSON.parse(line) as Incoming;
@@ -99,76 +142,39 @@ export const createClient = (relay: Relay): Client => {
       return;
     }
     if (message.id !== undefined) {
-      const call = pending.get(message.id);
-      pending.delete(message.id);
+      const call = this.pending.get(message.id);
+      this.pending.delete(message.id);
       if (message.error) {
         call?.reject(new RpcError(message.error.code, message.error.message));
       } else {
         call?.resolve(message.result as never);
       }
     } else if (message.method === READY) {
-      onReady(message.params);
+      this.onReady(message.params);
     } else if (message.method !== undefined) {
-      handlers.get(message.method)?.forEach((handler) => handler(message.params as never));
+      this.handlers.get(message.method)?.forEach((handler) => handler(message.params as never));
     }
-  };
+  }
 
-  const onExit = (code: number | null, stderr: string[]) => {
-    status.set(new Exited(code, stderr));
-    failAll();
-  };
+  private onExit(code: number | null, stderr: string[]): void {
+    this.status.set(new Exited(code, stderr));
+    this.failAll();
+  }
 
-  const onMessage = (message: RelayMessage) => {
+  private onMessage(message: RelayMessage): void {
     if (message.kind === RelayMessageKind.Lines) {
-      message.lines.forEach(onLine);
+      message.lines.forEach((line) => this.onLine(line));
     } else {
-      onExit(message.code, message.stderr);
+      this.onExit(message.code, message.stderr);
     }
-  };
+  }
 
-  const onAttached = (attached: Attached) => {
+  private onAttached(attached: Attached): void {
     if (attached.ready !== null) {
-      onLine(attached.ready);
+      this.onLine(attached.ready);
     }
     if (attached.exit !== null) {
-      onExit(attached.exit.code, attached.exit.stderr);
+      this.onExit(attached.exit.code, attached.exit.stderr);
     }
-  };
-
-  return {
-    status,
-    async connect() {
-      onAttached(await relay.attach(onMessage));
-    },
-    async restart() {
-      failAll();
-      status.set(new Connecting());
-      onAttached(await relay.restart(onMessage));
-    },
-    call(method, params) {
-      const current = status.get();
-      if (current.isClosed()) {
-        return Promise.reject(new SidecarUnavailableError(current));
-      }
-      const id = nextId++;
-      return new Promise((resolve, reject) => {
-        pending.set(id, { resolve, reject });
-        deliver(() => {
-          write({ id, method, params }).catch((error: unknown) => {
-            pending.delete(id);
-            reject(error instanceof Error ? error : new Error(String(error)));
-          });
-        });
-      });
-    },
-    send(input, params) {
-      deliver(() => void write({ method: input, params }));
-    },
-    subscribe(name, handler) {
-      const set = handlers.get(name) ?? new Set();
-      set.add(handler);
-      handlers.set(name, set);
-      return () => set.delete(handler);
-    },
-  };
-};
+  }
+}

@@ -5,6 +5,8 @@ Date: 2026-10-16
 ## Status
 
 Accepted. Settles the verb and worktree questions of LAZY-9, LAZY-7 and LAZY-15, and departs from LAZY-9 on the pull request query.
+Amended by ADR 0084: `session` also decides that a ticket with no verb starts an unlinked session and where a past session
+resumes, and whether the branch is merged is a `MergeState` whose `UNKNOWN` never preselects `done`.
 
 ## Context
 

@@ -1,51 +1,52 @@
 import { describe, expect, it } from 'vitest';
 import { boardFixture, ticketFixture } from './board/fixtures';
-import { createApp } from './app';
+import { AppModel } from './app';
 import { FaultedConfiguration } from './keys/configurationState';
 import { Connecting, Exited, Ready } from './protocol';
 import { fakeClient } from './test/fakeClient';
+import { testPlatform } from './testPlatform';
 
 describe('the app', () => {
   it('reads nothing until the sidecar is ready', () => {
     const client = fakeClient(new Connecting());
-    createApp(client).start();
+    new AppModel(client, testPlatform()).start();
     expect(client.calls).toEqual([]);
   });
 
   it('loads the board when the sidecar becomes ready', () => {
     const client = fakeClient(new Connecting());
-    createApp(client).start();
+    new AppModel(client, testPlatform()).start();
     client.setStatus(new Ready());
-    expect(client.calls.map((call) => call.method)).toEqual(['board/watch', 'session/configuration']);
+    expect(client.calls.map((call) => call.method)).toEqual(['board/watch', 'session/configuration', 'warning/watch']);
   });
 
   it('loads the board at once when the page reloaded onto a ready sidecar', () => {
     const client = fakeClient(new Ready());
-    createApp(client).start();
-    expect(client.calls.map((call) => call.method)).toEqual(['board/watch', 'session/configuration']);
+    new AppModel(client, testPlatform()).start();
+    expect(client.calls.map((call) => call.method)).toEqual(['board/watch', 'session/configuration', 'warning/watch']);
   });
 
   it('watches the sessions of the project once the board shows tickets', async () => {
     const client = fakeClient(new Connecting());
-    createApp(client).start();
+    new AppModel(client, testPlatform()).start();
     client.setStatus(new Ready());
     client.answerNext(boardFixture([ticketFixture({ id: 'PROJ-1' }), ticketFixture({ id: 'PROJ-2' })]));
     await Promise.resolve();
     await Promise.resolve();
-    expect(client.calls[2]).toEqual({ method: 'session/watch', params: { root: '/p', ticketIds: ['PROJ-1', 'PROJ-2'] } });
+    expect(client.calls[3]).toEqual({ method: 'session/watch', params: { root: '/p', ticketIds: ['PROJ-1', 'PROJ-2'] } });
   });
 
   it('loads the board again after a restart reaches ready', () => {
     const client = fakeClient(new Ready());
-    createApp(client).start();
+    new AppModel(client, testPlatform()).start();
     client.setStatus(new Exited(1, []));
     client.setStatus(new Ready());
-    expect(client.calls.map((call) => call.method)).toEqual(['board/watch', 'session/configuration', 'board/watch', 'session/configuration']);
+    expect(client.calls.map((call) => call.method)).toEqual(['board/watch', 'session/configuration', 'warning/watch', 'board/watch', 'session/configuration', 'warning/watch']);
   });
 
   it('asks for the configuration once ready and reserves the chords it answers', async () => {
     const client = fakeClient(new Ready());
-    const app = createApp(client);
+    const app = new AppModel(client, testPlatform());
     app.start();
     expect(app.reserved()).toEqual([]);
     expect(client.calls.map((call) => call.method)).toContain('session/configuration');
@@ -64,19 +65,19 @@ describe('the app', () => {
 
   it('holds the fault when the configuration cannot be read, reserving no chord', async () => {
     const client = fakeClient(new Ready());
-    const app = createApp(client);
+    const app = new AppModel(client, testPlatform());
     app.start();
     client.answerNext(boardFixture([]));
     client.failNext(new Error('refused'));
     await Promise.resolve();
     await Promise.resolve();
-    expect(app.configuration.get()).toEqual(new FaultedConfiguration('refused'));
+    expect(app.configuration.state.get()).toEqual(new FaultedConfiguration('refused'));
     expect(app.reserved()).toEqual([]);
   });
 
   it('watches the sessions once a board that started empty fills through a change', async () => {
     const client = fakeClient(new Ready());
-    createApp(client).start();
+    new AppModel(client, testPlatform()).start();
     client.answerNext(boardFixture([]));
     await Promise.resolve();
     await Promise.resolve();
@@ -86,14 +87,14 @@ describe('the app', () => {
 
   it('watches the sessions after a retry that reads the board', async () => {
     const client = fakeClient(new Ready());
-    const app = createApp(client);
+    const app = new AppModel(client, testPlatform());
     app.start();
-    client.failNext(new Error('gh timed out'));
-    client.answerNext({ chords: [], desktopNotifications: true, mouse: true });
+    client.fail('board/watch', new Error('gh timed out'));
+    client.answer('session/configuration', { chords: [], desktopNotifications: true, mouse: true });
     await Promise.resolve();
     await Promise.resolve();
     void app.load();
-    client.answerNext(boardFixture([ticketFixture({ id: 'PROJ-1' })]));
+    client.answer('board/watch', boardFixture([ticketFixture({ id: 'PROJ-1' })]));
     await Promise.resolve();
     await Promise.resolve();
     expect(client.calls.map((call) => call.method)).toContain('session/watch');

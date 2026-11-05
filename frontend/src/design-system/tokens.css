@@ -20,6 +20,25 @@
   --lamp-off: #26272a;
   --lamp-off-ink: #76777a;
 
+  --terminal-ground: #0e0f10;
+  --terminal-selection: #2e4560;
+  --ansi-black: #1c1d1f;
+  --ansi-red: #b9665f;
+  --ansi-green: #6f9a78;
+  --ansi-yellow: #b09a62;
+  --ansi-blue: #6a9ccb;
+  --ansi-magenta: #a581b0;
+  --ansi-cyan: #68a5a5;
+  --ansi-white: #c9c6bf;
+  --ansi-bright-black: #6b6c70;
+  --ansi-bright-red: #cb8179;
+  --ansi-bright-green: #8db596;
+  --ansi-bright-yellow: #c9b57f;
+  --ansi-bright-blue: #8cb7de;
+  --ansi-bright-magenta: #c19dcb;
+  --ansi-bright-cyan: #8cc2c2;
+  --ansi-bright-white: #ece9e2;
+
   --focus: #5aa9e6;
   --selected: #d9d6cf;
 
@@ -32,6 +51,7 @@
   --size-label: 13px;
   --size-body: 14px;
   --size-base: 15px;
+  --size-terminal: 13px;
   --size-lamp: 24px;
   --size-title: 28px;
 

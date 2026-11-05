@@ -4,9 +4,10 @@ import java.util.List;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.MergeState;
 
 /** The verbs a ticket allows, in the order they are offered, and the one under the cursor when the choice opens. */
-public record VerbChoice(List<Verb> verbs, Verb preselected) {
+public record VerbChoice(List<Verb> verbs, Verb preselected) implements NewSession {
 
     public VerbChoice {
         Assert.notEmpty("verbs", verbs);
@@ -14,10 +15,10 @@ public record VerbChoice(List<Verb> verbs, Verb preselected) {
     }
 
     /**
-     * The choice among {@code allowed}: {@code design} while no session has run it, else {@code done} once the ticket branch is merged,
-     * else the first verb.
+     * The choice among {@code allowed}: {@code design} while no session has run it, else {@code done} once the ticket branch is known
+     * to be merged, else the first verb.
      */
-    public static VerbChoice of(List<Verb> allowed, boolean designRun, boolean merged) {
+    public static VerbChoice of(List<Verb> allowed, boolean designRun, MergeState merged) {
         Assert.notEmpty("verbs", allowed);
         return builder()
                 .verbs(allowed)
@@ -25,11 +26,11 @@ public record VerbChoice(List<Verb> verbs, Verb preselected) {
                 .build();
     }
 
-    private static Verb preselect(List<Verb> allowed, boolean designRun, boolean merged) {
+    private static Verb preselect(List<Verb> allowed, boolean designRun, MergeState merged) {
         if (allowed.contains(Verb.DESIGN) && !designRun) {
             return Verb.DESIGN;
         }
-        if (allowed.contains(Verb.DONE) && merged) {
+        if (allowed.contains(Verb.DONE) && merged == MergeState.MERGED) {
             return Verb.DONE;
         }
         return allowed.getFirst();

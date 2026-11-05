@@ -13,9 +13,14 @@
   },
   "statusLine": {
     "tiles": "live sessions",
-    "counts": "sessions by state"
+    "counts": "sessions by state",
+    "warning": "⚠ {{text}}",
+    "warningCounted": "⚠ {{count}} · {{text}}"
   },
   "unreadableRow": {
     "row": "{{id}} — {{reason}}"
+  },
+  "dockTabs": {
+    "label": "hosted sessions"
   }
 }

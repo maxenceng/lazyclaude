@@ -46,17 +46,20 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCom
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnlinkedStartView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeView;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
+import dev.maxenceng.lazyclaude.session.published.MergeState;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
@@ -329,7 +332,7 @@ final class ShellFixture {
     }
 
     static SessionQuery screensChoosing(VerbChoiceView choice) {
-        return mock(SessionQuery.class, invocation -> invocation.getMethod().getReturnType() == VerbChoiceView.class
+        return mock(SessionQuery.class, invocation -> invocation.getMethod().getReturnType() == NewSessionView.class
                 ? choice
                 : blankScreenOrNothing(invocation));
     }
@@ -342,11 +345,14 @@ final class ShellFixture {
     }
 
     private static Object blankScreenOrFirstVerb(InvocationOnMock invocation) {
-        if (invocation.getMethod().getReturnType() != VerbChoiceView.class) {
+        if (invocation.getMethod().getReturnType() != NewSessionView.class) {
             return blankScreenOrNothing(invocation);
         }
-        VerbChoicePayload payload = invocation.getArgument(0);
-        Verb preselected = payload.merged() && payload.verbs().contains(Verb.DONE) ? Verb.DONE : payload.verbs().getFirst();
+        NewSessionPayload payload = invocation.getArgument(0);
+        if (payload.verbs().isEmpty()) {
+            return new UnlinkedStartView();
+        }
+        Verb preselected = payload.merged() == MergeState.MERGED && payload.verbs().contains(Verb.DONE) ? Verb.DONE : payload.verbs().getFirst();
         return VerbChoiceView.builder().verbs(payload.verbs()).preselected(preselected).build();
     }
 

@@ -101,8 +101,6 @@ public final class ProtocolCoverageFixture {
 "session/resize",
 "session/screenOf",
 "session/send",
-"session/verbChoiceFor",
-"session/watching",
 "session/worktreeOf",
 "warning/threadStopped");
     }

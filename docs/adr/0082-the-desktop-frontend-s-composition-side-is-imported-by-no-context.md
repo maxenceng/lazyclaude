@@ -4,7 +4,8 @@ Date: 2026-11-02
 
 ## Status
 
-Accepted. Builds on ADR 0057. The frontend's twin of the backend's rule that nothing depends on the shell.
+Accepted. Builds on ADR 0057. The frontend's twin of the backend's rule that nothing depends on the shell. Amended by
+ADR 0085: `keyRouting.ts` joins the root files that compose.
 
 ## Context
 
@@ -16,7 +17,10 @@ them, and the boundary the backend enforces with its sixth hard rule did not hol
 
 - `architecture.test.ts` lists `keys` and `connection` as the composition side. No context and no shared folder may
   import one; `App.tsx`, `app.ts` and `main.tsx` may.
-- A folder that only composes contexts joins that list; a folder a context reads stays shared.
+- A folder that only composes contexts joins that list; a folder a context reads stays shared. `window/` joined it
+  with ADR 0083: the heartbeat and the window's focus are Tauri's window, which only the composition side talks to.
+- Every file at the root of `src/` composes (`App.tsx`, `app.ts`, `main.tsx`, `layout.ts`, `platform.ts`), so no
+  context and no shared folder imports one.
 
 ## Consequences
 

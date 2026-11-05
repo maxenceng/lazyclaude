@@ -3,6 +3,8 @@ package dev.maxenceng.lazyclaude.session.domain;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.ticketLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.idOf;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.linkedPastSessionListed;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.unlinkedPastSessionListed;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.clock;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.nowhereTicketWorktree;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketStart;
@@ -264,6 +266,39 @@ class HostedSessionManagerTicketTest {
         assertThat(start).isEqualTo(new NotStartedHost());
         verify(hosts, never()).spawn(any(), any(), any());
         assertThat(raisedTexts(warnings)).containsExactly("ticket worktree: fatal: already checked out; nothing started.");
+    }
+
+    @Test
+    void shouldResumeALinkedPastSessionListedUnderItsTicketInTheTicketWorktree() {
+        when(hosts.exists(worktreeDirectory())).thenReturn(false, true);
+        when(worktrees.branchExists(project(), branchName())).thenReturn(true);
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+
+        manager.resumePast(linkedPastSessionListed(), project(), sessionId(), worktreeDirectory(), Optional.of(ticketWorktree()), paneSize());
+
+        verify(worktrees).addOnBranch(project(), branchName(), worktreeDirectory());
+    }
+
+    @Test
+    void shouldResumeAnUnlinkedPastSessionWhereItRanEvenUnderATicket() {
+        when(hosts.exists(worktreeDirectory())).thenReturn(false);
+
+        HostStart start = manager.resumePast(
+                unlinkedPastSessionListed(), project(), sessionId(), worktreeDirectory(), Optional.of(ticketWorktree()), paneSize());
+
+        assertThat(start).as("an unlinked session's gone directory is not the ticket's to add back").isEqualTo(new NotStartedHost());
+        verifyNoInteractions(worktrees);
+    }
+
+    @Test
+    void shouldResumeALinkedPastSessionListedUnderNoTicketWhereItRan() {
+        when(hosts.exists(worktreeDirectory())).thenReturn(false);
+
+        HostStart start = manager.resumePast(
+                linkedPastSessionListed(), project(), sessionId(), worktreeDirectory(), Optional.empty(), paneSize());
+
+        assertThat(start).isEqualTo(new NotStartedHost());
+        verifyNoInteractions(worktrees);
     }
 
     @Test

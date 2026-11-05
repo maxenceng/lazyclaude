@@ -1,0 +1,11 @@
+.surface {
+  flex: 1;
+  min-height: 0;
+  background: var(--terminal-ground);
+  padding: var(--space-2) var(--space-3);
+  overflow: hidden;
+}
+
+.surface :global(.xterm) {
+  height: 100%;
+}

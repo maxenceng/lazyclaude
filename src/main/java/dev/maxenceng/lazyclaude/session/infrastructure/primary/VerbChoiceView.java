@@ -6,7 +6,7 @@ import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
 
 /** The verbs a ticket allows, in the order they are offered, and the one under the cursor when the picker opens. */
-public record VerbChoiceView(List<Verb> verbs, Verb preselected) {
+public record VerbChoiceView(List<Verb> verbs, Verb preselected) implements NewSessionView {
 
     static VerbChoiceView from(VerbChoice choice) {
         return builder().verbs(choice.verbs()).preselected(choice.preselected()).build();

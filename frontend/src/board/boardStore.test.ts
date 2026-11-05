@@ -3,24 +3,24 @@ import { RpcError } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
 import { boardFixture, ticketFixture } from './fixtures';
 import { EmptyBoard, FaultedBoard, LoadingBoard, PopulatedBoard, UnavailableBoard, UnavailableCause } from './boardState';
-import { createBoardStore } from './boardStore';
+import { BoardStore } from './boardStore';
 
 describe('the board store', () => {
   it('is loading until the watch answers', () => {
-    const store = createBoardStore(fakeClient());
+    const store = new BoardStore(fakeClient());
     void store.load();
     expect(store.state.get()).toEqual(new LoadingBoard());
   });
 
   it('asks board/watch from the project directory the sidecar runs in', () => {
     const client = fakeClient();
-    void createBoardStore(client).load();
+    void new BoardStore(client).load();
     expect(client.calls).toEqual([{ method: 'board/watch', params: { from: '.' } }]);
   });
 
   it('shows the board the watch answers', async () => {
     const client = fakeClient();
-    const store = createBoardStore(client);
+    const store = new BoardStore(client);
     const loaded = store.load();
     const view = boardFixture([ticketFixture({ id: 'PROJ-1' })]);
     client.answerNext(view);
@@ -30,7 +30,7 @@ describe('the board store', () => {
 
   it('shows each board/changed after it', async () => {
     const client = fakeClient();
-    const store = createBoardStore(client);
+    const store = new BoardStore(client);
     const loaded = store.load();
     client.answerNext(boardFixture([]));
     await loaded;
@@ -41,7 +41,7 @@ describe('the board store', () => {
 
   it('is empty when the board has no ticket', async () => {
     const client = fakeClient();
-    const store = createBoardStore(client);
+    const store = new BoardStore(client);
     const loaded = store.load();
     client.answerNext(boardFixture([]));
     await loaded;
@@ -50,7 +50,7 @@ describe('the board store', () => {
 
   it('is empty when its statuses are all without a ticket', async () => {
     const client = fakeClient();
-    const store = createBoardStore(client);
+    const store = new BoardStore(client);
     const loaded = store.load();
     client.answerNext({ ...boardFixture([]), groups: [{ status: 'TODO', tickets: [] }] });
     await loaded;
@@ -59,7 +59,7 @@ describe('the board store', () => {
 
   it('is not empty when only unreadable tickets are on it', async () => {
     const client = fakeClient();
-    const store = createBoardStore(client);
+    const store = new BoardStore(client);
     const loaded = store.load();
     client.answerNext({ ...boardFixture([]), unreadable: [{ id: 'PROJ-9', reason: 'no title' }] });
     await loaded;
@@ -68,7 +68,7 @@ describe('the board store', () => {
 
   it('shows the reason of an unavailable board', async () => {
     const client = fakeClient();
-    const store = createBoardStore(client);
+    const store = new BoardStore(client);
     const loaded = store.load();
     client.answerNext({ kind: 'unavailableBoard', root: '/p', reason: 'gh is not signed in' });
     await loaded;
@@ -77,7 +77,7 @@ describe('the board store', () => {
 
   it('shows the reason a directory belongs to no project', async () => {
     const client = fakeClient();
-    const store = createBoardStore(client);
+    const store = new BoardStore(client);
     const loaded = store.load();
     client.answerNext({ kind: 'noProject', reason: 'not a lazyclaude project' });
     await loaded;
@@ -86,7 +86,7 @@ describe('the board store', () => {
 
   it('shows a JSON-RPC error as a fault with its message', async () => {
     const client = fakeClient();
-    const store = createBoardStore(client);
+    const store = new BoardStore(client);
     const loaded = store.load();
     client.failNext(new RpcError(-32603, 'internal error'));
     await loaded;
@@ -95,7 +95,7 @@ describe('the board store', () => {
 
   it('loads again after a fault when asked', async () => {
     const client = fakeClient();
-    const store = createBoardStore(client);
+    const store = new BoardStore(client);
     const first = store.load();
     client.failNext(new RpcError(-32603, 'internal error'));
     await first;

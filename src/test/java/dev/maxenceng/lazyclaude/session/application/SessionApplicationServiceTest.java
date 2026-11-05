@@ -64,18 +64,21 @@ import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LaunchLogPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.NewSession;
 import dev.maxenceng.lazyclaude.session.domain.OpenHostedSession;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.ReportedStatus;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.StartingPhase;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
+import dev.maxenceng.lazyclaude.session.domain.UnlinkedStart;
 import dev.maxenceng.lazyclaude.session.domain.UnreadPhase;
 import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
 import dev.maxenceng.lazyclaude.session.domain.WatchedSession;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
+import dev.maxenceng.lazyclaude.session.published.MergeState;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
@@ -232,14 +235,20 @@ class SessionApplicationServiceTest {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
         when(hosts.spawn(any(), any(), any())).thenReturn(processId());
 
-        HostStart start = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).resumeInTicketWorktree(sessionId(), worktreeDirectory(), ticketWorktree(), paneSize());
+        HostStart start = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).resumePast(project(), boardTickets(), sessionId(), worktreeDirectory(), Optional.of(ticketWorktree()), paneSize());
 
         assertThat(start).isEqualTo(new StartedHost(sessionId()));
     }
 
     @Test
+    void shouldOpenAnUnlinkedSessionFromATicketThatAllowsNoVerb() {
+        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).newSessionFor(project(), boardTickets(), linkedTicketId(), List.of(), MergeState.UNKNOWN))
+                .isEqualTo(new UnlinkedStart());
+    }
+
+    @Test
     void shouldPreselectDesignWhenNoSessionHasRunItOnTheTicket() {
-        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false))
+        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).newSessionFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), MergeState.NOT_MERGED))
                 .isEqualTo(VerbChoice.builder().verbs(List.of(Verb.REVIEW, Verb.DESIGN)).preselected(Verb.DESIGN).build());
     }
 
@@ -249,16 +258,14 @@ class SessionApplicationServiceTest {
         when(past.transcriptsOf(any()))
                 .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("design", "1"))));
 
-        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
-                        .preselected())
-                .isEqualTo(Verb.REVIEW);
+        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).newSessionFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), MergeState.NOT_MERGED))
+                .isEqualTo(VerbChoice.builder().verbs(List.of(Verb.REVIEW, Verb.DESIGN)).preselected(Verb.REVIEW).build());
     }
 
     @Test
     void shouldPreselectDoneWhenTheBranchIsMerged() {
-        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.RESPOND, Verb.DONE), true)
-                        .preselected())
-                .isEqualTo(Verb.DONE);
+        assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).newSessionFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.RESPOND, Verb.DONE), MergeState.MERGED))
+                .isEqualTo(VerbChoice.builder().verbs(List.of(Verb.RESPOND, Verb.DONE)).preselected(Verb.DONE).build());
     }
 
     @Test
@@ -274,10 +281,11 @@ class SessionApplicationServiceTest {
         verify(watch).watch(any(), changed.capture(), any());
         changed.getValue().run();
 
-        Verb preselected = service.verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
-                .preselected();
+        NewSession opened = service.newSessionFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), MergeState.NOT_MERGED);
 
-        assertThat(preselected).as("the pushed sessions say design ran").isEqualTo(Verb.REVIEW);
+        assertThat(opened)
+                .as("the pushed sessions say design ran")
+                .isEqualTo(VerbChoice.builder().verbs(List.of(Verb.REVIEW, Verb.DESIGN)).preselected(Verb.REVIEW).build());
         verify(sessions, times(1)).recordOf(processId());
     }
 
@@ -287,9 +295,8 @@ class SessionApplicationServiceTest {
         SessionApplicationService service = hostingTheRegisteredSession(
                 sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees), hosts);
 
-        assertThat(service.verbChoiceFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), false)
-                        .preselected())
-                .isEqualTo(Verb.DESIGN);
+        assertThat(service.newSessionFor(project(), boardTickets(), linkedTicketId(), List.of(Verb.REVIEW, Verb.DESIGN), MergeState.NOT_MERGED))
+                .isEqualTo(VerbChoice.builder().verbs(List.of(Verb.REVIEW, Verb.DESIGN)).preselected(Verb.DESIGN).build());
     }
 
     @Test

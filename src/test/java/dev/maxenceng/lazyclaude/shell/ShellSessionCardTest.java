@@ -111,14 +111,14 @@ class ShellSessionCardTest {
 
     @Test
     void shouldStillResumeAPastSessionWhoseTranscriptCannotBeReadWithEnter() {
-        when(hosting.resume(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
+        when(hosting.resumePast(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
         Shell shell = shellHosting(
                 pastSessionsViewOf(List.of(pastSessionViewBuilder().reading(unreadable()).build())), hosting, blankScreens());
         shell.press(alt('j'));
 
         shell.press(enter());
 
-        verify(hosting).resume(any());
+        verify(hosting).resumePast(any());
     }
 
     @Test

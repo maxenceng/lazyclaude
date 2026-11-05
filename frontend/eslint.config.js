@@ -25,6 +25,18 @@ const ARROWS_ONLY = [
   { selector: ':not(MethodDefinition, Property) > FunctionExpression', message: 'Write an arrow function.' },
 ];
 
+// ADR 0085: state with behaviour is a class, a helper sits at module level; an inline callback stays an arrow.
+const NO_NESTED_FUNCTIONS = [
+  {
+    selector: ':function VariableDeclarator > :matches(ArrowFunctionExpression, FunctionExpression)',
+    message: 'Declare the helper at module level, or make this a class with a private method.',
+  },
+  {
+    selector: ':matches(:function ReturnStatement, ArrowFunctionExpression) > ObjectExpression > Property > :function',
+    message: 'An object of closures is a class: give it private state and methods.',
+  },
+];
+
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'src-tauri', 'src/protocol/generated'] },
   ...tseslint.configs.strictTypeChecked,
@@ -38,14 +50,14 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       '@typescript-eslint/no-confusing-void-expression': 'off',
-      'no-restricted-syntax': ['error', ...HTML_ELEMENT_STYLING, ...LITERAL_COPY, ...ARROWS_ONLY],
+      'no-restricted-syntax': ['error', ...HTML_ELEMENT_STYLING, ...LITERAL_COPY, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS],
       'func-style': ['error', 'expression'],
       'react/jsx-no-comment-textnodes': 'off',
     },
   },
   {
     files: ['src/design-system/**'],
-    rules: { 'no-restricted-syntax': ['error', ...LITERAL_COPY, ...ARROWS_ONLY] },
+    rules: { 'no-restricted-syntax': ['error', ...LITERAL_COPY, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS] },
   },
   {
     files: ['**/*.test.ts', '**/*.test.tsx', 'src/test/**'],
@@ -53,7 +65,7 @@ export default tseslint.config(
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/no-unsafe-type-assertion': 'off',
-      'no-restricted-syntax': ['error', ...HTML_ELEMENT_STYLING, ...ARROWS_ONLY],
+      'no-restricted-syntax': ['error', ...HTML_ELEMENT_STYLING, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS],
     },
   },
   {

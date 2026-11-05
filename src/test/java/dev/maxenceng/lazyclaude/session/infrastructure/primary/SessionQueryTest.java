@@ -14,7 +14,7 @@ import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastTra
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.transcriptsRead;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.recordUnreadable;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.verbChoicePayload;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newSessionPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.sessionQueryHostingTheRegistered;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
@@ -54,6 +54,7 @@ import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
+import dev.maxenceng.lazyclaude.session.published.MergeState;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
@@ -194,10 +195,16 @@ class SessionQueryTest {
     }
 
     @Test
+    void shouldViewAnUnlinkedStartForATicketThatAllowsNoVerb() {
+        assertThat(sessionQuery(sessions, launchLog, watch, warnings).newSessionFor(newSessionPayload(List.of(), MergeState.UNKNOWN)))
+                .isEqualTo(new UnlinkedStartView());
+    }
+
+    @Test
     void shouldViewTheVerbsAndTheOneToPreselect() {
 
         assertThat(sessionQuery(sessions, launchLog, watch, warnings)
-                        .verbChoiceFor(verbChoicePayload(List.of(Verb.REVIEW, Verb.DESIGN), false)))
+                        .newSessionFor(newSessionPayload(List.of(Verb.REVIEW, Verb.DESIGN), MergeState.NOT_MERGED)))
                 .isEqualTo(VerbChoiceView.builder()
                         .verbs(List.of(Verb.REVIEW, Verb.DESIGN))
                         .preselected(Verb.DESIGN)

@@ -63,6 +63,6 @@ class SidecarMethodsTest {
     @Test
     void declares_the_calls_it_takes_without_answering() {
         assertThat(Sidecar.protocol().inputs().stream().map(ProtocolInput::name))
-                .containsExactlyInAnyOrder("pty/input", "pty/resize", "session/repaint");
+                .containsExactlyInAnyOrder("pty/input", "pty/resize", "session/repaint", "session/watching");
     }
 }

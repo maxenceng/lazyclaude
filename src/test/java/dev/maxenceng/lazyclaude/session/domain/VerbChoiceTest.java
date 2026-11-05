@@ -9,13 +9,14 @@ import org.junit.jupiter.api.Test;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.EmptyValueException;
+import dev.maxenceng.lazyclaude.session.published.MergeState;
 
 class VerbChoiceTest {
 
     private static final boolean DESIGN_RUN = true;
     private static final boolean NO_DESIGN_RUN = false;
-    private static final boolean MERGED = true;
-    private static final boolean NOT_MERGED = false;
+    private static final MergeState MERGED = MergeState.MERGED;
+    private static final MergeState NOT_MERGED = MergeState.NOT_MERGED;
 
     @Test
     void shouldPreselectTheOnlyVerbAllowed() {
@@ -62,6 +63,13 @@ class VerbChoiceTest {
     void shouldKeepTheVerbsInTheOrderTheyWereAllowed() {
         assertThat(VerbChoice.of(List.of(Verb.RESPOND, Verb.DONE), NO_DESIGN_RUN, MERGED).verbs())
                 .containsExactly(Verb.RESPOND, Verb.DONE);
+    }
+
+    @Test
+    void shouldNotPreselectDoneWhileWhetherTheBranchIsMergedIsUnknown() {
+        assertThat(VerbChoice.of(List.of(Verb.RESPOND, Verb.DONE), NO_DESIGN_RUN, MergeState.UNKNOWN).preselected())
+                .as("done is preselected only on a branch known to be merged")
+                .isEqualTo(Verb.RESPOND);
     }
 
     @Test

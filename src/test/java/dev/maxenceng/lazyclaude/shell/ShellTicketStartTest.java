@@ -36,7 +36,8 @@ import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeTicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumePastPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketListingPayload;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 
@@ -114,7 +115,7 @@ class ShellTicketStartTest {
 
     @Test
     void shouldResumeATicketsPastSessionThroughTheTicketsWorktree() {
-        when(hosting.resumeInTicketWorktree(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
+        when(hosting.resumePast(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
         Shell shell = shellOnTicket(
                 ticketViewIn(Status.TODO),
                 sessionsViewOf(List.of(), List.of(linkedPastSessionView(1, ticketLink("1", "start")))),
@@ -124,9 +125,9 @@ class ShellTicketStartTest {
 
         shell.press(enter());
 
-        ArgumentCaptor<ResumeTicketHostedPayload> payload = ArgumentCaptor.forClass(ResumeTicketHostedPayload.class);
-        verify(hosting).resumeInTicketWorktree(payload.capture());
-        assertThat(payload.getValue().branch()).isEqualTo(ticketBranch().value());
+        ArgumentCaptor<ResumePastPayload> payload = ArgumentCaptor.forClass(ResumePastPayload.class);
+        verify(hosting).resumePast(payload.capture());
+        assertThat(payload.getValue().listing()).isEqualTo(new TicketListingPayload(ticketBranch().value()));
         assertThat(shell.focus()).isEqualTo(Focus.DOCK);
     }
 

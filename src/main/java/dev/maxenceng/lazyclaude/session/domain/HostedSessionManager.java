@@ -101,6 +101,23 @@ public final class HostedSessionManager {
     }
 
     /**
+     * Resumes a past session from the row it is listed on: one linked to a ticket and listed under that ticket in the ticket's worktree,
+     * any other in the directory it was launched in.
+     */
+    public HostStart resumePast(
+            AvailableSessions sessions,
+            Project project,
+            SessionId session,
+            WorkingDirectory recorded,
+            Optional<TicketWorktree> listedUnder,
+            PaneSize size) {
+        return listedUnder
+                .filter(_ -> sessions.isLinkedPast(session))
+                .map(worktree -> resumeInTicketWorktree(session, recorded, worktree, size))
+                .orElseGet(() -> resume(project, session, recorded, size));
+    }
+
+    /**
      * Like {@link #resume}, but a {@code recorded} directory that is {@code worktree}'s own path and gone is added back first, so
      * resuming a ticket's session after its worktree was removed finds its transcript again.
      */
