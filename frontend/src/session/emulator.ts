@@ -21,10 +21,19 @@ export interface EmulatorDeps {
 
 const disposer = (subscription: IDisposable) => () => subscription.dispose();
 
+/** Where a reloaded emulator is on its way to `session/repaint`: its kept modes written, then fitted to its pane. */
+enum Repaint {
+  None,
+  Restoring,
+  Restored,
+}
+
 /** One hosted session's xterm.js: fed by its `pty/output`, sending its keys, pastes and mouse reports as `pty/input`, and keeping its private modes for a reload. */
 export class Emulator {
   readonly mouseReported: Store<boolean> = createStore(false);
-  private readonly kept: KeptModes;
+  private readonly kept = new KeptModes();
+  private repaint = Repaint.None;
+  private fitted = false;
   private readonly subscriptions: Array<() => void> = [];
 
   constructor(
@@ -33,8 +42,6 @@ export class Emulator {
     private readonly deps: EmulatorDeps,
   ) {
     const recalled = deps.memory.recall(session);
-    this.kept = recalled ?? new KeptModes();
-    this.mouseReported.set(this.kept.reportsMouse());
     trackModes(terminal, this.kept, () => {
       deps.memory.remember(session, this.kept);
       this.mouseReported.set(this.kept.reportsMouse());
@@ -45,7 +52,11 @@ export class Emulator {
     );
     terminal.attachCustomKeyEventHandler((event) => this.handleKey(event));
     if (recalled !== undefined) {
-      terminal.write(recalled.restoration(), () => deps.client.send('session/repaint', { session }));
+      this.repaint = Repaint.Restoring;
+      terminal.write(recalled.restoration(), () => {
+        this.repaint = Repaint.Restored;
+        this.repaintWhenFitted();
+      });
     }
   }
 
@@ -54,15 +65,17 @@ export class Emulator {
     this.terminal.write(fromBase64(data));
   }
 
-  /** Puts the terminal into `container`, fits it and tells `claude` the size it came to. */
+  /** Puts the terminal into `container` in place of whichever was there, fits it and tells `claude` the size it came to; focus is the dock's to give. */
   attach(container: HTMLElement): void {
     if (this.terminal.element === undefined) {
       this.terminal.open(container);
-    } else if (this.terminal.element.parentElement !== container) {
-      container.appendChild(this.terminal.element);
+    }
+    if (this.terminal.element !== undefined) {
+      container.replaceChildren(this.terminal.element);
     }
     this.resize();
-    this.terminal.focus();
+    this.fitted = true;
+    this.repaintWhenFitted();
   }
 
   /** ADR 0049: the emulator is fitted first, then the pty is told, so what `claude` redraws lands in a buffer of the new size. */
@@ -98,6 +111,14 @@ export class Emulator {
   dispose(): void {
     this.subscriptions.forEach((unsubscribe) => unsubscribe());
     this.terminal.dispose();
+  }
+
+  /** ADR 0049: `claude` redraws at the pty's size, so a reloaded emulator asks for the repaint only once its kept modes are in and it has been fitted to that size. */
+  private repaintWhenFitted(): void {
+    if (this.repaint === Repaint.Restored && this.fitted) {
+      this.repaint = Repaint.None;
+      this.deps.client.send('session/repaint', { session: this.session });
+    }
   }
 
   private take(kind: PaneKey, reserved: (() => void) | undefined): void {

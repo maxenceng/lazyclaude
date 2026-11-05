@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 const SRC = resolve(__dirname);
 const CONTEXTS = ['board', 'session'];
 const SHARED = ['protocol', 'design-system', 'i18n', 'shared', 'test'];
-const COMPOSITION = ['keys', 'connection'];
+const COMPOSITION = ['keys', 'connection', 'window'];
 
 const sourceFiles = (directory: string): string[] => {
   return readdirSync(directory).flatMap((name) => {
@@ -36,6 +36,7 @@ const imports = sourceFiles(SRC)
   .filter((file) => !file.endsWith('architecture.test.ts'))
   .flatMap(importsOf);
 const folderOf = (path: string) => path.split(sep)[0] ?? '';
+const atRoot = (target: string) => !target.includes(sep) && statSync(join(SRC, target), { throwIfNoEntry: false })?.isDirectory() !== true;
 
 describe('the frontend architecture', () => {
   it('lets only src/protocol import the generated files', () => {
@@ -60,6 +61,11 @@ describe('the frontend architecture', () => {
 
   it('keeps the shared folders free of contexts', () => {
     const offenders = imports.filter((entry) => SHARED.includes(entry.from) && CONTEXTS.includes(folderOf(entry.target)));
+    expect(offenders.map((entry) => entry.file)).toEqual([]);
+  });
+
+  it('keeps contexts and shared folders from importing a file at the root, all of which compose', () => {
+    const offenders = imports.filter((entry) => [...CONTEXTS, ...SHARED].includes(entry.from) && atRoot(entry.target));
     expect(offenders.map((entry) => entry.file)).toEqual([]);
   });
 

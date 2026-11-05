@@ -1,4 +1,4 @@
-import { createStore, type Store } from './store';
+import { createStore, type Store } from '../shared/store';
 
 export interface FocusSource {
   isFocused(): Promise<boolean>;

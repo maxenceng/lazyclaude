@@ -14,7 +14,7 @@ import { VerbPicker } from './session/verbPicker';
 import { watchedPayload } from './session/watched';
 import { createStore } from './shared/store';
 import { createWarningStore } from './shared/warningStore';
-import { createWindowFocus } from './shared/windowFocus';
+import { createWindowFocus } from './window/windowFocus';
 
 /** The stores one window reads, and the rule that loads them whenever the sidecar becomes ready. */
 export const createApp = (client: Client, platform: Platform) => {

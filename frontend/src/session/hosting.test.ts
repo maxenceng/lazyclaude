@@ -154,7 +154,7 @@ describe('the hosted sessions', () => {
     expect(hosted.emulatorOf('s1')).toBeUndefined();
   });
 
-  it('restores a listed session\'s kept modes and asks for a repaint, as a reloaded page does', async () => {
+  it('restores a listed session\'s kept modes and asks for a repaint once its pane fits it, as a reloaded page does', async () => {
     const { client, sessions, memory, hosted } = hosting();
     sessions.set(hostedIn('s1'));
     client.push('pty/output', { session: 's1', data: encoded(CLAUDE_START) });
@@ -164,6 +164,7 @@ describe('the hosted sessions', () => {
     const term = reloaded.hosted.emulatorOf('s1')!.terminal;
     await written(term);
     expect(term.modes.bracketedPasteMode).toBe(true);
+    reloaded.hosted.emulatorOf('s1')!.attach(document.createElement('div'));
     expect(reloaded.client.sent.filter((sent) => sent.input === 'session/repaint')).toEqual([{ input: 'session/repaint', params: { session: 's1' } }]);
   });
 

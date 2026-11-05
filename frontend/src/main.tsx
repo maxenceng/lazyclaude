@@ -5,8 +5,9 @@ import { createApp } from './app';
 import './design-system/global.css';
 import './i18n/i18n';
 import { browserPlatform } from './platform';
-import { createClient, pageAlive, tauriRelay } from './protocol';
-import { startHeartbeat } from './shared/heartbeat';
+import { createClient, tauriRelay } from './protocol';
+import { startHeartbeat } from './window/heartbeat';
+import { pageAlive } from './window/tauri';
 
 const HEARTBEAT_MILLISECONDS = 1000;
 

@@ -5,7 +5,7 @@
   },
   "row": {
     "hosted": "hosted",
-    "live": "running elsewhere",
+    "live": "hosted in another window",
     "new": "new session",
     "starting": "starting",
     "untitled": "session {{id}}"

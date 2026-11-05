@@ -5,7 +5,8 @@ Date: 2026-10-27
 ## Status
 
 Accepted. Builds on ADR 0033 (the desktop notification), ADR 0050 (the sidecar protocol), ADR 0056 (Linux x86_64
-only) and ADR 0057 (the desktop frontend).
+only) and ADR 0057 (the desktop frontend). Amended by ADR 0083: the window's focus is unknown until Tauri
+answers, and unknown counts as not focused.
 
 ## Context
 

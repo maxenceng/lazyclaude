@@ -5,7 +5,7 @@ Date: 2026-11-05
 ## Status
 
 Accepted. Builds on ADR 0049 (the repaint restores only part of a terminal's state), ADR 0057 (the page keeps the modes
-a reload loses) and ADR 0058 (the watched session and the pane's keys).
+a reload loses) and ADR 0058 (the watched session and the pane's keys), which it amends.
 
 ## Context
 
@@ -25,10 +25,13 @@ window's focus is before Tauri answers.
 - **The store is `sessionStorage`, one JSON entry per `SessionId`, `lazyclaude.modes.<id>`.** It survives a reload and
   not a quit, as ADR 0057 said. An entry that does not parse is none. A session that exits has its entry removed; a
   tab dropped from `session/watch`'s list does too.
-- **A page with an entry for a hosted session it finds restores before it asks.** The new emulator is written the
-  kept modes, and `session/repaint` is sent in the write's callback, so the repaint lands in an emulator already in
-  bracketed paste and the alternate screen. There is no other signal of a reload, so the entry's presence is it. The
-  pane is fitted and `pty/resize` sent on its first attach, which makes `claude` repaint at the size the pane has.
+- **A page with an entry for a hosted session it finds restores, fits, and only then asks.** The new emulator is
+  written the kept modes, rebuilding its own record from those bytes rather than taking the stored one, which would
+  push the kitty stack a second time on each reload. `session/repaint` waits for both the write's callback and the
+  pane's first fit and `pty/resize`, so the repaint lands in an emulator already in bracketed paste and the alternate
+  screen, and at the size `claude` redraws for: the pty keeps its size across a reload, so a fit sent after the
+  repaint changes nothing and draws nothing again (ADR 0049). A tab not selected asks when it is first shown. There is
+  no other signal of a reload, so the entry's presence is it.
 - **The page tells the window it is alive; the window offers Reload.** The page calls a `page_alive` command once a
   second. The Rust side, in a packaged build only, checks every second, and a page silent for ten seconds (a page
   loading included) gets a menu of the window's own with one item, Reload, which calls the webview's `reload`. The menu
@@ -52,5 +55,7 @@ window's focus is before Tauri answers.
 - A restored `?1049h` switches the new emulator to its alternate screen at once, before the repaint lands.
 - The verb picker starts on the first verb of the ticket, not the one the TUI preselects, since the protocol carries
   no verb choice (a `deferred:` comment on `VerbPicker`).
+- The heartbeat and the window's focus live in `window/`, on the composition side (ADR 0082), since only the
+  composition side talks to Tauri's window.
 - Whether WebKitGTK lets the page read the clipboard without a prompt, whether the Reload menu draws in a packaged
   build under Hyprland, and whether `isFocused()` is right there (ADR 0058's open point) were not run, only reasoned.

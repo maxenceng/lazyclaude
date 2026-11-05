@@ -3,8 +3,8 @@ import type { Clipboard } from './session/emulator';
 import type { ModeMemory } from './session/modeMemory';
 import { createModeMemory } from './session/modeMemory';
 import { createXterm } from './session/xterm';
-import type { FocusSource } from './shared/windowFocus';
-import { tauriFocus } from './shared/tauriFocus';
+import type { FocusSource } from './window/windowFocus';
+import { tauriFocus } from './window/tauri';
 import type { Terminal } from '@xterm/xterm';
 
 /** What the window takes from the webview it runs in: where it keeps modes, the clipboard, terminals and the window's focus. */

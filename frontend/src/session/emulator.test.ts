@@ -4,7 +4,7 @@ import { fromBase64, toBase64, bytesOfText } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
 import { Emulator, type EmulatorDeps } from './emulator';
 import { createModeMemory } from './modeMemory';
-import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './recordings';
+import { CLAUDE_POPS_KITTY_KEYBOARD, CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './recordings';
 
 const written = (term: Terminal) => new Promise<void>((done) => term.write('', done));
 
@@ -21,6 +21,8 @@ const emulate = (overrides: Partial<EmulatorDeps> = {}) => {
 };
 
 const encoded = (text: string) => toBase64(bytesOfText(text));
+
+const sizingOf = (sent: ReadonlyArray<{ input: string }>) => sent.map((each) => each.input).filter((input) => input !== 'pty/input');
 
 describe('a hosted session\'s emulator', () => {
   beforeEach(() => sessionStorage.clear());
@@ -51,16 +53,68 @@ describe('a hosted session\'s emulator', () => {
     expect(memory.recall('s1')?.restoration()).toContain('\x1b[?2004h');
   });
 
-  it('writes the kept modes into the emulator of a reloaded page and then asks for a repaint', async () => {
+  it('writes the kept modes into the emulator of a reloaded page, then asks for a repaint once it is fitted', async () => {
     const before = emulate();
     before.emulator.write(encoded(CLAUDE_START));
     await written(before.term);
     const after = emulate();
-    expect(after.client.sent.filter((sent) => sent.input === 'session/repaint')).toEqual([]);
     await written(after.term);
     expect(after.term.modes.bracketedPasteMode).toBe(true);
     expect(after.term.buffer.active.type).toBe('alternate');
-    expect(after.client.sent.filter((sent) => sent.input === 'session/repaint')).toEqual([{ input: 'session/repaint', params: { session: 's1' } }]);
+    expect(sizingOf(after.client.sent), 'an unfitted emulator would have claude redraw into a buffer of the wrong size').toEqual([]);
+    after.emulator.attach(document.createElement('div'));
+    expect(sizingOf(after.client.sent)).toEqual(['pty/resize', 'session/repaint']);
+  });
+
+  it('asks for the repaint of an emulator fitted before its kept modes were in only once they are', async () => {
+    const before = emulate();
+    before.emulator.write(encoded(CLAUDE_START));
+    await written(before.term);
+    const after = emulate();
+    after.emulator.attach(document.createElement('div'));
+    expect(sizingOf(after.client.sent)).toEqual(['pty/resize']);
+    await written(after.term);
+    expect(sizingOf(after.client.sent)).toEqual(['pty/resize', 'session/repaint']);
+  });
+
+  it('asks for one repaint however often it is fitted', async () => {
+    const before = emulate();
+    before.emulator.write(encoded(CLAUDE_START));
+    await written(before.term);
+    const after = emulate();
+    await written(after.term);
+    after.emulator.attach(document.createElement('div'));
+    after.emulator.attach(document.createElement('div'));
+    expect(after.client.sent.filter((sent) => sent.input === 'session/repaint')).toHaveLength(1);
+  });
+
+  it('keeps the kitty keyboard stack as claude left it across reloads, not once more per reload', async () => {
+    const first = emulate();
+    first.emulator.write(encoded(CLAUDE_START));
+    await written(first.term);
+    await written(emulate().term);
+    const third = emulate();
+    await written(third.term);
+    third.emulator.write(encoded(CLAUDE_POPS_KITTY_KEYBOARD));
+    await written(third.term);
+    expect(third.memory.recall('s1')?.toJSON().keyboard, 'the one push claude made, popped once, leaves no flags').toEqual([]);
+  });
+
+  it('takes the place of the terminal its pane showed before', () => {
+    const container = document.createElement('div');
+    const shown = emulate();
+    shown.emulator.attach(container);
+    const next = emulate();
+    next.emulator.attach(container);
+    expect([...container.children]).toEqual([next.term.element]);
+  });
+
+  it('leaves the keyboard where it was when it is put into its pane', () => {
+    const elsewhere = document.body.appendChild(document.createElement('button'));
+    elsewhere.focus();
+    const { emulator } = emulate();
+    emulator.attach(document.body.appendChild(document.createElement('div')));
+    expect(document.activeElement).toBe(elsewhere);
   });
 
   it('sends a paste bracketed after a reload, the way it was before', async () => {

@@ -51,7 +51,10 @@ export const DockScreen = ({ hosting, sessions, focused, onFocus }: Props) => {
 
   return (
     <Pane title={t('dock.title')} focused={focused} layout="fill">
-      <DockTabs tabs={tabs} selected={selected} onSelect={(id) => hosting.select(id)} />
+      <DockTabs tabs={tabs} selected={selected} onSelect={(id) => {
+          hosting.select(id);
+          onFocus();
+        }} />
       <TerminalSurface ref={surface} label={t('dock.terminal')} onFocus={onFocus} />
     </Pane>
   );
