@@ -60,16 +60,15 @@ public final class SpawnedSidecar implements AutoCloseable {
             stty raw -echo
             until [ "$(stty size)" != "0 0" ]; do sleep 0.01; done
             last=$(stty size)
+            trap 'now=$(stty size); [ "$now" != "$last" ] && { last=$now; echo "size $now at ${EPOCHREALTIME/[.,]/}000"; }' WINCH
             echo ready
-            while true; do
-              IFS= read -r -s -n1 -d '' -t 0.002 typed
-              status=$?
-              now=$(stty size)
-              [ "$now" != "$last" ] && { last=$now; echo "size $now at ${EPOCHREALTIME/[.,]/}000"; }
-              [ $status -gt 128 ] && continue
+            while IFS= read -r -s -n1 -d '' typed; do
               [ "$typed" = "q" ] && exit 7
               printf '%%s' "$typed"
-            done
+            done < /dev/tty &
+            reader=$!
+            until wait "$reader"; status=$?; [ $status -le 128 ]; do :; done
+            exit $status
             """;
     private static final Pattern RESIZE = Pattern.compile("size (\\d+ \\d+) at (\\d+)\\r?\\n");
     private static final long EXIT_PATIENCE_SECONDS = 30;
