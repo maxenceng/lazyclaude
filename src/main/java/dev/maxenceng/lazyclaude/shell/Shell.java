@@ -53,22 +53,26 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorQue
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ListingPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoTicketListingPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RefusedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemovedWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeTicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumePastPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketListingPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoicePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnlinkedStartView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
@@ -79,6 +83,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeView;
 import dev.maxenceng.lazyclaude.session.published.FixedChord;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
+import dev.maxenceng.lazyclaude.session.published.MergeState;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.PaneHeight;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
@@ -463,7 +468,9 @@ public final class Shell extends ToolkitApp {
         worktree.markStale();
         picker.ifPresent(open -> {
             open.checked();
-            open.preselecting(choiceFor(open.ticket()));
+            if (newSessionOf(open.ticket()) instanceof VerbChoiceView choice) {
+                open.preselecting(choice);
+            }
         });
         refreshOffer();
     }
@@ -1172,7 +1179,7 @@ public final class Shell extends ToolkitApp {
 
     private WorktreePayload worktreePayload(TicketView ticket) {
         return new WorktreePayload(
-                new SessionPayload(root, BoardRows.ticketIdsOf(lastRead)),
+                sessionsAsAsked(),
                 ticket.branch().value(),
                 latestMerged.mergedHeadOf(new HeadBranch(ticket.branch().value())));
     }
@@ -1414,17 +1421,26 @@ public final class Shell extends ToolkitApp {
 
     /** Asks {@code session} again which verb the shown ticket's {@code n new} row offers; a ticket with no verb left offers none. */
     private void refreshOffer() {
-        sessions.offering(selectedTicket()
-                .filter(ticket -> !ticket.verbs().isEmpty())
-                .map(ticket -> choiceFor(ticket).preselected()));
+        sessions.offering(selectedTicket().flatMap(ticket -> switch (newSessionOf(ticket)) {
+            case VerbChoiceView choice -> Optional.of(choice.preselected());
+            case UnlinkedStartView _ -> Optional.<Verb>empty();
+        }));
     }
 
-    private VerbChoiceView choiceFor(TicketView ticket) {
-        return screens.verbChoiceFor(new VerbChoicePayload(
-                new SessionPayload(root, BoardRows.ticketIdsOf(lastRead)),
-                new LinkedTicketId(ticket.id().value()),
-                ticket.verbs(),
-                mergedHeads.contains(ticket.branch().value())));
+    private NewSessionView newSessionOf(TicketView ticket) {
+        return screens.newSessionFor(new NewSessionPayload(
+                sessionsAsAsked(), new LinkedTicketId(ticket.id().value()), ticket.verbs(), mergeOf(ticket)));
+    }
+
+    private MergeState mergeOf(TicketView ticket) {
+        if (!mergedRead) {
+            return MergeState.UNKNOWN;
+        }
+        return mergedHeads.contains(ticket.branch().value()) ? MergeState.MERGED : MergeState.NOT_MERGED;
+    }
+
+    private SessionPayload sessionsAsAsked() {
+        return new SessionPayload(root, BoardRows.ticketIdsOf(lastRead));
     }
 
     private boolean newFromTicket() {
@@ -1435,12 +1451,14 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean newSessionFor(TicketView ticket) {
-        if (ticket.verbs().isEmpty()) {
-            return opened(hosting.startUnlinked(new NewHostedPayload(root, paneSize())));
-        }
-        leaveZoom();
-        picker = Optional.of(new VerbPicker(ticket, choiceFor(ticket), !mergedRead));
-        return true;
+        return switch (newSessionOf(ticket)) {
+            case UnlinkedStartView _ -> opened(hosting.startUnlinked(new NewHostedPayload(root, paneSize())));
+            case VerbChoiceView choice -> {
+                leaveZoom();
+                picker = Optional.of(new VerbPicker(ticket, choice, !mergedRead));
+                yield true;
+            }
+        };
     }
 
     private boolean pressInPicker(VerbPicker open, KeyEvent key) {
@@ -1526,8 +1544,7 @@ public final class Shell extends ToolkitApp {
     private boolean enterSession(SessionRow row) {
         return switch (row) {
             case LiveSessionRow live -> focusTabOf(live.session());
-            case PastSessionRow past when past.session().isUnlinked() -> resume(past.session());
-            case PastSessionRow past -> selectedTicket().map(ticket -> resumeInTicket(past.session(), ticket)).orElse(false);
+            case PastSessionRow past -> resumePast(past.session());
             case StartingSessionRow starting -> focusTab(starting.tab().id());
             case NewSessionRow _ -> selectedTicket().map(this::newSessionFor).orElse(false);
             default -> false;
@@ -1539,11 +1556,17 @@ public final class Shell extends ToolkitApp {
         return focusOn(Focus.DOCK);
     }
 
-    private boolean resumeInTicket(PastSessionView session, TicketView ticket) {
-        ResumeTicketHostedPayload payload =
-                new ResumeTicketHostedPayload(
-                        session.id(), session.directory(), root, ticket.branch().value(), paneSize());
-        inBackground(() -> hosting.resumeInTicketWorktree(payload));
+    /** Resumes a past session from its row; {@code session} decides where, and adding a worktree back runs {@code git}, so not here. */
+    private boolean resumePast(PastSessionView session) {
+        ResumePastPayload payload = new ResumePastPayload(
+                sessionsAsAsked(),
+                session.id(),
+                session.directory(),
+                selectedTicket()
+                        .<ListingPayload>map(ticket -> new TicketListingPayload(ticket.branch().value()))
+                        .orElseGet(NoTicketListingPayload::new),
+                paneSize());
+        inBackground(() -> hosting.resumePast(payload));
         return true;
     }
 
@@ -1556,10 +1579,6 @@ public final class Shell extends ToolkitApp {
                     focusOn(Focus.DOCK);
                 });
         return true;
-    }
-
-    private boolean resume(PastSessionView session) {
-        return opened(hosting.resume(new ResumeHostedPayload(root, session.id(), session.directory(), paneSize())));
     }
 
     private boolean goUp(Focus above) {

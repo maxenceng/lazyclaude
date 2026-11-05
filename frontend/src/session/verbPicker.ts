@@ -1,9 +1,6 @@
 import type { Verb } from '../protocol';
 
-/**
- * The verb picker over one ticket: its verbs and the cursor.
- */
-// deferred: the cursor starts on the first verb, not on the verb the backend would preselect — close it when the protocol carries the verb choice.
+/** The verb picker over one ticket: its verbs and the cursor, which opens on the verb `session` preselects. */
 export class VerbPicker {
   constructor(
     readonly ticket: string,
@@ -11,6 +8,10 @@ export class VerbPicker {
     readonly verbs: readonly Verb[],
     private readonly cursor: number = 0,
   ) {}
+
+  static opening(ticket: string, branch: string, verbs: readonly Verb[], preselected: Verb): VerbPicker {
+    return new VerbPicker(ticket, branch, verbs, Math.max(0, verbs.indexOf(preselected)));
+  }
 
   selected(): Verb | undefined {
     return this.verbs[this.cursor];

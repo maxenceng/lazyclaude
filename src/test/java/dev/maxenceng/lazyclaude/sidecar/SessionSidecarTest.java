@@ -1,20 +1,23 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newHostedPayload;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newSessionPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyInputPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyOutputView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyResizePayload;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.resumeHostedPayload;
-import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.resumeTicketHostedPayload;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.resumePastUnderTicket;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.sessionExitView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ticketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.typedPtyInputPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceViewFixture.designPreselected;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.appliedOnReturn;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.changingAtOnce;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.designPreselectedView;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.exitingAtOnce;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.newHostedParams;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.newSessionParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.noSessions;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.noWatchedSessionParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.notStartedHost;
@@ -23,8 +26,7 @@ import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.ptyInputPar
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.ptyOutput;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.ptyResizeParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.repaintParams;
-import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.resumeHostedParams;
-import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.resumeTicketHostedParams;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.resumePastParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.sessionExited;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.sessionsChanged;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.sessionsParams;
@@ -63,6 +65,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.RepaintPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionPayload;
+import dev.maxenceng.lazyclaude.session.published.MergeState;
 import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 
@@ -103,19 +106,20 @@ class SessionSidecarTest {
     }
 
     @Test
-    void answers_a_resume_the_directory_being_gone_refuses_as_a_result() {
-        when(hosting.resume(resumeHostedPayload())).thenReturn(new NotStartedHost());
+    void answers_a_resume_of_a_past_session_with_the_started_session() {
+        when(hosting.resumePast(resumePastUnderTicket(sessionId()))).thenReturn(new StartedHost(sessionId()));
 
-        assertThat(linesWritten(sessions, hosting, request(1, "session/resume", resumeHostedParams())))
-                .containsExactly(ready(), resultOf(1, notStartedHost()));
+        assertThat(linesWritten(sessions, hosting, request(1, "session/resumePast", resumePastParams())))
+                .containsExactly(ready(), resultOf(1, startedHost()));
     }
 
     @Test
-    void answers_a_resume_in_the_ticket_worktree_with_the_started_session() {
-        when(hosting.resumeInTicketWorktree(resumeTicketHostedPayload())).thenReturn(new StartedHost(sessionId()));
+    void answers_a_new_session_from_a_ticket_with_its_verb_choice() {
+        when(sessions.newSessionFor(newSessionPayload(List.of(Verb.REVIEW, Verb.DESIGN), MergeState.UNKNOWN)))
+                .thenReturn(designPreselected());
 
-        assertThat(linesWritten(sessions, hosting, request(1, "session/resumeInTicketWorktree", resumeTicketHostedParams())))
-                .containsExactly(ready(), resultOf(1, startedHost()));
+        assertThat(linesWritten(sessions, hosting, request(1, "session/newSessionFor", newSessionParams())))
+                .containsExactly(ready(), resultOf(1, designPreselectedView()));
     }
 
     @Test

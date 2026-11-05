@@ -36,14 +36,20 @@ public final class SessionSidecarFixture {
                 .formatted(project().root(), branchName().value(), SIZE);
     }
 
-    public static String resumeHostedParams() {
-        return "{\"root\":\"%s\",\"session\":\"%s\",\"recordedDirectory\":\"%s\",\"size\":%s}"
-                .formatted(project().root(), sessionId().value(), worktreeDirectory().path(), SIZE);
+    public static String resumePastParams() {
+        return ("{\"sessions\":{\"root\":\"%s\",\"ticketIds\":[\"1\"]},\"session\":\"%s\",\"recordedDirectory\":\"%s\","
+                        + "\"listing\":{\"kind\":\"ticketListingPayload\",\"branch\":\"%s\"},\"size\":%s}")
+                .formatted(project().root(), sessionId().value(), worktreeDirectory().path(), branchName().value(), SIZE);
     }
 
-    public static String resumeTicketHostedParams() {
-        return "{\"session\":\"%s\",\"recordedDirectory\":\"%s\",\"root\":\"%s\",\"branch\":\"%s\",\"size\":%s}"
-                .formatted(sessionId().value(), worktreeDirectory().path(), project().root(), branchName().value(), SIZE);
+    public static String newSessionParams() {
+        return ("{\"sessions\":{\"root\":\"%s\",\"ticketIds\":[\"1\"]},\"ticket\":\"1\",\"verbs\":[\"REVIEW\",\"DESIGN\"],"
+                        + "\"merged\":\"UNKNOWN\"}")
+                .formatted(project().root());
+    }
+
+    public static String designPreselectedView() {
+        return "{\"kind\":\"verbChoice\",\"verbs\":[\"REVIEW\",\"DESIGN\"],\"preselected\":\"DESIGN\"}";
     }
 
     public static String sessionsParams() {

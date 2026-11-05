@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fromBase64, toBase64, bytesOfText } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
 import { Emulator, type EmulatorDeps } from './emulator';
-import { createModeMemory } from './modeMemory';
+import { StorageModeMemory } from './modeMemory';
 import { CLAUDE_POPS_KITTY_KEYBOARD, CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './recordings';
 
 const written = (term: Terminal) => new Promise<void>((done) => term.write('', done));
@@ -12,7 +12,7 @@ const textOf = (sent: unknown): string => new TextDecoder().decode(fromBase64((s
 
 const emulate = (overrides: Partial<EmulatorDeps> = {}) => {
   const client = fakeClient();
-  const memory = createModeMemory(sessionStorage);
+  const memory = new StorageModeMemory(sessionStorage);
   const fit = { fit: vi.fn() };
   const deps: EmulatorDeps = { client, memory, fit, reserved: () => undefined, clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.resolve() }, ...overrides };
   const emulator = new Emulator('s1', new Terminal(), deps);

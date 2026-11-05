@@ -19,5 +19,11 @@
   "ticket": {
     "title": "Ticket",
     "noneSelected": "No ticket selected."
+  },
+  "keyBar": {
+    "move": "j/k move",
+    "open": "enter open",
+    "new": "n new session",
+    "newUnlinked": "N new unlinked"
   }
 }

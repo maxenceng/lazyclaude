@@ -35,7 +35,7 @@ class ShellMouseSessionsTest {
         shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("Refine 1")));
 
         assertThat(shell.focus()).isEqualTo(Focus.SESSIONS);
-        verify(hosting, never()).resume(any());
+        verify(hosting, never()).resumePast(any());
     }
 
     @Test
@@ -45,7 +45,7 @@ class ShellMouseSessionsTest {
 
         shell.mouse(leftPress(Screen.of(shell).positionInLeftColumn("Refine 1")));
 
-        verify(hosting).resume(any());
+        verify(hosting).resumePast(any());
     }
 
     @Test

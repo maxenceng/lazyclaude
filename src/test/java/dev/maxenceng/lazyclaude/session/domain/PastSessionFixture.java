@@ -19,7 +19,9 @@ import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.SessionIdFixture;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
+import dev.maxenceng.lazyclaude.session.published.TicketLinkFixture;
 
 public final class PastSessionFixture {
 
@@ -44,6 +46,17 @@ public final class PastSessionFixture {
 
     public static PastSession pastSession() {
         return pastSessionBuilder().build();
+    }
+
+    public static AvailableSessions linkedPastSessionListed() {
+        return SessionsFixture.pastSessionsOf(List.of(pastSessionBuilder()
+                .id(SessionIdFixture.sessionId())
+                .links(List.of(TicketLinkFixture.ticketLink("PROJ-1", "review")))
+                .build()));
+    }
+
+    public static AvailableSessions unlinkedPastSessionListed() {
+        return SessionsFixture.pastSessionsOf(List.of(pastSessionBuilder().id(SessionIdFixture.sessionId()).build()));
     }
 
     public static PastSession pastSessionActiveMinutesAgo(int number, int minutes) {

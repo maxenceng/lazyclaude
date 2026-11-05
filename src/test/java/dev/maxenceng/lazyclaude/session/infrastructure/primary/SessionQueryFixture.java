@@ -4,7 +4,15 @@ import static dev.maxenceng.lazyclaude.session.application.SessionApplicationSer
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.hostingTheRegisteredSession;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.emptyLaunchLogPort;
+import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.launchLogOf;
+import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ticketRun;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastLaunchEntry;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionId;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastTranscriptFactsRunning;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.quietPastSessions;
+import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.transcriptsRead;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 
 import dev.maxenceng.lazyclaude.session.application.SessionApplicationService;
@@ -49,6 +57,16 @@ public final class SessionQueryFixture {
                 warnings,
                 hosts,
                 worktrees));
+    }
+
+    public static HostedSessionCommand hostedSessionCommandOverALinkedPastSession(HostPort hosts, WarningPort warnings, WorktreePort worktrees) {
+        LaunchLogPort log = mock(LaunchLogPort.class);
+        lenient().when(log.read(any(), any())).thenReturn(launchLogOf(pastLaunchEntry(1)));
+        PastSessionPort past = mock(PastSessionPort.class);
+        lenient().when(past.transcriptsOf(any()))
+                .thenReturn(transcriptsRead(pastTranscriptFactsRunning(pastSessionId(1), ticketRun("review", "1"))));
+        return new HostedSessionCommand(sessionApplicationService(
+                mock(LiveSessionPort.class), past, log, mock(SessionWatchPort.class), mock(TranscriptWatchPort.class), warnings, hosts, worktrees));
     }
 
     public static SessionQuery sessionQueryOver(LiveSessionPort sessions, LaunchLogPort log, WorktreePort worktrees) {

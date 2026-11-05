@@ -2,7 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
-import { createApp } from './app';
+import { AppModel } from './app';
 import { boardFixture, ticketFixture } from './board/fixtures';
 import { Exited, Ready } from './protocol';
 import { bytesOfText, toBase64 } from './protocol';
@@ -33,7 +33,7 @@ const settle = () => act(async () => {
 const readyApp = async (packaged = false) => {
   const client = fakeClient(new Ready());
   const platform = testPlatform();
-  const app = createApp(client, platform);
+  const app = new AppModel(client, platform);
   app.start();
   render(<App app={app} packaged={packaged} />);
   await act(async () => {
@@ -48,8 +48,15 @@ const readyApp = async (packaged = false) => {
 
 type Started = Awaited<ReturnType<typeof readyApp>>;
 
+const newSessionAnswered = (client: Started['client'], answer: unknown) =>
+  act(async () => {
+    client.answer('session/newSessionFor', answer);
+    await settle();
+  });
+
 const startedSession = async ({ client, user }: Started, key = 'N') => {
   await user.keyboard(key);
+  await newSessionAnswered(client, { kind: 'unlinkedStart' });
   await act(async () => {
     client.answer('session/startUnlinked', { kind: 'startedHost', id: 'h1' });
     client.answer('session/startTicket', { kind: 'startedHost', id: 'h1' });
@@ -88,13 +95,13 @@ describe('the window', () => {
 
   it('shows the connection screen instead of the board while the backend is down', () => {
     const client = fakeClient(new Exited(1, ['boom']));
-    render(<App app={createApp(client, testPlatform())} packaged={false} />);
+    render(<App app={new AppModel(client, testPlatform())} packaged={false} />);
     expect(screen.getByRole('alert')).toHaveTextContent('The backend stopped');
   });
 
   it('shows a configuration it cannot read as an alert whose retry reads it again', async () => {
     const client = fakeClient(new Ready());
-    const app = createApp(client, testPlatform());
+    const app = new AppModel(client, testPlatform());
     app.start();
     render(<App app={app} packaged={false} />);
     await act(async () => {
@@ -126,20 +133,32 @@ describe('starting a session from the board', () => {
     expect(keyBar()).toHaveTextContent('ctrl+shift+v paste');
   });
 
-  it('starts an unlinked session on n for a ticket with no verb', async () => {
+  it('asks session what n opens, the merge being unknown to the window', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('j');
+    await ready.user.keyboard('n');
+    expect(ready.client.calls.find((call) => call.method === 'session/newSessionFor')?.params).toEqual({
+      sessions: { root: '/p', ticketIds: ['PROJ-1', 'PROJ-2'] },
+      ticket: 'PROJ-2',
+      verbs: ['START', 'REVIEW'],
+      merged: 'UNKNOWN',
+    });
+  });
+
+  it('starts an unlinked session on n when session answers that the ticket allows no verb', async () => {
     const ready = await readyApp();
     await startedSession(ready, 'n');
     expect(ready.client.calls.map((call) => call.method)).toContain('session/startUnlinked');
   });
 
-  it('offers the verbs of a ticket on n and starts the chosen one in its worktree', async () => {
+  it('offers the verbs of a ticket on n with the cursor on the one session preselects, and starts it in its worktree', async () => {
     const ready = await readyApp();
     await ready.user.keyboard('j');
     await ready.user.keyboard('n');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'REVIEW' });
     expect(screen.getByRole('button', { name: /start$/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /review/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /review/ })).toHaveAttribute('aria-current', 'true');
     expect(keyBar()).toHaveTextContent('enter start');
-    await ready.user.keyboard('j');
     await ready.user.keyboard('{Enter}');
     expect(ready.client.calls.find((call) => call.method === 'session/startTicket')?.params).toEqual({
       root: '/p',
@@ -154,6 +173,7 @@ describe('starting a session from the board', () => {
     const ready = await readyApp();
     await ready.user.keyboard('j');
     await ready.user.keyboard('n');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'START' });
     await ready.user.keyboard('{Escape}');
     expect(screen.queryByRole('button', { name: /review/ })).not.toBeInTheDocument();
     expect(ready.client.calls.map((call) => call.method)).not.toContain('session/startTicket');
@@ -189,29 +209,42 @@ describe('starting a session from the board', () => {
     expect(ready.client.calls.filter((call) => call.method === 'session/startUnlinked')).toHaveLength(2);
   });
 
+  it('shows n failing to reach session as an alert whose retry asks again', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('n');
+    await act(async () => {
+      ready.client.fail('session/newSessionFor', new Error('sidecar gone'));
+      await settle();
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('sidecar gone');
+    await ready.user.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(ready.client.calls.filter((call) => call.method === 'session/newSessionFor')).toHaveLength(2);
+  });
+
   it('resumes a past session of the ticket in the ticket\'s worktree', async () => {
     const ready = await readyApp();
     act(() => ready.client.push('session/changed', sessionsFixture([], { past: [pastFixture({ id: 'old', title: 'Earlier work', ticket: 'PROJ-1' })] })));
     await ready.user.keyboard('{Enter}');
     await ready.user.click(screen.getByRole('button', { name: /Earlier work/ }));
-    expect(ready.client.calls.find((call) => call.method === 'session/resumeInTicketWorktree')?.params).toEqual({
+    expect(ready.client.calls.find((call) => call.method === 'session/resumePast')?.params).toEqual({
+      sessions: { root: '/p', ticketIds: ['PROJ-1', 'PROJ-2'] },
       session: 'old',
       recordedDirectory: '/p/wt',
-      root: '/p',
-      branch: 'proj-1-first',
+      listing: { kind: 'ticketListingPayload', branch: 'proj-1-first' },
       size: { width: 80, height: 24 },
     });
   });
 
-  it('resumes a past session linked to no ticket where it was recorded', async () => {
+  it('resumes a past session linked to no ticket from its row, where being session\'s to decide', async () => {
     const ready = await readyApp();
     act(() => ready.client.push('session/changed', sessionsFixture([], { past: [pastFixture({ id: 'free', title: 'Loose end' })] })));
     await ready.user.keyboard('{Enter}');
     await ready.user.click(screen.getByRole('button', { name: /Loose end/ }));
-    expect(ready.client.calls.find((call) => call.method === 'session/resume')?.params).toEqual({
-      root: '/p',
+    expect(ready.client.calls.find((call) => call.method === 'session/resumePast')?.params).toEqual({
+      sessions: { root: '/p', ticketIds: ['PROJ-1', 'PROJ-2'] },
       session: 'free',
       recordedDirectory: '/p/wt',
+      listing: { kind: 'ticketListingPayload', branch: 'proj-1-first' },
       size: { width: 80, height: 24 },
     });
   });

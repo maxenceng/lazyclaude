@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { RpcError } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
-import { createWarningStore } from './warningStore';
+import { WarningStore } from './warningStore';
 
 describe('the warning on the status line', () => {
   it('shows none until a watch answers', () => {
-    expect(createWarningStore(fakeClient()).warning.get()).toBeUndefined();
+    expect(new WarningStore(fakeClient()).warning.get()).toBeUndefined();
   });
 
   it('asks warning/watch and shows the warning it answers', async () => {
     const client = fakeClient();
-    const store = createWarningStore(client);
+    const store = new WarningStore(client);
     const watching = store.watch();
     client.answerNext({ kind: 'warning', text: 'hosted session: claude exited with code 2.', count: 1 });
     await watching;
@@ -20,7 +20,7 @@ describe('the warning on the status line', () => {
 
   it('shows each warning/changed after it, and none once the last is withdrawn', async () => {
     const client = fakeClient();
-    const store = createWarningStore(client);
+    const store = new WarningStore(client);
     const watching = store.watch();
     client.answerNext({ kind: 'noWarning' });
     await watching;
@@ -32,7 +32,7 @@ describe('the warning on the status line', () => {
 
   it('shows none when the watch fails, since a warning that cannot be read is not one to invent', async () => {
     const client = fakeClient();
-    const store = createWarningStore(client);
+    const store = new WarningStore(client);
     const watching = store.watch();
     client.failNext(new RpcError(-32000, 'broken'));
     await watching;

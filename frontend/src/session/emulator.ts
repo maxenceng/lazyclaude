@@ -3,7 +3,7 @@ import { binaryBytes, bytesOfText, type Client, fromBase64, toBase64 } from '../
 import { createStore, type Store } from '../shared/store';
 import type { ModeMemory } from './modeMemory';
 import { PaneKey, type PaneKeyPress, paneKeyOf } from './paneKeys';
-import { KeptModes, trackModes } from './privateModes';
+import { KeptModes, ModeTracker } from './privateModes';
 
 export interface Clipboard {
   readText(): Promise<string>;
@@ -19,8 +19,6 @@ export interface EmulatorDeps {
   clipboard: Clipboard;
 }
 
-const disposer = (subscription: IDisposable) => () => subscription.dispose();
-
 /** Where a reloaded emulator is on its way to `session/repaint`: its kept modes written, then fitted to its pane. */
 enum Repaint {
   None,
@@ -34,7 +32,7 @@ export class Emulator {
   private readonly kept = new KeptModes();
   private repaint = Repaint.None;
   private fitted = false;
-  private readonly subscriptions: Array<() => void> = [];
+  private readonly subscriptions: IDisposable[] = [];
 
   constructor(
     readonly session: string,
@@ -42,13 +40,10 @@ export class Emulator {
     private readonly deps: EmulatorDeps,
   ) {
     const recalled = deps.memory.recall(session);
-    trackModes(terminal, this.kept, () => {
-      deps.memory.remember(session, this.kept);
-      this.mouseReported.set(this.kept.reportsMouse());
-    });
     this.subscriptions.push(
-      disposer(terminal.onData((data) => this.send(bytesOfText(data)))),
-      disposer(terminal.onBinary((data) => this.binary(data))),
+      new ModeTracker(terminal, this.kept, () => this.modesChanged()),
+      terminal.onData((data) => this.send(bytesOfText(data))),
+      terminal.onBinary((data) => this.binary(data)),
     );
     terminal.attachCustomKeyEventHandler((event) => this.handleKey(event));
     if (recalled !== undefined) {
@@ -102,6 +97,11 @@ export class Emulator {
     return false;
   }
 
+  private modesChanged(): void {
+    this.deps.memory.remember(this.session, this.kept);
+    this.mouseReported.set(this.kept.reportsMouse());
+  }
+
   /** The session ended: nothing of it is kept, and the terminal goes. */
   end(): void {
     this.dispose();
@@ -109,7 +109,7 @@ export class Emulator {
   }
 
   dispose(): void {
-    this.subscriptions.forEach((unsubscribe) => unsubscribe());
+    this.subscriptions.forEach((subscription) => subscription.dispose());
     this.terminal.dispose();
   }
 

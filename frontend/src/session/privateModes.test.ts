@@ -9,7 +9,7 @@ import {
   FULL_RESET,
   SOFT_RESET,
 } from './recordings';
-import { KeptModes, trackModes } from './privateModes';
+import { KeptModes, ModeTracker } from './privateModes';
 
 const feed = (term: Terminal, bytes: string) => new Promise<void>((done) => term.write(bytes, done));
 
@@ -17,7 +17,7 @@ const tracked = () => {
   const term = new Terminal();
   const kept = new KeptModes();
   const changed = vi.fn();
-  trackModes(term, kept, changed);
+  new ModeTracker(term, kept, changed);
   return { term, kept, changed };
 };
 
@@ -119,7 +119,7 @@ describe('the private modes kept from what the emulator is written', () => {
   it('stops keeping once disposed', async () => {
     const term = new Terminal();
     const kept = new KeptModes();
-    trackModes(term, kept, () => {}).dispose();
+    new ModeTracker(term, kept, () => {}).dispose();
     await feed(term, CLAUDE_START);
     expect(kept.restoration()).toBe('');
   });

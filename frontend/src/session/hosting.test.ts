@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { bytesOfText, RpcError, toBase64 } from '../protocol';
 import { createStore } from '../shared/store';
 import { fakeClient } from '../test/fakeClient';
-import { createHosting, type HostingDeps } from './hosting';
-import { createModeMemory } from './modeMemory';
+import { Hosting, type HostingDeps } from './hosting';
+import { StorageModeMemory } from './modeMemory';
 import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './recordings';
 import { sessionFixture, sessionsFixture } from './fixtures';
 import type { SessionsView } from '../protocol';
@@ -20,7 +20,7 @@ const hostedIn = (...ids: string[]): SessionsView => ({
 const hosting = (overrides: Partial<HostingDeps> = {}) => {
   const client = fakeClient();
   const sessions = createStore<SessionsView | undefined>(undefined);
-  const memory = createModeMemory(sessionStorage);
+  const memory = new StorageModeMemory(sessionStorage);
   const deps: HostingDeps = {
     client,
     memory,
@@ -30,7 +30,7 @@ const hosting = (overrides: Partial<HostingDeps> = {}) => {
     clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.resolve() },
     ...overrides,
   };
-  return { client, sessions, memory, hosted: createHosting(deps) };
+  return { client, sessions, memory, hosted: new Hosting(deps) };
 };
 
 describe('the hosted sessions', () => {
@@ -62,21 +62,14 @@ describe('the hosted sessions', () => {
     ]);
   });
 
-  it('resumes a session in its recorded directory', () => {
+  it('resumes a past session from its row, leaving where to the sidecar', () => {
     const { client, hosted } = hosting();
-    void hosted.resume('/p', 'old', '/p/wt');
-    expect(client.calls).toEqual([
-      { method: 'session/resume', params: { root: '/p', session: 'old', recordedDirectory: '/p/wt', size: { width: 80, height: 24 } } },
-    ]);
-  });
-
-  it('resumes a session in a ticket\'s worktree', () => {
-    const { client, hosted } = hosting();
-    void hosted.resumeInTicketWorktree('/p', 'old', '/p/wt', 'proj-1');
+    const sessions = { root: '/p', ticketIds: ['PROJ-1'] };
+    void hosted.resumePast(sessions, 'old', '/p/wt', { kind: 'ticketListingPayload', branch: 'proj-1' });
     expect(client.calls).toEqual([
       {
-        method: 'session/resumeInTicketWorktree',
-        params: { session: 'old', recordedDirectory: '/p/wt', root: '/p', branch: 'proj-1', size: { width: 80, height: 24 } },
+        method: 'session/resumePast',
+        params: { sessions, session: 'old', recordedDirectory: '/p/wt', listing: { kind: 'ticketListingPayload', branch: 'proj-1' }, size: { width: 80, height: 24 } },
       },
     ]);
   });

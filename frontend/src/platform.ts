@@ -1,7 +1,7 @@
 import { terminalLook } from './design-system';
 import type { Clipboard } from './session/emulator';
 import type { ModeMemory } from './session/modeMemory';
-import { createModeMemory } from './session/modeMemory';
+import { StorageModeMemory } from './session/modeMemory';
 import { createXterm } from './session/xterm';
 import type { FocusSource } from './window/windowFocus';
 import { tauriFocus } from './window/tauri';
@@ -16,7 +16,7 @@ export interface Platform {
 }
 
 export const browserPlatform = (): Platform => ({
-  memory: createModeMemory(sessionStorage),
+  memory: new StorageModeMemory(sessionStorage),
   clipboard: { readText: () => navigator.clipboard.readText(), writeText: (text) => navigator.clipboard.writeText(text) },
   newTerminal: () => createXterm(terminalLook(document.documentElement)),
   focus: tauriFocus,

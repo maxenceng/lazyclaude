@@ -18,6 +18,7 @@ import dev.maxenceng.lazyclaude.session.domain.KnownTickets;
 import dev.maxenceng.lazyclaude.session.domain.LastPushedSessions;
 import dev.maxenceng.lazyclaude.session.domain.LaunchLogPort;
 import dev.maxenceng.lazyclaude.session.domain.LiveSessionPort;
+import dev.maxenceng.lazyclaude.session.domain.NewSession;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
 import dev.maxenceng.lazyclaude.session.domain.PtyListener;
@@ -29,13 +30,13 @@ import dev.maxenceng.lazyclaude.session.domain.TicketStart;
 import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
 import dev.maxenceng.lazyclaude.session.domain.TimerPort;
 import dev.maxenceng.lazyclaude.session.domain.TranscriptWatchPort;
-import dev.maxenceng.lazyclaude.session.domain.VerbChoice;
 import dev.maxenceng.lazyclaude.session.domain.Watched;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeManager;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeNotClearException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
+import dev.maxenceng.lazyclaude.session.published.MergeState;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
@@ -116,19 +117,29 @@ public final class SessionApplicationService {
         return hosted.startTicket(ticket, size);
     }
 
-    public HostStart resumeInTicketWorktree(
-            SessionId session, WorkingDirectory recorded, TicketWorktree worktree, PaneSize size) {
-        return hosted.resumeInTicketWorktree(session, recorded, worktree, size);
+    /**
+     * Resumes a past session from the row it is listed on, in the ticket's worktree when it is linked and listed under the ticket. The
+     * sessions are the watcher's last push, as {@link #newSessionFor} reads them.
+     */
+    public HostStart resumePast(
+            Project project,
+            KnownTickets tickets,
+            SessionId session,
+            WorkingDirectory recorded,
+            Optional<TicketWorktree> listedUnder,
+            PaneSize size) {
+        return hosted.resumePast(sessionsAsPushed(project, tickets), project, session, recorded, listedUnder, size);
     }
 
     /**
-     * The verbs a ticket allows and the one to start on: {@code design} while no session has run it, {@code done} once the branch
-     * is merged. The sessions are the watcher's last push, so the render thread asking on every move never waits on the
-     * registry; only before the first push are they read here.
+     * What starting a session from a ticket opens: the verbs it allows and the one to start on, {@code design} while no session has
+     * run it and {@code done} once the branch is known merged, or an unlinked session when it allows none. The sessions are the
+     * watcher's last push, so the render thread asking on every move never waits on the registry; only before the first push are
+     * they read here.
      */
-    public VerbChoice verbChoiceFor(
-            Project project, KnownTickets tickets, LinkedTicketId ticket, List<Verb> allowed, boolean merged) {
-        return VerbChoice.of(allowed, sessionsAsPushed(project, tickets).ranVerb(ticket, Verb.DESIGN), merged);
+    public NewSession newSessionFor(
+            Project project, KnownTickets tickets, LinkedTicketId ticket, List<Verb> allowed, MergeState merged) {
+        return sessionsAsPushed(project, tickets).newSessionFor(ticket, allowed, merged);
     }
 
     private AvailableSessions sessionsAsPushed(Project project, KnownTickets tickets) {
@@ -137,7 +148,7 @@ public final class SessionApplicationService {
 
     /**
      * The ticket worktree and what stands in it, none when the ticket has no worktree. The sessions are the watcher's last push, as
-     * {@link #verbChoiceFor} reads them. It runs {@code git}, so not on the render thread.
+     * {@link #newSessionFor} reads them. It runs {@code git}, so not on the render thread.
      */
     public Optional<HeldWorktree> worktreeOf(Project project, KnownTickets tickets, TicketWorktree worktree, MergedHead merged) {
         return worktreeing.held(worktree, merged, sessionsAsPushed(project, tickets));
@@ -155,10 +166,6 @@ public final class SessionApplicationService {
     /** Tells {@code listener} which ticket's {@code /ticket done} session ended, however it ended. */
     public void onTicketDoneEnded(TicketDoneEndedListener listener) {
         hosted.onTicketDoneEnded(listener);
-    }
-
-    public HostStart resume(Project project, SessionId session, WorkingDirectory recorded, PaneSize size) {
-        return hosted.resume(project, session, recorded, size);
     }
 
     public void write(SessionId id, PtyBytes bytes) {

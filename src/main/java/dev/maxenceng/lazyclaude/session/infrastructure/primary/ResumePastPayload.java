@@ -5,19 +5,20 @@ import java.nio.file.Path;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
-import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
-/** What {@link HostedSessionCommand} is asked a resume with: the project root whose launch log lists the past session, the session, the directory it was launched in, and the pane's size. */
-public record ResumeHostedPayload(Path root, SessionId session, Path recordedDirectory, PaneSize size) {
+/**
+ * What {@link HostedSessionCommand} is asked a resume of a past session with: the project's sessions as they are asked for, the
+ * session, the directory it was launched in, what its row is listed under, and the pane's size.
+ */
+public record ResumePastPayload(
+        SessionPayload sessions, SessionId session, Path recordedDirectory, ListingPayload listing, PaneSize size) {
 
-    public ResumeHostedPayload {
+    public ResumePastPayload {
+        Assert.notNull("sessions", sessions);
         Assert.notNull("session", session);
+        Assert.notNull("listing", listing);
         Assert.notNull("pane size", size);
-    }
-
-    Project project() {
-        return new Project(root);
     }
 
     WorkingDirectory recorded() {

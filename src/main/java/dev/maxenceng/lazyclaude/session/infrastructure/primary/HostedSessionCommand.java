@@ -22,14 +22,19 @@ public final class HostedSessionCommand {
         return sessions.startTicket(payload.toDomain(), payload.size());
     }
 
-    /** {@code claude --resume} of a ticket's past session, its worktree added back first when that is the recorded directory and is gone. */
-    public HostStart resumeInTicketWorktree(ResumeTicketHostedPayload payload) {
-        return sessions.resumeInTicketWorktree(payload.session(), payload.recorded(), payload.worktree(), payload.size());
-    }
-
-    /** {@code claude --resume} of a past session, in the directory it was launched in, or nothing with a warning when that is gone. */
-    public HostStart resume(ResumeHostedPayload payload) {
-        return sessions.resume(payload.project(), payload.session(), payload.recorded(), payload.size());
+    /**
+     * {@code claude --resume} of a past session from its row: linked to a ticket and listed under it, in the ticket's worktree, added
+     * back first when that is the recorded directory and is gone; otherwise in the directory it was launched in. Nothing, with a
+     * warning, when that directory is gone.
+     */
+    public HostStart resumePast(ResumePastPayload payload) {
+        return sessions.resumePast(
+                payload.sessions().toDomain(),
+                payload.sessions().tickets(),
+                payload.session(),
+                payload.recorded(),
+                payload.listing().worktreeIn(payload.sessions().toDomain()),
+                payload.size());
     }
 
     /** Writes the bytes to the session's pty as they are; nothing for a session that is gone. */

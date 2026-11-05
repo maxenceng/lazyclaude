@@ -11,12 +11,13 @@ import java.util.stream.Stream;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyOutputView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RepaintPayload;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeTicketHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumePastPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionExitView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
@@ -40,12 +41,9 @@ final class SessionMethods {
     private static final List<ServedMethod<HostedSessionCommand, ?, ?>> STARTS = List.of(
             ServedMethod.of("session/startUnlinked", NewHostedPayload.class, HostStart.class, HostedSessionCommand::startUnlinked),
             ServedMethod.of("session/startTicket", TicketHostedPayload.class, HostStart.class, HostedSessionCommand::startTicket),
-            ServedMethod.of("session/resume", ResumeHostedPayload.class, HostStart.class, HostedSessionCommand::resume),
-            ServedMethod.of(
-                    "session/resumeInTicketWorktree",
-                    ResumeTicketHostedPayload.class,
-                    HostStart.class,
-                    HostedSessionCommand::resumeInTicketWorktree));
+            ServedMethod.of("session/resumePast", ResumePastPayload.class, HostStart.class, HostedSessionCommand::resumePast));
+    private static final ServedMethod<SessionQuery, NewSessionPayload, NewSessionView> NEW_SESSION =
+            ServedMethod.of("session/newSessionFor", NewSessionPayload.class, NewSessionView.class, SessionQuery::newSessionFor);
     private static final ServedMethod<ConfigurationView, NoParams, ConfigurationView> CONFIGURATION =
             ServedMethod.of("session/configuration", NoParams.class, ConfigurationView.class, (held, _) -> held);
     private static final ProtocolMethod<SessionPayload, SessionsView> WATCH =
@@ -82,7 +80,7 @@ final class SessionMethods {
 
     static Protocol protocol() {
         return new Protocol(
-                Stream.concat(STARTS.stream().map(ServedMethod::method), Stream.of(CONFIGURATION.method(), WATCH))
+                Stream.concat(STARTS.stream().map(ServedMethod::method), Stream.of(NEW_SESSION.method(), CONFIGURATION.method(), WATCH))
                         .<ProtocolMethod<?, ?>>map(declared -> declared)
                         .toList(),
                 Stream.concat(INPUTS.stream().map(ServedInput::input), Stream.of(WATCHING.input()))
@@ -99,6 +97,7 @@ final class SessionMethods {
                         STARTS.stream().map(start -> start.boundTo(hosting)),
                         INPUTS.stream().map(input -> input.boundTo(hosting)),
                         Stream.of(WATCHING.boundTo(watched)),
+                        Stream.of(NEW_SESSION.boundTo(sessions)),
                         Stream.of(CONFIGURATION.boundTo(configuration)),
                         Stream.of(Map.<String, SidecarMethod>entry(WATCH.name(), this::watch)))
                 .flatMap(served -> served)

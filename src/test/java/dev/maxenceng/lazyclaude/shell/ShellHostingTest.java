@@ -49,7 +49,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCom
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumeHostedPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumePastPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.MouseAction;
@@ -167,35 +167,35 @@ class ShellHostingTest {
 
     @Test
     void shouldResumeAnUnlinkedPastSessionInItsRecordedDirectoryWithEnter() {
-        when(hosting.resume(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
+        when(hosting.resumePast(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
         Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, emulating, screens);
         shell.press(alt('j'));
 
         shell.press(enter());
 
-        ArgumentCaptor<ResumeHostedPayload> payload = ArgumentCaptor.forClass(ResumeHostedPayload.class);
-        verify(hosting).resume(payload.capture());
+        ArgumentCaptor<ResumePastPayload> payload = ArgumentCaptor.forClass(ResumePastPayload.class);
+        verify(hosting).resumePast(payload.capture());
         assertThat(payload.getValue().session()).isEqualTo(pastSessionView().id());
         assertThat(payload.getValue().recordedDirectory()).isEqualTo(pastSessionView().directory());
-        assertThat(payload.getValue().root()).as("the launch log that lists the session is the project's").isEqualTo(project().root());
+        assertThat(payload.getValue().sessions().root()).as("the launch log that lists the session is the project's").isEqualTo(project().root());
     }
 
     @Test
     void shouldResumeAnInterruptedPastSessionWithEnterLikeAnyOther() {
-        when(hosting.resume(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
+        when(hosting.resumePast(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
         Shell shell = shellHosting(
                 sessionsViewOf(List.of(), List.of(pastSessionViewBuilder().interrupted(true).build())), hosting, emulating, screens);
         shell.press(alt('j'));
 
         shell.press(enter());
 
-        verify(hosting).resume(any());
+        verify(hosting).resumePast(any());
         assertThat(shell.focus()).isEqualTo(Focus.DOCK);
     }
 
     @Test
     void shouldFocusTheResumedTab() {
-        when(hosting.resume(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
+        when(hosting.resumePast(any())).thenReturn(new StartedHost(hostedSessionIdOf(1)));
         Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, emulating, screens);
         shell.press(alt('j'));
 
@@ -206,7 +206,7 @@ class ShellHostingTest {
 
     @Test
     void shouldKeepFocusWhenResumingFails() {
-        when(hosting.resume(any())).thenReturn(new NotStartedHost());
+        when(hosting.resumePast(any())).thenReturn(new NotStartedHost());
         Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, emulating, screens);
         shell.press(alt('j'));
 

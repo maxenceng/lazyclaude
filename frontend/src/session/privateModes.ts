@@ -1,10 +1,55 @@
 import type { IDisposable, Terminal } from '@xterm/xterm';
 
 const CSI = '\x1b[';
-const MOUSE_REPORTING = [9, 1000, 1002, 1003];
-const KITTY_SET_ALL = 1;
-const KITTY_SET_BITS = 2;
-const KITTY_CLEAR_BITS = 3;
+
+/** The DEC private modes `claude` sets and resets, by the number `CSI ? n h` and `CSI ? n l` carry. */
+export enum PrivateMode {
+  X10Mouse = 9,
+  CursorVisible = 25,
+  MouseButtons = 1000,
+  MouseDrag = 1002,
+  MouseMotion = 1003,
+  FocusReports = 1004,
+  SgrMouse = 1006,
+  AlternateScreen = 1049,
+  BracketedPaste = 2004,
+  ColourSchemeReports = 2031,
+}
+
+/** The kitty keyboard protocol's flags `claude` pushes, by the bit each sets. */
+export enum KittyFlag {
+  Disambiguate = 1,
+  ReportAlternateKeys = 4,
+}
+
+/** What comes between `CSI` and a sequence's parameters: a private mode, or one of the kitty keyboard stack's verbs. */
+export enum CsiPrefix {
+  PrivateMode = '?',
+  KeyboardPush = '>',
+  KeyboardPop = '<',
+  KeyboardSet = '=',
+}
+
+/** The byte that ends a sequence, naming what it does. */
+export enum CsiFinal {
+  Set = 'h',
+  Reset = 'l',
+  Keyboard = 'u',
+  SoftReset = 'p',
+}
+
+/** The intermediate byte of `CSI ! p`, the soft reset. */
+export const SOFT_RESET_INTERMEDIATE = '!';
+
+/** The final byte of `ESC c`, the full reset. */
+export const FULL_RESET_FINAL = 'c';
+
+const MOUSE_REPORTING = [PrivateMode.X10Mouse, PrivateMode.MouseButtons, PrivateMode.MouseDrag, PrivateMode.MouseMotion];
+
+/** How `CSI = flags ; how u` changes the flags on top of the kitty keyboard stack: a number off the wire, any other keeping them. */
+const KEYBOARD_SET_ALL = 1;
+const KEYBOARD_SET_BITS = 2;
+const KEYBOARD_CLEAR_BITS = 3;
 
 /** The private modes an emulator was last asked for and the kitty keyboard flags it stacked: what a new emulator must be written to match it. */
 export class KeptModes {
@@ -25,12 +70,12 @@ export class KeptModes {
 
   setKeyboard(flags: number, how: number): void {
     const current = this.flags.pop() ?? 0;
-    if (how === KITTY_SET_BITS) {
+    if (how === KEYBOARD_SET_BITS) {
       this.flags.push(current | flags);
-    } else if (how === KITTY_CLEAR_BITS) {
+    } else if (how === KEYBOARD_CLEAR_BITS) {
       this.flags.push(current & ~flags);
     } else {
-      this.flags.push(how === KITTY_SET_ALL ? flags : current);
+      this.flags.push(how === KEYBOARD_SET_ALL ? flags : current);
     }
   }
 
@@ -46,8 +91,8 @@ export class KeptModes {
 
   /** The bytes that put a fresh emulator into these modes. */
   restoration(): string {
-    const modes = [...this.modes].map(([mode, on]) => `${CSI}?${mode}${on ? 'h' : 'l'}`);
-    const keyboard = this.flags.map((flags) => `${CSI}>${flags}u`);
+    const modes = [...this.modes].map(([mode, on]) => `${CSI}${CsiPrefix.PrivateMode}${mode}${on ? CsiFinal.Set : CsiFinal.Reset}`);
+    const keyboard = this.flags.map((flags) => `${CSI}${CsiPrefix.KeyboardPush}${flags}${CsiFinal.Keyboard}`);
     return [...modes, ...keyboard].join('');
   }
 
@@ -67,25 +112,47 @@ const numbers = (params: ReadonlyArray<number | number[]>): number[] => params.f
 
 /**
  * Records, into `kept`, every private mode and kitty keyboard flag the emulator is written, then lets xterm.js apply it as it would;
- * `changed` is told after each. Returns how to stop.
+ * `changed` is told after each. `dispose` stops it.
  */
-export const trackModes = (term: Terminal, kept: KeptModes, changed: () => void): IDisposable => {
-  const handle = (act: () => void) => () => {
+export class ModeTracker implements IDisposable {
+  private readonly registrations: IDisposable[];
+
+  constructor(
+    term: Terminal,
+    private readonly kept: KeptModes,
+    private readonly changed: () => void,
+  ) {
+    const { parser } = term;
+    this.registrations = [
+      parser.registerCsiHandler({ prefix: CsiPrefix.PrivateMode, final: CsiFinal.Set }, (params) => this.record(() => this.setAll(params, true))),
+      parser.registerCsiHandler({ prefix: CsiPrefix.PrivateMode, final: CsiFinal.Reset }, (params) => this.record(() => this.setAll(params, false))),
+      parser.registerCsiHandler({ prefix: CsiPrefix.KeyboardPush, final: CsiFinal.Keyboard }, (params) =>
+        this.record(() => kept.pushKeyboard(numbers(params)[0] ?? 0)),
+      ),
+      parser.registerCsiHandler({ prefix: CsiPrefix.KeyboardPop, final: CsiFinal.Keyboard }, (params) =>
+        this.record(() => kept.popKeyboard(Math.max(1, numbers(params)[0] ?? 1))),
+      ),
+      parser.registerCsiHandler({ prefix: CsiPrefix.KeyboardSet, final: CsiFinal.Keyboard }, (params) => {
+        const [flags = 0, how = KEYBOARD_SET_ALL] = numbers(params);
+        return this.record(() => kept.setKeyboard(flags, how));
+      }),
+      parser.registerCsiHandler({ intermediates: SOFT_RESET_INTERMEDIATE, final: CsiFinal.SoftReset }, () => this.record(() => kept.clear())),
+      parser.registerEscHandler({ final: FULL_RESET_FINAL }, () => this.record(() => kept.clear())),
+    ];
+  }
+
+  dispose(): void {
+    this.registrations.forEach((registration) => registration.dispose());
+  }
+
+  private setAll(params: ReadonlyArray<number | number[]>, on: boolean): void {
+    numbers(params).forEach((mode) => this.kept.set(mode, on));
+  }
+
+  /** Acts, tells `changed`, and answers that xterm.js should still apply the sequence itself. */
+  private record(act: () => void): boolean {
     act();
-    changed();
+    this.changed();
     return false;
-  };
-  const registrations = [
-    term.parser.registerCsiHandler({ prefix: '?', final: 'h' }, (params) => handle(() => numbers(params).forEach((mode) => kept.set(mode, true)))()),
-    term.parser.registerCsiHandler({ prefix: '?', final: 'l' }, (params) => handle(() => numbers(params).forEach((mode) => kept.set(mode, false)))()),
-    term.parser.registerCsiHandler({ prefix: '>', final: 'u' }, (params) => handle(() => kept.pushKeyboard(numbers(params)[0] ?? 0))()),
-    term.parser.registerCsiHandler({ prefix: '<', final: 'u' }, (params) => handle(() => kept.popKeyboard(Math.max(1, numbers(params)[0] ?? 1)))()),
-    term.parser.registerCsiHandler({ prefix: '=', final: 'u' }, (params) => {
-      const [flags = 0, how = 1] = numbers(params);
-      return handle(() => kept.setKeyboard(flags, how))();
-    }),
-    term.parser.registerCsiHandler({ intermediates: '!', final: 'p' }, handle(() => kept.clear())),
-    term.parser.registerEscHandler({ final: 'c' }, handle(() => kept.clear())),
-  ];
-  return { dispose: () => registrations.forEach((registration) => registration.dispose()) };
-};
+  }
+}

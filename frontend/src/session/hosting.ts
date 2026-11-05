@@ -1,5 +1,5 @@
 import type { Terminal } from '@xterm/xterm';
-import type { Client, HostStart, PaneSize, SessionsView, Verb } from '../protocol';
+import type { Client, HostStart, ListingPayload, PaneSize, SessionPayload, SessionsView, Verb } from '../protocol';
 import { createStore, type Store } from '../shared/store';
 import { Dock } from './dock';
 import { type Clipboard, Emulator } from './emulator';
@@ -23,126 +23,134 @@ export interface StartFailure {
   retry: () => Promise<boolean>;
 }
 
-export interface Hosting {
-  readonly dock: Store<Dock>;
-  readonly failure: Store<StartFailure | undefined>;
-  readonly mouseReported: Store<boolean>;
-  emulatorOf(session: string): Emulator | undefined;
-  select(session: string): void;
-  selectPrevious(): boolean;
-  selectNext(): boolean;
-  startUnlinked(root: string): Promise<boolean>;
-  startTicket(root: string, ticket: string, branch: string, verb: Verb): Promise<boolean>;
-  resume(root: string, session: string, recordedDirectory: string): Promise<boolean>;
-  resumeInTicketWorktree(root: string, session: string, recordedDirectory: string, branch: string): Promise<boolean>;
-}
-
 /** The hosted sessions: their tabs, one emulator each, the starts that open them and the pushes that feed and close them. */
-export const createHosting = (deps: HostingDeps): Hosting => {
-  const { client } = deps;
-  const dock = createStore(new Dock());
-  const failure = createStore<StartFailure | undefined>(undefined);
-  const emulators = new Map<string, Emulator>();
-  const ended = new Set<string>();
-  const mouseReported = createStore(false);
-  const refreshMouse = () => {
-    const selected = dock.get().selectedTab();
-    mouseReported.set(selected !== undefined && emulators.get(selected)?.mouseReported.get() === true);
-  };
+export class Hosting {
+  readonly dock: Store<Dock> = createStore(new Dock());
+  readonly failure: Store<StartFailure | undefined> = createStore<StartFailure | undefined>(undefined);
+  readonly mouseReported: Store<boolean> = createStore(false);
+  private readonly emulators = new Map<string, Emulator>();
+  private readonly ended = new Set<string>();
 
-  const emulatorFor = (session: string): Emulator => {
-    const existing = emulators.get(session);
+  constructor(private readonly deps: HostingDeps) {
+    deps.client.subscribe('pty/output', (view) => {
+      if (!this.ended.has(view.session)) {
+        this.emulatorFor(view.session).write(view.data);
+      }
+    });
+    deps.client.subscribe('session/exited', (view) => {
+      this.ended.add(view.session);
+      this.settle(this.dock.get().closed(view.session));
+    });
+    deps.sessions.subscribe(() => this.listed());
+  }
+
+  emulatorOf(session: string): Emulator | undefined {
+    return this.emulators.get(session);
+  }
+
+  select(session: string): void {
+    this.dock.set(this.dock.get().select(session));
+    this.refreshMouse();
+  }
+
+  selectPrevious(): boolean {
+    const previous = this.dock.get().previous();
+    if (previous !== undefined) {
+      this.dock.set(previous);
+      this.refreshMouse();
+    }
+    return previous !== undefined;
+  }
+
+  selectNext(): boolean {
+    const before = this.dock.get().selectedTab();
+    this.dock.set(this.dock.get().next());
+    this.refreshMouse();
+    return this.dock.get().selectedTab() !== before;
+  }
+
+  hasTabs(): boolean {
+    return this.dock.get().tabs.length > 0;
+  }
+
+  startUnlinked(root: string): Promise<boolean> {
+    return this.start(() => this.deps.client.call('session/startUnlinked', { root, size: this.paneSize() }));
+  }
+
+  startTicket(root: string, ticket: string, branch: string, verb: Verb): Promise<boolean> {
+    return this.start(() => this.deps.client.call('session/startTicket', { root, ticket, branch, verb, size: this.paneSize() }));
+  }
+
+  /** Resumes a past session from its row; `session` decides whether in the ticket's worktree or where it ran. */
+  resumePast(sessions: SessionPayload, session: string, recordedDirectory: string, listing: ListingPayload): Promise<boolean> {
+    return this.start(() => this.deps.client.call('session/resumePast', { sessions, session, recordedDirectory, listing, size: this.paneSize() }));
+  }
+
+  /** A call that should have led to a start failed: the screen shows `message`, and `retry` makes the call again. */
+  failed(message: string, retry: () => Promise<boolean>): void {
+    this.failure.set({ message, retry });
+  }
+
+  private emulatorFor(session: string): Emulator {
+    const existing = this.emulators.get(session);
     if (existing !== undefined) {
       return existing;
     }
-    const { terminal, fit } = deps.newTerminal();
-    const emulator = new Emulator(session, terminal, { client, memory: deps.memory, fit, reserved: deps.reserved, clipboard: deps.clipboard });
-    emulators.set(session, emulator);
-    emulator.mouseReported.subscribe(refreshMouse);
+    const { terminal, fit } = this.deps.newTerminal();
+    const { client, memory, reserved, clipboard } = this.deps;
+    const emulator = new Emulator(session, terminal, { client, memory, fit, reserved, clipboard });
+    this.emulators.set(session, emulator);
+    emulator.mouseReported.subscribe(() => this.refreshMouse());
     return emulator;
-  };
+  }
 
-  const settle = (next: Dock) => {
-    const before = dock.get().tabs;
-    dock.set(next);
-    next.tabs.forEach(emulatorFor);
+  private refreshMouse(): void {
+    const selected = this.dock.get().selectedTab();
+    this.mouseReported.set(selected !== undefined && this.emulators.get(selected)?.mouseReported.get() === true);
+  }
+
+  private listed(): void {
+    const view = this.deps.sessions.get();
+    if (view !== undefined) {
+      this.settle(this.dock.get().listing(view.hosted.map((hosted) => hosted.id)));
+    }
+  }
+
+  private settle(next: Dock): void {
+    const before = this.dock.get().tabs;
+    this.dock.set(next);
+    next.tabs.forEach((session) => this.emulatorFor(session));
     before
       .filter((session) => !next.tabs.includes(session))
       .forEach((session) => {
-        emulators.get(session)?.end();
-        emulators.delete(session);
+        this.emulators.get(session)?.end();
+        this.emulators.delete(session);
       });
-    refreshMouse();
-  };
+    this.refreshMouse();
+  }
 
-  const paneSize = (): PaneSize => {
-    const fitted = [...emulators.values()].find((emulator) => emulator.terminal.element !== undefined);
+  private paneSize(): PaneSize {
+    const fitted = [...this.emulators.values()].find((emulator) => emulator.terminal.element !== undefined);
     return fitted === undefined ? DEFAULT_PANE : { width: fitted.terminal.cols, height: fitted.terminal.rows };
-  };
+  }
 
-  const opened = (start: HostStart): boolean => {
+  private opened(start: HostStart): boolean {
     if (start.kind !== 'startedHost') {
       return false;
     }
-    ended.delete(start.id);
-    settle(dock.get().opened(start.id));
+    this.ended.delete(start.id);
+    this.settle(this.dock.get().opened(start.id));
     return true;
-  };
+  }
 
-  const start = async (ask: () => Promise<HostStart>): Promise<boolean> => {
+  private async start(ask: () => Promise<HostStart>): Promise<boolean> {
     try {
-      const started = opened(await ask());
-      failure.set(undefined);
+      const started = this.opened(await ask());
+      this.failure.set(undefined);
       return started;
     } catch (error) {
-      failure.set({ message: error instanceof Error ? error.message : String(error), retry: () => start(ask) });
+      this.failed(error instanceof Error ? error.message : String(error), () => this.start(ask));
       return false;
     }
-  };
-
-  client.subscribe('pty/output', (view) => {
-    if (!ended.has(view.session)) {
-      emulatorFor(view.session).write(view.data);
-    }
-  });
-  client.subscribe('session/exited', (view) => {
-    ended.add(view.session);
-    settle(dock.get().closed(view.session));
-  });
-  deps.sessions.subscribe(() => {
-    const view = deps.sessions.get();
-    if (view !== undefined) {
-      settle(dock.get().listing(view.hosted.map((hosted) => hosted.id)));
-    }
-  });
-
-  return {
-    dock,
-    failure,
-    mouseReported,
-    emulatorOf: (session) => emulators.get(session),
-    select(session) {
-      dock.set(dock.get().select(session));
-      refreshMouse();
-    },
-    selectPrevious() {
-      const previous = dock.get().previous();
-      if (previous !== undefined) {
-        dock.set(previous);
-        refreshMouse();
-      }
-      return previous !== undefined;
-    },
-    selectNext() {
-      const before = dock.get().selectedTab();
-      dock.set(dock.get().next());
-      refreshMouse();
-      return dock.get().selectedTab() !== before;
-    },
-    startUnlinked: (root) => start(() => client.call('session/startUnlinked', { root, size: paneSize() })),
-    startTicket: (root, ticket, branch, verb) => start(() => client.call('session/startTicket', { root, ticket, branch, verb, size: paneSize() })),
-    resume: (root, session, recordedDirectory) => start(() => client.call('session/resume', { root, session, recordedDirectory, size: paneSize() })),
-    resumeInTicketWorktree: (root, session, recordedDirectory, branch) =>
-      start(() => client.call('session/resumeInTicketWorktree', { session, recordedDirectory, root, branch, size: paneSize() })),
-  };
-};
+  }
+}

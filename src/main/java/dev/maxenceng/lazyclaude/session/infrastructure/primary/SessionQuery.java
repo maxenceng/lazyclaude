@@ -21,9 +21,12 @@ public final class SessionQuery {
         return SessionsView.from(sessions.sessionsFor(payload.toDomain(), payload.tickets()));
     }
 
-    /** The verbs a ticket allows and the one to start on; the sessions are the last pushed, read afresh only before the first push. */
-    public VerbChoiceView verbChoiceFor(VerbChoicePayload payload) {
-        return VerbChoiceView.from(sessions.verbChoiceFor(
+    /**
+     * What starting a session from a ticket opens: the verbs it allows and the one to start on, or an unlinked session when it allows
+     * none. The sessions are the last pushed, read afresh only before the first push.
+     */
+    public NewSessionView newSessionFor(NewSessionPayload payload) {
+        return NewSessionView.from(sessions.newSessionFor(
                 payload.sessions().toDomain(),
                 payload.sessions().tickets(),
                 payload.ticket(),
@@ -48,7 +51,7 @@ public final class SessionQuery {
 
     /**
      * The ticket's worktree and what stands in it, none when it has none, or why that could not be told; never a failure. The sessions
-     * are the last pushed, as for {@link #verbChoiceFor}. It runs {@code git}, so not on the render thread.
+     * are the last pushed, as for {@link #newSessionFor}. It runs {@code git}, so not on the render thread.
      */
     public WorktreeView worktreeOf(WorktreePayload payload) {
         try {

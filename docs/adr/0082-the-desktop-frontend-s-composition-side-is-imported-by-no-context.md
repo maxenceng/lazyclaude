@@ -4,7 +4,8 @@ Date: 2026-11-02
 
 ## Status
 
-Accepted. Builds on ADR 0057. The frontend's twin of the backend's rule that nothing depends on the shell.
+Accepted. Builds on ADR 0057. The frontend's twin of the backend's rule that nothing depends on the shell. Amended by
+ADR 0085: `keyRouting.ts` joins the root files that compose.
 
 ## Context
 

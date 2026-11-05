@@ -8,6 +8,10 @@ describe('the verb picker over a ticket', () => {
     expect(picker().selected()).toBe('REFINE');
   });
 
+  it('opens on the verb session preselects', () => {
+    expect(VerbPicker.opening('PROJ-1', 'proj-1', ['REFINE', 'START', 'REVIEW'], 'START').selected()).toBe('START');
+  });
+
   it('moves down and up, held at the ends', () => {
     expect(picker().down().down().down().selected()).toBe('REVIEW');
     expect(picker().down().up().up().selected()).toBe('REFINE');

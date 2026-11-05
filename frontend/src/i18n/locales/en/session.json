@@ -29,5 +29,16 @@
     "title": "Dock",
     "terminal": "session terminal",
     "starting": "starting"
+  },
+  "keyBar": {
+    "move": "j/k move",
+    "open": "enter open",
+    "back": "esc back",
+    "new": "n new session",
+    "start": "enter start",
+    "cancel": "esc cancel",
+    "copy": "ctrl+shift+c copy",
+    "paste": "ctrl+shift+v paste",
+    "select": "shift+drag select"
   }
 }

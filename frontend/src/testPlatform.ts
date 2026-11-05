@@ -1,6 +1,6 @@
 import { Terminal } from '@xterm/xterm';
 import type { Platform } from './platform';
-import { createModeMemory } from './session/modeMemory';
+import { StorageModeMemory } from './session/modeMemory';
 
 export interface TestPlatform extends Platform {
   fits: Array<{ fit: () => void }>;
@@ -13,7 +13,7 @@ export interface TestPlatform extends Platform {
 export const testPlatform = (focused = true): TestPlatform => {
   let notify: (focused: boolean) => void = () => {};
   const platform: TestPlatform = {
-    memory: createModeMemory(sessionStorage),
+    memory: new StorageModeMemory(sessionStorage),
     fits: [],
     copied: [],
     clipboardText: '',

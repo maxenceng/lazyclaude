@@ -1,0 +1,142 @@
+import type { BoardController } from './board/boardController';
+import { Action } from './keys/bindings';
+import { Focus, type Layout } from './layout';
+import type { SessionsController } from './session/sessionsController';
+import type { Store } from './shared/store';
+
+/** The keys a pane takes while it has focus and claude has the keyboard: only these move out of it. */
+const FOCUS_KEYS: readonly Action[] = [
+  Action.FocusLeft,
+  Action.FocusRight,
+  Action.FocusDown,
+  Action.FocusUp,
+  Action.ToggleMainView,
+  Action.Zoom,
+  Action.NextWaiting,
+];
+
+/** Where a key goes: to the verb picker while it is open, to the focused pane's own handling, or to the layout. */
+export class KeyRouter {
+  constructor(
+    private readonly board: BoardController,
+    private readonly sessions: SessionsController,
+    private readonly layout: Store<Layout>,
+  ) {}
+
+  /** A key the window-level handler took: whatever the focused pane does with it. */
+  press(action: Action): void {
+    if (this.sessions.isPicking()) {
+      this.pressInPicker(action);
+    } else if (this.focus() === Focus.Dock && this.sessions.hosting.hasTabs()) {
+      if (FOCUS_KEYS.includes(action)) {
+        this.pressInPane(action);
+      }
+    } else {
+      this.pressOutsidePane(action);
+    }
+  }
+
+  /** A reserved chord pressed inside a pane, as the TUI's pane acts on it. */
+  pressInPane(action: Action): void {
+    switch (action) {
+      case Action.FocusLeft:
+        if (!this.sessions.hosting.selectPrevious()) {
+          this.change((current) => current.focusOn(Focus.Board));
+        }
+        break;
+      case Action.FocusRight:
+        this.sessions.hosting.selectNext();
+        break;
+      case Action.FocusUp:
+        this.change((current) => current.goUp(Focus.Sessions));
+        break;
+      case Action.ToggleMainView:
+        this.change((current) => current.toggleMainView());
+        break;
+      case Action.Zoom:
+        this.change((current) => current.toggleZoom());
+        break;
+      case Action.NextWaiting:
+        this.change((current) => current.leaveZoom());
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** Opens the row under the sessions' cursor, or moves focus to the sessions of the ticket under the Board's. */
+  open(): void {
+    if (this.focus() === Focus.Sessions) {
+      this.sessions.activate();
+    } else if (this.board.selectedTicket() !== undefined) {
+      this.sessions.moveTo(0);
+      this.change((current) => current.focusOn(Focus.Sessions));
+    }
+  }
+
+  private pressInPicker(action: Action): void {
+    switch (action) {
+      case Action.MoveDown:
+        return this.sessions.pickDown();
+      case Action.MoveUp:
+        return this.sessions.pickUp();
+      case Action.Back:
+        return this.sessions.cancelPick();
+      case Action.Open:
+        return void this.sessions.pick();
+      default:
+        return undefined;
+    }
+  }
+
+  private pressOutsidePane(action: Action): void {
+    switch (action) {
+      case Action.MoveDown:
+        return this.move(1);
+      case Action.MoveUp:
+        return this.move(-1);
+      case Action.Open:
+        return this.open();
+      case Action.NewTicketSession:
+        return void this.sessions.newSession();
+      case Action.NewSession:
+        return void this.sessions.newUnlinked();
+      case Action.Back:
+        return this.change((current) => (current.zoomed || current.focus === Focus.Board ? current.leaveZoom() : current.focusOn(Focus.Board)));
+      case Action.PanelLeft:
+      case Action.FocusLeft:
+        return this.change((current) => current.focusOn(Focus.Board));
+      case Action.PanelRight:
+      case Action.FocusRight:
+        return this.change((current) => current.focusOn(Focus.Sessions));
+      case Action.FocusDown:
+        return this.sessions.hosting.hasTabs() ? this.change((current) => current.focusOn(Focus.Dock)) : undefined;
+      case Action.FocusUp:
+        return this.change((current) => current.goUp(current.focus === Focus.Dock ? Focus.Sessions : Focus.Board));
+      case Action.Zoom:
+        return this.change((current) => current.toggleZoom());
+      case Action.ToggleMainView:
+        return this.change((current) => current.toggleMainView());
+      case Action.NextWaiting:
+        return this.change((current) => current.leaveZoom());
+      default:
+        return undefined;
+    }
+  }
+
+  private move(delta: number): void {
+    if (this.focus() === Focus.Sessions) {
+      this.sessions.move(delta);
+    } else if (this.board.move(delta)) {
+      this.sessions.moveTo(0);
+    }
+  }
+
+  private focus(): Focus {
+    return this.layout.get().focus;
+  }
+
+  private change(next: (current: Layout) => Layout): void {
+    this.layout.set(next(this.layout.get()));
+  }
+}

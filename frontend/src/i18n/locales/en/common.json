@@ -5,18 +5,6 @@
     "ticketTitle": "Ticket",
     "noTicketSelected": "No ticket selected."
   },
-  "keyBar": {
-    "move": "j/k move",
-    "open": "enter open",
-    "new": "n new session",
-    "newUnlinked": "N new unlinked",
-    "back": "esc back",
-    "start": "enter start",
-    "cancel": "esc cancel",
-    "copy": "ctrl+shift+c copy",
-    "paste": "ctrl+shift+v paste",
-    "select": "shift+drag select"
-  },
   "configuration": {
     "fault": "The configuration could not be read",
     "retry": "Retry"

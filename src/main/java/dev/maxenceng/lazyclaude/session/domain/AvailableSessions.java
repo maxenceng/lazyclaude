@@ -9,7 +9,9 @@ import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
+import dev.maxenceng.lazyclaude.session.published.MergeState;
 import dev.maxenceng.lazyclaude.session.published.SessionAge;
+import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
@@ -54,6 +56,19 @@ public record AvailableSessions(List<PastSession> past, List<OpenHostedSession> 
                                 .filter(link -> link.verb().equals(ran))
                                 .isPresent())
                 || hosted.stream().anyMatch(open -> open.session().runs(ticket, verb));
+    }
+
+    /** What starting a session from {@code ticket} opens: the choice among {@code allowed}, or an unlinked session when it allows none. */
+    public NewSession newSessionFor(LinkedTicketId ticket, List<Verb> allowed, MergeState merged) {
+        if (allowed.isEmpty()) {
+            return new UnlinkedStart();
+        }
+        return VerbChoice.of(allowed, ranVerb(ticket, Verb.DESIGN), merged);
+    }
+
+    /** Whether {@code session} is a past session linked to a ticket; one not among them is not known to be. */
+    public boolean isLinkedPast(SessionId session) {
+        return past.stream().anyMatch(candidate -> candidate.id().equals(session) && !candidate.links().isEmpty());
     }
 
     public SessionAge ageOf(LiveSession session) {

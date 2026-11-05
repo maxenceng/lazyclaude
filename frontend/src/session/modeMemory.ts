@@ -17,10 +17,15 @@ const isShape = (value: unknown): value is ReturnType<KeptModes['toJSON']> => {
 };
 
 /** The modes each session's emulator was set to, in `storage` (sessionStorage in the window: it survives a reload and not a quit, ADR 0057). */
-export const createModeMemory = (storage: Storage): ModeMemory => ({
-  remember: (session, kept) => storage.setItem(PREFIX + session, JSON.stringify(kept)),
-  recall(session) {
-    const text = storage.getItem(PREFIX + session);
+export class StorageModeMemory implements ModeMemory {
+  constructor(private readonly storage: Storage) {}
+
+  remember(session: string, kept: KeptModes): void {
+    this.storage.setItem(PREFIX + session, JSON.stringify(kept));
+  }
+
+  recall(session: string): KeptModes | undefined {
+    const text = this.storage.getItem(PREFIX + session);
     if (text === null) {
       return undefined;
     }
@@ -30,6 +35,9 @@ export const createModeMemory = (storage: Storage): ModeMemory => ({
     } catch {
       return undefined;
     }
-  },
-  forget: (session) => storage.removeItem(PREFIX + session),
-});
+  }
+
+  forget(session: string): void {
+    this.storage.removeItem(PREFIX + session);
+  }
+}

@@ -10,6 +10,9 @@ export type BoardTicketType = BoardTypeName | BoardNoType;
 export type BoardTicketBody = BoardBody | BoardNoBody;
 export type BoardVerb = 'REFINE' | 'START' | 'REVIEW' | 'DESIGN' | 'RESPOND' | 'DONE';
 export type SessionHostStart = SessionStartedHost | SessionNotStartedHost;
+export type SessionListingPayload = SessionTicketListingPayload | SessionNoTicketListingPayload;
+export type SessionMergeState = 'MERGED' | 'NOT_MERGED' | 'UNKNOWN';
+export type SessionNewSessionView = SessionVerbChoiceView | SessionUnlinkedStartView;
 export type SessionReservedAction =
   'FOCUS_LEFT' | 'FOCUS_DOWN' | 'FOCUS_UP' | 'FOCUS_RIGHT' | 'HIDE_MAIN_VIEW' | 'ZOOM' | 'NEXT_WAITING';
 export type SessionModifier = 'CTRL' | 'ALT' | 'SHIFT';
@@ -94,13 +97,13 @@ export interface LazyclaudeProtocol {
       params: SessionTicketHostedPayload;
       result: SessionHostStart;
     };
-    'session/resume': {
-      params: SessionResumeHostedPayload;
+    'session/resumePast': {
+      params: SessionResumePastPayload;
       result: SessionHostStart;
     };
-    'session/resumeInTicketWorktree': {
-      params: SessionResumeTicketHostedPayload;
-      result: SessionHostStart;
+    'session/newSessionFor': {
+      params: SessionNewSessionPayload;
+      result: SessionNewSessionView;
     };
     'session/configuration': {
       params: SidecarNoParams;
@@ -317,18 +320,37 @@ export interface SessionTicketHostedPayload {
   verb: BoardVerb;
   size: SessionPaneSize;
 }
-export interface SessionResumeHostedPayload {
-  root: string;
+export interface SessionResumePastPayload {
+  sessions: SessionSessionPayload;
   session: string;
   recordedDirectory: string;
+  listing: SessionListingPayload;
   size: SessionPaneSize;
 }
-export interface SessionResumeTicketHostedPayload {
-  session: string;
-  recordedDirectory: string;
+export interface SessionSessionPayload {
   root: string;
+  ticketIds: string[];
+}
+export interface SessionTicketListingPayload {
+  kind: 'ticketListingPayload';
   branch: string;
-  size: SessionPaneSize;
+}
+export interface SessionNoTicketListingPayload {
+  kind: 'noTicketListingPayload';
+}
+export interface SessionNewSessionPayload {
+  sessions: SessionSessionPayload;
+  ticket: string;
+  verbs: BoardVerb[];
+  merged: SessionMergeState;
+}
+export interface SessionVerbChoiceView {
+  kind: 'verbChoice';
+  verbs: BoardVerb[];
+  preselected: BoardVerb;
+}
+export interface SessionUnlinkedStartView {
+  kind: 'unlinkedStart';
 }
 export interface SidecarNoParams {}
 export interface SessionConfigurationView {
@@ -351,10 +373,6 @@ export interface SessionTypedCharacter {
 export interface SessionPressedKey {
   kind: 'pressedKey';
   key: SessionNamedKey;
-}
-export interface SessionSessionPayload {
-  root: string;
-  ticketIds: string[];
 }
 export interface SessionSessionsView {
   live: SessionLiveSessionView[];

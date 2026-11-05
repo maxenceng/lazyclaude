@@ -1,9 +1,10 @@
 import { type ReactNode, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { App as AppStores } from './app';
+import type { AppModel } from './app';
+import { BoardKeyBar } from './board/BoardKeyBar';
 import { BoardPane, TicketPane } from './board/BoardScreen';
 import { ConnectionScreen } from './connection/ConnectionScreen';
-import { Alert, AppFrame, Button, Count, KeyBar, Lamp, Pane, StatusLine, Text } from './design-system';
+import { Alert, AppFrame, Button, Count, Lamp, Pane, StatusLine, Text } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { installKeys } from './keys/installKeys';
@@ -11,13 +12,14 @@ import { Focus } from './layout';
 import { StatusKind } from './protocol';
 import { DockScreen } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
+import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
 import { SessionsList } from './session/SessionsList';
 import { useStore } from './shared/useStore';
 
 const COLOURS = [LampColour.Permission, LampColour.Input, LampColour.Turn] as const;
 
 interface Props {
-  app: AppStores;
+  app: AppModel;
   packaged: boolean;
 }
 
@@ -25,29 +27,28 @@ interface Props {
 export const App = ({ app, packaged }: Props) => {
   const { t } = useTranslation();
   const status = useStore(app.client.status);
-  const sessions = useStore(app.sessions.sessions);
-  const board = useStore(app.board.state);
-  const configuration = useStore(app.configuration);
+  const sessions = useStore(app.sessionStore.sessions);
+  const board = useStore(app.board.store.state);
+  const configuration = useStore(app.configuration.state);
   const layout = useStore(app.layout);
   const dock = useStore(app.hosting.dock);
-  const picker = useStore(app.picker);
-  const cursor = useStore(app.cursor);
+  const picker = useStore(app.sessions.picker);
+  const cursor = useStore(app.sessions.cursor);
   const failure = useStore(app.hosting.failure);
   const warning = useStore(app.warnings.warning);
   const mouseReported = useStore(app.hosting.mouseReported);
-  useStore(app.selection.selected);
+  useStore(app.board.selection.selected);
 
-  useEffect(() => installKeys((action) => app.press(action), { packaged, reserved: app.reserved }), [app, packaged]);
+  useEffect(() => installKeys((action) => app.press(action), { packaged, reserved: () => app.reserved() }), [app, packaged]);
 
   const markers = sessions === undefined ? [] : markersOf(sessions);
   const project = board.shown()?.root ?? t('app.project');
   const hasDock = dock.tabs.length > 0;
-  const keys = {
-    [Focus.Board]: [t('keyBar.move'), t('keyBar.open'), t('keyBar.new'), t('keyBar.newUnlinked')],
-    [Focus.Sessions]: [t('keyBar.move'), t('keyBar.open'), t('keyBar.back'), t('keyBar.new')],
-    [Focus.Dock]: [t('keyBar.copy'), t('keyBar.paste'), ...(mouseReported ? [t('keyBar.select')] : [])],
-  }[picker === undefined ? layout.focus : Focus.Sessions];
-  const pickerKeys = [t('keyBar.move'), t('keyBar.start'), t('keyBar.cancel')];
+  const keyBar = {
+    [Focus.Board]: <BoardKeyBar />,
+    [Focus.Sessions]: <SessionsKeyBar picking={false} />,
+    [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} />,
+  }[layout.focus];
 
   const unboarded = (alternative: ReactNode) => ({
     board: (
@@ -77,8 +78,8 @@ export const App = ({ app, packaged }: Props) => {
     return {
       board: (
         <BoardPane
-          board={app.board}
-          selection={app.selection}
+          board={app.board.store}
+          selection={app.board.selection}
           focused={layout.focus === Focus.Board}
           markerOf={(ticket) => (sessions === undefined ? undefined : markerOfTicket(sessions, ticket))}
           onOpen={() => app.press(Action.Open)}
@@ -87,15 +88,15 @@ export const App = ({ app, packaged }: Props) => {
         />
       ),
       main: (
-        <TicketPane board={app.board} selection={app.selection} focused={layout.focus === Focus.Sessions}>
+        <TicketPane board={app.board.store} selection={app.board.selection} focused={layout.focus === Focus.Sessions}>
           <SessionsList
-            rows={app.rows()}
+            rows={app.sessions.rows()}
             cursor={cursor}
             focused={layout.focus === Focus.Sessions}
             picker={picker}
             failure={failure}
             onPress={(index) => app.pressRow(index)}
-            onPickVerb={(index) => app.pressVerb(index)}
+            onPickVerb={(index) => void app.sessions.pick(index)}
           />
         </TicketPane>
       ),
@@ -117,7 +118,7 @@ export const App = ({ app, packaged }: Props) => {
           warning={warning}
         />
       }
-      keyBar={<KeyBar keys={picker === undefined ? keys : pickerKeys} />}
+      keyBar={picker === undefined ? keyBar : <SessionsKeyBar picking />}
       board={shown.board}
       main={shown.main}
       dock={

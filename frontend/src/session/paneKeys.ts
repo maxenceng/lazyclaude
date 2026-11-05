@@ -6,6 +6,18 @@ export enum PaneKey {
   Terminal = 'terminal',
 }
 
+/** The keys a pane's own chords are pressed on, as `KeyboardEvent.key` spells them, lower-cased. */
+enum ChordKey {
+  Suspend = 'z',
+  Copy = 'c',
+  Paste = 'v',
+  Insert = 'insert',
+}
+
+const CHORD_KEYS: readonly string[] = Object.values(ChordKey);
+
+const isChordKey = (key: string): key is ChordKey => CHORD_KEYS.includes(key);
+
 export interface PaneKeyPress {
   key: string;
   ctrlKey: boolean;
@@ -23,17 +35,18 @@ const onlyShift = (press: PaneKeyPress) => press.shiftKey && !press.ctrlKey && !
  * `ctrl+shift+v` and `shift+insert` paste, and every other key, `ctrl+c` and a plain `ctrl+v` among them, is the terminal's.
  */
 export const paneKeyOf = (press: PaneKeyPress, isReserved: (press: PaneKeyPress) => boolean): PaneKey => {
-  const key = press.key.toLowerCase();
+  const typed = press.key.toLowerCase();
+  const key = isChordKey(typed) ? typed : undefined;
   if (isReserved(press)) {
     return PaneKey.Reserved;
   }
-  if (onlyCtrl(press) && key === 'z') {
+  if (onlyCtrl(press) && key === ChordKey.Suspend) {
     return PaneKey.Suspend;
   }
-  if (ctrlShift(press) && key === 'c') {
+  if (ctrlShift(press) && key === ChordKey.Copy) {
     return PaneKey.Copy;
   }
-  if ((ctrlShift(press) && key === 'v') || (onlyShift(press) && key === 'insert')) {
+  if ((ctrlShift(press) && key === ChordKey.Paste) || (onlyShift(press) && key === ChordKey.Insert)) {
     return PaneKey.Paste;
   }
   return PaneKey.Terminal;
