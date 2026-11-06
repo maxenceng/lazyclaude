@@ -51,7 +51,7 @@
 }
 
 .removed .sign {
-  color: var(--ansi-red);
+  color: var(--ansi-bright-red);
 }
 
 .cursor .sign {

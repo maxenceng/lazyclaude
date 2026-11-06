@@ -52,6 +52,10 @@ export class FakeClient implements Client {
     this.waiting.shift()?.resolve(result);
   }
 
+  answerLast(result: unknown): void {
+    this.waiting.pop()?.resolve(result);
+  }
+
   answer(method: string, result: unknown): void {
     this.take(method)?.resolve(result);
   }

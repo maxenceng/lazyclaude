@@ -195,7 +195,7 @@ describe('the app and a review', () => {
   it('takes j and k as the cursor of the diff, and of Files and Comments once they have focus', async () => {
     const { client, app } = await reviewing();
     app.press(Action.Review);
-    const session = app.review.session.get();
+    const current = app.review.current.get();
     client.answer('review/diffOf', {
       kind: 'readDiff',
       files: [
@@ -207,18 +207,18 @@ describe('the app and a review', () => {
     client.answer('review/threadsInDiff', []);
     await settled();
     app.press(Action.MoveDown);
-    expect(session?.cursor()).toBe(1);
+    expect(current?.cursor()).toBe(1);
     app.press(Action.PanelLeft);
     app.press(Action.MoveDown);
-    expect(session?.selectedFile()).toBe(1);
+    expect(current?.selectedFile()).toBe(1);
     app.press(Action.Open);
-    expect(session?.cursor()).toBe(2);
+    expect(current?.cursor()).toBe(2);
   });
 
   it('asks where a comment would hang on c in the diff, and toggles resolved threads on r', async () => {
     const { client, app } = await reviewing();
     app.press(Action.Review);
-    const session = app.review.session.get();
+    const current = app.review.current.get();
     client.answer('review/diffOf', {
       kind: 'readDiff',
       files: [{ path: 'a.ts', status: { kind: 'modifiedFile' }, hunks: [{ header: '@@', lines: [{ kind: 'addedLine', content: 'a', newNumber: 1 }] }] }],
@@ -228,21 +228,21 @@ describe('the app and a review', () => {
     app.press(Action.Capture);
     expect(client.calls.map((call) => call.method)).toEqual(['review/anchorOf']);
     app.press(Action.Resolved);
-    expect(session?.resolvedShown()).toBe(true);
+    expect(current?.resolvedShown()).toBe(true);
   });
 
   it('answers the confirm after the summary with y, and dismisses it with any other key', async () => {
     const { client, app } = await reviewing();
     app.press(Action.Review);
-    const session = app.review.session.get();
-    session?.openSummary();
-    session?.saveBox();
+    const current = app.review.current.get();
+    current?.openSummary();
+    current?.saveBox();
     client.calls.length = 0;
     app.press(Action.MoveDown);
-    expect(session?.submitPrompt()).toBe(false);
+    expect(current?.submitPrompt()).toBe(false);
     expect(client.calls).toEqual([]);
-    session?.openSummary();
-    session?.saveBox();
+    current?.openSummary();
+    current?.saveBox();
     app.press(Action.Yes);
     expect(client.calls.map((call) => call.method)).toEqual(['review/submit']);
   });
@@ -250,9 +250,9 @@ describe('the app and a review', () => {
   it('opens the summary on S, and ignores the keys of the diff while a box is open', async () => {
     const { app } = await reviewing();
     app.press(Action.Review);
-    const session = app.review.session.get();
+    const current = app.review.current.get();
     app.press(Action.Submit);
-    expect(session?.box()).toBeDefined();
+    expect(current?.box()).toBeDefined();
     app.press(Action.Back);
     expect(app.review.isOpen()).toBe(true);
   });
@@ -260,9 +260,9 @@ describe('the app and a review', () => {
   it('leaves the review when the submit is taken', async () => {
     const { client, app } = await reviewing();
     app.press(Action.Review);
-    const session = app.review.session.get();
-    session?.openSummary();
-    session?.saveBox();
+    const current = app.review.current.get();
+    current?.openSummary();
+    current?.saveBox();
     app.press(Action.Yes);
     client.answer('review/submit', { kind: 'writtenReview', pending: { kind: 'noPendingReview' } });
     await settled();

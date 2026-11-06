@@ -1,7 +1,7 @@
 import type { BoardController } from './board/boardController';
 import type { DocsController } from './docs/docsController';
 import type { ReviewController } from './review/reviewController';
-import type { ReviewSession } from './review/reviewSession';
+import type { OpenReview } from './review/openReview';
 import { Action } from './keys/bindings';
 import { Focus, type Layout } from './layout';
 import type { SessionsController } from './session/sessionsController';
@@ -39,15 +39,15 @@ export class KeyRouter {
 
   /** A key the window-level handler took: whatever the focused pane does with it. */
   press(action: Action): void {
-    const session = this.review.session.get();
+    const current = this.review.current.get();
     if (this.sessions.isPicking()) {
       this.pressInPicker(action);
     } else if (this.focus() === Focus.Dock && this.sessions.hosting.hasTabs()) {
       if (FOCUS_KEYS.includes(action)) {
         this.pressInPane(action);
       }
-    } else if (session !== undefined) {
-      this.pressInReview(session, action);
+    } else if (current !== undefined) {
+      this.pressInReview(current, action);
     } else {
       this.pressOutsidePane(action);
     }
@@ -103,70 +103,70 @@ export class KeyRouter {
   }
 
   /** The keys of an open review: the confirm after the summary answers first, a comment box takes none, then the focused panel's. */
-  private pressInReview(session: ReviewSession, action: Action): void {
-    if (session.submitPrompt()) {
-      session.answerSubmit(action === Action.Yes);
-    } else if (session.box() === undefined) {
-      this.pressInReviewPanel(session, action);
+  private pressInReview(current: OpenReview, action: Action): void {
+    if (current.submitPrompt()) {
+      current.answerSubmit(action === Action.Yes);
+    } else if (current.box() === undefined) {
+      this.pressInReviewPanel(current, action);
     }
   }
 
-  private pressInReviewPanel(session: ReviewSession, action: Action): void {
+  private pressInReviewPanel(current: OpenReview, action: Action): void {
     const focus = this.focus();
     switch (action) {
       case Action.Back:
-        if (session.clearRange()) {
+        if (current.clearRange()) {
           return;
         }
         return this.layout.get().zoomed ? this.change((current) => current.leaveZoom()) : this.review.leave();
       case Action.Refresh:
-        return session.read();
+        return current.read();
       case Action.Submit:
-        return session.openSummary();
+        return current.openSummary();
       case Action.Resolved:
-        return session.toggleResolved();
+        return current.toggleResolved();
       case Action.Open:
-        return this.enterInReview(session, focus);
+        return this.enterInReview(current, focus);
       case Action.MoveDown:
-        return this.moveInReview(session, focus, 1);
+        return this.moveInReview(current, focus, 1);
       case Action.MoveUp:
-        return this.moveInReview(session, focus, -1);
+        return this.moveInReview(current, focus, -1);
       case Action.Capture:
-        return focus === Focus.Comments ? session.commentOnSelectedComment() : focus === Focus.Diff ? void session.comment() : undefined;
+        return focus === Focus.Comments ? current.commentOnSelectedComment() : focus === Focus.Diff ? void current.comment() : undefined;
       case Action.Delete:
-        return focus === Focus.Comments ? session.deleteSelectedComment() : focus === Focus.Diff ? session.deleteAtCursor() : undefined;
+        return focus === Focus.Comments ? current.deleteSelectedComment() : focus === Focus.Diff ? current.deleteAtCursor() : undefined;
       case Action.Range:
-        return focus === Focus.Diff ? void session.markRangeKey() : undefined;
+        return focus === Focus.Diff ? void current.markRangeKey() : undefined;
       case Action.NextFile:
-        return focus === Focus.Diff ? session.nextFile() : undefined;
+        return focus === Focus.Diff ? current.nextFile() : undefined;
       case Action.PreviousFile:
-        return focus === Focus.Diff ? session.previousFile() : undefined;
+        return focus === Focus.Diff ? current.previousFile() : undefined;
       case Action.HalfPageDown:
-        return focus === Focus.Diff ? session.halfPage(true) : undefined;
+        return focus === Focus.Diff ? current.halfPage(true) : undefined;
       case Action.HalfPageUp:
-        return focus === Focus.Diff ? session.halfPage(false) : undefined;
+        return focus === Focus.Diff ? current.halfPage(false) : undefined;
       default:
         return this.moveFocusInReview(action);
     }
   }
 
-  private enterInReview(session: ReviewSession, focus: Focus): void {
+  private enterInReview(current: OpenReview, focus: Focus): void {
     if (focus === Focus.Diff) {
-      session.enterInDiff();
+      current.enterInDiff();
     } else if (focus === Focus.Files) {
-      session.goToSelectedFile();
+      current.goToSelectedFile();
     } else if (focus === Focus.Comments) {
-      session.enterOnComment();
+      current.enterOnComment();
     }
   }
 
-  private moveInReview(session: ReviewSession, focus: Focus, delta: number): void {
+  private moveInReview(current: OpenReview, focus: Focus, delta: number): void {
     if (focus === Focus.Diff) {
-      session.moveLine(delta);
+      current.moveLine(delta);
     } else if (focus === Focus.Files) {
-      session.selectFile(session.selectedFile() + delta);
+      current.selectFile(current.selectedFile() + delta);
     } else if (focus === Focus.Comments) {
-      session.moveComment(delta);
+      current.moveComment(delta);
     }
   }
 

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RpcError } from '../protocol';
 import { added, diffFixture, fileFixture, hunk, kept, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
 import { CommentsPane, DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './ReviewScreen';
-import { Harness, settle } from './sessionHarness';
+import { Harness, settle } from './reviewHarness';
 
 const diff = diffFixture([
   fileFixture('src/a.ts', [hunk('@@ -1,2 +1,3 @@', [kept(1, 1, 'one'), removed(2, 'two'), added(2, 'deux')])]),
@@ -14,21 +14,21 @@ const diff = diffFixture([
 const renderDiff = (harness: Harness, focused = true) => {
   const onFocus = vi.fn();
   const onRetry = vi.fn();
-  render(<DiffPane session={harness.session} focused={focused} onFocus={onFocus} onRetry={onRetry} />);
+  render(<DiffPane review={harness.review} focused={focused} onFocus={onFocus} onRetry={onRetry} />);
   return { onFocus, onRetry };
 };
 
 describe('the diff of a review', () => {
   it('says it is reading while the diff has not answered', () => {
     const harness = new Harness();
-    harness.session.read();
+    harness.review.read();
     renderDiff(harness);
     expect(screen.getByRole('status')).toHaveTextContent('Reading the diff');
   });
 
   it('says why the pull request cannot be read', async () => {
     const harness = new Harness();
-    harness.session.read();
+    harness.review.read();
     renderDiff(harness);
     await harness.answer('review/diffOf', { kind: 'unavailableDiff', reason: 'gh is not signed in', tooLarge: false });
     expect(screen.getByText('PR unknown (gh is not signed in)')).toBeInTheDocument();
@@ -36,7 +36,7 @@ describe('the diff of a review', () => {
 
   it('says the diff is too large for GitHub', async () => {
     const harness = new Harness();
-    harness.session.read();
+    harness.review.read();
     renderDiff(harness);
     await harness.answer('review/diffOf', { kind: 'unavailableDiff', reason: '20000 lines', tooLarge: true });
     expect(screen.getByText('diff too large for GitHub (20000 lines)')).toBeInTheDocument();
@@ -51,7 +51,7 @@ describe('the diff of a review', () => {
 
   it('shows the failure of the read with a retry', async () => {
     const harness = new Harness();
-    harness.session.read();
+    harness.review.read();
     const { onRetry } = renderDiff(harness);
     await harness.fail('review/diffOf', new RpcError(-32000, 'sidecar gone'));
     expect(screen.getByRole('alert')).toHaveTextContent('sidecar gone');
@@ -81,7 +81,7 @@ describe('the diff of a review', () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     renderDiff(harness);
-    act(() => harness.session.moveLine(2));
+    act(() => harness.review.moveLine(2));
     expect(screen.getAllByRole('button')[2]).toHaveAttribute('aria-current', 'true');
     expect(screen.getAllByRole('button')[0]).not.toHaveAttribute('aria-current');
   });
@@ -113,7 +113,7 @@ describe('the diff of a review', () => {
     fireEvent.mouseDown(screen.getAllByRole('button')[2]!);
     fireEvent.mouseUp(screen.getAllByRole('button')[2]!);
     expect(onFocus).toHaveBeenCalled();
-    expect(harness.session.cursor()).toBe(2);
+    expect(harness.review.cursor()).toBe(2);
   });
 
   it('marks the range dragged from a line to the line the pointer is released on', async () => {
@@ -128,6 +128,25 @@ describe('the diff of a review', () => {
       await settle();
     });
     expect(screen.getAllByRole('button').slice(0, 3).every((line) => line.className.includes('range'))).toBe(true);
+  });
+
+  it('takes no press of a button other than the left one', async () => {
+    const harness = new Harness();
+    await harness.readAll({ diff });
+    renderDiff(harness);
+    fireEvent.mouseDown(screen.getAllByRole('button')[2]!, { button: 2 });
+    expect(harness.review.cursor()).toBe(0);
+  });
+
+  it('ends a drag at a press off the diff, so a release the window never saw marks nothing later', async () => {
+    const harness = new Harness();
+    await harness.readAll({ diff });
+    renderDiff(harness);
+    const callsBefore = harness.client.calls.length;
+    fireEvent.mouseDown(screen.getAllByRole('button')[0]!);
+    fireEvent.mouseDown(document.body);
+    fireEvent.mouseUp(screen.getAllByRole('button')[2]!);
+    expect(harness.client.calls).toHaveLength(callsBefore);
   });
 
   it('marks a range dragged upward, released on a line above the one pressed', async () => {
@@ -158,7 +177,7 @@ describe('the Files of a review', () => {
   it('lists each file with the letter for what the pull request does to it, its name, and the open threads and pending comments on it', async () => {
     const harness = new Harness();
     await withThreads(harness);
-    render(<FilesPane session={harness.session} focused onFocus={() => {}} />);
+    render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
     const rows = screen.getAllByRole('button');
     expect(rows[0]).toHaveTextContent('Ma.ts◆1✎1');
     expect(rows[1]).toHaveTextContent('Mb.ts');
@@ -169,7 +188,7 @@ describe('the Files of a review', () => {
   it('names a renamed file by its old and new names', async () => {
     const harness = new Harness();
     await harness.readAll({ diff: diffFixture([fileFixture('src/new.ts', [], { kind: 'renamedFile', from: 'lib/old.ts' })]) });
-    render(<FilesPane session={harness.session} focused onFocus={() => {}} />);
+    render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
     expect(screen.getByRole('button')).toHaveTextContent('Rold.ts → new.ts');
   });
 
@@ -177,20 +196,20 @@ describe('the Files of a review', () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     const onFocus = vi.fn();
-    render(<FilesPane session={harness.session} focused onFocus={onFocus} />);
+    render(<FilesPane review={harness.review} focused onFocus={onFocus} />);
     expect(screen.getAllByRole('button')[0]).toHaveAttribute('aria-current', 'true');
     await userEvent.click(screen.getAllByRole('button')[1]!);
-    expect(harness.session.selectedFile()).toBe(1);
-    expect(harness.session.cursor()).toBe(0);
+    expect(harness.review.selectedFile()).toBe(1);
+    expect(harness.review.cursor()).toBe(0);
     await userEvent.click(screen.getAllByRole('button')[1]!);
-    expect(harness.session.cursor()).toBe(3);
+    expect(harness.review.cursor()).toBe(3);
     expect(onFocus).toHaveBeenCalled();
   });
 
   it('lists nothing until the diff is read', () => {
     const harness = new Harness();
-    harness.session.read();
-    render(<FilesPane session={harness.session} focused onFocus={() => {}} />);
+    harness.review.read();
+    render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
     expect(screen.getByRole('status')).toHaveTextContent('Reading the diff');
   });
 });
@@ -199,29 +218,29 @@ describe('the Comments of a review', () => {
   it('lists the pending comments first, then the threads, each with where it hangs', async () => {
     const harness = new Harness();
     await withThreads(harness);
-    render(<CommentsPane session={harness.session} focused onFocus={() => {}} />);
+    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
     expect(screen.getAllByRole('button').map((row) => row.textContent)).toEqual(['✎a.ts:2', '◆a.ts:1–2 ada', 'a.ts:-2 bob', 'b.ts  outdated']);
   });
 
   it('dims a resolved thread', async () => {
     const harness = new Harness();
     await withThreads(harness);
-    render(<CommentsPane session={harness.session} focused onFocus={() => {}} />);
+    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
     expect(screen.getAllByRole('button')[2]!.className).toContain('dim');
     expect(screen.getAllByRole('button')[1]!.className).not.toContain('dim');
   });
 
   it('says it is reading while the threads have not answered', () => {
     const harness = new Harness();
-    harness.session.read();
-    render(<CommentsPane session={harness.session} focused onFocus={() => {}} />);
+    harness.review.read();
+    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
     expect(screen.getByRole('status')).toHaveTextContent('Reading the threads');
   });
 
   it('says why the threads cannot be read', async () => {
     const harness = new Harness();
-    harness.session.read();
-    render(<CommentsPane session={harness.session} focused onFocus={() => {}} />);
+    harness.review.read();
+    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
     await harness.answer('review/threadsOf', { kind: 'unavailableThreads', reason: 'rate limited' });
     expect(screen.getByText('threads unknown (rate limited)')).toBeInTheDocument();
   });
@@ -229,40 +248,40 @@ describe('the Comments of a review', () => {
   it('says there are no threads', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
-    render(<CommentsPane session={harness.session} focused onFocus={() => {}} />);
+    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
     expect(screen.getByText('no threads')).toBeInTheDocument();
   });
 
   it('selects an entry by a press, and goes to its line by a second', async () => {
     const harness = new Harness();
     await withThreads(harness);
-    render(<CommentsPane session={harness.session} focused onFocus={() => {}} />);
+    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
     await userEvent.click(screen.getAllByRole('button')[2]!);
-    expect(harness.session.selectedComment()).toBe(2);
+    expect(harness.review.selectedComment()).toBe(2);
     await userEvent.click(screen.getAllByRole('button')[2]!);
-    expect(harness.session.cursor()).toBe(1);
+    expect(harness.review.cursor()).toBe(1);
   });
 });
 
 describe('the Review panel', () => {
   it('says it is reading while the pending review has not answered', () => {
     const harness = new Harness();
-    harness.session.read();
-    render(<ReviewPanel session={harness.session} />);
+    harness.review.read();
+    render(<ReviewPanel review={harness.review} />);
     expect(screen.getByRole('status')).toHaveTextContent('Reading the pending review');
   });
 
   it('says there is no pending review', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
-    render(<ReviewPanel session={harness.session} />);
+    render(<ReviewPanel review={harness.review} />);
     expect(screen.getByText('no pending review')).toBeInTheDocument();
   });
 
   it('says why the pending review is unknown', async () => {
     const harness = new Harness();
-    harness.session.read();
-    render(<ReviewPanel session={harness.session} />);
+    harness.review.read();
+    render(<ReviewPanel review={harness.review} />);
     await harness.answer('review/pendingOf', { kind: 'unavailablePendingReview', reason: 'no scope' });
     expect(screen.getByText('pending unknown (no scope)')).toBeInTheDocument();
   });
@@ -270,7 +289,7 @@ describe('the Review panel', () => {
   it('counts the pending comments under the first line of the summary, or says there is no summary', async () => {
     const harness = new Harness();
     await harness.readAll({ diff, pending: openPending([pendingCommentFixture(), pendingCommentFixture({ id: 'C2' })], { summary: 'Mostly fine\nbut see below' }) });
-    render(<ReviewPanel session={harness.session} />);
+    render(<ReviewPanel review={harness.review} />);
     expect(screen.getByText('Mostly fine')).toBeInTheDocument();
     expect(screen.getByText('2 pending')).toBeInTheDocument();
     expect(screen.queryByText(/see below/)).not.toBeInTheDocument();
@@ -279,7 +298,7 @@ describe('the Review panel', () => {
   it('says there is no summary when the pending review has none', async () => {
     const harness = new Harness();
     await harness.readAll({ diff, pending: openPending([]) });
-    render(<ReviewPanel session={harness.session} />);
+    render(<ReviewPanel review={harness.review} />);
     expect(screen.getByText('no summary')).toBeInTheDocument();
     expect(screen.getByText('0 pending')).toBeInTheDocument();
   });
@@ -287,7 +306,7 @@ describe('the Review panel', () => {
   it('warns when the branch moved since the review was written', async () => {
     const harness = new Harness();
     await harness.readAll({ diff, pending: openPending([], { headMove: { kind: 'movedHead', writtenOn: 'abcdef0123456789', head: '1234567890abcdef' } }) });
-    render(<ReviewPanel session={harness.session} />);
+    render(<ReviewPanel review={harness.review} />);
     expect(screen.getByText('written on abcdef0,')).toBeInTheDocument();
     expect(screen.getByText('head is now 1234567')).toBeInTheDocument();
   });
@@ -295,11 +314,11 @@ describe('the Review panel', () => {
   it('shows the summary typed for the submit even before any comment is written', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
-    render(<ReviewPanel session={harness.session} />);
+    render(<ReviewPanel review={harness.review} />);
     act(() => {
-      harness.session.openSummary();
-      harness.session.typeInBox('Typed first');
-      harness.session.saveBox();
+      harness.review.openSummary();
+      harness.review.typeInBox('Typed first');
+      harness.review.saveBox();
     });
     expect(screen.getByText('Typed first')).toBeInTheDocument();
     expect(screen.getByText('0 pending')).toBeInTheDocument();
@@ -310,7 +329,7 @@ const anchored = { kind: 'onDiffAnchor', path: 'src/a.ts', position: { kind: 'pl
 
 const openedBox = async (harness: Harness) => {
   await harness.readAll({ diff });
-  const opening = harness.session.comment();
+  const opening = harness.review.comment();
   harness.client.answerNext(anchored);
   await act(async () => {
     await opening;
@@ -321,22 +340,22 @@ describe('the comment box of a review', () => {
   it('shows nothing while no box is open', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
-    render(<ReviewDialogs session={harness.session} />);
+    render(<ReviewDialogs review={harness.review} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('is a popup titled for a pending comment, holding what is typed', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs session={harness.session} />);
+    render(<ReviewDialogs review={harness.review} />);
     await openedBox(harness);
     expect(screen.getByRole('dialog', { name: 'Pending comment' })).toBeInTheDocument();
     await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
-    expect(harness.session.box()?.text).toBe('Rename this');
+    expect(harness.review.box()?.text).toBe('Rename this');
   });
 
   it('saves with ctrl+s and says it is saving, holding the text still', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs session={harness.session} />);
+    render(<ReviewDialogs review={harness.review} />);
     await openedBox(harness);
     await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
     await userEvent.keyboard('{Control>}s{/Control}');
@@ -347,7 +366,7 @@ describe('the comment box of a review', () => {
 
   it('says why a comment was not saved, keeping the text to save again', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs session={harness.session} />);
+    render(<ReviewDialogs review={harness.review} />);
     await openedBox(harness);
     await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
     await userEvent.keyboard('{Control>}s{/Control}');
@@ -359,19 +378,19 @@ describe('the comment box of a review', () => {
 
   it('is thrown away by escape', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs session={harness.session} />);
+    render(<ReviewDialogs review={harness.review} />);
     await openedBox(harness);
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(harness.session.box()).toBeUndefined();
+    expect(harness.review.box()).toBeUndefined();
   });
 
   it('shows the thread a reply answers above the box, titled with its first line', async () => {
     const harness = new Harness();
     const thread = threadFixture({ id: 'T1', comments: [{ author: 'ada', body: 'Why this?\nReally.' }, { author: 'bob', body: 'Speed' }] });
     await harness.readAll({ diff, threads: threadsFixture([thread]), placedThreads: [threadInDiff(thread, onLine(0))] });
-    render(<ReviewDialogs session={harness.session} />);
-    act(() => harness.session.commentOnSelectedComment());
+    render(<ReviewDialogs review={harness.review} />);
+    act(() => harness.review.commentOnSelectedComment());
     expect(screen.getByRole('dialog', { name: 'Why this?' })).toBeInTheDocument();
     expect(screen.getByText(/ada\s+Why this\?/)).toBeInTheDocument();
     expect(screen.getByText(/bob\s+Speed/)).toBeInTheDocument();
@@ -380,8 +399,8 @@ describe('the comment box of a review', () => {
   it('is titled Summary for the summary, and keeps it for the submit', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
-    render(<ReviewDialogs session={harness.session} />);
-    act(() => harness.session.openSummary());
+    render(<ReviewDialogs review={harness.review} />);
+    act(() => harness.review.openSummary());
     expect(screen.getByRole('dialog', { name: 'Summary' })).toBeInTheDocument();
   });
 });
@@ -389,10 +408,10 @@ describe('the comment box of a review', () => {
 const confirming = async () => {
   const harness = new Harness();
   await harness.readAll({ diff });
-  render(<ReviewDialogs session={harness.session} />);
+  render(<ReviewDialogs review={harness.review} />);
   act(() => {
-    harness.session.openSummary();
-    harness.session.saveBox();
+    harness.review.openSummary();
+    harness.review.saveBox();
   });
   return harness;
 };

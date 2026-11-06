@@ -1,7 +1,7 @@
 .annotation {
   margin: 0 var(--space-4) var(--space-2) calc(var(--space-4) + 4ch + 4ch + 3ch);
   padding: var(--space-1) var(--space-3);
-  border-left: 2px solid var(--seam);
+  border-left: 1px solid var(--seam);
   font: var(--size-body) / 1.5 var(--font-mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

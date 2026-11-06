@@ -1,7 +1,7 @@
 import { act } from '@testing-library/react';
 import { fakeClient } from '../test/fakeClient';
 import { diffFixture, threadsFixture } from './fixtures';
-import { ReviewSession } from './reviewSession';
+import { OpenReview } from './openReview';
 
 export interface Reads {
   diff?: unknown;
@@ -20,10 +20,10 @@ export class Harness {
   readonly client = fakeClient();
   readonly refusals: string[] = [];
   submitted = 0;
-  readonly session: ReviewSession;
+  readonly review: OpenReview;
 
   constructor() {
-    this.session = new ReviewSession({
+    this.review = new OpenReview({
       client: this.client,
       root: '/p',
       number: 7,
@@ -46,7 +46,7 @@ export class Harness {
 
   /** Reads the review and answers everything it asks, the diff last. */
   async readAll(reads: Reads = {}): Promise<void> {
-    this.session.read();
+    this.review.read();
     await this.answer('review/pendingOf', reads.pending ?? { kind: 'noPendingReview' });
     await this.answer('review/threadsOf', reads.threads ?? threadsFixture([]));
     await this.answer('review/diffOf', reads.diff ?? diffFixture([]));

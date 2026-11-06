@@ -59,7 +59,7 @@ export const App = ({ app, packaged }: Props) => {
   const warning = useStore(app.warnings.warning);
   const notice = useStore(app.notices.notice);
   const mouseReported = useStore(app.hosting.mouseReported);
-  const review = useStore(app.review.session);
+  const review = useStore(app.review.current);
   useStore(app.board.selection.selected);
 
   useEffect(() => {
@@ -93,10 +93,10 @@ export const App = ({ app, packaged }: Props) => {
     review === undefined
       ? undefined
       : {
-          board: <FilesPane session={review} focused={layout.focus === Focus.Files} onFocus={() => app.focusOn(Focus.Files)} />,
-          docs: <CommentsPane session={review} focused={layout.focus === Focus.Comments} onFocus={() => app.focusOn(Focus.Comments)} />,
-          foot: <ReviewPanel session={review} />,
-          main: <DiffPane session={review} focused={layout.focus === Focus.Diff} onFocus={() => app.focusOn(Focus.Diff)} onRetry={() => review.read()} />,
+          board: <FilesPane review={review} focused={layout.focus === Focus.Files} onFocus={() => app.focusOn(Focus.Files)} />,
+          docs: <CommentsPane review={review} focused={layout.focus === Focus.Comments} onFocus={() => app.focusOn(Focus.Comments)} />,
+          foot: <ReviewPanel review={review} />,
+          main: <DiffPane review={review} focused={layout.focus === Focus.Diff} onFocus={() => app.focusOn(Focus.Diff)} onRetry={() => review.read()} />,
           arrangement: layout.arrangement(hasDock),
         };
 
@@ -173,7 +173,7 @@ export const App = ({ app, packaged }: Props) => {
         }
         arrangement={shown.arrangement}
       />
-        {review === undefined ? null : <ReviewDialogs session={review} />}
+        {review === undefined ? null : <ReviewDialogs review={review} />}
     </>
   );
 };

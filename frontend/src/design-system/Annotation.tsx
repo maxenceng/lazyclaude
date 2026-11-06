@@ -21,7 +21,7 @@ export const Annotation = ({ kind, heading, comments, dim }: Props) => {
           <span className={styles.mark}>{kind === 'pending' ? '✎' : '◆'}</span> {heading}
         </p>
         {comments.map((comment, index) => (
-          <p key={index} className={index === 0 ? styles.first : styles.reply}>
+          <p key={index} className={index === 0 ? undefined : styles.reply}>
             <strong className={styles.author}>{comment.author}</strong> {comment.body}
           </p>
         ))}

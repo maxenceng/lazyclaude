@@ -26,9 +26,9 @@ describe('opening a review', () => {
   it('opens the review of the open pull request whose head is the ticket\'s branch, and reads it', async () => {
     const { client, controller, events } = await setup();
     expect(controller.open('proj-1-first')).toBe(true);
-    const session = controller.session.get();
-    expect(session?.number()).toBe(7);
-    expect(session?.title()).toBe('Add the thing');
+    const review = controller.current.get();
+    expect(review?.number()).toBe(7);
+    expect(review?.title()).toBe('Add the thing');
     expect(client.calls.map((call) => call.method)).toEqual(['review/pendingOf', 'review/diffOf', 'review/threadsOf']);
     expect(events).toEqual(['opened']);
   });
@@ -36,7 +36,7 @@ describe('opening a review', () => {
   it('opens nothing for a branch that heads no open pull request', async () => {
     const { controller, events } = await setup();
     expect(controller.open('proj-2-second')).toBe(false);
-    expect(controller.session.get()).toBeUndefined();
+    expect(controller.current.get()).toBeUndefined();
     expect(events).toEqual([]);
   });
 
@@ -55,22 +55,22 @@ describe('opening a review', () => {
   it('is left by leave, which drops the reads still under way', async () => {
     const { client, controller, events } = await setup();
     controller.open('proj-1-first');
-    const session = controller.session.get();
+    const review = controller.current.get();
     controller.leave();
-    expect(controller.session.get()).toBeUndefined();
+    expect(controller.current.get()).toBeUndefined();
     expect(events).toEqual(['opened', 'left']);
     client.answer('review/diffOf', { kind: 'readDiff', files: [] });
     await Promise.resolve();
-    expect(session?.diffState().kind).toBe('loading');
+    expect(review?.diffState().kind).toBe('loading');
   });
 
   it('is left when GitHub takes the submit', async () => {
     const { client, controller, events } = await setup();
     controller.open('proj-1-first');
-    const session = controller.session.get();
-    session?.openSummary();
-    session?.saveBox();
-    session?.answerSubmit(true);
+    const review = controller.current.get();
+    review?.openSummary();
+    review?.saveBox();
+    review?.answerSubmit(true);
     client.answer('review/submit', { kind: 'writtenReview', pending: { kind: 'noPendingReview' } });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(events).toEqual(['opened', 'left']);
@@ -79,10 +79,10 @@ describe('opening a review', () => {
   it('raises what the review refuses as a notice', async () => {
     const { client, controller, notices } = await setup();
     controller.open('proj-1-first');
-    const session = controller.session.get();
-    session?.openSummary();
-    session?.saveBox();
-    session?.answerSubmit(true);
+    const review = controller.current.get();
+    review?.openSummary();
+    review?.saveBox();
+    review?.answerSubmit(true);
     client.answer('review/submit', { kind: 'refusedWrite', reason: 'nothing to submit' });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(notices.notice.get()).toBe('not submitted (nothing to submit)');

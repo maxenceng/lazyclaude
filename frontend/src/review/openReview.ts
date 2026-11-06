@@ -31,10 +31,10 @@ const clamp = (index: number, size: number): number => Math.min(Math.max(index, 
 
 /**
  * What the review screen shows of one pull request: its diff, threads and pending review as last read, the cursor over the diff lines
- * and the Files and Comments selections. A read lands only if no later read of the same kind was begun since, and the session is
+ * and the Files and Comments selections. A read lands only if no later read of the same kind was begun since, and the review is
  * closed when the review is left, which drops every read still under way.
  */
-export class ReviewSession {
+export class OpenReview {
   readonly changed: Store<number> = new Store(0);
   diff: PullRequestDiffView = { kind: 'loadingDiff' };
   threads: ThreadsView = { kind: 'loadingThreads' };
@@ -52,6 +52,7 @@ export class ReviewSession {
   private threadsReads = 0;
   private pendingReads = 0;
   private placements = 0;
+  private anchors = 0;
   private closed = false;
   private rangeStart: number | undefined;
   private rangeEnd: number | undefined;
@@ -183,7 +184,10 @@ export class ReviewSession {
     return this.deps.client.call(method, params);
   }
 
-  /** Asks where the threads and the pending comments sit on the diff, and builds the rows from the answer; only the latest ask lands. */
+  /**
+   * Asks where the threads and the pending comments sit on the diff, and builds the rows from the answer; only the latest ask lands. A
+   * failed ask faults the diff, offering its retry, and leaves rows of the diff now held, so no line answers for a diff since replaced.
+   */
   private async place(): Promise<void> {
     this.placements += 1;
     const placement = this.placements;
@@ -202,7 +206,10 @@ export class ReviewSession {
       }
     } catch (error) {
       if (placement === this.placements && !this.closed) {
-        this.deps.refuse(messageOf(error));
+        this.placedThreads = [];
+        this.placedPending = [];
+        this.diffFault = messageOf(error);
+        this.rebuild();
       }
     }
   }
@@ -308,24 +315,31 @@ export class ReviewSession {
   async markRange(from: number, to: number): Promise<void> {
     this.moveTo(to);
     const start = clamp(from, this.diffRows.lineCount());
-    const answer = await this.anchorOf(Math.min(start, this.line), Math.max(start, this.line));
+    const end = this.line;
+    const answer = await this.anchorOf(Math.min(start, end), Math.max(start, end));
     if (answer === undefined) {
       return;
     }
     if (answer.kind === 'onDiffAnchor') {
       this.rangeStart = start;
-      this.rangeEnd = this.line;
+      this.rangeEnd = end;
       this.touch();
     } else {
       this.deps.refuse(answer.reason);
     }
   }
 
+  /** Asks where a comment on diff lines `first` to `last` would hang; an answer that is not the latest ask's, or comes after the review was left, is dropped. */
   private async anchorOf(first: number, last: number) {
+    this.anchors += 1;
+    const ask = this.anchors;
     try {
-      return await this.deps.client.call('review/anchorOf', { diff: this.diff, first, last });
+      const answer = await this.deps.client.call('review/anchorOf', { diff: this.diff, first, last });
+      return ask === this.anchors && !this.closed ? answer : undefined;
     } catch (error) {
-      this.deps.refuse(messageOf(error));
+      if (ask === this.anchors && !this.closed) {
+        this.deps.refuse(messageOf(error));
+      }
       return undefined;
     }
   }
@@ -350,6 +364,9 @@ export class ReviewSession {
     }
     const marked = this.rangeStart !== undefined;
     const answer = await this.anchorOf(marked ? this.rangeLow() : this.line, marked ? this.rangeHigh() : this.line);
+    if (this.open !== undefined) {
+      return;
+    }
     if (answer?.kind === 'onDiffAnchor') {
       this.openBox(new CommentBox({ kind: TargetKind.New, path: answer.path, position: answer.position }));
     } else if (answer !== undefined) {
@@ -366,8 +383,11 @@ export class ReviewSession {
     this.touch();
   }
 
-  /** Throws the box and what was typed in it away, and the range it was written on. */
+  /** Throws the box and what was typed in it away, and the range it was written on; a box whose save is in flight stays until GitHub answers. */
   cancelBox(): void {
+    if (this.open?.saving === true) {
+      return;
+    }
     this.open = undefined;
     this.rangeStart = undefined;
     this.rangeEnd = undefined;
@@ -504,6 +524,11 @@ export class ReviewSession {
     }
   }
 
+  /** A press that landed on no diff line, or the window losing the pointer: a drag under way ends without marking anything. */
+  dropDrag(): void {
+    this.dragFrom = undefined;
+  }
+
   /** The release of a drag, on the line nearest to where the pointer let go: the range between the two lines is marked unless they are one. */
   async releaseLine(line: number): Promise<void> {
     const from = this.dragFrom;
@@ -550,19 +575,35 @@ export class ReviewSession {
     );
   }
 
-  /** Writes off the render thread; GitHub's answer closes the box, or keeps it with the reason it was refused. */
+  /**
+   * Writes off the render thread; GitHub's answer closes the box, or keeps it with the reason it was refused. A call that failed may
+   * still have written, so it closes the box rather than offer a save that could write the comment twice.
+   */
   private write(box: CommentBox, write: () => Promise<PendingReviewWriteView>): void {
     box.saveBegun();
     this.touch();
-    this.inOrder(write, (answer) => {
-      if (answer.kind === 'writtenReview') {
-        this.applyWritten(answer.pending);
-        this.cancelBox();
-      } else {
-        box.saveRefused(answer.reason);
-        this.touch();
-      }
-    });
+    this.inOrder(
+      write,
+      (answer) => {
+        if (answer.kind === 'writtenReview') {
+          this.applyWritten(answer.pending);
+          this.closeBox(box);
+        } else {
+          box.saveRefused(answer.reason);
+          this.touch();
+        }
+      },
+      () => this.closeBox(box),
+    );
+  }
+
+  private closeBox(box: CommentBox): void {
+    if (this.open === box) {
+      this.open = undefined;
+      this.rangeStart = undefined;
+      this.rangeEnd = undefined;
+      this.touch();
+    }
   }
 
   /** What a write answered with replaces what was read, and any read begun before it. */
@@ -573,16 +614,26 @@ export class ReviewSession {
   }
 
   /** Writes to the pending review one after the other; an answer for a review since left is dropped. */
-  private inOrder(write: () => Promise<PendingReviewWriteView>, answered: (answer: PendingReviewWriteView) => void): void {
+  private inOrder(write: () => Promise<PendingReviewWriteView>, answered: (answer: PendingReviewWriteView) => void, failed: () => void = () => undefined): void {
     this.waiting += 1;
-    this.writes = this.waiting === 1 ? this.perform(write, answered) : this.writes.then(() => this.perform(write, answered));
+    this.writes = this.waiting === 1 ? this.perform(write, answered, failed) : this.writes.then(() => this.perform(write, answered, failed));
   }
 
-  private async perform(write: () => Promise<PendingReviewWriteView>, answered: (answer: PendingReviewWriteView) => void): Promise<void> {
-    const answer = await write().catch((error: unknown): PendingReviewWriteView => ({ kind: 'refusedWrite', reason: messageOf(error) }));
-    this.waiting -= 1;
-    if (!this.closed) {
-      answered(answer);
+  /** A write GitHub answered is handed on; one whose call failed may or may not have landed, so the pending review is read again to show which. */
+  private async perform(write: () => Promise<PendingReviewWriteView>, answered: (answer: PendingReviewWriteView) => void, failed: () => void): Promise<void> {
+    try {
+      const answer = await write();
+      this.waiting -= 1;
+      if (!this.closed) {
+        answered(answer);
+      }
+    } catch (error) {
+      this.waiting -= 1;
+      if (!this.closed) {
+        failed();
+        this.deps.refuse(i18n.t('review:refused.notWritten', { reason: messageOf(error) }));
+        void this.readPending({ root: this.deps.root, number: this.deps.number });
+      }
     }
   }
 
