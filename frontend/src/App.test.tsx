@@ -78,6 +78,8 @@ const output = (client: Started['client'], session: string, text: string) =>
     await settle();
   });
 
+const dockTabs = () => screen.getByRole('tablist', { name: 'hosted sessions' });
+
 const keyBar = () => screen.getByRole('contentinfo');
 
 describe('the window', () => {
@@ -203,7 +205,7 @@ describe('starting a session from the board', () => {
     const ready = await readyApp();
     await startedSession(ready);
     expect(ready.client.calls.find((call) => call.method === 'session/startUnlinked')?.params).toEqual({ root: '/p', size: { width: 80, height: 24 } });
-    expect(screen.getByRole('tab', { selected: true })).toHaveTextContent('starting');
+    expect(within(dockTabs()).getByRole('tab', { selected: true })).toHaveTextContent('starting');
     expect(screen.getByRole('group', { name: 'session terminal' })).toBeInTheDocument();
     expect(keyBar()).toHaveTextContent('ctrl+shift+c copy');
     expect(keyBar()).toHaveTextContent('ctrl+shift+v paste');
@@ -273,7 +275,7 @@ describe('starting a session from the board', () => {
       ready.client.push('warning/changed', { kind: 'warning', text: 'hosted session: the directory is gone.', count: 1 });
       await Promise.resolve();
     });
-    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'hosted sessions' })).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('⚠ hosted session: the directory is gone.');
   });
 
@@ -355,7 +357,7 @@ describe('a hosted session\'s pane', () => {
       ready.client.push('warning/changed', { kind: 'warning', text: 'hosted session: claude exited with code 2.', count: 1 });
       await Promise.resolve();
     });
-    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'hosted sessions' })).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('claude exited with code 2');
     expect(keyBar()).toHaveTextContent('enter open');
   });
@@ -364,7 +366,7 @@ describe('a hosted session\'s pane', () => {
     const { client } = await readyApp();
     const waiting = sessionFixture({ id: 'live1', state: { kind: 'waitingForPermission', reason: { kind: 'waitingReason', value: 'edit' } }, ticket: 'PROJ-1' });
     act(() => client.push('session/changed', { ...sessionsFixture([waiting]), hosted: [hostedFixture('h1', { ticket: 'PROJ-1', live: waiting })] }));
-    const tab = screen.getByRole('tab');
+    const tab = within(dockTabs()).getByRole('tab');
     expect(tab).toHaveTextContent('PROJ-1');
     expect(within(tab).getByRole('img', { name: 'waiting for permission' })).toBeInTheDocument();
   });
@@ -382,29 +384,29 @@ describe('a hosted session\'s pane', () => {
   it('changes tab by a click', async () => {
     const ready = await readyApp();
     act(() => ready.client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1', { ticket: 'PROJ-1' }), hostedFixture('h2', { ticket: 'PROJ-2' })] }));
-    await ready.user.click(screen.getByRole('tab', { name: /PROJ-2/ }));
-    expect(screen.getByRole('tab', { name: /PROJ-2/ })).toHaveAttribute('aria-selected', 'true');
+    await ready.user.click(within(dockTabs()).getByRole('tab', { name: /PROJ-2/ }));
+    expect(within(dockTabs()).getByRole('tab', { name: /PROJ-2/ })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('changes tab by the reserved chords, as the TUI does, the previous one and the next', async () => {
     const ready = await readyApp();
     act(() => ready.client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1', { ticket: 'PROJ-1' }), hostedFixture('h2', { ticket: 'PROJ-2' })] }));
-    await ready.user.click(screen.getByRole('tab', { name: /PROJ-1/ }));
+    await ready.user.click(within(dockTabs()).getByRole('tab', { name: /PROJ-1/ }));
     await ready.user.keyboard('{Alt>}l{/Alt}');
-    expect(screen.getByRole('tab', { name: /PROJ-2/ })).toHaveAttribute('aria-selected', 'true');
+    expect(within(dockTabs()).getByRole('tab', { name: /PROJ-2/ })).toHaveAttribute('aria-selected', 'true');
     await ready.user.keyboard('{Alt>}h{/Alt}');
-    expect(screen.getByRole('tab', { name: /PROJ-1/ })).toHaveAttribute('aria-selected', 'true');
+    expect(within(dockTabs()).getByRole('tab', { name: /PROJ-1/ })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('takes a reserved chord typed into the terminal and keeps it from claude', async () => {
     const ready = await readyApp();
     act(() => ready.client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1', { ticket: 'PROJ-1' }), hostedFixture('h2', { ticket: 'PROJ-2' })] }));
-    await ready.user.click(screen.getByRole('tab', { name: /PROJ-1/ }));
+    await ready.user.click(within(dockTabs()).getByRole('tab', { name: /PROJ-1/ }));
     ready.client.sent.length = 0;
     const textarea = screen.getByRole('group', { name: 'session terminal' }).querySelector('textarea');
     textarea?.focus();
     await ready.user.keyboard('{Alt>}l{/Alt}');
-    expect(screen.getByRole('tab', { name: /PROJ-2/ })).toHaveAttribute('aria-selected', 'true');
+    expect(within(dockTabs()).getByRole('tab', { name: /PROJ-2/ })).toHaveAttribute('aria-selected', 'true');
     expect(ready.client.sent.filter((sent) => sent.input === 'pty/input')).toEqual([]);
   });
 

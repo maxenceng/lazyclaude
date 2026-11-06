@@ -55,7 +55,7 @@ public record GitHubIssue(TicketId id, TicketBranch branch, Title title, TicketB
 
     private Optional<String> refusal() {
         return switch (state) {
-            case ClosedIssue(ClosedReason reason) when !reason.completed() -> Optional.of(CLOSED_AS.formatted(reason.phrase()));
+            case ClosedIssue(ClosedReason reason, ClosedAt _) when !reason.completed() -> Optional.of(CLOSED_AS.formatted(reason.phrase()));
             case ClosedIssue _ -> labelCountRefusal();
             case OpenIssue _ -> statusRefusal().or(this::labelCountRefusal);
         };
@@ -92,6 +92,7 @@ public record GitHubIssue(TicketId id, TicketBranch branch, Title title, TicketB
                 .title(title)
                 .otherLabels(otherLabels())
                 .body(body)
+                .closure(state instanceof ClosedIssue(ClosedReason _, ClosedAt at) ? at : new NotClosed())
                 .build();
     }
 

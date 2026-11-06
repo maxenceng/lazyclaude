@@ -13,3 +13,9 @@ export const ReviewKeyBar = ({ panel }: { panel: ReviewFocus }) => {
   const { t } = useTranslation('review');
   return <KeyBar keys={t(`keyBar.${panel}`, { returnObjects: true })} />;
 };
+
+/** The keys that work on the Pull requests tab. */
+export const PullRequestsKeyBar = ({ extra = [] }: { extra?: readonly string[] }) => {
+  const { t } = useTranslation('review');
+  return <KeyBar keys={[t('keyBar.pullRequests'), t('keyBar.pullRequestsOpen'), ...extra]} />;
+};

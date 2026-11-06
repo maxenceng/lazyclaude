@@ -1,0 +1,31 @@
+.glyph {
+  display: inline-block;
+  width: var(--lamp-marker);
+  flex: none;
+  text-align: center;
+  font-weight: 600;
+}
+
+.failed {
+  color: var(--ci-failed);
+}
+
+.pending {
+  color: var(--ci-pending);
+}
+
+.passed {
+  color: var(--ci-passed);
+}
+
+.onLight.failed {
+  color: var(--ci-failed-on-light);
+}
+
+.onLight.pending {
+  color: var(--ci-pending-on-light);
+}
+
+.onLight.passed {
+  color: var(--ci-passed-on-light);
+}

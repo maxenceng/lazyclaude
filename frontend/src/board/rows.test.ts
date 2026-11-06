@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { boardFixture, ticketFixture } from './fixtures';
-import { isFolded, moveSelection, orderedGroups, selectedIn, ticketIds } from './rows';
+import {
+  columnsOf,
+  cursorTicketInColumns,
+  goesToBase,
+  inProgressCount,
+  isFolded,
+  moveAcross,
+  moveInColumn,
+  moveSelection,
+  orderedGroups,
+  selectedIn,
+  selectedInColumns,
+  ticketIds,
+} from './rows';
 
 const view = boardFixture([
   ticketFixture({ id: 'PROJ-1', status: 'DONE' }),
@@ -58,5 +71,66 @@ describe('the board rows', () => {
 
   it('selects nothing on a board without tickets', () => {
     expect(moveSelection(boardFixture([]), undefined, 1)).toBeUndefined();
+  });
+
+  it('lays the board out as every status in lifecycle order, draft first, the ones with no ticket kept', () => {
+    expect(columnsOf(view).map((column) => [column.status, column.tickets.length, column.total])).toEqual([
+      ['DRAFT', 0, 0],
+      ['TODO', 2, 2],
+      ['IN_PROGRESS', 1, 1],
+      ['IN_REVIEW', 1, 1],
+      ['DONE', 1, 1],
+    ]);
+  });
+
+  it('shows the ten latest closed done tickets, in the order the board gives, and counts them all', () => {
+    const done = Array.from({ length: 12 }, (_, at) => ticketFixture({ id: `PROJ-${String(at + 10)}`, status: 'DONE' }));
+    const column = columnsOf(boardFixture(done)).find((candidate) => candidate.status === 'DONE');
+    expect(column?.tickets.map((ticket) => ticket.id)).toEqual(done.slice(0, 10).map((ticket) => ticket.id));
+    expect(column?.total).toBe(12);
+  });
+
+  it('keeps the cursor on a done card the Board tab shows, which the rows of Base fold away', () => {
+    expect(selectedInColumns(view, 'PROJ-1')).toBe('PROJ-1');
+    expect(selectedIn(view, 'PROJ-1')).toBe('PROJ-3');
+    expect(cursorTicketInColumns(view, 'PROJ-1')?.id).toBe('PROJ-1');
+  });
+
+  it('goes to Base only from a ticket Base shows, a done one being previewed in place', () => {
+    expect(goesToBase(ticketFixture({ status: 'TODO' }))).toBe(true);
+    expect(goesToBase(ticketFixture({ status: 'DONE' }))).toBe(false);
+  });
+
+  it('moves down and up inside one column and stops at its ends', () => {
+    expect(moveInColumn(view, 'PROJ-2', 1)).toBe('PROJ-5');
+    expect(moveInColumn(view, 'PROJ-5', 1)).toBe('PROJ-5');
+    expect(moveInColumn(view, 'PROJ-5', -1)).toBe('PROJ-2');
+    expect(moveInColumn(view, 'PROJ-2', -1)).toBe('PROJ-2');
+  });
+
+  it('moves across to the next column that holds a ticket, at the same row or the last one it has', () => {
+    expect(moveAcross(view, 'PROJ-3', 1)).toBe('PROJ-4');
+    expect(moveAcross(view, 'PROJ-2', 1)).toBe('PROJ-3');
+    expect(moveAcross(view, 'PROJ-5', 1)).toBe('PROJ-3');
+    expect(moveAcross(view, 'PROJ-4', -1)).toBe('PROJ-3');
+  });
+
+  it('stays in its column when no column across holds a ticket', () => {
+    expect(moveAcross(view, 'PROJ-2', -1)).toBe('PROJ-2');
+    expect(moveAcross(view, 'PROJ-1', 1)).toBe('PROJ-1');
+  });
+
+  it('moves across into the done column', () => {
+    expect(moveAcross(view, 'PROJ-4', 1)).toBe('PROJ-1');
+  });
+
+  it('moves from where Base\'s cursor is when the cursor is on none', () => {
+    expect(moveAcross(view, undefined, 1)).toBe('PROJ-4');
+    expect(moveInColumn(view, undefined, 1)).toBe('PROJ-3');
+  });
+
+  it('counts the tickets in progress, none on a board with none', () => {
+    expect(inProgressCount(view)).toBe(1);
+    expect(inProgressCount(boardFixture([ticketFixture({ status: 'TODO' })]))).toBe(0);
   });
 });

@@ -1,0 +1,14 @@
+.columns {
+  display: flex;
+  gap: 1px;
+  background: var(--seam);
+  height: 100%;
+  overflow-x: auto;
+}
+
+.column {
+  flex: 1 1 0;
+  min-width: 200px;
+  background: var(--pane);
+  overflow-y: auto;
+}

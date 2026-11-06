@@ -64,8 +64,45 @@
     "notWritten": "not known to be written ({{reason}}): reading the pending review again"
   },
   "keyBar": {
-    "diff": ["c comment", "v range", "enter edit", "x delete", "S submit", "j/k line", "J/K file", "^d/^u page", "r resolved", "R refresh", "esc back"],
-    "comments": ["c reply", "enter open", "x delete", "S submit", "j/k move", "r resolved", "R refresh", "esc back"],
-    "files": ["j/k move", "enter go to line", "S submit", "r resolved", "R refresh", "esc back"]
+    "diff": [
+      "c comment",
+      "v range",
+      "enter edit",
+      "x delete",
+      "S submit",
+      "j/k line",
+      "J/K file",
+      "^d/^u page",
+      "r resolved",
+      "R refresh",
+      "esc back"
+    ],
+    "comments": [
+      "c reply",
+      "enter open",
+      "x delete",
+      "S submit",
+      "j/k move",
+      "r resolved",
+      "R refresh",
+      "esc back"
+    ],
+    "files": [
+      "j/k move",
+      "enter go to line",
+      "S submit",
+      "r resolved",
+      "R refresh",
+      "esc back"
+    ],
+    "pullRequests": "j/k move",
+    "pullRequestsOpen": "enter review"
+  },
+  "pullRequests": {
+    "title": "Pull requests",
+    "loading": "Reading the pull requests…",
+    "empty": "No open pull requests.",
+    "fault": "The pull requests could not be read",
+    "retry": "Retry"
   }
 }

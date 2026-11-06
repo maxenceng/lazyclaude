@@ -25,7 +25,7 @@ public final class GitHubIssueFixture {
 
     public static GitHubIssue closedIssue(String reason, String... labels) {
         return gitHubIssueBuilder()
-                .state(new ClosedIssue(new ClosedReason(reason)))
+                .state(ClosedIssue.builder().reason(new ClosedReason(reason)).closedAt(ClosedAtFixture.closedAt()).build())
                 .labels(Arrays.stream(labels).map(LabelName::new).toList())
                 .build();
     }

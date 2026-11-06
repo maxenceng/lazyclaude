@@ -34,6 +34,14 @@
   grid-template-areas: 'dock';
 }
 
+.tab {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'board'
+    'dock';
+}
+
 .left {
   grid-area: board;
   display: grid;
@@ -42,6 +50,10 @@
   background: var(--seam);
   min-height: 0;
   min-width: 0;
+}
+
+.tab .left {
+  grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
 }
 
 .left:has(> .foot) {

@@ -43,8 +43,18 @@
   --diff-removed: color-mix(in srgb, var(--ansi-red) 11%, var(--pane));
   --diff-range: color-mix(in srgb, var(--ansi-blue) 16%, var(--pane));
 
+  --ci-failed: #d9695f;
+  --ci-pending: #c9a94c;
+  --ci-passed: #6fb27c;
+  --ci-failed-on-light: #9c2a22;
+  --ci-pending-on-light: #7a5d00;
+  --ci-passed-on-light: #1d6b34;
+
   --focus: #5aa9e6;
   --selected: #d9d6cf;
+  --card: #232427;
+  --card-edge: #2f3034;
+  --card-dim: #908d86;
 
   --font-read: Barlow, system-ui, sans-serif;
   --font-stencil: 'Saira Stencil One', Barlow, sans-serif;
@@ -69,4 +79,5 @@
   --lamp-tile-width: 118px;
   --lamp-tile-height: 46px;
   --lamp-marker: 14px;
+  --card-radius: 3px;
 }

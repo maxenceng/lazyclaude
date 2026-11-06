@@ -64,6 +64,7 @@ export class OpenReview {
   private rangeStart: number | undefined;
   private rangeEnd: number | undefined;
   private dragFrom: number | undefined;
+  private pressedAgain = false;
   private open: CommentBox | undefined;
   private typedSummary: string | undefined;
   private confirming = false;
@@ -537,37 +538,41 @@ export class OpenReview {
     }
   }
 
-  /** A press on a diff line: the cursor goes to it and a drag starts from it; a second press on the cursor's line in the focused diff is `enter`. */
+  /** A press on a diff line: the cursor goes to it and a drag starts from it, remembering whether it was a second press, on the cursor's line in the focused diff. */
   pressLine(line: number, focused: boolean): void {
-    const second = focused && this.line === line;
+    this.pressedAgain = focused && this.line === line;
     this.moveTo(line);
     this.dragFrom = line;
-    if (second) {
-      this.enterInDiff();
-    }
   }
 
   /** A press that landed on no diff line, or the window losing the pointer: a drag under way ends without marking anything. */
   dropDrag(): void {
     this.dragFrom = undefined;
+    this.pressedAgain = false;
   }
 
-  /** The release of a drag, on the line nearest to where the pointer let go: the range between the two lines is marked unless they are one. */
+  /**
+   * The release of a drag, on the line nearest to where the pointer let go: the range between the two lines is marked unless they are one.
+   * Released where a second press began, it edits the line's pending comment, as `enter` does, or writes one there, as `c` does.
+   */
   async releaseLine(line: number): Promise<void> {
     const from = this.dragFrom;
+    const again = this.pressedAgain;
     this.dragFrom = undefined;
+    this.pressedAgain = false;
     if (from !== undefined && from !== line) {
       await this.markRange(from, line);
+    } else if (from !== undefined && again && this.pendingOnCursorLine() !== undefined) {
+      this.enterInDiff();
+    } else if (from !== undefined && again) {
+      await this.comment();
     }
   }
 
-  /** A press on a file: it is selected, and a second press on the selected one goes to its first line. */
-  pressFile(index: number, focused: boolean): void {
-    const second = focused && index === this.fileSelected;
+  /** A press on a file: it is selected and the cursor goes to its first line. */
+  pressFile(index: number): void {
     this.selectFile(index);
-    if (second) {
-      this.goToSelectedFile();
-    }
+    this.goToSelectedFile();
   }
 
   /** A press on a comment: it is selected, and a second press on the selected one is `enter`. */

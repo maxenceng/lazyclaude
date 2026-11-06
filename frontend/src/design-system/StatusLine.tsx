@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import styles from './StatusLine.module.css';
 
 interface Props {
+  tabs: ReactNode;
   tiles: ReactNode;
   counts: ReactNode;
   project: string;
@@ -11,13 +12,14 @@ interface Props {
 }
 
 /**
- * The andon board across the top: a lamp tile per live session, folded to marker and count when narrow; then the window's
+ * The window tabs at the left of the andon board across the top: a lamp tile per live session, folded to marker and count when narrow; then the window's
  * notice and the backend's warning, each when there is one, before the project.
  */
-export const StatusLine = ({ tiles, counts, project, warning, notice }: Props) => {
+export const StatusLine = ({ tabs, tiles, counts, project, warning, notice }: Props) => {
   const { t } = useTranslation('designSystem');
   return (
     <header className={styles.line}>
+      {tabs}
       <div className={styles.tiles} role="group" aria-label={t('statusLine.tiles')}>
         {tiles}
       </div>

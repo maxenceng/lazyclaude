@@ -1,9 +1,13 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
+import dev.maxenceng.lazyclaude.board.domain.ClosedAt;
 import dev.maxenceng.lazyclaude.board.domain.ClosedIssue;
 import dev.maxenceng.lazyclaude.board.domain.ClosedReason;
 import dev.maxenceng.lazyclaude.board.domain.GitHubIssue;
@@ -22,12 +26,14 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.MissingFields;
  * One issue as {@code gh issue list --json} writes it, null where the JSON lacks it. The domain's {@link GitHubIssue} decides what ticket it
  * is (ADR 0043); this reads the fields, and names the branch as {@code gh issue develop} would.
  */
-record IssueRecord(Integer number, String title, String body, List<LabelRecord> labels, String state, String stateReason) {
+record IssueRecord(Integer number, String title, String body, List<LabelRecord> labels, String state, String stateReason, String closedAt) {
 
     private static final String NUMBER = "number";
     private static final String TITLE = "title";
     private static final String STATE = "state";
     private static final String CLOSED = "CLOSED";
+    private static final String CLOSED_AT = "closedAt";
+    private static final String UNREAD_TIME = "gh issue list wrote a closedAt that is not a time: %s";
     private static final String NO_REASON = "";
     private static final String NON_SLUG = "[^a-z0-9]+";
     private static final Pattern NON_SLUG_RUN = Pattern.compile(NON_SLUG);
@@ -38,7 +44,8 @@ record IssueRecord(Integer number, String title, String body, List<LabelRecord> 
 
     /** The fields an issue cannot be read without that the JSON lacks. */
     MissingFields missingFields() {
-        return new MissingFields().absent(NUMBER, number).blank(TITLE, title).blank(STATE, state);
+        MissingFields fields = new MissingFields().absent(NUMBER, number).blank(TITLE, title).blank(STATE, state);
+        return CLOSED.equals(state) ? fields.blank(CLOSED_AT, closedAt) : fields;
     }
 
     /** Only once {@link #missingFields()} names none. */
@@ -54,7 +61,20 @@ record IssueRecord(Integer number, String title, String body, List<LabelRecord> 
     }
 
     private IssueState issueState() {
-        return CLOSED.equals(state) ? new ClosedIssue(new ClosedReason(stateReason == null ? NO_REASON : stateReason)) : new OpenIssue();
+        return CLOSED.equals(state)
+                ? ClosedIssue.builder()
+                        .reason(new ClosedReason(stateReason == null ? NO_REASON : stateReason))
+                        .closedAt(new ClosedAt(closedTime()))
+                        .build()
+                : new OpenIssue();
+    }
+
+    private Instant closedTime() {
+        try {
+            return Instant.parse(closedAt);
+        } catch (DateTimeParseException e) {
+            throw new BacklogUnavailableException(UNREAD_TIME.formatted(closedAt), e);
+        }
     }
 
     private TicketBody textBody() {

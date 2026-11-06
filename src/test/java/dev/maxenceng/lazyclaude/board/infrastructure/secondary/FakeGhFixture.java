@@ -88,8 +88,8 @@ public final class FakeGhFixture {
 
     static String issueJson(int number, String title, String state, String reason, String... labels) {
         String named = Stream.of(labels).map("{\"name\":\"%s\"}"::formatted).collect(Collectors.joining(","));
-        return "{\"number\":%d,\"title\":\"%s\",\"body\":\"Body.\",\"labels\":[%s],\"state\":\"%s\",\"stateReason\":\"%s\"}"
-                .formatted(number, title, named, state, reason);
+        return "{\"number\":%d,\"title\":\"%s\",\"body\":\"Body.\",\"labels\":[%s],\"state\":\"%s\",\"stateReason\":\"%s\",\"closedAt\":%s}"
+                .formatted(number, title, named, state, reason, "CLOSED".equals(state) ? "\"2026-10-01T09:00:00Z\"" : "null");
     }
 
     private static Path script(Path directory, String body) throws IOException {

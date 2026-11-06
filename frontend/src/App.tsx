@@ -2,24 +2,29 @@ import type { TFunction } from 'i18next';
 import { type ReactNode, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AppModel } from './app';
-import { BoardKeyBar } from './board/BoardKeyBar';
-import { BoardPane, TicketPane } from './board/BoardScreen';
+import { BoardKeyBar, BoardTabKeyBar } from './board/BoardKeyBar';
+import { BoardColumns, BoardPane, BoardPreview, TicketPane } from './board/BoardScreen';
+import { inProgressCount } from './board/rows';
 import { ConnectionScreen } from './connection/ConnectionScreen';
 import { DocsKeyBar } from './docs/DocsKeyBar';
 import { DocsPane, DocumentPane } from './docs/DocsScreen';
-import { Alert, AppFrame, Arrangement, Button, Count, Lamp, LampSize, Pane, StatusLine, Text, Tone } from './design-system';
+import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Lamp, LampSize, Pane, StatusLine, Text, Tone, WindowTabBar } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { WindowKeys } from './keys/windowKeys';
-import { Focus } from './layout';
+import { Focus, WindowTab } from './layout';
 import { StatusKind } from './protocol';
+import { cellsOf, ciOf, worstResult } from './review/pullRequestList';
+import { PullRequestsPane } from './review/PullRequestsScreen';
 import { CommentsPane, DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './review/ReviewScreen';
-import { ReviewFocus, ReviewKeyBar } from './review/ReviewKeyBar';
-import { DockScreen } from './session/DockScreen';
+import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKeyBar';
+import { DockScreen, DockStrip } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
 import { SessionsList } from './session/SessionsList';
 import { useStore } from './shared/useStore';
+
+const TAB_OF: ReadonlyMap<string, WindowTab> = new Map<string, WindowTab>(Object.values(WindowTab).map((tab) => [tab, tab]));
 
 const COLOURS = [LampColour.Permission, LampColour.Input, LampColour.Turn] as const;
 
@@ -60,7 +65,12 @@ export const App = ({ app, packaged }: Props) => {
   const notice = useStore(app.notices.notice);
   const mouseReported = useStore(app.hosting.mouseReported);
   const review = useStore(app.review.current);
+  const tab = useStore(app.tabs.selected);
+  const previewShown = useStore(app.tabs.previewShown);
+  const pullRequests = useStore(app.review.pullRequests.state);
   useStore(app.board.selection.selected);
+  useStore(app.review.cursor.selected);
+  useStore(app.review.ticketPullRequests.joined);
 
   useEffect(() => {
     const keys = new WindowKeys((action) => app.press(action), { packaged, reserved: () => app.reserved() });
@@ -70,10 +80,11 @@ export const App = ({ app, packaged }: Props) => {
   const markers = sessions === undefined ? [] : markersOf(sessions);
   const project = board.shown()?.root ?? t('app.project');
   const hasDock = dock.tabs.length > 0;
+  const tabKeys = [t('keyBar.tabs')];
   const keyBar = {
-    [Focus.Board]: <BoardKeyBar />,
-    [Focus.Docs]: <DocsKeyBar />,
-    [Focus.Sessions]: <SessionsKeyBar picking={false} />,
+    [Focus.Board]: <BoardKeyBar extra={tabKeys} />,
+    [Focus.Docs]: <DocsKeyBar extra={tabKeys} />,
+    [Focus.Sessions]: <SessionsKeyBar picking={false} extra={tabKeys} />,
     [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
     [Focus.Comments]: <ReviewKeyBar panel={ReviewFocus.Comments} />,
     [Focus.Diff]: <ReviewKeyBar panel={ReviewFocus.Diff} />,
@@ -100,8 +111,63 @@ export const App = ({ app, packaged }: Props) => {
           arrangement: layout.arrangement(hasDock),
         };
 
+  const populatedBoard = board.shown();
+  const pullRequestList = app.tabs.pullRequests();
+  const tabScreen =
+    tab === WindowTab.Board
+      ? {
+          bar: <BoardTabKeyBar extra={tabKeys} />,
+          pane: (
+            <BoardColumns
+              board={app.board.store}
+              selection={app.board.selection}
+              markerOf={(ticket) => (sessions === undefined ? undefined : markerOfTicket(sessions, ticket))}
+              pullRequestOf={(ticket) => {
+                const pullRequest = app.review.ticketPullRequests.of(ticket.branch);
+                return pullRequest === undefined ? undefined : cellsOf(pullRequest);
+              }}
+              onPress={(ticket, cursor) => app.tabs.pressTicket(ticket, cursor)}
+              onBackground={() => app.tabs.closePreview()}
+              onRetry={() => void app.load()}
+            />
+          ),
+          preview: previewShown ? (
+            <BoardPreview
+              board={app.board.store}
+              selection={app.board.selection}
+              onLink={(href) => {
+                app.chooseTab(WindowTab.Base);
+                app.docs.followFromTicket(href);
+              }}
+            />
+          ) : null,
+        }
+      : {
+          bar: <PullRequestsKeyBar extra={tabKeys} />,
+          pane: (
+            <PullRequestsPane
+              state={pullRequests}
+              list={pullRequestList}
+              cursor={app.review.cursor.cursorIn(pullRequestList)?.number}
+              onOpen={(pullRequest) => app.tabs.openPullRequest(pullRequest)}
+              onRetry={() => app.retryPullRequests()}
+            />
+          ),
+          preview: null,
+        };
+  const tabbed =
+    tab === WindowTab.Base || unready !== undefined || reviewing !== undefined
+      ? undefined
+      : {
+          board: tabScreen.pane,
+          docs: tabScreen.preview,
+          main: null,
+          arrangement: Arrangement.Tab,
+        };
+
   const shown =
     reviewing ??
+    tabbed ??
     (unready === undefined
       ? {
           board: (
@@ -147,11 +213,43 @@ export const App = ({ app, packaged }: Props) => {
         }
       : unboarded(unready, t));
 
+  const dockScreen =
+    tabbed === undefined ? (
+      <DockScreen hosting={app.hosting} sessions={sessions} focused={layout.focus === Focus.Dock} onFocus={() => app.focusOn(Focus.Dock)} />
+    ) : (
+      <DockStrip hosting={app.hosting} sessions={sessions} onSelect={(id) => app.openDockTab(id)} />
+    );
+
   return (
     <>
       <AppFrame
         statusLine={
           <StatusLine
+            tabs={
+              <WindowTabBar
+                tabs={[
+                  { id: WindowTab.Base, label: t('tabs.base') },
+                  {
+                    id: WindowTab.Board,
+                    label: t('tabs.board'),
+                    finding: populatedBoard === undefined ? undefined : <span>{inProgressCount(populatedBoard)}</span>,
+                  },
+                  {
+                    id: WindowTab.PullRequests,
+                    label: t('tabs.pullRequests'),
+                    finding:
+                      pullRequests.kind === 'openPullRequests' ? (
+                        <>
+                          <span>{pullRequests.pullRequests.length}</span>
+                          <CiGlyph ci={ciOf(worstResult(pullRequests.pullRequests))} />
+                        </>
+                      ) : undefined,
+                  },
+                ]}
+                selected={tab}
+                onSelect={(id) => app.chooseTab(TAB_OF.get(id) ?? WindowTab.Base)}
+              />
+            }
             tiles={markers.map((marker) => (
               <Lamp key={marker.session} colour={marker.colour} size={LampSize.Tile} number={marker.ticket} />
             ))}
@@ -163,14 +261,12 @@ export const App = ({ app, packaged }: Props) => {
             notice={notice}
           />
         }
-        keyBar={picker === undefined ? keyBar : <SessionsKeyBar picking />}
+        keyBar={picker === undefined ? (tabbed === undefined ? keyBar : tabScreen.bar) : <SessionsKeyBar picking />}
         board={shown.board}
         docs={shown.docs}
         foot={reviewing?.foot}
         main={shown.main}
-        dock={
-          hasDock ? <DockScreen hosting={app.hosting} sessions={sessions} focused={layout.focus === Focus.Dock} onFocus={() => app.focusOn(Focus.Dock)} /> : null
-        }
+        dock={dock.tabs.length === 0 ? null : dockScreen}
         arrangement={shown.arrangement}
       />
         {review === undefined ? null : <ReviewDialogs review={review} />}

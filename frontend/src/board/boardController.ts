@@ -1,6 +1,6 @@
 import type { BoardBoardView, Client, BoardTicketView } from '../protocol';
 import { BoardStore } from './boardStore';
-import { selectedIn, ticketIds } from './rows';
+import { columnsOf, selectedIn, ticketIds } from './rows';
 import { Selection } from './selection';
 
 /** The Board: its one read, the ticket the cursor is on, and the moves of that cursor. */
@@ -24,6 +24,12 @@ export class BoardController {
   ticketIds(): string[] {
     const view = this.shown();
     return view === undefined ? [] : ticketIds(view);
+  }
+
+  /** The branches of the tickets on show, done cut to its latest closed, which `review` joins to their pull requests. */
+  branches(): string[] {
+    const view = this.shown();
+    return view === undefined ? [] : columnsOf(view).flatMap((column) => column.tickets.map((ticket) => ticket.branch));
   }
 
   selectedTicket(): BoardTicketView | undefined {

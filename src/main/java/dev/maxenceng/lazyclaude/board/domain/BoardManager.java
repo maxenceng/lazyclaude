@@ -109,9 +109,15 @@ public final class BoardManager {
                         .status(status)
                         .tickets(tickets.stream()
                                 .filter(ticket -> ticket.status() == status)
-                                .sorted(Comparator.comparing(Ticket::id))
+                                .sorted(orderIn(status))
                                 .toList())
                         .build())
                 .toList();
+    }
+
+    /** Done tickets latest closed first, so the ones just landed head the group; every other status in id order. */
+    private static Comparator<Ticket> orderIn(Status status) {
+        Comparator<Ticket> byId = Comparator.comparing(Ticket::id);
+        return status.finished() ? Comparator.comparing(Ticket::closure, Closure.latestFirst()).thenComparing(byId) : byId;
     }
 }

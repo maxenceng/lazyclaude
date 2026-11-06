@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { Action, actionOf, type KeyPress } from './bindings';
+import { Action, actionOf, type WindowKeyPress } from './bindings';
 
-const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
+const press = (key: string, held: Partial<WindowKeyPress> = {}): WindowKeyPress => ({
   key,
+  code: '',
   ctrlKey: false,
   altKey: false,
   metaKey: false,
@@ -37,6 +38,9 @@ describe('the keys the TUI binds', () => {
     ['K', Action.PreviousFile],
     ['r', Action.Resolved],
     ['y', Action.Yes],
+    ['1', Action.ShowBase],
+    ['2', Action.ShowBoard],
+    ['3', Action.ShowPullRequests],
   ])('%s is taken as %s', (key, action) => {
     expect(actionOf(press(key, { shiftKey: key !== key.toLowerCase() }))).toBe(action);
   });
@@ -51,6 +55,14 @@ describe('the keys the TUI binds', () => {
 
   it('does not take an alt chord on its own, since only the configuration reserves them', () => {
     expect(actionOf(press('h', { altKey: true }))).toBeUndefined();
+  });
+
+  it.each([
+    ['&', 'Digit1', Action.ShowBase],
+    ['é', 'Digit2', Action.ShowBoard],
+    ['"', 'Digit3', Action.ShowPullRequests],
+  ])('takes %s typed on the digit row key %s, as on AZERTY, as %s', (key, code, action) => {
+    expect(actionOf(press(key, { code }))).toBe(action);
   });
 
   it('leaves a key the TUI does not bind to the webview', () => {

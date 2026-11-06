@@ -196,17 +196,15 @@ describe('the Files of a review', () => {
     expect(screen.getByRole('button')).toHaveTextContent('Rold.ts → new.ts');
   });
 
-  it('marks the selected file, selects one by a press, and goes to the first line of the selected one by a second', async () => {
+  it('marks the selected file, and a press selects one and goes to its first line', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     const onFocus = vi.fn();
-    render(<FilesPane review={harness.review} focused onFocus={onFocus} />);
+    render(<FilesPane review={harness.review} focused={false} onFocus={onFocus} />);
     expect(screen.getAllByRole('button')[0]).toHaveAttribute('aria-current', 'true');
     await userEvent.click(screen.getAllByRole('button')[1]!);
     expect(harness.review.selectedFile()).toBe(1);
-    expect(harness.review.cursor()).toBe(0);
-    await userEvent.click(screen.getAllByRole('button')[1]!);
-    expect(harness.review.cursor()).toBe(3);
+    expect(harness.review.cursor(), 'one press goes, even on a pane that had no focus').toBe(3);
     expect(onFocus).toHaveBeenCalled();
   });
 
@@ -388,6 +386,25 @@ describe('the comment box of a review', () => {
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(harness.review.box()).toBeUndefined();
+  });
+
+  it('is thrown away, as by escape, by a press outside it', async () => {
+    const harness = new Harness();
+    render(<ReviewDialogs review={harness.review} />);
+    await openedBox(harness);
+    await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
+    await userEvent.click(screen.getByRole('dialog').parentElement!);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(harness.review.box()).toBeUndefined();
+  });
+
+  it('stays open for a press inside it, even one let go outside it', async () => {
+    const harness = new Harness();
+    render(<ReviewDialogs review={harness.review} />);
+    await openedBox(harness);
+    const user = userEvent.setup();
+    await user.pointer([{ keys: '[MouseLeft>]', target: screen.getByRole('textbox', { name: 'Comment text' }) }, { target: screen.getByRole('dialog').parentElement! }, { keys: '[/MouseLeft]' }]);
+    expect(screen.getByRole('dialog', { name: 'Pending comment' }), 'a selection dragged out of the box is not a press outside it').toBeInTheDocument();
   });
 
   it('shows the thread a reply answers above the box, titled with its first line', async () => {

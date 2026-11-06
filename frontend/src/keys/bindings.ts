@@ -32,9 +32,15 @@ export enum Action {
   PreviousFile = 'previousFile',
   Resolved = 'resolved',
   Yes = 'yes',
+  ShowBase = 'showBase',
+  ShowBoard = 'showBoard',
+  ShowPullRequests = 'showPullRequests',
 }
 
 export type KeyPress = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' | 'metaKey' | 'shiftKey'>;
+
+/** A key pressed on the window, which also says where the key sits on the keyboard. */
+export type WindowKeyPress = KeyPress & Pick<KeyboardEvent, 'code'>;
 
 const PLAIN: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entries({
   j: Action.MoveDown,
@@ -62,6 +68,16 @@ const PLAIN: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entrie
   K: Action.PreviousFile,
   r: Action.Resolved,
   y: Action.Yes,
+  '1': Action.ShowBase,
+  '2': Action.ShowBoard,
+  '3': Action.ShowPullRequests,
+}));
+
+/** The digit row's keys by position, so a layout whose digits need shift, as AZERTY's, chooses a tab with the same keys. */
+const TAB_POSITIONS: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entries({
+  Digit1: Action.ShowBase,
+  Digit2: Action.ShowBoard,
+  Digit3: Action.ShowPullRequests,
 }));
 
 const CTRL: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entries({
@@ -70,8 +86,8 @@ const CTRL: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entries
   u: Action.HalfPageUp,
 }));
 
-/** What the TUI's key table does with a key, matched on `KeyboardEvent.key` and the modifiers; undefined when the TUI leaves it. */
-export const actionOf = (press: KeyPress, reserved: readonly Binding[] = []): Action | undefined => {
+/** What the window does with a key: the TUI's key table matched on `KeyboardEvent.key` and the modifiers, and the digits that choose a window tab, by character or by their key on the digit row; undefined when the TUI leaves it. */
+export const actionOf = (press: WindowKeyPress, reserved: readonly Binding[] = []): Action | undefined => {
   if (press.metaKey) {
     return undefined;
   }
@@ -82,5 +98,5 @@ export const actionOf = (press: KeyPress, reserved: readonly Binding[] = []): Ac
   if (press.ctrlKey && !press.altKey) {
     return CTRL.get(press.key);
   }
-  return press.ctrlKey || press.altKey ? undefined : PLAIN.get(press.key);
+  return press.ctrlKey || press.altKey ? undefined : (TAB_POSITIONS.get(press.code) ?? PLAIN.get(press.key));
 };
