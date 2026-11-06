@@ -1,7 +1,9 @@
-import type { Client } from '../protocol';
+import type { Client, ReviewPullRequestView } from '../protocol';
 import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import { PullRequestStore } from './pullRequestStore';
+import { PullRequestSelection } from './pullRequestSelection';
+import { TicketPullRequests } from './ticketPullRequests';
 import { OpenReview } from './openReview';
 
 export interface ReviewControllerDeps {
@@ -18,10 +20,13 @@ export interface ReviewControllerDeps {
 /** The Review: the pull requests that can be reviewed, and the review that is open, if one is. */
 export class ReviewController {
   readonly pullRequests: PullRequestStore;
+  readonly tickets: TicketPullRequests;
+  readonly cursor: PullRequestSelection = new PullRequestSelection();
   readonly current: Store<OpenReview | undefined> = new Store<OpenReview | undefined>(undefined);
 
   constructor(private readonly deps: ReviewControllerDeps) {
     this.pullRequests = new PullRequestStore(deps.client);
+    this.tickets = new TicketPullRequests(this.pullRequests);
   }
 
   isOpen(): boolean {
@@ -42,6 +47,15 @@ export class ReviewController {
       return undefined;
     });
     if (pullRequest === undefined || this.isOpen()) {
+      return false;
+    }
+    return this.openPullRequest(pullRequest);
+  }
+
+  /** Opens the review of a pull request as listed, one whose head is no ticket's branch included; false while a review is open or the board is not read. */
+  openPullRequest(pullRequest: ReviewPullRequestView): boolean {
+    const root = this.deps.root();
+    if (root === undefined || this.isOpen()) {
       return false;
     }
     const review = new OpenReview({

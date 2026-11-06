@@ -10,6 +10,13 @@ export enum Focus {
   Dock = 'dock',
 }
 
+/** What the window shows: Base is the window without tabs, Board the status columns, Pull requests every open pull request. */
+export enum WindowTab {
+  Base = 'base',
+  Board = 'board',
+  PullRequests = 'pullRequests',
+}
+
 /** The panes that fill the main view: a ticket's sessions, and a review's diff. */
 const isMainView = (focus: Focus): boolean => focus === Focus.Sessions || focus === Focus.Diff;
 

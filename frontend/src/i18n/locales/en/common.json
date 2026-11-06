@@ -17,5 +17,13 @@
     "exitedWithCode": "It ended with exit code {{code}}.",
     "exitedWithoutCode": "It ended with no exit code.",
     "restart": "Restart"
+  },
+  "tabs": {
+    "base": "Base",
+    "board": "Board",
+    "pullRequests": "Pull requests"
+  },
+  "keyBar": {
+    "tabs": "1/2/3 tabs"
   }
 }

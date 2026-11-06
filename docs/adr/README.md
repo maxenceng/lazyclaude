@@ -94,3 +94,4 @@
 - 0090 [`review` decides the review screen's rules both frontends show](0090-review-decides-the-review-screen-rules-both-frontends-show.md) — Accepted.
 - 0091 [The desktop window declares a set of values as an enum](0091-the-desktop-window-declares-a-set-of-values-as-an-enum.md) — Accepted.
 - 0092 [`config.yml` sets the verbs each status offers, and `board` holds the rule](0092-config-yml-sets-the-verbs-each-status-offers-and-board-holds-the-rule.md) — Accepted.
+- 0093 [The desktop window chooses what it shows by window tab, keyed 1, 2 and 3](0093-the-desktop-window-chooses-what-it-shows-by-window-tab-and-keys-them-1-2-3.md) — Accepted.

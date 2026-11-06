@@ -26,6 +26,11 @@ export class BoardController {
     return view === undefined ? [] : ticketIds(view);
   }
 
+  /** The branches of the tickets on show, which `review` joins to their pull requests. */
+  branches(): string[] {
+    return this.shown()?.groups.flatMap((group) => group.tickets.map((ticket) => ticket.branch)) ?? [];
+  }
+
   selectedTicket(): BoardTicketView | undefined {
     const view = this.shown();
     const id = view === undefined ? undefined : selectedIn(view, this.selection.selected.get());

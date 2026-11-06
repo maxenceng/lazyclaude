@@ -3,7 +3,7 @@ import { boardFixture, ticketFixture } from './board/fixtures';
 import { readFixture, treeFixture } from './docs/fixtures';
 import { AppModel } from './app';
 import { Action } from './keys/bindings';
-import { Focus } from './layout';
+import { Focus, WindowTab } from './layout';
 import { FaultedConfiguration } from './keys/configurationState';
 import { Connecting, Exited, Ready } from './protocol';
 import type { OpenReview } from './review/openReview';
@@ -301,5 +301,60 @@ describe('the app and a review', () => {
     await settled();
     expect(app.review.isOpen()).toBe(false);
     expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+});
+
+describe('the app and its window tabs', () => {
+  it('opens on Base and chooses a tab on its digit', async () => {
+    const { app } = await reviewing();
+    expect(app.tabs.selected.get()).toBe(WindowTab.Base);
+    app.press(Action.ShowPullRequests);
+    expect(app.tabs.selected.get()).toBe(WindowTab.PullRequests);
+    app.press(Action.ShowBoard);
+    expect(app.tabs.selected.get()).toBe(WindowTab.Board);
+    app.press(Action.ShowBase);
+    expect(app.tabs.selected.get()).toBe(WindowTab.Base);
+  });
+
+  it('ignores a digit while a review is open', async () => {
+    const { client, app } = await reviewing();
+    await opened(client, app);
+    app.press(Action.ShowBoard);
+    expect(app.tabs.selected.get()).toBe(WindowTab.Base);
+  });
+
+  it('routes j and enter to the Board tab when it is shown, not to the Base panes', async () => {
+    const { app } = await reviewing();
+    app.press(Action.ShowBoard);
+    app.press(Action.MoveDown);
+    expect(app.board.selection.selected.get()).toBe('PROJ-2');
+    app.press(Action.MoveUp);
+    app.press(Action.MoveDown);
+    app.press(Action.Open);
+    expect(app.tabs.selected.get()).toBe(WindowTab.Base);
+    expect(app.board.selection.selected.get()).toBe('PROJ-2');
+    expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+
+  it('returns to the Pull requests tab and its row when the review opened from it ends', async () => {
+    const { client, app } = await reviewing();
+    app.press(Action.ShowPullRequests);
+    app.press(Action.Open);
+    await settled();
+    expect(app.review.current.get()?.number()).toBe(7);
+    expect(app.layout.get().focus).toBe(Focus.Diff);
+    app.review.leave();
+    expect(app.tabs.selected.get()).toBe(WindowTab.PullRequests);
+    expect(app.review.cursor.selected.get()).toBe(7);
+    expect(app.layout.get().focus).toBe(Focus.Board);
+    expect(client.calls.length).toBeGreaterThan(0);
+  });
+
+  it('asks review for the tickets\' pull requests again when the pull requests change on the Board tab', async () => {
+    const { client, app } = await reviewing();
+    app.press(Action.ShowBoard);
+    client.calls.length = 0;
+    client.push('review/changed', { kind: 'openPullRequests', pullRequests: [] });
+    expect(client.calls.map((call) => call.method)).toEqual(['review/pullRequestOn', 'review/pullRequestOn']);
   });
 });

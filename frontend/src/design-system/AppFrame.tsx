@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import styles from './AppFrame.module.css';
 
-/** Which panes the window shows: every one, all but the dock, all but the main view, or the dock zoomed over the rest. */
+/** Which panes the window shows: every one, all but the dock, all but the main view, the dock zoomed over the rest, or a tab's screen over a dock folded to a strip. */
 export enum Arrangement {
   Full = 'full',
   NoDock = 'noDock',
   NoMain = 'noMain',
   Zoomed = 'zoomed',
+  Tab = 'tab',
 }
 
 interface Props {
@@ -32,7 +33,7 @@ export const AppFrame = ({ statusLine, keyBar, board, docs, foot, main, dock, ar
             {docs === null ? null : <div className={styles.docs}>{docs}</div>}
             {foot === undefined ? null : <div className={styles.foot}>{foot}</div>}
           </div>}
-        {arrangement === Arrangement.NoMain || arrangement === Arrangement.Zoomed ? null : <div className={styles.main}>{main}</div>}
+        {arrangement === Arrangement.NoMain || arrangement === Arrangement.Zoomed || arrangement === Arrangement.Tab ? null : <div className={styles.main}>{main}</div>}
         {arrangement === Arrangement.NoDock ? null : <div className={styles.dock}>{dock}</div>}
       </main>
       {keyBar}

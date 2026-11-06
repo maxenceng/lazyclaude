@@ -43,3 +43,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.mark {
+  display: inline-block;
+  width: var(--lamp-marker);
+  flex: none;
+  text-align: center;
+  opacity: 0.6;
+}

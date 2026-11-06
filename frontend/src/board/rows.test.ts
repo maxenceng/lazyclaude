@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { boardFixture, ticketFixture } from './fixtures';
-import { isFolded, moveSelection, orderedGroups, selectedIn, ticketIds } from './rows';
+import { columnsOf, inProgressCount, isFolded, moveAcross, moveInColumn, moveSelection, orderedGroups, selectedIn, ticketIds } from './rows';
 
 const view = boardFixture([
   ticketFixture({ id: 'PROJ-1', status: 'DONE' }),
@@ -58,5 +58,44 @@ describe('the board rows', () => {
 
   it('selects nothing on a board without tickets', () => {
     expect(moveSelection(boardFixture([]), undefined, 1)).toBeUndefined();
+  });
+
+  it('lays the board out as every status in order, the ones with no ticket kept and done narrow', () => {
+    expect(columnsOf(view).map((column) => [column.status, column.tickets.length, column.narrow])).toEqual([
+      ['IN_PROGRESS', 1, false],
+      ['IN_REVIEW', 1, false],
+      ['TODO', 2, false],
+      ['DRAFT', 0, false],
+      ['DONE', 1, true],
+    ]);
+  });
+
+  it('moves down and up inside one column and stops at its ends', () => {
+    expect(moveInColumn(view, 'PROJ-2', 1)).toBe('PROJ-5');
+    expect(moveInColumn(view, 'PROJ-5', 1)).toBe('PROJ-5');
+    expect(moveInColumn(view, 'PROJ-5', -1)).toBe('PROJ-2');
+    expect(moveInColumn(view, 'PROJ-2', -1)).toBe('PROJ-2');
+  });
+
+  it('moves across to the next column that holds a ticket, at the same row or the last one it has', () => {
+    expect(moveAcross(view, 'PROJ-3', 1)).toBe('PROJ-4');
+    expect(moveAcross(view, 'PROJ-4', 1)).toBe('PROJ-2');
+    expect(moveAcross(view, 'PROJ-5', -1)).toBe('PROJ-4');
+    expect(moveAcross(view, 'PROJ-2', -1)).toBe('PROJ-4');
+  });
+
+  it('stays in its column when no column across holds a ticket', () => {
+    expect(moveAcross(view, 'PROJ-3', -1)).toBe('PROJ-3');
+    expect(moveAcross(view, 'PROJ-5', 1)).toBe('PROJ-5');
+  });
+
+  it('moves from the first ticket when the cursor is on none', () => {
+    expect(moveAcross(view, undefined, 1)).toBe('PROJ-4');
+    expect(moveInColumn(view, undefined, 1)).toBe('PROJ-3');
+  });
+
+  it('counts the tickets in progress, none on a board with none', () => {
+    expect(inProgressCount(view)).toBe(1);
+    expect(inProgressCount(boardFixture([ticketFixture({ status: 'TODO' })]))).toBe(0);
   });
 });

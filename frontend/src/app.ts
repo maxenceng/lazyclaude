@@ -4,7 +4,8 @@ import type { Action, KeyPress } from './keys/bindings';
 import type { Binding } from './keys/chords';
 import { ConfigurationStore } from './keys/configurationStore';
 import { KeyRouter } from './keyRouting';
-import { Focus, Layout } from './layout';
+import { Focus, Layout, WindowTab } from './layout';
+import { WindowTabs } from './windowTabs';
 import type { Platform } from './platform';
 import type { Client } from './protocol';
 import { ReviewController } from './review/reviewController';
@@ -30,6 +31,7 @@ export class AppModel {
   readonly notices: NoticeStore = new NoticeStore();
   readonly layout: Store<Layout> = new Store(new Layout());
   readonly windowFocus: WindowFocus;
+  readonly tabs: WindowTabs;
   private readonly keys: KeyRouter;
   private readonly watching: WatchingReporter;
   private watched = false;
@@ -70,12 +72,15 @@ export class AppModel {
       onOpened: () => this.focusOn(Focus.Dock),
       onPicking: () => this.layout.set(this.layout.get().leaveZoom()),
     });
-    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review);
+    this.tabs = new WindowTabs({ board: this.board, review: this.review, layout: this.layout });
+    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review, this.tabs);
     this.hosting.dock.subscribe(() => this.dockChanged());
     this.layout.subscribe(() => this.tellWatching());
     this.hosting.dock.subscribe(() => this.tellWatching());
     this.windowFocus.focused.subscribe(() => this.tellWatching());
     this.board.store.state.subscribe(() => this.boardRead());
+    this.board.store.state.subscribe(() => this.tabs.pullRequestsChanged());
+    this.review.pullRequests.state.subscribe(() => this.tabs.pullRequestsChanged());
     this.board.selection.selected.subscribe(() => this.notices.clear());
   }
 
@@ -88,6 +93,28 @@ export class AppModel {
       this.notices.clear();
     }
     this.keys.press(action);
+  }
+
+  /** A click on a window tab; a review open covers the window, so none is chosen until it ends. */
+  chooseTab(tab: WindowTab): void {
+    if (!this.review.isOpen()) {
+      this.tabs.choose(tab);
+    }
+  }
+
+  /** A click on a session's tab in the dock folded under a window tab: back to Base, with that session's pane focused. */
+  openDockTab(id: string): void {
+    this.hosting.select(id);
+    this.tabs.choose(WindowTab.Base);
+    this.focusOn(Focus.Dock);
+  }
+
+  /** Retry on the Pull requests tab: reads the open pull requests again. */
+  retryPullRequests(): void {
+    const root = this.board.root();
+    if (root !== undefined) {
+      void this.review.pullRequests.watch(root);
+    }
   }
 
   focusOn(focus: Focus): void {

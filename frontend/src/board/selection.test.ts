@@ -24,4 +24,20 @@ describe('the board selection', () => {
     selection.select('PROJ-2');
     expect(selection.selected.get()).toBe('PROJ-2');
   });
+
+  it('moves within a column and across columns for the status columns', () => {
+    const columns = boardFixture([
+      ticketFixture({ id: 'PROJ-1', status: 'TODO' }),
+      ticketFixture({ id: 'PROJ-2', status: 'TODO' }),
+      ticketFixture({ id: 'PROJ-3', status: 'IN_REVIEW' }),
+    ]);
+    const selection = new Selection();
+    selection.selected.set('PROJ-3');
+    selection.moveAcross(columns, 1);
+    expect(selection.selected.get()).toBe('PROJ-1');
+    selection.moveInColumn(columns, 1);
+    expect(selection.selected.get()).toBe('PROJ-2');
+    selection.moveAcross(columns, -1);
+    expect(selection.selected.get()).toBe('PROJ-3');
+  });
 });

@@ -3,7 +3,8 @@ import type { DocsController } from './docs/docsController';
 import type { ReviewController } from './review/reviewController';
 import type { OpenReview } from './review/openReview';
 import { Action } from './keys/bindings';
-import { Focus, type Layout } from './layout';
+import { Focus, type Layout, WindowTab } from './layout';
+import type { WindowTabs } from './windowTabs';
 import type { SessionsController } from './session/sessionsController';
 import type { Store } from './shared/store';
 
@@ -18,6 +19,12 @@ const FOCUS_KEYS: readonly Action[] = [
   Action.NextWaiting,
 ];
 
+const TABS: ReadonlyMap<Action, WindowTab> = new Map([
+  [Action.ShowBase, WindowTab.Base],
+  [Action.ShowBoard, WindowTab.Board],
+  [Action.ShowPullRequests, WindowTab.PullRequests],
+]);
+
 /** Where a key goes: to the verb picker while it is open, to the focused pane's own handling, or to the layout. */
 export class KeyRouter {
   constructor(
@@ -26,6 +33,7 @@ export class KeyRouter {
     private readonly sessions: SessionsController,
     private readonly layout: Store<Layout>,
     private readonly review: ReviewController,
+    private readonly tabs: WindowTabs,
   ) {
     layout.subscribe(() => {
       const focus = layout.get().focus;
@@ -49,7 +57,19 @@ export class KeyRouter {
     } else if (current !== undefined) {
       this.pressInReview(current, action);
     } else {
+      this.pressInWindow(action);
+    }
+  }
+
+  /** A key outside every pane that takes its own: a digit chooses a tab, and the tab shown takes the rest. */
+  private pressInWindow(action: Action): void {
+    const chosen = TABS.get(action);
+    if (chosen !== undefined) {
+      this.tabs.choose(chosen);
+    } else if (this.tabs.selected.get() === WindowTab.Base) {
       this.pressOutsidePane(action);
+    } else {
+      this.tabs.press(action);
     }
   }
 

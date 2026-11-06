@@ -24,6 +24,8 @@
     "move": "j/k move",
     "open": "enter open",
     "new": "n new session",
-    "newUnlinked": "N new unlinked"
+    "newUnlinked": "N new unlinked",
+    "columns": "h/j/k/l move",
+    "openTicket": "enter go to ticket"
   }
 }

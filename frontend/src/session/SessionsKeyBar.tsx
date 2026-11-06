@@ -2,11 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { KeyBar } from '../design-system';
 
 /** The keys that work while the ticket's sessions have focus, or over its verb picker while that is open. */
-export const SessionsKeyBar = ({ picking }: { picking: boolean }) => {
+export const SessionsKeyBar = ({ picking, extra = [] }: { picking: boolean; extra?: readonly string[] }) => {
   const { t } = useTranslation('session');
   const keys = picking
     ? [t('keyBar.move'), t('keyBar.start'), t('keyBar.cancel')]
-    : [t('keyBar.move'), t('keyBar.open'), t('keyBar.back'), t('keyBar.new')];
+    : [t('keyBar.move'), t('keyBar.open'), t('keyBar.back'), t('keyBar.new'), ...extra];
   return <KeyBar keys={keys} />;
 };
 

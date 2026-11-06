@@ -32,6 +32,27 @@ const openOn = (client: FakeClient, controller: ReviewController, branch: string
 
 const SETTLED = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+describe('opening a review of a listed pull request', () => {
+  it('opens the pull request given, with no ask to review, whatever its head', async () => {
+    const { client, controller, events } = await setup();
+    const unlinked = pullRequestFixture({ number: 12, title: 'Housekeeping', head: 'chore-tidy' });
+    expect(controller.openPullRequest(unlinked)).toBe(true);
+    const review = controller.current.get();
+    expect(review?.number()).toBe(12);
+    expect(review?.title()).toBe('Housekeeping');
+    expect(client.calls.map((call) => call.method)).toEqual(['review/pendingOf', 'review/diffOf', 'review/threadsOf']);
+    expect(events).toEqual(['opened']);
+  });
+
+  it('opens nothing while a review is open or before the board names the project', async () => {
+    const { controller } = await setup();
+    expect(controller.openPullRequest(pullRequestFixture({ number: 1 }))).toBe(true);
+    expect(controller.openPullRequest(pullRequestFixture({ number: 2 }))).toBe(false);
+    const unrooted = await setup(false);
+    expect(unrooted.controller.openPullRequest(pullRequestFixture({ number: 3 }))).toBe(false);
+  });
+});
+
 describe('opening a review', () => {
   it('opens the review of the open pull request whose head is the ticket\'s branch, and reads it', async () => {
     const { client, controller, events } = await setup();

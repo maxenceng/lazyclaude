@@ -4,8 +4,11 @@ import {
   Alert,
   Busy,
   Button,
+  Column,
+  Columns,
   Detail,
   type LampColour,
+  type PullRequestCells,
   Pane,
   StatusHeading,
   Text,
@@ -18,7 +21,7 @@ import type { BoardBoardView, BoardTicketView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import { type BoardState, BoardStateKind, UnavailableCause } from './boardState';
 import type { BoardStore } from './boardStore';
-import { isFolded, orderedGroups, selectedIn } from './rows';
+import { columnsOf, isFolded, orderedGroups, selectedIn } from './rows';
 import type { Selection } from './selection';
 
 interface ViewProps {
@@ -61,6 +64,51 @@ export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus
             return id === cursor ? onOpen(id) : selection.select(id);
           }}
         />
+      )}
+    </Pane>
+  );
+};
+
+interface ColumnsProps extends ViewProps {
+  markerOf: (ticket: string) => LampColour | undefined;
+  pullRequestOf: (ticket: BoardTicketView) => PullRequestCells | undefined;
+  onOpen: (ticket: string) => void;
+  onRetry: () => void;
+}
+
+/** The Board tab: the Board as status columns, as the TUI's zoomed Board. A press on a ticket goes to it on Base. */
+export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onOpen, onRetry }: ColumnsProps) => {
+  const { t } = useTranslation('board');
+  const { state, populated, cursor } = useBoardView({ board, selection });
+  return (
+    <Pane title={t('board.title')} focused>
+      {populated === undefined ? (
+        <Unread state={state} onRetry={onRetry} />
+      ) : (
+        <>
+          <Columns>
+            {columnsOf(populated).map((column) => (
+              <Column key={column.status} label={t(`status.${column.status}`)} narrow={column.narrow}>
+                <StatusHeading status={t(`status.${column.status}`)} count={column.tickets.length} />
+                <Rows>
+                  {(column.narrow ? [] : column.tickets).map((ticket) => (
+                    <TicketRow
+                      key={ticket.id}
+                      id={ticket.id}
+                      title={ticket.title}
+                      selected={ticket.id === cursor}
+                      done={false}
+                      lamp={markerOf(ticket.id)}
+                      pullRequest={pullRequestOf(ticket)}
+                      onSelect={() => onOpen(ticket.id)}
+                    />
+                  ))}
+                </Rows>
+              </Column>
+            ))}
+          </Columns>
+          <Unreadable view={populated} />
+        </>
       )}
     </Pane>
   );
@@ -143,17 +191,22 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
           </Rows>
         </div>
       ))}
-      {view.unreadable.length === 0 ? null : (
-        <div>
-          <StatusHeading status={t('board.unreadable')} count={view.unreadable.length} />
-          <Rows>
-            {view.unreadable.map((ticket) => (
-              <UnreadableRow key={ticket.id} id={ticket.id} reason={ticket.reason} />
-            ))}
-          </Rows>
-        </div>
-      )}
+      <Unreadable view={view} />
     </>
+  );
+};
+
+const Unreadable = ({ view }: { view: BoardBoardView }) => {
+  const { t } = useTranslation('board');
+  return view.unreadable.length === 0 ? null : (
+    <div>
+      <StatusHeading status={t('board.unreadable')} count={view.unreadable.length} />
+      <Rows>
+        {view.unreadable.map((ticket) => (
+          <UnreadableRow key={ticket.id} id={ticket.id} reason={ticket.reason} />
+        ))}
+      </Rows>
+    </div>
   );
 };
 

@@ -29,5 +29,16 @@
     "openThreads_other": "{{count}} open threads",
     "pending_one": "{{count}} pending comment",
     "pending_other": "{{count}} pending comments"
+  },
+  "ci": {
+    "failed": "checks failed",
+    "pending": "checks pending",
+    "passed": "checks passed"
+  },
+  "windowTabs": {
+    "label": "window tabs"
+  },
+  "pullRequestMark": {
+    "draft": "draft or without checks"
   }
 }

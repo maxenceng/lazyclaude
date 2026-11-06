@@ -32,6 +32,9 @@ export enum Action {
   PreviousFile = 'previousFile',
   Resolved = 'resolved',
   Yes = 'yes',
+  ShowBase = 'showBase',
+  ShowBoard = 'showBoard',
+  ShowPullRequests = 'showPullRequests',
 }
 
 export type KeyPress = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' | 'metaKey' | 'shiftKey'>;
@@ -62,6 +65,9 @@ const PLAIN: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entrie
   K: Action.PreviousFile,
   r: Action.Resolved,
   y: Action.Yes,
+  '1': Action.ShowBase,
+  '2': Action.ShowBoard,
+  '3': Action.ShowPullRequests,
 }));
 
 const CTRL: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entries({
@@ -70,7 +76,7 @@ const CTRL: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entries
   u: Action.HalfPageUp,
 }));
 
-/** What the TUI's key table does with a key, matched on `KeyboardEvent.key` and the modifiers; undefined when the TUI leaves it. */
+/** What the window does with a key: the TUI's key table, and the digits that choose a window tab, matched on `KeyboardEvent.key` and the modifiers; undefined when the TUI leaves it. */
 export const actionOf = (press: KeyPress, reserved: readonly Binding[] = []): Action | undefined => {
   if (press.metaKey) {
     return undefined;

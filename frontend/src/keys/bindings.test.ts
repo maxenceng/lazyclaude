@@ -37,6 +37,9 @@ describe('the keys the TUI binds', () => {
     ['K', Action.PreviousFile],
     ['r', Action.Resolved],
     ['y', Action.Yes],
+    ['1', Action.ShowBase],
+    ['2', Action.ShowBoard],
+    ['3', Action.ShowPullRequests],
   ])('%s is taken as %s', (key, action) => {
     expect(actionOf(press(key, { shiftKey: key !== key.toLowerCase() }))).toBe(action);
   });
