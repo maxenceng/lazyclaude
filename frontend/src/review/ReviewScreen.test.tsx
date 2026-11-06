@@ -388,6 +388,25 @@ describe('the comment box of a review', () => {
     expect(harness.review.box()).toBeUndefined();
   });
 
+  it('is thrown away, as by escape, by a press outside it', async () => {
+    const harness = new Harness();
+    render(<ReviewDialogs review={harness.review} />);
+    await openedBox(harness);
+    await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
+    await userEvent.click(screen.getByRole('dialog').parentElement!);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(harness.review.box()).toBeUndefined();
+  });
+
+  it('stays open for a press inside it, even one let go outside it', async () => {
+    const harness = new Harness();
+    render(<ReviewDialogs review={harness.review} />);
+    await openedBox(harness);
+    const user = userEvent.setup();
+    await user.pointer([{ keys: '[MouseLeft>]', target: screen.getByRole('textbox', { name: 'Comment text' }) }, { target: screen.getByRole('dialog').parentElement! }, { keys: '[/MouseLeft]' }]);
+    expect(screen.getByRole('dialog', { name: 'Pending comment' }), 'a selection dragged out of the box is not a press outside it').toBeInTheDocument();
+  });
+
   it('shows the thread a reply answers above the box, titled with its first line', async () => {
     const harness = new Harness();
     const thread = threadFixture({ id: 'T1', comments: [{ author: 'ada', body: 'Why this?\nReally.' }, { author: 'bob', body: 'Speed' }] });

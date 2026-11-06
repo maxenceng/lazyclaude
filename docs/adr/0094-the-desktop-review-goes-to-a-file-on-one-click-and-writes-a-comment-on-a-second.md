@@ -23,9 +23,14 @@ started with `c`, because `enter` on a diff line edits the pending comment there
 - **A second click acts on its release, not its press.** A press on the cursor's line may also start a drag. A release on
   another line marks the range and writes nothing. A release on the line pressed does the second click's action. A press
   off the diff, or the window losing focus, forgets the press.
+- **A press outside the comment box throws it away, as `esc` does** (ADR 0089), what was typed and the range included;
+  a box whose save is in flight stays, as it does for `esc`. It is the press that counts, not the click, so a selection
+  dragged out of the text and let go over the window keeps the box. The submit confirm keeps ADR 0051's modal popup: a
+  press outside it does nothing.
 
 ## Consequences
 
 - The desktop window and the TUI now differ on a click in a review's Files and on a second click on a diff line. The TUI
   still needs two clicks for a file and `c` for a new comment.
-- A comment box opened by a click is still modal (ADR 0089), so a stray second click cannot write past it.
+- A press outside the box loses what was typed in it, with no confirm. `esc` does the same, so the mouse adds no new way
+  to lose text, only a quicker one.

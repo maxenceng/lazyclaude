@@ -293,7 +293,7 @@ const boxTitle = (box: CommentBox, t: TFunction<'review'>): string => {
 const BoxDialog = ({ review, box }: { review: OpenReview; box: CommentBox }) => {
   const { t } = useTranslation('review');
   return (
-    <Dialog title={boxTitle(box, t)} hint={t('box.hint')}>
+    <Dialog title={boxTitle(box, t)} hint={t('box.hint')} onDismiss={() => review.cancelBox()}>
       {box.target.kind === TargetKind.Reply
         ? box.target.thread.comments.map((comment, index) => (
             <Text key={index} tight mono>
