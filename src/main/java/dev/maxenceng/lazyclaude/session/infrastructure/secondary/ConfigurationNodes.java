@@ -202,7 +202,7 @@ final class ConfigurationNodes {
     }
 
     private TicketPlugin plugin(ConfigurationEntry entry) {
-        if (!(entry.value() instanceof ScalarNode scalar) || !Tag.STR.equals(scalar.getTag()) || scalar.getValue().isBlank()) {
+        if (!(entry.value() instanceof ScalarNode scalar) || !Tag.STR.equals(scalar.getTag()) || !TicketPlugin.isName(scalar.getValue())) {
             throw refused(entry.line(), NEEDS_A_PLUGIN.formatted(entry.key(), TICKET_PLUGIN_BY_DEFAULT));
         }
         return new TicketPlugin(scalar.getValue());

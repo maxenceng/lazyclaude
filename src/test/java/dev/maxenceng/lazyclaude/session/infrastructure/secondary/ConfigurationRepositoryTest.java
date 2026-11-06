@@ -144,6 +144,15 @@ class ConfigurationRepositoryTest {
                 .hasMessage("~/.config/lazyclaude/config.yml:1: ticket-plugin needs the name of a plugin such as ddd-workflow");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"my tools", "\"a:b\"", "/my-tools", "\" my-tools\""})
+    void shouldRefuseATicketPluginThatWouldSplitTheSlashCommand(String value) throws IOException {
+        configYml(configHome, "ticket-plugin: " + value);
+
+        assertThatThrownBy(repository::configuration)
+                .hasMessage("~/.config/lazyclaude/config.yml:1: ticket-plugin needs the name of a plugin such as ddd-workflow");
+    }
+
     @Test
     void shouldReadTheFileUnderTheXdgConfigHomeWhenItIsSet() throws IOException {
         Path elsewhere = home.resolve("srv");
