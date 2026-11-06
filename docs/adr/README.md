@@ -93,3 +93,4 @@
 - 0089 [The desktop Review screen asks the sidecar where comments hang and writes them in a popup](0089-the-desktop-review-screen-asks-the-sidecar-where-comments-hang-and-writes-in-a-popup.md) — Accepted.
 - 0090 [`review` decides the review screen's rules both frontends show](0090-review-decides-the-review-screen-rules-both-frontends-show.md) — Accepted.
 - 0091 [The desktop window declares a set of values as an enum](0091-the-desktop-window-declares-a-set-of-values-as-an-enum.md) — Accepted.
+- 0092 [`config.yml` sets the verbs each status offers, and `board` holds the rule](0092-config-yml-sets-the-verbs-each-status-offers-and-board-holds-the-rule.md) — Accepted.
