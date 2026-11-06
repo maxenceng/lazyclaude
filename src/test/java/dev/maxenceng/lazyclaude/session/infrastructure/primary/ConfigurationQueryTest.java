@@ -3,8 +3,10 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.defaultConfiguration;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.rebindingFocusLeft;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.refusal;
+import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withTicketPlugin;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withoutDesktopNotifications;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withoutMouse;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.customPluginConfigurationView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.defaultConfigurationView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.mouselessConfigurationView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.reboundConfigurationView;
@@ -64,6 +66,13 @@ class ConfigurationQueryTest {
         when(configurations.configuration()).thenReturn(withoutMouse());
 
         assertThat(query.configuration()).isEqualTo(mouselessConfigurationView());
+    }
+
+    @Test
+    void shouldAnswerThePluginATicketRunsUnder() {
+        when(configurations.configuration()).thenReturn(withTicketPlugin());
+
+        assertThat(query.configuration()).isEqualTo(customPluginConfigurationView());
     }
 
     @Test

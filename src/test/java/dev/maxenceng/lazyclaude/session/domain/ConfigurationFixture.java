@@ -4,6 +4,8 @@ import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altH;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altZ;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlO;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlY;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.otherTicketPlugin;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +23,7 @@ public final class ConfigurationFixture {
                 .reservedChords(ReservedChords.defaults())
                 .desktopNotifications(true)
                 .mouse(true)
+                .ticketPlugin(ticketPlugin())
                 .build();
     }
 
@@ -29,6 +32,7 @@ public final class ConfigurationFixture {
                 .reservedChords(ReservedChords.defaults().rebinding(Map.of(ReservedAction.FOCUS_LEFT, ctrlY())))
                 .desktopNotifications(true)
                 .mouse(true)
+                .ticketPlugin(ticketPlugin())
                 .build();
     }
 
@@ -37,6 +41,7 @@ public final class ConfigurationFixture {
                 .reservedChords(ReservedChords.defaults().rebinding(Map.of(ReservedAction.ZOOM, ctrlO())))
                 .desktopNotifications(true)
                 .mouse(true)
+                .ticketPlugin(ticketPlugin())
                 .build();
     }
 
@@ -45,6 +50,7 @@ public final class ConfigurationFixture {
                 .reservedChords(ReservedChords.defaults())
                 .desktopNotifications(false)
                 .mouse(true)
+                .ticketPlugin(ticketPlugin())
                 .build();
     }
 
@@ -53,6 +59,16 @@ public final class ConfigurationFixture {
                 .reservedChords(ReservedChords.defaults())
                 .desktopNotifications(true)
                 .mouse(false)
+                .ticketPlugin(ticketPlugin())
+                .build();
+    }
+
+    public static Configuration withTicketPlugin() {
+        return Configuration.builder()
+                .reservedChords(ReservedChords.defaults())
+                .desktopNotifications(true)
+                .mouse(true)
+                .ticketPlugin(otherTicketPlugin())
                 .build();
     }
 

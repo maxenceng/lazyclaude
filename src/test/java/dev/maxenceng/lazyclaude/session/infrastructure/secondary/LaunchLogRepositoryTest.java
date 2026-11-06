@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaude;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaudeUnder;
 import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.emptyLaunchLog;
 import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.endedLaunchEntry;
 import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.launchEntry;
@@ -11,6 +12,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.LaunchLo
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.thirdSessionId;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.otherTicketPlugin;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.otherProject;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,7 +70,7 @@ class LaunchLogRepositoryTest {
                 endedLaunchEntry(),
                 launchEntryBuilder().command(new ResumeClaude(secondSessionId())).build(),
                 launchEntryBuilder()
-                        .command(ticketClaude(thirdSessionId(), Verb.DESIGN))
+                        .command(ticketClaudeUnder(thirdSessionId(), Verb.DESIGN, otherTicketPlugin()))
                         .build()));
 
         assertThat(repository.read(project(), fallback))
@@ -77,7 +79,7 @@ class LaunchLogRepositoryTest {
                         endedLaunchEntry(),
                         launchEntryBuilder().command(new ResumeClaude(secondSessionId())).build(),
                         launchEntryBuilder()
-                                .command(ticketClaude(thirdSessionId(), Verb.DESIGN))
+                                .command(ticketClaudeUnder(thirdSessionId(), Verb.DESIGN, otherTicketPlugin()))
                                 .build()));
     }
 
@@ -210,6 +212,21 @@ class LaunchLogRepositoryTest {
         ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
         verify(fallback).unavailable(cause.capture());
         assertThat(cause.getValue().value()).startsWith("%s:1: ".formatted(file));
+    }
+
+    @Test
+    void shouldRefuseATicketEntryThatNamesNoPlugin() throws IOException {
+        repository.change(project(), fallback, log -> log.launched(launchEntryBuilder().command(ticketClaude(sessionId(), Verb.DESIGN)).build()));
+        Path file = repository.fileOf(project());
+        Files.writeString(file, Files.readString(file).replace("\"plugin\":\"ddd-workflow\"", "\"plugin\":null"), StandardCharsets.UTF_8);
+
+        repository.read(project(), fallback);
+
+        ArgumentCaptor<Reason> cause = ArgumentCaptor.forClass(Reason.class);
+        verify(fallback).unavailable(cause.capture());
+        assertThat(cause.getValue().value())
+                .as("a plugin guessed for the entry would be one claude was never sent")
+                .isEqualTo("%s:1: a ticket launch with no plugin".formatted(file));
     }
 
     @Test

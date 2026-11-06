@@ -25,4 +25,15 @@ class ConfigurationTest {
                 .as("a forgotten flag would leave the mouse in whatever state the Java default is, not the terminal's")
                 .isInstanceOf(MissingMandatoryValueException.class);
     }
+
+    @Test
+    void shouldRefuseToBuildWithoutSayingWhichPluginATicketRunsUnder() {
+        assertThatThrownBy(() -> Configuration.builder()
+                        .reservedChords(ReservedChords.defaults())
+                        .desktopNotifications(true)
+                        .mouse(true)
+                        .build())
+                .as("a forgotten plugin would send claude a command it does not know")
+                .isInstanceOf(MissingMandatoryValueException.class);
+    }
 }

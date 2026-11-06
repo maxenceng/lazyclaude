@@ -2,11 +2,13 @@ package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.defaultConfiguration;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.rebindingFocusLeft;
+import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withTicketPlugin;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withoutDesktopNotifications;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withoutMouse;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigYmlFixture.configYml;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigYmlFixture.configYmlInLatin1;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigYmlFixture.configYmlLinkingToNothing;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -18,6 +20,8 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import dev.maxenceng.lazyclaude.session.domain.ConfigurationRefusedException;
 
@@ -99,6 +103,45 @@ class ConfigurationRepositoryTest {
         configYml(configHome, "mouse:", "  capture: true");
 
         assertThatThrownBy(repository::configuration).hasMessage("~/.config/lazyclaude/config.yml:1: mouse needs true or false");
+    }
+
+    @Test
+    void shouldRunTicketsUnderDddWorkflowWhenTheFileSaysNothingOfThePlugin() throws IOException {
+        configYml(configHome, "mouse: true");
+
+        assertThat(repository.configuration().ticketPlugin()).isEqualTo(ticketPlugin());
+    }
+
+    @Test
+    void shouldReadTheTicketPlugin() throws IOException {
+        configYml(configHome, "ticket-plugin: my-tools");
+
+        assertThat(repository.configuration()).isEqualTo(withTicketPlugin());
+    }
+
+    @Test
+    void shouldRefuseABlankTicketPlugin() throws IOException {
+        configYml(configHome, "mouse: true", "ticket-plugin: \"  \"");
+
+        assertThatThrownBy(repository::configuration)
+                .hasMessage("~/.config/lazyclaude/config.yml:2: ticket-plugin needs the name of a plugin such as ddd-workflow");
+    }
+
+    @Test
+    void shouldRefuseATicketPluginLeftEmpty() throws IOException {
+        configYml(configHome, "ticket-plugin:");
+
+        assertThatThrownBy(repository::configuration)
+                .hasMessage("~/.config/lazyclaude/config.yml:1: ticket-plugin needs the name of a plugin such as ddd-workflow");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"42", "true", "[my-tools]", "{name: my-tools}"})
+    void shouldRefuseATicketPluginThatIsNotAString(String value) throws IOException {
+        configYml(configHome, "ticket-plugin: " + value);
+
+        assertThatThrownBy(repository::configuration)
+                .hasMessage("~/.config/lazyclaude/config.yml:1: ticket-plugin needs the name of a plugin such as ddd-workflow");
     }
 
     @Test

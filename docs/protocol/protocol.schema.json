@@ -2063,9 +2063,12 @@
         },
         "mouse" : {
           "type" : "boolean"
+        },
+        "ticketPlugin" : {
+          "type" : "string"
         }
       },
-      "required" : [ "chords", "desktopNotifications", "mouse" ],
+      "required" : [ "chords", "desktopNotifications", "mouse", "ticketPlugin" ],
       "additionalProperties" : false
     },
     "session.FirstPrompt" : {

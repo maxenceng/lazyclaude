@@ -13,7 +13,7 @@ const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
 });
 
 const configuration = (...chords: SessionConfigurationView['chords']): SessionConfigurationView => {
-  return { chords, desktopNotifications: true, mouse: true };
+  return { chords, desktopNotifications: true, mouse: true, ticketPlugin: 'ddd-workflow' };
 };
 
 const alt = (character: string): SessionConfigurationView['chords'][number]['chord'] => ({

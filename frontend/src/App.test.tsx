@@ -24,6 +24,7 @@ const configuration = {
     { action: 'ZOOM', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 122 } } },
   ],
   desktopNotifications: true,
+  ticketPlugin: 'ddd-workflow',
   mouse: true,
 };
 

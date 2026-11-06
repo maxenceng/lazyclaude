@@ -31,7 +31,7 @@ public final class PtyHostRepository implements HostPort {
     private static final String SESSION_ID_FLAG = "--session-id";
     private static final String RESUME_FLAG = "--resume";
     private static final String NAME_FLAG = "-n";
-    private static final String SLASH_COMMAND = "/ticket %s %s";
+    private static final String SLASH_COMMAND = "/%s:ticket %s %s";
 
     private final List<String> claude;
     private final Map<String, String> environment;
@@ -95,7 +95,8 @@ public final class PtyHostRepository implements HostPort {
                                     run.session().value(),
                                     NAME_FLAG,
                                     run.sessionName().value(),
-                                    SLASH_COMMAND.formatted(run.verb().label(), run.ticket().value())))
+                                    SLASH_COMMAND.formatted(
+                                            run.plugin().value(), run.verb().label(), run.ticket().value())))
                     .toList();
         };
     }

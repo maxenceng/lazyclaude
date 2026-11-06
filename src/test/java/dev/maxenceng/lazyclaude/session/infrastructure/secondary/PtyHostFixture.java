@@ -1,7 +1,8 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
-import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaude;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaudeUnder;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSizeOf;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -16,6 +17,7 @@ import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.NewClaude;
 import dev.maxenceng.lazyclaude.session.domain.ResumeClaude;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 public final class PtyHostFixture {
@@ -58,8 +60,12 @@ public final class PtyHostFixture {
     }
 
     public static HostLaunch ticketLaunch(SessionId id) {
+        return ticketLaunchUnder(id, ticketPlugin());
+    }
+
+    public static HostLaunch ticketLaunchUnder(SessionId id, TicketPlugin plugin) {
         return HostLaunch.builder()
-                .command(ticketClaude(id, Verb.REVIEW))
+                .command(ticketClaudeUnder(id, Verb.REVIEW, plugin))
                 .directory(new WorkingDirectory(Path.of("/tmp")))
                 .size(paneSizeOf(100, 30))
                 .build();

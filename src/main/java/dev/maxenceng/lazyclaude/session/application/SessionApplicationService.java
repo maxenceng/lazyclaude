@@ -39,6 +39,7 @@ import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.MergeState;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
@@ -54,6 +55,7 @@ public final class SessionApplicationService {
     private final WorktreeManager worktreeing;
     private final DesktopNotificationManager notifying;
     private final boolean desktopNotifications;
+    private final TicketPlugin ticketPlugin;
     private final LastPushedSessions lastPushed = new LastPushedSessions();
     private final AtomicReference<Consumer<AvailableSessions>> delivering = new AtomicReference<>(sessions -> {});
 
@@ -69,8 +71,10 @@ public final class SessionApplicationService {
             DesktopNotificationPort notifications,
             boolean desktopNotifications,
             TimerPort timer,
+            TicketPlugin ticketPlugin,
             Clock clock) {
         this.hosted = new HostedSessionManager(hosts, sessions, warnings, worktrees, launchLog, timer, clock);
+        this.ticketPlugin = ticketPlugin;
         this.worktreeing = new WorktreeManager(worktrees);
         this.notifying = new DesktopNotificationManager(notifications, warnings);
         this.desktopNotifications = desktopNotifications;
@@ -114,7 +118,7 @@ public final class SessionApplicationService {
 
     /** A session running {@code verb} on a ticket, in the ticket's worktree, added first when it is missing. */
     public HostStart startTicket(TicketStart ticket, PaneSize size) {
-        return hosted.startTicket(ticket, size);
+        return hosted.startTicket(ticket, ticketPlugin, size);
     }
 
     /**

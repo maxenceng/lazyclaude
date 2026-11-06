@@ -8,6 +8,7 @@ import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.proces
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +26,7 @@ import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
+import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -76,7 +78,11 @@ public final class HostedSessionFixture {
     }
 
     public static TicketClaude ticketClaude(SessionId session, Verb verb) {
-        return TicketClaude.builder().session(session).ticket(linkedTicketId()).verb(verb).build();
+        return ticketClaudeUnder(session, verb, ticketPlugin());
+    }
+
+    public static TicketClaude ticketClaudeUnder(SessionId session, Verb verb, TicketPlugin plugin) {
+        return TicketClaude.builder().session(session).ticket(linkedTicketId()).verb(verb).plugin(plugin).build();
     }
 
     public static HostedSession hostedSessionRunning(Verb verb) {

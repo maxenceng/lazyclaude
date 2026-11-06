@@ -9,8 +9,10 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostF
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.newLaunchIn;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.ticketLaunch;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.ticketLaunchUnder;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSizeOf;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.otherTicketPlugin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -172,8 +174,18 @@ class PtyHostRepositoryTest {
 
         host.spawn(ticketLaunch(id), output, code -> {});
 
-        assertThat(output.textContaining("[/ticket review 1]"))
-                .contains("args:[--session-id][" + id.value() + "][-n][1 review][/ticket review 1]");
+        assertThat(output.textContaining("[/ddd-workflow:ticket review 1]"))
+                .contains("args:[--session-id][" + id.value() + "][-n][1 review][/ddd-workflow:ticket review 1]");
+        host.end(id);
+    }
+
+    @Test
+    void shouldRunTheTicketSkillOfThePluginTheLaunchNames() throws Exception {
+        PtyHostRepository host = hostRunning("printf 'args:'; printf '[%s]' \"$@\"; read line");
+
+        host.spawn(ticketLaunchUnder(id, otherTicketPlugin()), output, code -> {});
+
+        assertThat(output.textContaining("[/my-tools:ticket review 1]")).endsWith("[/my-tools:ticket review 1]");
         host.end(id);
     }
 

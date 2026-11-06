@@ -24,6 +24,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptCache
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptWatchRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.WorktreeRepository;
+import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepository;
 
 /**
@@ -64,10 +65,10 @@ final class ConfigurationLoader {
 
     /** Every context, wired over {@code configuration}. */
     Contexts contexts(ConfigurationView configuration) {
-        return Contexts.of(warnings, sessionService(configuration.desktopNotifications()), configuration);
+        return Contexts.of(warnings, sessionService(configuration.desktopNotifications(), configuration.ticketPlugin()), configuration);
     }
 
-    private SessionApplicationService sessionService(boolean desktopNotifications) {
+    private SessionApplicationService sessionService(boolean desktopNotifications, TicketPlugin ticketPlugin) {
         Path registry = home.resolve(REGISTRY);
         TranscriptRepository transcripts = new TranscriptRepository(
                 home.resolve(TRANSCRIPTS),
@@ -86,6 +87,7 @@ final class ConfigurationLoader {
                 new NotifySendRepository(NOTIFY_SEND, GDBUS, NOTIFY_PATIENCE),
                 desktopNotifications,
                 new TimerRepository(Executors.newSingleThreadScheduledExecutor(task -> Thread.ofPlatform().name(REPAINT_THREAD).daemon().unstarted(task))),
+                ticketPlugin,
                 Clock.systemDefaultZone());
     }
 
