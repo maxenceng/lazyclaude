@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DockTabs, Pane, type Tab, TerminalSurface } from '../design-system';
+import { DockTabs, Pane, PaneLayout, type Tab, TerminalSurface } from '../design-system';
 import type { SessionSessionsView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import type { Hosting } from './hosting';
@@ -50,7 +50,7 @@ export const DockScreen = ({ hosting, sessions, focused, onFocus }: Props) => {
   }, [focused, emulator]);
 
   return (
-    <Pane title={t('dock.title')} focused={focused} layout="fill">
+    <Pane title={t('dock.title')} focused={focused} layout={PaneLayout.Fill}>
       <DockTabs tabs={tabs} selected={selected} onSelect={(id) => {
           hosting.select(id);
           onFocus();

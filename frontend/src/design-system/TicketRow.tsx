@@ -1,4 +1,4 @@
-import { Lamp, type LampColour } from './Lamp';
+import { Lamp, type LampColour, LampSize } from './Lamp';
 import styles from './TicketRow.module.css';
 
 interface Props {
@@ -16,7 +16,7 @@ export const TicketRow = ({ id, title, selected, done, lamp, onSelect }: Props) 
   return (
     <li>
       <button type="button" className={classes} aria-current={selected ? 'true' : undefined} onClick={onSelect}>
-        {lamp === undefined ? <span className={styles.noLamp} /> : <Lamp colour={lamp} size="marker" />}
+        {lamp === undefined ? <span className={styles.noLamp} /> : <Lamp colour={lamp} size={LampSize.Marker} />}
         <span className={styles.id}>{id}</span>
         <span className={styles.title}>{title}</span>
       </button>

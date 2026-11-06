@@ -21,16 +21,22 @@ const SHORT_MEANING = {
   turn: 'lamp.shortTurn',
 } as const satisfies Record<Exclude<LampColour, LampColour.Off>, string>;
 
+/** A marker beside a ticket or a session, or a tile on the andon board. */
+export enum LampSize {
+  Marker = 'marker',
+  Tile = 'tile',
+}
+
 interface Props {
   colour: LampColour;
-  size: 'marker' | 'tile';
+  size: LampSize;
   number?: string;
 }
 
 /** A session's state as a lamp: a marker beside a ticket, or a tile on the andon board. Its colour means session state and nothing else. */
 export const Lamp = ({ colour, size, number }: Props) => {
   const { t } = useTranslation('designSystem');
-  if (size === 'marker') {
+  if (size === LampSize.Marker) {
     return (
       <span className={`${styles.marker} ${styles[colour]}`} role="img" aria-label={t(MEANING[colour])}>
         {GLYPH[colour]}

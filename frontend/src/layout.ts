@@ -1,4 +1,4 @@
-import type { Arrangement } from './design-system';
+import { Arrangement } from './design-system';
 
 export enum Focus {
   Board = 'board',
@@ -60,11 +60,11 @@ export class Layout {
 
   arrangement(hasDock: boolean): Arrangement {
     if (!hasDock) {
-      return 'noDock';
+      return Arrangement.NoDock;
     }
     if (this.zoomed) {
-      return 'zoomed';
+      return Arrangement.Zoomed;
     }
-    return this.mainHidden ? 'noMain' : 'full';
+    return this.mainHidden ? Arrangement.NoMain : Arrangement.Full;
   }
 }
