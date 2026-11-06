@@ -23,7 +23,7 @@ class ConfigurationViewTest {
     void holds_one_chord_per_action_in_their_order_whatever_list_it_is_given() {
         ReservedChordView zoom = reboundConfigurationView().chords().get(ReservedAction.ZOOM.ordinal());
 
-        ConfigurationView view = new ConfigurationView(List.of(zoom), true, true, ticketPlugin());
+        ConfigurationView view = new ConfigurationView(List.of(zoom), true, true, ticketPlugin(), List.of());
 
         assertThat(view.chords())
                 .as("an action the list leaves out keeps its default, as config.yml's does")
@@ -35,7 +35,7 @@ class ConfigurationViewTest {
     void refuses_chords_that_name_one_action_twice() {
         ReservedChordView zoom = reboundConfigurationView().chords().get(ReservedAction.ZOOM.ordinal());
 
-        assertThatThrownBy(() -> new ConfigurationView(List.of(zoom, zoom), true, true, ticketPlugin()))
+        assertThatThrownBy(() -> new ConfigurationView(List.of(zoom, zoom), true, true, ticketPlugin(), List.of()))
                 .isInstanceOf(ReservedActionTwiceException.class)
                 .hasMessageContaining(ReservedAction.ZOOM.configurationName());
     }

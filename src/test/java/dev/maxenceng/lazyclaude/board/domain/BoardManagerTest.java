@@ -6,6 +6,7 @@ import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicket;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicketBuilder;
 import static dev.maxenceng.lazyclaude.board.published.ReasonFixture.reason;
+import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.inReviewDoneThenRespond;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.secondTicketId;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.tenthTicketId;
@@ -26,6 +27,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.StatusVerbs;
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
@@ -47,6 +50,9 @@ class BoardManagerTest {
 
     @Mock
     private BranchChangesPort changes;
+
+    @Mock
+    private ConfiguredVerbsPort configuredVerbs;
 
     @InjectMocks
     private BoardManager manager;
@@ -135,6 +141,29 @@ class BoardManagerTest {
 
         assertThat(manager.boardFor(workingDirectory()).groups().get(Status.IN_PROGRESS.ordinal()).tickets())
                 .containsExactly(inProgress.withChanges(frontendChanges()));
+    }
+
+    @Test
+    void shouldGiveEachTicketTheVerbsItsStatusIsConfiguredWith() {
+        when(configuredVerbs.configured()).thenReturn(List.of(inReviewDoneThenRespond()));
+        Ticket inReview = ticketBuilder().status(Status.IN_REVIEW).build();
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(inReview));
+
+        assertThat(manager.boardFor(workingDirectory()).groups().get(Status.IN_REVIEW.ordinal()).tickets())
+                .extracting(Ticket::verbs)
+                .containsExactly(List.of(Verb.DONE, Verb.RESPOND));
+    }
+
+    @Test
+    void shouldReadNoBranchChangesForAnInProgressTicketWhoseStatusDoesNotListDesign() {
+        when(configuredVerbs.configured()).thenReturn(List.of(StatusVerbs.builder().status(Status.IN_PROGRESS).verbs(List.of(Verb.REVIEW)).build()));
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(ticketBuilder().status(Status.IN_PROGRESS).build()));
+
+        manager.boardFor(workingDirectory());
+
+        verifyNoInteractions(changes);
     }
 
     @Test

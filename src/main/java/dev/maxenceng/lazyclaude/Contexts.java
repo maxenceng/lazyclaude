@@ -7,6 +7,7 @@ import dev.maxenceng.lazyclaude.board.application.TicketCaptureApplicationServic
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchChangesRepository;
+import dev.maxenceng.lazyclaude.board.infrastructure.secondary.ConfiguredVerbsRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesWatchRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.TicketCaptureRepository;
@@ -77,7 +78,8 @@ public record Contexts(
                         new IssuesRepository(),
                         new BranchChangesRepository(),
                         new IssuesWatchRepository(),
-                        warnings)),
+                        warnings,
+                        new ConfiguredVerbsRepository(configuration.statusVerbs()))),
                 new TicketCaptureCommand(new TicketCaptureApplicationService(new TicketCaptureRepository(), new TicketTemplateRepository())),
                 new DocsQuery(new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(), warnings)),
                 new SessionQuery(sessions),

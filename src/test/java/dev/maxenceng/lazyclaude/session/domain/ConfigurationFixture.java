@@ -1,5 +1,8 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.inProgressDesignThenReview;
+import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.inReviewDoneThenRespond;
+import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.todoWithoutVerbs;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altH;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altZ;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlO;
@@ -10,6 +13,7 @@ import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.tic
 import java.util.List;
 import java.util.Map;
 
+import dev.maxenceng.lazyclaude.board.published.StatusVerbs;
 import dev.maxenceng.lazyclaude.session.published.Chord;
 import dev.maxenceng.lazyclaude.session.published.ReservedAction;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
@@ -69,6 +73,28 @@ public final class ConfigurationFixture {
                 .desktopNotifications(true)
                 .mouse(true)
                 .ticketPlugin(otherTicketPlugin())
+                .build();
+    }
+
+    public static Configuration withInReviewVerbs() {
+        return configurationBuilderWith(List.of(inReviewDoneThenRespond()));
+    }
+
+    public static Configuration withTodoWithoutVerbs() {
+        return configurationBuilderWith(List.of(todoWithoutVerbs()));
+    }
+
+    public static Configuration withInProgressDesignFirst() {
+        return configurationBuilderWith(List.of(inProgressDesignThenReview()));
+    }
+
+    private static Configuration configurationBuilderWith(List<StatusVerbs> statusVerbs) {
+        return Configuration.builder()
+                .reservedChords(ReservedChords.defaults())
+                .desktopNotifications(true)
+                .mouse(true)
+                .ticketPlugin(ticketPlugin())
+                .statusVerbs(statusVerbs)
                 .build();
     }
 

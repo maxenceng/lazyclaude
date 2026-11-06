@@ -28,6 +28,7 @@ import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.Board;
 import dev.maxenceng.lazyclaude.board.domain.BoardWatchPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
+import dev.maxenceng.lazyclaude.board.domain.ConfiguredVerbsPort;
 import dev.maxenceng.lazyclaude.board.domain.NoProject;
 import dev.maxenceng.lazyclaude.board.domain.UnavailableBoard;
 import dev.maxenceng.lazyclaude.board.published.Reason;
@@ -58,6 +59,9 @@ class BoardApplicationServiceTest {
 
     @Mock
     private Runnable changed;
+
+    @Mock
+    private ConfiguredVerbsPort configuredVerbs;
 
     @InjectMocks
     private BoardApplicationService service;

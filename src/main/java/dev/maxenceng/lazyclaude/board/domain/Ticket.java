@@ -1,7 +1,7 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.board.published.LabelName;
 import dev.maxenceng.lazyclaude.board.published.Status;
@@ -24,7 +24,8 @@ public record Ticket(
         Title title,
         List<LabelName> otherLabels,
         TicketBody body,
-        BranchChanges changes)
+        BranchChanges changes,
+        List<Verb> statusVerbs)
         implements BacklogEntry {
 
     public Ticket {
@@ -37,22 +38,25 @@ public record Ticket(
         Assert.notNull("otherLabels", otherLabels);
         Assert.notNull("body", body);
         Assert.notNull("changes", changes);
+        Assert.notNull("statusVerbs", statusVerbs);
     }
 
-    /** The verbs {@code /ticket} accepts for the ticket: those of its status, and {@code design} once an in-progress branch touches the frontend. */
+    /** The verbs its status offers, in that order; {@code design}, where listed, only while the branch touches the frontend. */
     public List<Verb> verbs() {
-        return mayOfferDesign() && changes.touchesFrontend()
-                ? Stream.concat(status.verbs().stream(), Stream.of(Verb.DESIGN)).toList()
-                : status.verbs();
+        return statusVerbs.stream().filter(verb -> verb != Verb.DESIGN || changes.touchesFrontend()).toList();
     }
 
-    /** Whether the branch's changes decide what is offered: only while the ticket is in progress. */
+    /** Whether the branch's changes decide what is offered: only while its status lists {@code design}. */
     public boolean mayOfferDesign() {
-        return status == Status.IN_PROGRESS;
+        return statusVerbs.contains(Verb.DESIGN);
     }
 
     public Ticket withChanges(BranchChanges changes) {
-        return new Ticket(id, branch, status, context, type, title, otherLabels, body, changes);
+        return new Ticket(id, branch, status, context, type, title, otherLabels, body, changes, statusVerbs);
+    }
+
+    public Ticket withStatusVerbs(List<Verb> statusVerbs) {
+        return new Ticket(id, branch, status, context, type, title, otherLabels, body, changes, statusVerbs);
     }
 
     public static TicketBuilder builder() {
@@ -69,6 +73,7 @@ public record Ticket(
         private List<LabelName> otherLabels = List.of();
         private TicketBody body;
         private BranchChanges changes = new UnreadChanges();
+        private List<Verb> statusVerbs;
 
         private TicketBuilder() {}
 
@@ -117,8 +122,25 @@ public record Ticket(
             return this;
         }
 
+        public TicketBuilder statusVerbs(List<Verb> statusVerbs) {
+            this.statusVerbs = statusVerbs;
+            return this;
+        }
+
+        /** A ticket not given its status's verbs offers the ones {@code /ticket} accepts for it. */
         public Ticket build() {
-            return new Ticket(id, branch, status, context, type, title, otherLabels, body, changes);
+            Assert.notNull("status", status);
+            return new Ticket(
+                    id,
+                    branch,
+                    status,
+                    context,
+                    type,
+                    title,
+                    otherLabels,
+                    body,
+                    changes,
+                    Optional.ofNullable(statusVerbs).orElseGet(status::verbs));
         }
     }
 }

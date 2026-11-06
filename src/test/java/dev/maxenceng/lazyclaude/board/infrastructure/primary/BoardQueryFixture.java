@@ -6,6 +6,7 @@ import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
 import dev.maxenceng.lazyclaude.board.domain.BacklogPort;
 import dev.maxenceng.lazyclaude.board.domain.BoardWatchPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
+import dev.maxenceng.lazyclaude.board.domain.ConfiguredVerbsPort;
 import dev.maxenceng.lazyclaude.board.domain.UnreadChanges;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
@@ -28,7 +29,7 @@ public final class BoardQueryFixture {
             BranchChangesPort changes,
             BoardWatchPort watch,
             WarningPort warnings) {
-        return new BoardQuery(new BoardApplicationService(locator, backlog, changes, watch, warnings));
+        return new BoardQuery(new BoardApplicationService(locator, backlog, changes, watch, warnings, mock(ConfiguredVerbsPort.class)));
     }
 
     public static BranchChangesPort unreadChanges() {

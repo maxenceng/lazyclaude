@@ -8,7 +8,7 @@ import java.util.Optional;
 public enum Status {
     DRAFT("draft", Verb.REFINE),
     TODO("todo", Verb.START),
-    IN_PROGRESS("in-progress", Verb.REVIEW),
+    IN_PROGRESS("in-progress", Verb.REVIEW, Verb.DESIGN),
     IN_REVIEW("in-review", Verb.RESPOND, Verb.DONE),
     DONE("done");
 
@@ -24,7 +24,8 @@ public enum Status {
         return label;
     }
 
-    /** The verbs {@code /ticket} accepts for a ticket in this status, in the order they are offered; none once it is done. */
+    /** The verbs {@code /ticket} accepts for a ticket in this status, in the order they are offered; none once it is done. {@code design} also needs the
+     * ticket branch to touch the frontend, which only a ticket knows. */
     public List<Verb> verbs() {
         return verbs;
     }

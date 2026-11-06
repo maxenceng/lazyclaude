@@ -79,7 +79,7 @@ describe('the window-level key handler', () => {
   });
 
   it('takes a chord the configuration reserved, read at the time of the press', () => {
-    let reserved = bindingsOf({ chords: [], desktopNotifications: true, mouse: true, ticketPlugin: 'ddd-workflow' });
+    let reserved = bindingsOf({ chords: [], desktopNotifications: true, mouse: true, ticketPlugin: 'ddd-workflow', statusVerbs: [] });
     const taken: Action[] = [];
     keys = new WindowKeys((action) => taken.push(action), { reserved: () => reserved });
     expect(press('x', { altKey: true }).defaultPrevented).toBe(false);
@@ -87,6 +87,7 @@ describe('the window-level key handler', () => {
       chords: [{ action: 'ZOOM', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 120 } } }],
       desktopNotifications: true,
       ticketPlugin: 'ddd-workflow',
+      statusVerbs: [],
       mouse: true,
     });
     expect(press('x', { altKey: true }).defaultPrevented).toBe(true);

@@ -73,6 +73,24 @@ class VerbChoiceTest {
     }
 
     @Test
+    void shouldPreselectTheFirstVerbListedWhenAStatusOrdersDoneAheadOfRespond() {
+        assertThat(VerbChoice.of(List.of(Verb.DONE, Verb.RESPOND), NO_DESIGN_RUN, NOT_MERGED).preselected())
+                .isEqualTo(Verb.DONE);
+    }
+
+    @Test
+    void shouldLetDesignWinOverTheFirstVerbListedWhileNoDesignSessionExists() {
+        assertThat(VerbChoice.of(List.of(Verb.REVIEW, Verb.DESIGN), NO_DESIGN_RUN, MERGED).preselected())
+                .isEqualTo(Verb.DESIGN);
+    }
+
+    @Test
+    void shouldLetAMergedBranchWinDoneOverAFirstVerbListed() {
+        assertThat(VerbChoice.of(List.of(Verb.RESPOND, Verb.REVIEW, Verb.DONE), DESIGN_RUN, MERGED).preselected())
+                .isEqualTo(Verb.DONE);
+    }
+
+    @Test
     void shouldRefuseAChoiceOfNoVerb() {
         assertThatThrownBy(() -> VerbChoice.of(List.of(), NO_DESIGN_RUN, NOT_MERGED))
                 .isInstanceOf(EmptyValueException.class);

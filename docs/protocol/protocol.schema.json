@@ -690,6 +690,22 @@
       "required" : [ "status", "tickets" ],
       "additionalProperties" : false
     },
+    "board.StatusVerbs" : {
+      "type" : "object",
+      "properties" : {
+        "status" : {
+          "$ref" : "#/$defs/board.Status"
+        },
+        "verbs" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/board.Verb"
+          }
+        }
+      },
+      "required" : [ "status", "verbs" ],
+      "additionalProperties" : false
+    },
     "board.TicketBody" : {
       "oneOf" : [ {
         "$ref" : "#/$defs/board.Body"
@@ -2066,9 +2082,15 @@
         },
         "ticketPlugin" : {
           "type" : "string"
+        },
+        "statusVerbs" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/board.StatusVerbs"
+          }
         }
       },
-      "required" : [ "chords", "desktopNotifications", "mouse", "ticketPlugin" ],
+      "required" : [ "chords", "desktopNotifications", "mouse", "ticketPlugin", "statusVerbs" ],
       "additionalProperties" : false
     },
     "session.FirstPrompt" : {

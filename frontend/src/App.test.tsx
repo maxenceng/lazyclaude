@@ -25,6 +25,7 @@ const configuration = {
   ],
   desktopNotifications: true,
   ticketPlugin: 'ddd-workflow',
+  statusVerbs: [],
   mouse: true,
 };
 

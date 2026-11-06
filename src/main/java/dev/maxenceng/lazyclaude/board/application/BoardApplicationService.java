@@ -9,6 +9,7 @@ import dev.maxenceng.lazyclaude.board.domain.BoardManager;
 import dev.maxenceng.lazyclaude.board.domain.BoardReading;
 import dev.maxenceng.lazyclaude.board.domain.BoardWatchPort;
 import dev.maxenceng.lazyclaude.board.domain.BranchChangesPort;
+import dev.maxenceng.lazyclaude.board.domain.ConfiguredVerbsPort;
 import dev.maxenceng.lazyclaude.board.domain.NoProject;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
@@ -28,8 +29,9 @@ public final class BoardApplicationService {
             BacklogPort backlog,
             BranchChangesPort changes,
             BoardWatchPort watch,
-            WarningPort warnings) {
-        this.manager = new BoardManager(locator, backlog, changes, watch, warnings);
+            WarningPort warnings,
+            ConfiguredVerbsPort configuredVerbs) {
+        this.manager = new BoardManager(locator, backlog, changes, watch, warnings, configuredVerbs);
     }
 
     /**
