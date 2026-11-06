@@ -316,10 +316,35 @@ describe('the app and its window tabs', () => {
     expect(app.tabs.selected.get()).toBe(WindowTab.Base);
   });
 
-  it('ignores a digit while a review is open', async () => {
+  it('ends an open review and shows the tab chosen by its digit or a click', async () => {
     const { client, app } = await reviewing();
     await opened(client, app);
     app.press(Action.ShowBoard);
+    expect(app.review.isOpen()).toBe(false);
+    expect(app.tabs.selected.get()).toBe(WindowTab.Board);
+    await opened(client, app);
+    app.press(Action.ShowBase);
+    app.press(Action.Review);
+    client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+    await settled();
+    app.chooseTab(WindowTab.PullRequests);
+    expect(app.review.isOpen()).toBe(false);
+    expect(app.tabs.selected.get()).toBe(WindowTab.PullRequests);
+  });
+
+  it('chooses no tab while the review\'s comment box or submit prompt is open', async () => {
+    const { client, app } = await reviewing();
+    await opened(client, app);
+    const current = app.review.current.get();
+    app.press(Action.Submit);
+    client.answer('review/summaryToSubmit', '');
+    await settled();
+    app.chooseTab(WindowTab.Board);
+    expect(app.review.isOpen(), 'a box holds what is not written yet').toBe(true);
+    current?.cancelBox();
+    await summaryKept(client, current);
+    app.chooseTab(WindowTab.Board);
+    expect(app.review.isOpen(), 'the submit prompt waits for its answer').toBe(true);
     expect(app.tabs.selected.get()).toBe(WindowTab.Base);
   });
 

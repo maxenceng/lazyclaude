@@ -95,11 +95,9 @@ export class AppModel {
     this.keys.press(action);
   }
 
-  /** A click on a window tab; a review open covers the window, so none is chosen until it ends. */
+  /** A click on a window tab. */
   chooseTab(tab: WindowTab): void {
-    if (!this.review.isOpen()) {
-      this.tabs.choose(tab);
-    }
+    this.tabs.choose(tab);
   }
 
   /** A click on a session's tab in the dock folded under a window tab: back to Base, with that session's pane focused. */

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionConfigurationView } from '../protocol';
 import { bindingsOf } from './chords';
-import { Action, actionOf, type KeyPress } from './bindings';
+import { Action, actionOf, type WindowKeyPress } from './bindings';
 
-const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
+const press = (key: string, held: Partial<WindowKeyPress> = {}): WindowKeyPress => ({
   key,
+  code: '',
   ctrlKey: false,
   altKey: false,
   metaKey: false,

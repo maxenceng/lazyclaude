@@ -122,7 +122,7 @@ export class KeyRouter {
     }
   }
 
-  /** The keys of an open review: the confirm after the summary answers first, a comment box takes none, then the focused panel's. */
+  /** The keys of an open review: the confirm after the summary answers first, a comment box takes none, then a digit choosing a tab, then the focused panel's. */
   private pressInReview(current: OpenReview, action: Action): void {
     if (current.submitPrompt()) {
       current.answerSubmit(action === Action.Yes);
@@ -133,6 +133,10 @@ export class KeyRouter {
 
   private pressInReviewPanel(current: OpenReview, action: Action): void {
     const focus = this.focus();
+    const chosen = TABS.get(action);
+    if (chosen !== undefined) {
+      return this.tabs.choose(chosen);
+    }
     switch (action) {
       case Action.Back:
         if (current.clearRange()) {

@@ -21,9 +21,9 @@ const rankOf = (pullRequest: ReviewPullRequestView): number => {
 export const worstFirst = (pullRequests: readonly ReviewPullRequestView[]): ReviewPullRequestView[] =>
   [...pullRequests].sort((a, b) => rankOf(a) - rankOf(b));
 
-/** The worst CI result among the pull requests, failed over pending over passed; none when no one has a check. */
+/** The worst CI result among the pull requests that are not drafts, failed over pending over passed, so it agrees with the list's top row; none when no such one has a check. */
 export const worstResult = (pullRequests: readonly ReviewPullRequestView[]): ReviewCheckOutcome | undefined =>
-  WORST_FIRST.find((outcome) => pullRequests.some((pullRequest) => ciResultOf(pullRequest) === outcome));
+  WORST_FIRST.find((outcome) => pullRequests.some((pullRequest) => !pullRequest.draft && ciResultOf(pullRequest) === outcome));
 
 const CI: Record<ReviewCheckOutcome, Ci> = { FAILED: Ci.Failed, PENDING: Ci.Pending, PASSED: Ci.Passed };
 

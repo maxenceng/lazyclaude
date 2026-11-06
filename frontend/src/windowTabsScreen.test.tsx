@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
@@ -260,6 +260,24 @@ describe('the Pull requests tab', () => {
     await user.keyboard('{Escape}');
     expect(tab(/^Pull requests/)).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: /#11/ })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('ends a review opened from it when another tab is clicked or keyed, the AZERTY digit row included', async () => {
+    const { client, user } = await started();
+    await user.keyboard('3');
+    await user.click(screen.getByRole('button', { name: /#11/ }));
+    await act(async () => {
+      client.answerAll('review/pendingOf', { kind: 'noPendingReview' });
+      client.answerAll('review/threadsOf', { kind: 'readThreads', threads: [] });
+      client.answerAll('review/diffOf', { kind: 'readDiff', files: [] });
+      await Promise.resolve();
+    });
+    await settle();
+    await user.click(tab(/^Board/));
+    expect(screen.queryByRole('region', { name: 'PR #11 Wait for it' })).not.toBeInTheDocument();
+    expect(tab(/^Board/)).toHaveAttribute('aria-selected', 'true');
+    fireEvent.keyDown(window, { key: '&', code: 'Digit1' });
+    expect(tab(/^Base/)).toHaveAttribute('aria-selected', 'true');
   });
 
   it('opens the review of a pull request whose head is no ticket\'s branch when it is clicked', async () => {

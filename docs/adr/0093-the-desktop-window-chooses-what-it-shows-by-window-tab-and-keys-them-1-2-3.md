@@ -20,9 +20,15 @@ as status columns and a list of pull requests, both reachable by key and by clic
   state, whether its preview is shown and what a second press on a ticket does, sits there too: going to Base is a
   window move, as Base's keys are routed in the composition.
 - **The keys are `1`, `2` and `3`.** They are plain keys no binding uses, no reserved chord is a digit, and they read in the
-  key bar as `1/2/3 tabs`. `KeyRouter` takes them only where it already takes a plain key: a hosted pane that has focus
-  passes every plain key to its terminal, and an open review or the verb picker ignores them, so a digit typed to `claude`
-  switches nothing. A click on a tab works wherever the window is, except under a review.
+  key bar as `1/2/3 tabs`. They are matched by their key on the digit row (`KeyboardEvent.code`) as well as by the
+  character, so a layout whose digits need shift, as AZERTY's, uses the same three keys unshifted, and the numpad's digits
+  still work. `KeyRouter` takes them only where it already takes a plain key: a hosted pane that has focus passes every
+  plain key to its terminal, and the verb picker ignores them, so a digit typed to `claude` switches nothing.
+- **A tab chosen under a review ends it.** A digit or a click on a tab does what `esc` does to the review, then shows that
+  tab: the pending review is on GitHub already, so leaving loses nothing written. While the comment box or the submit
+  prompt is open the tab press does nothing, since each holds what is not written yet. Rejected: a review that stays open
+  behind the Pull requests tab, a second place for the open review to live, and one the review opened by `p` on Base would
+  need as well; and the review that blocked every tab until `esc`, which read as a lock.
 - **A tab other than Base takes focus to the Board** and draws over the panes, the dock folded to its strip (the TUI's dock
   strip). `h`/`j`/`k`/`l` and `enter` act on the tab; `esc` returns to Base. On a pull request `enter` or a click opens the
   Review screen, and the tab and row are kept, so ending the review returns to them.
@@ -53,7 +59,8 @@ as status columns and a list of pull requests, both reachable by key and by clic
   unchanged. A `deferred:` marker in `pullRequestList.ts` says so; a protocol change for `review` moves both onto its view.
 - A done ticket whose issue is still open (labelled `status:done`) sorts before the closed ones, so the ten never hide
   the ticket marked done just now.
-- The digits are not yet configurable; `config.yml` reserves only chords.
+- The digits are not yet configurable; `config.yml` reserves only chords. On a layout that puts another character on the
+  digit row, the key bar's `1/2/3` names the keys by their place, not by what they type.
 - The board read asks `gh` for `closedAt` as well; a closed issue without one, or with one that is not a time, makes the
   board unavailable with that reason, as any field it lacks does.
 - Ten is a window choice in `frontend/src/board/rows.ts`; a done ticket older than the ten is read on GitHub or not at all.

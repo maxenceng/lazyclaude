@@ -21,8 +21,13 @@ export class WindowTabs {
 
   constructor(private readonly deps: Deps) {}
 
-  /** The tab is shown; a tab other than Base draws over the panes, so focus goes to the Board and the dock's zoom ends. */
+  /** The tab is shown, ending an open review as `esc` would; a tab other than Base draws over the panes, so focus goes to the Board and the dock's zoom ends. Nothing while the review's comment box or submit prompt is open, since either holds what is not written yet. */
   choose(tab: WindowTab): void {
+    const review = this.deps.review.current.get();
+    if (review !== undefined && (review.box() !== undefined || review.submitPrompt())) {
+      return;
+    }
+    this.deps.review.leave();
     this.selected.set(tab);
     if (tab !== WindowTab.Base) {
       this.deps.layout.set(this.deps.layout.get().focusOn(Focus.Board));

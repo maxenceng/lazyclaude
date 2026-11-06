@@ -544,23 +544,46 @@ describe('the summary of a review', () => {
 });
 
 describe('the mouse over a review', () => {
-  it('puts the cursor on the line pressed, and a second press on it, in the focused diff, is enter', async () => {
+  it('puts the cursor on the line pressed, and a second click on it, in the focused diff, is enter', async () => {
     const harness = new Harness();
     const comment = pendingCommentFixture({ id: 'C1', body: 'Rename this' });
     await readWithComment(harness, comment);
     harness.review.moveLine(2);
     harness.review.pressLine(0, true);
     expect(harness.review.cursor()).toBe(0);
-    expect(harness.review.box()).toBeUndefined();
     void harness.review.releaseLine(0);
+    expect(harness.review.box()).toBeUndefined();
     harness.review.pressLine(0, true);
+    void harness.review.releaseLine(0);
     expect(harness.review.box()).toMatchObject({ text: 'Rename this' });
+  });
+
+  it('asks where a new comment would hang on a second press on a line with no pending comment, as c does', async () => {
+    const harness = new Harness();
+    await readTo(harness);
+    harness.review.pressLine(1, true);
+    void harness.review.releaseLine(1);
+    const callsBefore = harness.client.calls.length;
+    harness.review.pressLine(1, true);
+    expect(harness.client.calls, 'a drag may still start from the press').toHaveLength(callsBefore);
+    void harness.review.releaseLine(1);
+    expect(harness.client.calls.slice(callsBefore)).toEqual([{ method: 'review/anchorOf', params: { diff, first: 1, last: 1 } }]);
+  });
+
+  it('marks the range of a drag that starts on the cursor\'s line, writing no comment', async () => {
+    const harness = new Harness();
+    await readTo(harness);
+    harness.review.pressLine(0, true);
+    void harness.review.releaseLine(2);
+    expect(harness.client.calls.at(-1)).toEqual({ method: 'review/anchorOf', params: { diff, first: 0, last: 2 } });
+    expect(harness.review.box()).toBeUndefined();
   });
 
   it('takes a press on an unfocused diff for the first of two, even on the cursor line', async () => {
     const harness = new Harness();
     await readWithComment(harness, pendingCommentFixture({ id: 'C1' }));
     harness.review.pressLine(0, false);
+    void harness.review.releaseLine(0);
     expect(harness.review.box()).toBeUndefined();
   });
 
@@ -589,13 +612,11 @@ describe('the mouse over a review', () => {
     expect(harness.client.calls).toHaveLength(callsBefore);
   });
 
-  it('selects a file by a press, and a second press on the selected file goes to its first line', async () => {
+  it('selects a file by a press and goes to its first line', async () => {
     const harness = new Harness();
     await readTo(harness);
-    harness.review.pressFile(1, false);
+    harness.review.pressFile(1);
     expect(harness.review.selectedFile()).toBe(1);
-    expect(harness.review.cursor()).toBe(0);
-    harness.review.pressFile(1, true);
     expect(harness.review.cursor()).toBe(3);
   });
 

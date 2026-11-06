@@ -196,17 +196,15 @@ describe('the Files of a review', () => {
     expect(screen.getByRole('button')).toHaveTextContent('Rold.ts → new.ts');
   });
 
-  it('marks the selected file, selects one by a press, and goes to the first line of the selected one by a second', async () => {
+  it('marks the selected file, and a press selects one and goes to its first line', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     const onFocus = vi.fn();
-    render(<FilesPane review={harness.review} focused onFocus={onFocus} />);
+    render(<FilesPane review={harness.review} focused={false} onFocus={onFocus} />);
     expect(screen.getAllByRole('button')[0]).toHaveAttribute('aria-current', 'true');
     await userEvent.click(screen.getAllByRole('button')[1]!);
     expect(harness.review.selectedFile()).toBe(1);
-    expect(harness.review.cursor()).toBe(0);
-    await userEvent.click(screen.getAllByRole('button')[1]!);
-    expect(harness.review.cursor()).toBe(3);
+    expect(harness.review.cursor(), 'one press goes, even on a pane that had no focus').toBe(3);
     expect(onFocus).toHaveBeenCalled();
   });
 

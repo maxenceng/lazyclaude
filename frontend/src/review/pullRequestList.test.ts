@@ -40,6 +40,11 @@ describe('the pull request list', () => {
     expect(worstResult([pullRequestFixture({ checks: [] })])).toBeUndefined();
   });
 
+  it('leaves a draft out of the worst result, as the list sinks it below every other', () => {
+    expect(worstResult([checked(1, 'PASSED'), checked(2, 'FAILED', true)])).toBe('PASSED');
+    expect(worstResult([checked(2, 'FAILED', true)])).toBeUndefined();
+  });
+
   it('draws an outcome as the glyph the TUI draws for it', () => {
     expect(ciOf('FAILED')).toBe(Ci.Failed);
     expect(ciOf('PENDING')).toBe(Ci.Pending);

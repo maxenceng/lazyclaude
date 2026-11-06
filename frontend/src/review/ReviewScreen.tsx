@@ -189,7 +189,7 @@ export const FilesPane = ({ review, focused, onFocus }: ReviewProps) => {
               selected={index === selected}
               onSelect={() => {
                 onFocus();
-                review.pressFile(index, focused);
+                review.pressFile(index);
               }}
             />
           ))}
