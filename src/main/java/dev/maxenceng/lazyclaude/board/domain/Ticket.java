@@ -127,7 +127,7 @@ public record Ticket(
             return this;
         }
 
-        /** A ticket not given its status's verbs offers the ones {@code /ticket} accepts for it. */
+        /** A ticket not given its status's verbs offers the ones its status offers by default. */
         public Ticket build() {
             Assert.notNull("status", status);
             return new Ticket(
@@ -140,7 +140,7 @@ public record Ticket(
                     otherLabels,
                     body,
                     changes,
-                    Optional.ofNullable(statusVerbs).orElseGet(status::verbs));
+                    Optional.ofNullable(statusVerbs).orElseGet(() -> OfferedVerbs.byDefault().of(status)));
         }
     }
 }

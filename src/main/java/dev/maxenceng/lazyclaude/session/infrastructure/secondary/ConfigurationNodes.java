@@ -241,7 +241,7 @@ final class ConfigurationNodes {
 
     private List<Verb> verbsOf(Status status, ConfigurationEntry entry) {
         if (!(entry.value() instanceof SequenceNode sequence)) {
-            throw refused(lineOf(entry.value().getStartMark()), NEEDS_A_LIST.formatted(entry.key()));
+            throw refused(entry.line(), NEEDS_A_LIST.formatted(entry.key()));
         }
         List<ConfigurationEntry> items = sequence.getValue().stream().map(this::verbEntry).toList();
         List<Verb> verbs = items.stream().map(item -> verbOf(status, item)).toList();

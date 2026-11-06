@@ -6,6 +6,7 @@ import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicket;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicketBuilder;
 import static dev.maxenceng.lazyclaude.board.published.ReasonFixture.reason;
+import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.inProgressReviewOnly;
 import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.inReviewDoneThenRespond;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.secondTicketId;
@@ -27,7 +28,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Status;
-import dev.maxenceng.lazyclaude.board.published.StatusVerbs;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectLocatorPort;
 import dev.maxenceng.lazyclaude.shared.domain.ProjectNotFoundException;
@@ -157,7 +157,7 @@ class BoardManagerTest {
 
     @Test
     void shouldReadNoBranchChangesForAnInProgressTicketWhoseStatusDoesNotListDesign() {
-        when(configuredVerbs.configured()).thenReturn(List.of(StatusVerbs.builder().status(Status.IN_PROGRESS).verbs(List.of(Verb.REVIEW)).build()));
+        when(configuredVerbs.configured()).thenReturn(List.of(inProgressReviewOnly()));
         when(locator.locate(workingDirectory())).thenReturn(project());
         when(backlog.entries(project())).thenReturn(List.of(ticketBuilder().status(Status.IN_PROGRESS).build()));
 

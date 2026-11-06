@@ -153,6 +153,24 @@ class ConfigurationRepositoryVerbsTest {
     }
 
     @Test
+    void shouldRefuseAStatusGivenNoValueAtItsOwnLine() throws IOException {
+        configYml(configHome, "verbs:", "  todo:", "  in-review: [done]");
+
+        assertThatThrownBy(repository::configuration)
+                .isExactlyInstanceOf(ConfigurationRefusedException.class)
+                .hasMessage(FILE + ":2: todo needs a list of verbs such as [respond, done]");
+    }
+
+    @Test
+    void shouldRefuseAVerbsListOnTheLineAfterItsStatusAtTheStatusLine() throws IOException {
+        configYml(configHome, "verbs:", "  in-review:", "    done");
+
+        assertThatThrownBy(repository::configuration)
+                .isExactlyInstanceOf(ConfigurationRefusedException.class)
+                .hasMessage(FILE + ":2: in-review needs a list of verbs such as [respond, done]");
+    }
+
+    @Test
     void shouldRefuseAVerbThatIsNotAName() throws IOException {
         configYml(configHome, "verbs:", "  in-review: [[done]]");
 

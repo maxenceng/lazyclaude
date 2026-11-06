@@ -17,4 +17,8 @@ public final class StatusVerbsFixture {
     public static StatusVerbs inProgressDesignThenReview() {
         return StatusVerbs.builder().status(Status.IN_PROGRESS).verbs(List.of(Verb.DESIGN, Verb.REVIEW)).build();
     }
+
+    public static StatusVerbs inProgressReviewOnly() {
+        return StatusVerbs.builder().status(Status.IN_PROGRESS).verbs(List.of(Verb.REVIEW)).build();
+    }
 }

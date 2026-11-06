@@ -14,6 +14,11 @@ public record OfferedVerbs(List<StatusVerbs> configured) {
         Assert.notNull("configured", configured);
     }
 
+    /** The verbs each status offers when {@code config.yml} names none. */
+    public static OfferedVerbs byDefault() {
+        return new OfferedVerbs(List.of());
+    }
+
     public List<Verb> of(Status status) {
         return configured.stream()
                 .filter(given -> given.status() == status)
