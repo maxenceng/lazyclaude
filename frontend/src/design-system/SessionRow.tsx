@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Lamp, type LampColour } from './Lamp';
+import { Lamp, type LampColour, LampSize } from './Lamp';
 import styles from './SessionRow.module.css';
 
 interface Props {
@@ -24,7 +24,7 @@ export const SessionRow = ({ label, detail, selected, lamp, onSelect }: Props) =
   return (
     <li>
       <button ref={row} type="button" className={selected ? `${styles.row} ${styles.selected}` : styles.row} aria-current={selected ? 'true' : undefined} onClick={onSelect}>
-        {lamp === undefined ? <span className={styles.noLamp} /> : <Lamp colour={lamp} size="marker" />}
+        {lamp === undefined ? <span className={styles.noLamp} /> : <Lamp colour={lamp} size={LampSize.Marker} />}
         <span className={styles.label}>{label}</span>
         <span className={styles.detail}>{detail}</span>
       </button>

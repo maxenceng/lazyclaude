@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Lamp, type LampColour } from './Lamp';
+import { Lamp, type LampColour, LampSize } from './Lamp';
 import styles from './DockTabs.module.css';
 
 export interface Tab {
@@ -28,7 +28,7 @@ export const DockTabs = ({ tabs, selected, onSelect }: Props) => {
           className={tab.id === selected ? `${styles.tab} ${styles.selected}` : styles.tab}
           onClick={() => onSelect(tab.id)}
         >
-          <Lamp colour={tab.lamp} size="marker" />
+          <Lamp colour={tab.lamp} size={LampSize.Marker} />
           {tab.label}
         </button>
       ))}

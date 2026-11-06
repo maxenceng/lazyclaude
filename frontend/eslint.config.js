@@ -45,6 +45,14 @@ const NAMED_PATTERNS = [
   },
 ];
 
+// ADR 0091: a set of values is an enum, named once; a type argument or constraint is exempt.
+const NAMED_VALUE_SETS = [
+  {
+    selector: ':not(TSTypeParameterInstantiation, TSTypeParameter) > TSUnionType > TSLiteralType > Literal[value=/[A-Za-z]/]',
+    message: 'A set of string values is an enum: declare one and compare against its members.',
+  },
+];
+
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'src-tauri', 'src/protocol/generated'] },
   ...tseslint.configs.strictTypeChecked,
@@ -58,14 +66,14 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       '@typescript-eslint/no-confusing-void-expression': 'off',
-      'no-restricted-syntax': ['error', ...HTML_ELEMENT_STYLING, ...LITERAL_COPY, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS, ...NAMED_PATTERNS],
+      'no-restricted-syntax': ['error', ...HTML_ELEMENT_STYLING, ...LITERAL_COPY, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS, ...NAMED_PATTERNS, ...NAMED_VALUE_SETS],
       'func-style': ['error', 'expression'],
       'react/jsx-no-comment-textnodes': 'off',
     },
   },
   {
     files: ['src/design-system/**'],
-    rules: { 'no-restricted-syntax': ['error', ...LITERAL_COPY, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS, ...NAMED_PATTERNS] },
+    rules: { 'no-restricted-syntax': ['error', ...LITERAL_COPY, ...ARROWS_ONLY, ...NO_NESTED_FUNCTIONS, ...NAMED_PATTERNS, ...NAMED_VALUE_SETS] },
   },
   {
     files: ['**/*.test.ts', '**/*.test.tsx', 'src/test/**'],

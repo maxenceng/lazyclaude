@@ -7,14 +7,14 @@ import { BoardPane, TicketPane } from './board/BoardScreen';
 import { ConnectionScreen } from './connection/ConnectionScreen';
 import { DocsKeyBar } from './docs/DocsKeyBar';
 import { DocsPane, DocumentPane } from './docs/DocsScreen';
-import { Alert, AppFrame, Button, Count, Lamp, Pane, StatusLine, Text, Tone } from './design-system';
+import { Alert, AppFrame, Arrangement, Button, Count, Lamp, LampSize, Pane, StatusLine, Text, Tone } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { WindowKeys } from './keys/windowKeys';
 import { Focus } from './layout';
 import { StatusKind } from './protocol';
 import { CommentsPane, DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './review/ReviewScreen';
-import { ReviewKeyBar } from './review/ReviewKeyBar';
+import { ReviewFocus, ReviewKeyBar } from './review/ReviewKeyBar';
 import { DockScreen } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
@@ -36,7 +36,7 @@ const unboarded = (alternative: ReactNode, t: TFunction) => ({
     </Pane>
   ),
   docs: null,
-  arrangement: 'noDock' as const,
+  arrangement: Arrangement.NoDock,
 });
 
 interface Props {
@@ -74,9 +74,9 @@ export const App = ({ app, packaged }: Props) => {
     [Focus.Board]: <BoardKeyBar />,
     [Focus.Docs]: <DocsKeyBar />,
     [Focus.Sessions]: <SessionsKeyBar picking={false} />,
-    [Focus.Files]: <ReviewKeyBar panel="files" />,
-    [Focus.Comments]: <ReviewKeyBar panel="comments" />,
-    [Focus.Diff]: <ReviewKeyBar panel="diff" />,
+    [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
+    [Focus.Comments]: <ReviewKeyBar panel={ReviewFocus.Comments} />,
+    [Focus.Diff]: <ReviewKeyBar panel={ReviewFocus.Diff} />,
     [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} />,
   }[layout.focus];
 
@@ -153,7 +153,7 @@ export const App = ({ app, packaged }: Props) => {
         statusLine={
           <StatusLine
             tiles={markers.map((marker) => (
-              <Lamp key={marker.session} colour={marker.colour} size="tile" number={marker.ticket} />
+              <Lamp key={marker.session} colour={marker.colour} size={LampSize.Tile} number={marker.ticket} />
             ))}
             counts={COLOURS.map((colour) => (
               <Count key={colour} colour={colour} count={markers.filter((marker) => marker.colour === colour).length} />
