@@ -1,4 +1,4 @@
-import type { DocumentView } from '../protocol';
+import type { DocsDocumentView } from '../protocol';
 
 export enum ShownKind {
   None = 'none',
@@ -15,7 +15,7 @@ export class NoDocument {
 export class FoundDocument {
   readonly kind = ShownKind.Found;
 
-  constructor(readonly document: DocumentView) {}
+  constructor(readonly document: DocsDocumentView) {}
 }
 
 /** A path a link named under `docs/` that the tree does not list. */

@@ -1,4 +1,4 @@
-import type { BoardView, Client, TicketView } from '../protocol';
+import type { BoardBoardView, Client, BoardTicketView } from '../protocol';
 import { BoardStore } from './boardStore';
 import { selectedIn, ticketIds } from './rows';
 import { Selection } from './selection';
@@ -13,7 +13,7 @@ export class BoardController {
     this.selection = new Selection();
   }
 
-  shown(): BoardView | undefined {
+  shown(): BoardBoardView | undefined {
     return this.store.state.get().shown();
   }
 
@@ -26,7 +26,7 @@ export class BoardController {
     return view === undefined ? [] : ticketIds(view);
   }
 
-  selectedTicket(): TicketView | undefined {
+  selectedTicket(): BoardTicketView | undefined {
     const view = this.shown();
     const id = view === undefined ? undefined : selectedIn(view, this.selection.selected.get());
     return view?.groups.flatMap((group) => group.tickets).find((ticket) => ticket.id === id);

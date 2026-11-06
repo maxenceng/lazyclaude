@@ -9,11 +9,12 @@ import {
   Pane,
   StatusHeading,
   Text,
+  Tone,
   Rows,
   TicketRow,
   UnreadableRow,
 } from '../design-system';
-import type { BoardView, TicketView } from '../protocol';
+import type { BoardBoardView, BoardTicketView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import { type BoardState, BoardStateKind, UnavailableCause } from './boardState';
 import type { BoardStore } from './boardStore';
@@ -77,7 +78,7 @@ export const TicketPane = ({ board, selection, focused, onLink, children }: Tick
   const { ticket } = useBoardView({ board, selection });
   return (
     <Pane title={t('ticket.title')} focused={focused}>
-      {ticket === undefined ? <Text tone="dim">{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} onLink={onLink} />}
+      {ticket === undefined ? <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} onLink={onLink} />}
       {children}
     </Pane>
   );
@@ -94,12 +95,12 @@ const Unread = ({ state, onRetry }: { state: BoardState; onRetry: () => void }) 
     case BoardStateKind.Loading:
       return <Busy>{t('board.loading')}</Busy>;
     case BoardStateKind.Empty:
-      return <Text tone="dim">{t('board.empty')}</Text>;
+      return <Text tone={Tone.Dim}>{t('board.empty')}</Text>;
     case BoardStateKind.Unavailable:
       return (
         <>
           <Text>{t(UNAVAILABLE[state.cause])}</Text>
-          <Text tone="dim">{state.reason}</Text>
+          <Text tone={Tone.Dim}>{state.reason}</Text>
         </>
       );
     case BoardStateKind.Fault:
@@ -114,7 +115,7 @@ const Unread = ({ state, onRetry }: { state: BoardState; onRetry: () => void }) 
 };
 
 interface TicketsProps {
-  view: BoardView;
+  view: BoardBoardView;
   cursor: string | undefined;
   markerOf: (ticket: string) => LampColour | undefined;
   onPress: (ticket: string) => void;
@@ -156,7 +157,7 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
   );
 };
 
-const TicketDetail = ({ ticket, onLink }: { ticket: TicketView; onLink: (href: string) => void }) => {
+const TicketDetail = ({ ticket, onLink }: { ticket: BoardTicketView; onLink: (href: string) => void }) => {
   const { t } = useTranslation('board');
   const facts = [
     ticket.id,

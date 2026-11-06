@@ -7,10 +7,10 @@ import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentsInDiffPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingDeletePayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingEditPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReplyPayload;
@@ -19,12 +19,14 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingSubmitPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestOnPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestOnView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.SummaryToSubmitPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.SummaryToSubmitView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 
 import tools.jackson.databind.JsonNode;
@@ -42,12 +44,14 @@ final class ReviewMethods {
             ServedMethod.of("review/loadingThreads", NoParams.class, ThreadsView.class, (review, _) -> review.loadingThreads()),
             ServedMethod.of("review/diffOf", PullRequestPayload.class, PullRequestDiffView.class, ReviewQuery::diffOf),
             ServedMethod.of("review/threadsOf", PullRequestPayload.class, ThreadsView.class, ReviewQuery::threadsOf),
-            ServedMethod.of("review/threadsInDiff", ThreadsInDiffPayload.class, ThreadsInDiffView.class, ReviewQuery::threadsInDiff),
+            ServedMethod.of(
+                    "review/commentsInDiff", CommentsInDiffPayload.class, CommentsInDiffView.class, ReviewQuery::commentsInDiff),
             ServedMethod.of("review/loadingPending", NoParams.class, PendingReviewView.class, (review, _) -> review.loadingPending()),
             ServedMethod.of("review/pendingOf", PullRequestPayload.class, PendingReviewView.class, ReviewQuery::pendingOf),
             ServedMethod.of("review/anchorOf", CommentAnchorPayload.class, CommentAnchorView.class, ReviewQuery::anchorOf),
             ServedMethod.of(
-                    "review/pendingInDiff", PendingCommentsInDiffPayload.class, PendingCommentsInDiffView.class, ReviewQuery::pendingInDiff),
+                    "review/summaryToSubmit", SummaryToSubmitPayload.class, SummaryToSubmitView.class, ReviewQuery::summaryToSubmit),
+            ServedMethod.of("review/pullRequestOn", PullRequestOnPayload.class, PullRequestOnView.class, ReviewQuery::pullRequestOn),
             ServedMethod.of("review/checking", NoParams.class, PullRequestsView.class, (review, _) -> review.checking()));
     // deferred: review/comment does not check its anchor against the diff, so a cross-hunk range reaches the user as GitHub's refusal — close it when a frontend comments without asking review/anchorOf first.
     private static final List<ServedMethod<PendingReviewCommand, ?, ?>> WRITES = List.of(

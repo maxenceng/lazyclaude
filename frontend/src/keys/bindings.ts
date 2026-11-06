@@ -25,6 +25,13 @@ export enum Action {
   FocusRight = 'focusRight',
   FocusDown = 'focusDown',
   FocusUp = 'focusUp',
+  Range = 'range',
+  Delete = 'delete',
+  Submit = 'submit',
+  NextFile = 'nextFile',
+  PreviousFile = 'previousFile',
+  Resolved = 'resolved',
+  Yes = 'yes',
 }
 
 export type KeyPress = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' | 'metaKey' | 'shiftKey'>;
@@ -48,6 +55,13 @@ const PLAIN: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entrie
   z: Action.Zoom,
   w: Action.NextWaiting,
   Escape: Action.Back,
+  v: Action.Range,
+  x: Action.Delete,
+  S: Action.Submit,
+  J: Action.NextFile,
+  K: Action.PreviousFile,
+  r: Action.Resolved,
+  y: Action.Yes,
 }));
 
 const CTRL: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entries({

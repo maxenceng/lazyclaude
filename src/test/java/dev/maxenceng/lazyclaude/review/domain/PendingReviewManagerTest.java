@@ -23,6 +23,7 @@ import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.pendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.threadId;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
+import static dev.maxenceng.lazyclaude.review.published.SummaryFixture.noSummary;
 import static dev.maxenceng.lazyclaude.review.published.SummaryFixture.summary;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightRange;
@@ -37,6 +38,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -267,5 +269,16 @@ class PendingReviewManagerTest {
     void shouldRefuseToAnchorACommentWhileThereIsNoDiffToComment() {
         assertThatThrownBy(() -> manager.anchor(unavailableDiff(), new DiffLineIndex(0), new DiffLineIndex(0)))
                 .isInstanceOf(DiffLineMissingException.class);
+    }
+
+    @Test
+    void shouldSubmitTheSummaryTypedOverTheAdoptedOneEvenWhenEmpty() {
+        assertThat(manager.summaryToSubmit(Optional.of(noSummary()), Optional.of(summary()))).isEqualTo(noSummary());
+    }
+
+    @Test
+    void shouldSubmitTheAdoptedSummaryUntilOneIsTypedAndNothingWithoutEither() {
+        assertThat(manager.summaryToSubmit(Optional.empty(), Optional.of(summary()))).isEqualTo(summary());
+        assertThat(manager.summaryToSubmit(Optional.empty(), Optional.empty())).isEqualTo(noSummary());
     }
 }

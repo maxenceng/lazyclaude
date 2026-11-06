@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.review.domain;
 
 import java.util.List;
+import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
@@ -18,6 +19,8 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
  * the first thing written to a pull request starts its pending review.
  */
 public record PendingReviewManager(PendingReviewPort reviews) {
+
+    private static final Summary NO_SUMMARY = new Summary("");
 
     /** What stands until the pending review's read answers. */
     public PendingReviewReading loading() {
@@ -73,6 +76,11 @@ public record PendingReviewManager(PendingReviewPort reviews) {
      */
     public PendingReviewWrite submit(Project project, PullRequestNumber number, Summary summary) {
         return written(project, number, () -> reviews.submit(project, reviewToWriteTo(project, number), summary));
+    }
+
+    /** What the summary box starts from and a submit sends: the summary {@code typed} on the review screen, else the adopted review's body, else nothing. */
+    public Summary summaryToSubmit(Optional<Summary> typed, Optional<Summary> adopted) {
+        return typed.or(() -> adopted).orElse(NO_SUMMARY);
     }
 
     /** The pending {@code comments} with the diff lines they show under: every one on no line until the diff is read. */

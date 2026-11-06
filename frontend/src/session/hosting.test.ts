@@ -8,19 +8,19 @@ import { Hosting, type HostingDeps } from './hosting';
 import { StorageModeMemory } from './modeMemory';
 import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './recordings';
 import { sessionFixture, sessionsFixture } from './fixtures';
-import type { SessionsView } from '../protocol';
+import type { SessionSessionsView } from '../protocol';
 
 const encoded = (text: string) => toBase64(bytesOfText(text));
 const written = (term: Terminal) => new Promise<void>((done) => term.write('', done));
 
-const hostedIn = (...ids: string[]): SessionsView => ({
+const hostedIn = (...ids: string[]): SessionSessionsView => ({
   ...sessionsFixture([]),
   hosted: ids.map((id) => ({ id, pid: 1, live: sessionFixture({ id }), busyOrWaiting: false, ticket: null })),
 });
 
 const hosting = (overrides: Partial<HostingDeps> = {}) => {
   const client = fakeClient();
-  const sessions = new Store<SessionsView | undefined>(undefined);
+  const sessions = new Store<SessionSessionsView | undefined>(undefined);
   const memory = new StorageModeMemory(sessionStorage);
   const deps: HostingDeps = {
     client,

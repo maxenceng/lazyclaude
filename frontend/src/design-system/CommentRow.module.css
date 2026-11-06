@@ -1,0 +1,51 @@
+.row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--space-1) var(--space-4);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: var(--size-body);
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: default;
+}
+
+.selected {
+  background: var(--selected);
+  color: var(--text-on-light);
+}
+
+.dim {
+  color: var(--dim);
+}
+
+.selected.dim {
+  color: var(--text-on-light);
+}
+
+.mark {
+  display: inline-block;
+  width: var(--lamp-marker);
+  flex: none;
+}
+
+.thread {
+  color: var(--ansi-magenta);
+}
+
+.pending {
+  color: var(--ansi-bright-blue);
+}
+
+.selected .mark {
+  color: var(--text-on-light);
+}
+
+.where {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

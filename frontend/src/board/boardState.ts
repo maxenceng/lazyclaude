@@ -1,4 +1,4 @@
-import type { BoardView } from '../protocol';
+import type { BoardBoardView } from '../protocol';
 
 export enum BoardStateKind {
   Loading = 'loading',
@@ -17,7 +17,7 @@ export enum UnavailableCause {
 export class LoadingBoard {
   readonly kind = BoardStateKind.Loading;
 
-  shown(): BoardView | undefined {
+  shown(): BoardBoardView | undefined {
     return undefined;
   }
 }
@@ -26,7 +26,7 @@ export class LoadingBoard {
 export class EmptyBoard {
   readonly kind = BoardStateKind.Empty;
 
-  shown(): BoardView | undefined {
+  shown(): BoardBoardView | undefined {
     return undefined;
   }
 }
@@ -40,7 +40,7 @@ export class UnavailableBoard {
     readonly reason: string,
   ) {}
 
-  shown(): BoardView | undefined {
+  shown(): BoardBoardView | undefined {
     return undefined;
   }
 }
@@ -51,7 +51,7 @@ export class FaultedBoard {
 
   constructor(readonly message: string) {}
 
-  shown(): BoardView | undefined {
+  shown(): BoardBoardView | undefined {
     return undefined;
   }
 }
@@ -60,9 +60,9 @@ export class FaultedBoard {
 export class PopulatedBoard {
   readonly kind = BoardStateKind.Populated;
 
-  constructor(readonly view: BoardView) {}
+  constructor(readonly view: BoardBoardView) {}
 
-  shown(): BoardView | undefined {
+  shown(): BoardBoardView | undefined {
     return this.view;
   }
 }

@@ -1,19 +1,19 @@
-import type { Verb } from '../protocol';
+import type { BoardVerb } from '../protocol';
 
 /** The verb picker over one ticket: its verbs and the cursor, which opens on the verb `session` preselects. */
 export class VerbPicker {
   constructor(
     readonly ticket: string,
     readonly branch: string,
-    readonly verbs: readonly Verb[],
+    readonly verbs: readonly BoardVerb[],
     private readonly cursor: number = 0,
   ) {}
 
-  static opening(ticket: string, branch: string, verbs: readonly Verb[], preselected: Verb): VerbPicker {
+  static opening(ticket: string, branch: string, verbs: readonly BoardVerb[], preselected: BoardVerb): VerbPicker {
     return new VerbPicker(ticket, branch, verbs, Math.max(0, verbs.indexOf(preselected)));
   }
 
-  selected(): Verb | undefined {
+  selected(): BoardVerb | undefined {
     return this.verbs[this.cursor];
   }
 

@@ -30,6 +30,13 @@ describe('the keys the TUI binds', () => {
     ['z', Action.Zoom],
     ['w', Action.NextWaiting],
     ['Escape', Action.Back],
+    ['v', Action.Range],
+    ['x', Action.Delete],
+    ['S', Action.Submit],
+    ['J', Action.NextFile],
+    ['K', Action.PreviousFile],
+    ['r', Action.Resolved],
+    ['y', Action.Yes],
   ])('%s is taken as %s', (key, action) => {
     expect(actionOf(press(key, { shiftKey: key !== key.toLowerCase() }))).toBe(action);
   });
@@ -47,7 +54,7 @@ describe('the keys the TUI binds', () => {
   });
 
   it('leaves a key the TUI does not bind to the webview', () => {
-    expect(actionOf(press('x'))).toBeUndefined();
+    expect(actionOf(press('a'))).toBeUndefined();
     expect(actionOf(press('F12'))).toBeUndefined();
   });
 

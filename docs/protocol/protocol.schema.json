@@ -202,17 +202,14 @@
           "required" : [ "params", "result" ],
           "additionalProperties" : false
         },
-        "review/threadsInDiff" : {
+        "review/commentsInDiff" : {
           "type" : "object",
           "properties" : {
             "params" : {
-              "$ref" : "#/$defs/review.ThreadsInDiffPayload"
+              "$ref" : "#/$defs/review.CommentsInDiffPayload"
             },
             "result" : {
-              "type" : "array",
-              "items" : {
-                "$ref" : "#/$defs/review.ThreadInDiffView"
-              }
+              "$ref" : "#/$defs/review.CommentsInDiffView"
             }
           },
           "required" : [ "params", "result" ],
@@ -257,17 +254,27 @@
           "required" : [ "params", "result" ],
           "additionalProperties" : false
         },
-        "review/pendingInDiff" : {
+        "review/summaryToSubmit" : {
           "type" : "object",
           "properties" : {
             "params" : {
-              "$ref" : "#/$defs/review.PendingCommentsInDiffPayload"
+              "$ref" : "#/$defs/review.SummaryToSubmitPayload"
             },
             "result" : {
-              "type" : "array",
-              "items" : {
-                "$ref" : "#/$defs/review.PendingInDiffView"
-              }
+              "type" : "string"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "review/pullRequestOn" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/review.PullRequestOnPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/review.PullRequestOnView"
             }
           },
           "required" : [ "params", "result" ],
@@ -378,7 +385,7 @@
           "additionalProperties" : false
         }
       },
-      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startTicket", "session/resumePast", "session/newSessionFor", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/threadsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/pendingInDiff", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
+      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startTicket", "session/resumePast", "session/newSessionFor", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/commentsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/summaryToSubmit", "review/pullRequestOn", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
       "additionalProperties" : false
     },
     "inputs" : {
@@ -1030,6 +1037,72 @@
         "propertyName" : "kind"
       }
     },
+    "review.CommentInDiffView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.ThreadInDiffView"
+      }, {
+        "$ref" : "#/$defs/review.PendingInDiffView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.CommentsInDiffPayload" : {
+      "type" : "object",
+      "properties" : {
+        "diff" : {
+          "$ref" : "#/$defs/review.PullRequestDiffView"
+        },
+        "threads" : {
+          "$ref" : "#/$defs/review.ThreadsView"
+        },
+        "pending" : {
+          "$ref" : "#/$defs/review.PendingReviewView"
+        },
+        "resolvedShown" : {
+          "type" : "boolean"
+        }
+      },
+      "required" : [ "diff", "threads", "pending", "resolvedShown" ],
+      "additionalProperties" : false
+    },
+    "review.CommentsInDiffView" : {
+      "type" : "object",
+      "properties" : {
+        "threads" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.ThreadInDiffView"
+          }
+        },
+        "pending" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.PendingInDiffView"
+          }
+        },
+        "underLines" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.ThreadInDiffView"
+          }
+        },
+        "listed" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.CommentInDiffView"
+          }
+        },
+        "lastOnLines" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/review.PendingInDiffView"
+          }
+        }
+      },
+      "required" : [ "threads", "pending", "underLines", "listed", "lastOnLines" ],
+      "additionalProperties" : false
+    },
     "review.ContextLine" : {
       "type" : "object",
       "properties" : {
@@ -1126,6 +1199,19 @@
       "discriminator" : {
         "propertyName" : "kind"
       }
+    },
+    "review.HeadedPullRequestView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "headedPullRequest"
+        },
+        "pullRequest" : {
+          "$ref" : "#/$defs/review.PullRequestView"
+        }
+      },
+      "required" : [ "kind", "pullRequest" ],
+      "additionalProperties" : false
     },
     "review.HeldHead" : {
       "type" : "object",
@@ -1227,6 +1313,16 @@
       "properties" : {
         "kind" : {
           "const" : "noDiffLine"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.NoHeadedPullRequestView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noHeadedPullRequest"
         }
       },
       "required" : [ "kind" ],
@@ -1367,19 +1463,6 @@
       "required" : [ "id", "body", "anchor" ],
       "additionalProperties" : false
     },
-    "review.PendingCommentsInDiffPayload" : {
-      "type" : "object",
-      "properties" : {
-        "diff" : {
-          "$ref" : "#/$defs/review.PullRequestDiffView"
-        },
-        "pending" : {
-          "$ref" : "#/$defs/review.PendingReviewView"
-        }
-      },
-      "required" : [ "diff", "pending" ],
-      "additionalProperties" : false
-    },
     "review.PendingDeletePayload" : {
       "type" : "object",
       "properties" : {
@@ -1418,6 +1501,9 @@
     "review.PendingInDiffView" : {
       "type" : "object",
       "properties" : {
+        "kind" : {
+          "const" : "pendingInDiff"
+        },
         "comment" : {
           "$ref" : "#/$defs/review.PendingCommentView"
         },
@@ -1425,7 +1511,7 @@
           "$ref" : "#/$defs/review.ThreadLine"
         }
       },
-      "required" : [ "comment", "line" ],
+      "required" : [ "kind", "comment", "line" ],
       "additionalProperties" : false
     },
     "review.PendingReplyPayload" : {
@@ -1513,6 +1599,29 @@
         "$ref" : "#/$defs/review.ReadDiffView"
       }, {
         "$ref" : "#/$defs/review.UnavailableDiffView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.PullRequestOnPayload" : {
+      "type" : "object",
+      "properties" : {
+        "pullRequests" : {
+          "$ref" : "#/$defs/review.PullRequestsView"
+        },
+        "branch" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "pullRequests", "branch" ],
+      "additionalProperties" : false
+    },
+    "review.PullRequestOnView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.HeadedPullRequestView"
+      }, {
+        "$ref" : "#/$defs/review.NoHeadedPullRequestView"
       } ],
       "discriminator" : {
         "propertyName" : "kind"
@@ -1712,6 +1821,29 @@
       "required" : [ "id", "path", "position", "resolved", "open", "comments" ],
       "additionalProperties" : false
     },
+    "review.SummaryDraftPayload" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.TypedSummaryPayload"
+      }, {
+        "$ref" : "#/$defs/review.UntypedSummaryPayload"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.SummaryToSubmitPayload" : {
+      "type" : "object",
+      "properties" : {
+        "pending" : {
+          "$ref" : "#/$defs/review.PendingReviewView"
+        },
+        "draft" : {
+          "$ref" : "#/$defs/review.SummaryDraftPayload"
+        }
+      },
+      "required" : [ "pending", "draft" ],
+      "additionalProperties" : false
+    },
     "review.ThreadComment" : {
       "type" : "object",
       "properties" : {
@@ -1728,6 +1860,9 @@
     "review.ThreadInDiffView" : {
       "type" : "object",
       "properties" : {
+        "kind" : {
+          "const" : "threadInDiff"
+        },
         "thread" : {
           "$ref" : "#/$defs/review.ReviewThreadView"
         },
@@ -1735,7 +1870,7 @@
           "$ref" : "#/$defs/review.ThreadLine"
         }
       },
-      "required" : [ "thread", "line" ],
+      "required" : [ "kind", "thread", "line" ],
       "additionalProperties" : false
     },
     "review.ThreadLine" : {
@@ -1762,19 +1897,6 @@
       "type" : "string",
       "enum" : [ "LEFT", "RIGHT" ]
     },
-    "review.ThreadsInDiffPayload" : {
-      "type" : "object",
-      "properties" : {
-        "diff" : {
-          "$ref" : "#/$defs/review.PullRequestDiffView"
-        },
-        "threads" : {
-          "$ref" : "#/$defs/review.ThreadsView"
-        }
-      },
-      "required" : [ "diff", "threads" ],
-      "additionalProperties" : false
-    },
     "review.ThreadsView" : {
       "oneOf" : [ {
         "$ref" : "#/$defs/review.LoadingThreadsView"
@@ -1786,6 +1908,19 @@
       "discriminator" : {
         "propertyName" : "kind"
       }
+    },
+    "review.TypedSummaryPayload" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "typedSummaryPayload"
+        },
+        "summary" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "summary" ],
+      "additionalProperties" : false
     },
     "review.UnavailableDiffView" : {
       "type" : "object",
@@ -1840,6 +1975,16 @@
         }
       },
       "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
+    "review.UntypedSummaryPayload" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "untypedSummaryPayload"
+        }
+      },
+      "required" : [ "kind" ],
       "additionalProperties" : false
     },
     "review.WrittenReviewView" : {

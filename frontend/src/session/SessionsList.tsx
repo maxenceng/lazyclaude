@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Alert, Button, SessionRow as Row, StatusHeading, Rows } from '../design-system';
-import type { PastSessionView } from '../protocol';
+import type { SessionPastSessionView } from '../protocol';
 import { type SessionRow, SessionRowKind } from './sessionRows';
 import type { StartFailure } from './hosting';
 import type { VerbPicker } from './verbPicker';
@@ -16,7 +16,7 @@ interface Props {
   onPickVerb: (index: number) => void;
 }
 
-const titleOf = (session: PastSessionView): string | undefined => {
+const titleOf = (session: SessionPastSessionView): string | undefined => {
   if (session.title.kind === 'aiTitle') {
     return session.title.value;
   }

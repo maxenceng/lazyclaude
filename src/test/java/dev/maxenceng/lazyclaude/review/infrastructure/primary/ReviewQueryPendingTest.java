@@ -15,10 +15,16 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingRevi
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.replyView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.unavailablePendingView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingDiffView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.onLineView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.openThreadView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQueryFixture.reviewQuery;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
+import static dev.maxenceng.lazyclaude.review.published.SummaryFixture.noSummary;
+import static dev.maxenceng.lazyclaude.review.published.SummaryFixture.summary;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightRange;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
@@ -114,20 +120,62 @@ class ReviewQueryPendingTest {
 
     @Test
     void shouldPlaceThePendingCommentsOnTheDiffLinesTheyShowUnder() {
-        assertThat(query.pendingInDiff(new PendingCommentsInDiffPayload(twoFileDiffView(), openPendingView())).comments())
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), loadingThreadsView(), openPendingView(), false)).pending())
                 .containsExactly(pendingOnLineView(commentOnDiffLineView(), 2), pendingOnLineView(replyView(), 2));
     }
 
     @Test
     void shouldPutEveryPendingCommentOnNoLineUntilTheDiffIsRead() {
-        assertThat(query.pendingInDiff(new PendingCommentsInDiffPayload(loadingDiffView(), openPendingView())).comments())
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(loadingDiffView(), loadingThreadsView(), openPendingView(), false)).pending())
                 .containsExactly(pendingOnNoLineView(commentOnDiffLineView()), pendingOnNoLineView(replyView()));
     }
 
     @Test
     void shouldHoldNoPendingCommentUntilThePendingReviewIsReadOrWhenThereIsNone() {
-        assertThat(query.pendingInDiff(new PendingCommentsInDiffPayload(twoFileDiffView(), loadingPendingView())).comments()).isEqualTo(List.of());
-        assertThat(query.pendingInDiff(new PendingCommentsInDiffPayload(twoFileDiffView(), noPendingReviewView())).comments()).isEqualTo(List.of());
-        assertThat(query.pendingInDiff(new PendingCommentsInDiffPayload(twoFileDiffView(), unavailablePendingView())).comments()).isEqualTo(List.of());
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), loadingThreadsView(), loadingPendingView(), false)).pending()).isEqualTo(List.of());
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), loadingThreadsView(), noPendingReviewView(), false)).pending()).isEqualTo(List.of());
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), loadingThreadsView(), unavailablePendingView(), false)).pending()).isEqualTo(List.of());
+    }
+
+    @Test
+    void shouldListThePendingCommentsBeforeTheThreadsInComments() {
+        ReviewThreadView thread = openThreadView(diffPath(), rightOn(3));
+
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), readThreadsViewOf(thread), openPendingView(), false)).listed())
+                .isEqualTo(List.of(pendingOnLineView(commentOnDiffLineView(), 2), pendingOnLineView(replyView(), 2), onLineView(thread, 2)));
+    }
+
+    @Test
+    void shouldPickThePendingCommentWrittenLastOnALineAsTheOneItsKeysActOn() {
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), loadingThreadsView(), openPendingView(), false)).lastOnLines())
+                .as("enter and x on line 2 act on the reply GitHub lists after the comment")
+                .isEqualTo(List.of(pendingOnLineView(replyView(), 2)));
+    }
+
+    @Test
+    void shouldPickNoPendingCommentOnALineUntilTheDiffIsRead() {
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(loadingDiffView(), loadingThreadsView(), openPendingView(), false)).lastOnLines())
+                .isEqualTo(List.of());
+    }
+
+    @Test
+    void shouldSubmitTheSummaryTypedEvenWhenItIsEmpty() {
+        assertThat(query.summaryToSubmit(new SummaryToSubmitPayload(openPendingView(), new TypedSummaryPayload(noSummary()))))
+                .as("an emptied box is a summary of nothing, not the adopted body back")
+                .isEqualTo(new SummaryToSubmitView(noSummary()));
+    }
+
+    @Test
+    void shouldSubmitTheAdoptedReviewsBodyWhileNoSummaryIsTyped() {
+        assertThat(query.summaryToSubmit(new SummaryToSubmitPayload(openPendingView(), new UntypedSummaryPayload())))
+                .isEqualTo(new SummaryToSubmitView(summary()));
+    }
+
+    @Test
+    void shouldSubmitNoSummaryWhileNoneIsTypedAndNoReviewIsAdopted() {
+        assertThat(query.summaryToSubmit(new SummaryToSubmitPayload(noPendingReviewView(), new UntypedSummaryPayload())))
+                .isEqualTo(new SummaryToSubmitView(noSummary()));
+        assertThat(query.summaryToSubmit(new SummaryToSubmitPayload(loadingPendingView(), new UntypedSummaryPayload())))
+                .isEqualTo(new SummaryToSubmitView(noSummary()));
     }
 }

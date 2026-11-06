@@ -1,4 +1,4 @@
-import type { Client, WarningsView } from '../protocol';
+import type { Client, SharedWarningsView } from '../protocol';
 import { Store } from './store';
 
 export interface ShownWarning {
@@ -6,7 +6,7 @@ export interface ShownWarning {
   count: number;
 }
 
-const shown = (view: WarningsView): ShownWarning | undefined => (view.kind === 'warning' ? { text: view.text, count: view.count } : undefined);
+const shown = (view: SharedWarningsView): ShownWarning | undefined => (view.kind === 'warning' ? { text: view.text, count: view.count } : undefined);
 
 /** The warning the status line shows: `warning/watch`'s answer, then every `warning/changed`. */
 export class WarningStore {

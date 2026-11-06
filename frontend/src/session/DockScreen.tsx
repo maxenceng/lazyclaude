@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DockTabs, Pane, type Tab, TerminalSurface } from '../design-system';
-import type { SessionsView } from '../protocol';
+import type { SessionSessionsView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import type { Hosting } from './hosting';
 import { colourOf, LampColour } from './markers';
 
 interface Props {
   hosting: Hosting;
-  sessions: SessionsView | undefined;
+  sessions: SessionSessionsView | undefined;
   focused: boolean;
   onFocus: () => void;
 }

@@ -18,7 +18,7 @@ words mean.
 | Project | The root of a git repository's main worktree. lazyclaude starts only inside one, and refuses to start outside git; a session belongs to the one its `cwd` belongs to, so a ticket worktree's sessions sit under its project. | `shared` |
 | Working directory | The directory lazyclaude was started in, or a session's `cwd`; the project is located from it. | `shared` |
 | Warning | A degraded mode lazyclaude carries on in (the docs watch fell back to polling, the board on screen kept because it could not be read again, the sessions watch left to its sweep), or a thread that stopped on a failure nobody caught. Each degraded mode is named once, by its context's manager, however often it is reported; it shows on the status line until quit, or until its cause goes away and the manager withdraws it (the board's failed read, withdrawn by the next good one, ADR 0066), and is never printed over the screen. | `shared` |
-| Notice | The desktop window's word on what one gesture did not do: a link not followed or not opened, a heading not found, a clipboard that refused. It shows on the status line beside the warning, never replacing it or its count, until the next selection or link followed clears it (ADR 0087). | the desktop frontend's `shared` |
+| Notice | The desktop window's word on what one gesture did not do: a link not followed or not opened, a heading not found, a clipboard that refused, a review's comment, range, write or submit refused. It shows on the status line beside the warning, never replacing it or its count, until the next selection or link followed clears it, or, while a review is open, the next key (ADR 0087, ADR 0089). | the desktop frontend's `shared` |
 
 ## shell
 
@@ -33,7 +33,7 @@ words mean.
 | Status columns | The Board zoomed: one column per status across the screen, the finished one narrow with only its header and count, then one for the unreadable tickets when there are any; when the issues could not be read, one saying why in place of them all. Their cursor is the Board's selection, never a second one, and skips the narrow column. | `shell` |
 | Dock strip | The dock folded to one line of its tabs and markers, under the status columns or the zoomed main view. | `shell` |
 | Ticket detail | What the main view shows for a ticket: its facts line (`#<number>`, status, context, type), a `labels` row for its other labels, a rule, then the issue body's `##` sections rendered as markdown. It scrolls as one unit. | `shell` |
-| Review panel | The review screen's third left panel, under Files and Comments: the summary's first line, the pending count, and the moved-head warning. | `shell`, read from `review` |
+| Review panel | The review screen's third left panel, under Files and Comments: the summary's first line, the pending count, and the moved-head warning. | `shell` and the desktop frontend's `review`, read from `review` |
 | Second click | A press on the row that was already selected, in the pane that already had focus: it does what `enter` does there. A first click only focuses and selects; there is no timed double-click. | `shell` |
 | Mouse setting | `mouse` in `config.yml`: `false` turns mouse capture off, for a terminal that answers in X10 and would type a click as keys. Off by default when `TERM` is `linux`. | `session` (the setting), `shell` (the capture) |
 
@@ -113,7 +113,7 @@ words mean.
 | CI result | The checks collapsed into *passed*, *failed* or *pending*: failed wins over pending, pending over passed. A pull request with no checks has none. | `review` |
 | Pending review | Your one unsubmitted review on a pull request, kept on GitHub. An existing one is adopted, wherever it was started. | `review` |
 | Pending comment | A comment in your pending review, on one line or a range of lines inside one hunk. | `review` |
-| Review screen | The screen `p` opens on a ticket's pull request: its diff, with Files and Comments beside it. Reading it is not GitHub's *review*; in code "review" is kept for the pending review and submitting. | `shell`, read from `review` |
+| Review screen | The screen `p` opens on a ticket's pull request: its diff, with Files and Comments beside it. Reading it is not GitHub's *review*; in code "review" is kept for the pending review and submitting. | `shell` and the desktop frontend's `review`, read from `review` |
 | Diff | The pull request's unified diff, every file in one scroll. | `review` |
 | Hunk | One `@@` section of a file's diff. | `review` |
 | Diff line | A `+`, `-` or context line in a hunk; the only rows a cursor or a comment lands on. | `review` |

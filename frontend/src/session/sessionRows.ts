@@ -1,4 +1,4 @@
-import type { PastSessionView, SessionsView } from '../protocol';
+import type { SessionPastSessionView, SessionSessionsView } from '../protocol';
 import { colourOf, LampColour } from './markers';
 
 export enum SessionRowKind {
@@ -34,7 +34,7 @@ export class LiveRow {
 /** A past session linked to the ticket: Enter resumes it in the ticket's worktree. */
 export class PastRow {
   readonly kind = SessionRowKind.Past;
-  constructor(readonly session: PastSessionView) {}
+  constructor(readonly session: SessionPastSessionView) {}
 }
 
 /** The row that starts a session for the ticket. */
@@ -45,7 +45,7 @@ export class NewRow {
 /** A past session linked to no ticket: Enter resumes it in the directory it was recorded in. */
 export class UnlinkedRow {
   readonly kind = SessionRowKind.Unlinked;
-  constructor(readonly session: PastSessionView) {}
+  constructor(readonly session: SessionPastSessionView) {}
 }
 
 export type SessionRow = HostedRow | LiveRow | PastRow | NewRow | UnlinkedRow;
@@ -53,7 +53,7 @@ export type SessionRow = HostedRow | LiveRow | PastRow | NewRow | UnlinkedRow;
 const linkedTo = (links: readonly { ticket: string }[], ticket: string | undefined): boolean => ticket !== undefined && links.some((link) => link.ticket === ticket);
 
 /** The rows under `ticket`, or only the unlinked ones where no ticket is selected. */
-export const rowsFor = (view: SessionsView | undefined, ticket: string | undefined): SessionRow[] => {
+export const rowsFor = (view: SessionSessionsView | undefined, ticket: string | undefined): SessionRow[] => {
   const hosted = (view?.hosted ?? []).filter((session) => ticket !== undefined && session.ticket === ticket);
   const hostedIds = new Set((view?.hosted ?? []).map((session) => session.live?.id ?? session.id));
   return [

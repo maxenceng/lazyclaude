@@ -1,0 +1,17 @@
+.file {
+  font: 600 var(--size-body) var(--font-mono);
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  border-bottom: 1px solid var(--seam);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hunk {
+  font: var(--size-body) / 1.5 var(--font-mono);
+  color: var(--dim);
+  padding: var(--space-1) var(--space-4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,4 +1,4 @@
-import type { DocumentView, FolderView } from '../protocol';
+import type { DocsDocumentView, DocsFolderView } from '../protocol';
 import type { DocsTreeView } from './docsState';
 
 export enum RowKind {
@@ -18,10 +18,10 @@ export interface DocsRow {
 
 const fileName = (path: string): string => path.slice(path.lastIndexOf('/') + 1);
 
-// deferred: the count rule also lives in the sidecar's FolderView — closed when the protocol carries a folder's count.
-const countIn = (folder: FolderView): number => folder.documents.length + folder.folders.reduce((sum, child) => sum + countIn(child), 0);
+// deferred: the count rule also lives in the sidecar's DocsFolderView — closed when the protocol carries a folder's count.
+const countIn = (folder: DocsFolderView): number => folder.documents.length + folder.folders.reduce((sum, child) => sum + countIn(child), 0);
 
-const rowsIn = (documents: DocumentView[], folders: FolderView[], depth: number, folded: ReadonlySet<string>): DocsRow[] => {
+const rowsIn = (documents: DocsDocumentView[], folders: DocsFolderView[], depth: number, folded: ReadonlySet<string>): DocsRow[] => {
   const own = documents.map((document): DocsRow => ({ kind: RowKind.Document, path: document.path, name: fileName(document.path), depth, count: 0, folded: false }));
   const beneath = folders.flatMap((folder): DocsRow[] => {
     const isFolded = folded.has(folder.path);
@@ -34,11 +34,11 @@ const rowsIn = (documents: DocumentView[], folders: FolderView[], depth: number,
 /** The rows the panel shows, in the order the tree arrives: a folder's documents, then its folders, a folded one without what is beneath it. */
 export const visibleRows = (tree: DocsTreeView, folded: ReadonlySet<string>): DocsRow[] => rowsIn(tree.documents, tree.folders, 0, folded);
 
-const documentsIn = (documents: DocumentView[], folders: FolderView[]): DocumentView[] => [
+const documentsIn = (documents: DocsDocumentView[], folders: DocsFolderView[]): DocsDocumentView[] => [
   ...documents,
   ...folders.flatMap((folder) => documentsIn(folder.documents, folder.folders)),
 ];
 
 /** The document the tree lists at `path`, at any depth. */
-export const documentIn = (tree: DocsTreeView, path: string): DocumentView | undefined =>
+export const documentIn = (tree: DocsTreeView, path: string): DocsDocumentView | undefined =>
   documentsIn(tree.documents, tree.folders).find((document) => document.path === path);

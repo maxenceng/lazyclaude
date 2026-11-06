@@ -1,10 +1,11 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.loadingPendingView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.pendingCommentPayload;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentsInDiffPayload;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
@@ -34,8 +35,8 @@ public final class SidecarJsonFixture {
         return params;
     }
 
-    public static JsonNode threadsInDiffWithANullFile() {
-        ObjectNode params = (ObjectNode) SidecarJson.tree(new ThreadsInDiffPayload(twoFileDiffView(), loadingThreadsView()));
+    public static JsonNode commentsInDiffWithANullFile() {
+        ObjectNode params = (ObjectNode) SidecarJson.tree(new CommentsInDiffPayload(twoFileDiffView(), loadingThreadsView(), loadingPendingView(), false));
         ((ArrayNode) params.get("diff").get("files")).addNull();
         return params;
     }

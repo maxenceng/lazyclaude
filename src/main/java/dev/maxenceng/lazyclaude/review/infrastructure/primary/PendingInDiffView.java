@@ -4,7 +4,7 @@ import dev.maxenceng.lazyclaude.review.domain.PendingInDiff;
 import dev.maxenceng.lazyclaude.review.published.ThreadLine;
 
 /** A pending comment and the diff line it shows under. */
-public record PendingInDiffView(PendingCommentView comment, ThreadLine line) {
+public record PendingInDiffView(PendingCommentView comment, ThreadLine line) implements CommentInDiffView {
 
     static PendingInDiffView from(PendingInDiff placed) {
         return builder().comment(PendingCommentView.from(placed.comment())).line(placed.line()).build();

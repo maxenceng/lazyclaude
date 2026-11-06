@@ -129,4 +129,16 @@ describe('the window-level key handler', () => {
       expect(event.defaultPrevented).toBe(true);
     });
   });
+
+  describe('a key typed into a box the user writes in', () => {
+    it('is left to the box: neither taken nor prevented, whatever the TUI binds', () => {
+      const taken = vi.fn();
+      keys = new WindowKeys(taken, { packaged: true });
+      const surface = document.body.appendChild(document.createElement('div'));
+      surface.setAttribute('data-typing', '');
+      const event = pressIn(surface.appendChild(document.createElement('textarea')), 'j');
+      expect(event.defaultPrevented).toBe(false);
+      expect(taken).not.toHaveBeenCalled();
+    });
+  });
 });

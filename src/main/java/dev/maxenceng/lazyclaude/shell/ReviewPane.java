@@ -2,25 +2,26 @@ package dev.maxenceng.lazyclaude.shell;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentsInDiffPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OnDiffAnchorView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.SummaryDraftPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.SummaryToSubmitPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadInDiffView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.TypedSummaryPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.UntypedSummaryPayload;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
@@ -37,7 +38,6 @@ import dev.maxenceng.lazyclaude.review.published.ThreadLine;
  */
 final class ReviewPane {
 
-    private static final Summary NO_SUMMARY = new Summary("");
     private static final int HALF = 2;
     private static final int WHEEL_LINES = 3;
 
@@ -46,9 +46,8 @@ final class ReviewPane {
     private final ReviewQuery reviews;
     private PullRequestDiffView diff;
     private ThreadsView threads;
-    private ThreadsInDiffView placed;
     private PendingReviewView pending;
-    private PendingCommentsInDiffView placedPending;
+    private CommentsInDiffView comments;
     private boolean showResolved;
     private DiffRows rows;
     private int cursor;
@@ -78,9 +77,8 @@ final class ReviewPane {
         this.threads = threads;
         this.pending = pending;
         this.reviews = reviews;
-        this.placed = reviews.threadsInDiff(new ThreadsInDiffPayload(diff, threads));
-        this.placedPending = reviews.pendingInDiff(new PendingCommentsInDiffPayload(diff, pending));
-        this.rows = DiffRows.of(diff, placed, placedPending, inlineBox(), showResolved);
+        this.comments = reviews.commentsInDiff(new CommentsInDiffPayload(diff, threads, pending, showResolved));
+        this.rows = DiffRows.of(diff, comments, inlineBox());
     }
 
     PullRequestNumber number() {
@@ -105,7 +103,7 @@ final class ReviewPane {
 
     /** The pending comments in diff order, the ones on no line last; none until the pending review is read. */
     List<PendingInDiffView> pendingComments() {
-        return placedPending.comments();
+        return comments.pending();
     }
 
     /** How many pending comments hang on the file at {@code path}. */
@@ -194,15 +192,12 @@ final class ReviewPane {
 
     /** The threads in diff order, the ones on no line last; none until they are read. */
     List<ThreadInDiffView> comments() {
-        return placed.threads();
+        return comments.threads();
     }
 
-    /** What Comments lists: the pending comments first, in diff order, then the threads in diff order. */
-    List<CommentEntry> entries() {
-        return Stream.concat(
-                        pendingComments().stream().<CommentEntry>map(PendingEntry::new),
-                        comments().stream().<CommentEntry>map(ThreadEntry::new))
-                .toList();
+    /** What Comments lists, as {@code review} orders it. */
+    List<CommentInDiffView> entries() {
+        return comments.listed();
     }
 
     /** How many threads of the file at {@code path} still wait for an answer: not resolved, and not outdated. */
@@ -285,26 +280,22 @@ final class ReviewPane {
     /** To the line the selected thread shows under; nowhere for an outdated one. */
     void goToSelectedComment() {
         if (selectedComment < entries().size()) {
-            if (lineOf(entries().get(selectedComment)) instanceof OnDiffLine(DiffLineIndex index)) {
+            if (entries().get(selectedComment).line() instanceof OnDiffLine(DiffLineIndex index)) {
                 moveTo(index.value());
             }
         }
     }
 
-    private static ThreadLine lineOf(CommentEntry entry) {
-        return switch (entry) {
-            case PendingEntry pending -> pending.placed().line();
-            case ThreadEntry thread -> thread.placed().line();
-        };
-    }
 
     void typeSummary(Summary summary) {
         typedSummary = Optional.of(summary);
     }
 
-    /** What the summary box starts from and a submit sends: the one typed here, else the body of the adopted review, else nothing. */
+    /** What the summary box starts from and a submit sends, as {@code review} decides it from the summary typed here and the pending review. */
     Summary summaryToSubmit() {
-        return typedSummary.orElseGet(() -> pending instanceof OpenPendingReviewView open ? open.summary() : NO_SUMMARY);
+        return reviews.summaryToSubmit(new SummaryToSubmitPayload(
+                        pending, typedSummary.<SummaryDraftPayload>map(TypedSummaryPayload::new).orElseGet(UntypedSummaryPayload::new)))
+                .summary();
     }
 
     Optional<CommentBox> box() {
@@ -386,17 +377,17 @@ final class ReviewPane {
         return rangeStart.isPresent() ? rangeHigh() : cursor;
     }
 
-    /** The pending comment on the cursor's line that was written last, if the line has one. */
+    /** The pending comment {@code enter} and {@code x} act on at the cursor's line, as {@code review} picks it, if the line has one. */
     Optional<PendingCommentView> pendingOnCursorLine() {
-        return pendingComments().stream()
+        return comments.lastOnLines().stream()
                 .filter(placed -> placed.line() instanceof OnDiffLine(DiffLineIndex index) && index.value() == cursor)
                 .map(PendingInDiffView::comment)
-                .reduce((_, later) -> later);
+                .findFirst();
     }
 
     /** The row selected in Comments, if there is one. */
-    Optional<CommentEntry> selectedEntry() {
-        List<CommentEntry> entries = entries();
+    Optional<CommentInDiffView> selectedEntry() {
+        List<CommentInDiffView> entries = entries();
         return selectedComment < entries.size() ? Optional.of(entries.get(selectedComment)) : Optional.empty();
     }
 
@@ -426,9 +417,8 @@ final class ReviewPane {
     }
 
     private void rebuild() {
-        placed = reviews.threadsInDiff(new ThreadsInDiffPayload(diff, threads));
-        placedPending = reviews.pendingInDiff(new PendingCommentsInDiffPayload(diff, pending));
-        rows = DiffRows.of(diff, placed, placedPending, inlineBox(), showResolved);
+        comments = reviews.commentsInDiff(new CommentsInDiffPayload(diff, threads, pending, showResolved));
+        rows = DiffRows.of(diff, comments, inlineBox());
         moveTo(cursor);
     }
 

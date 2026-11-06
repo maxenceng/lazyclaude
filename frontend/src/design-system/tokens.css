@@ -39,6 +39,10 @@
   --ansi-bright-cyan: #8cc2c2;
   --ansi-bright-white: #ece9e2;
 
+  --diff-added: color-mix(in srgb, var(--ansi-green) 11%, var(--pane));
+  --diff-removed: color-mix(in srgb, var(--ansi-red) 11%, var(--pane));
+  --diff-range: color-mix(in srgb, var(--ansi-blue) 16%, var(--pane));
+
   --focus: #5aa9e6;
   --selected: #d9d6cf;
 

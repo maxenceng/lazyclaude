@@ -1,5 +1,7 @@
 import type { BoardController } from './board/boardController';
 import type { DocsController } from './docs/docsController';
+import type { ReviewController } from './review/reviewController';
+import type { OpenReview } from './review/openReview';
 import { Action } from './keys/bindings';
 import { Focus, type Layout } from './layout';
 import type { SessionsController } from './session/sessionsController';
@@ -23,16 +25,29 @@ export class KeyRouter {
     private readonly docs: DocsController,
     private readonly sessions: SessionsController,
     private readonly layout: Store<Layout>,
-  ) {}
+    private readonly review: ReviewController,
+  ) {
+    layout.subscribe(() => {
+      const focus = layout.get().focus;
+      if (focus === Focus.Files || focus === Focus.Comments) {
+        this.lastLeft = focus;
+      }
+    });
+  }
+
+  private lastLeft: Focus = Focus.Files;
 
   /** A key the window-level handler took: whatever the focused pane does with it. */
   press(action: Action): void {
+    const current = this.review.current.get();
     if (this.sessions.isPicking()) {
       this.pressInPicker(action);
     } else if (this.focus() === Focus.Dock && this.sessions.hosting.hasTabs()) {
       if (FOCUS_KEYS.includes(action)) {
         this.pressInPane(action);
       }
+    } else if (current !== undefined) {
+      this.pressInReview(current, action);
     } else {
       this.pressOutsidePane(action);
     }
@@ -43,14 +58,14 @@ export class KeyRouter {
     switch (action) {
       case Action.FocusLeft:
         if (!this.sessions.hosting.selectPrevious()) {
-          this.change((current) => current.focusOn(Focus.Board));
+          this.change((current) => current.focusOn(this.review.isOpen() ? this.lastLeft : Focus.Board));
         }
         break;
       case Action.FocusRight:
         this.sessions.hosting.selectNext();
         break;
       case Action.FocusUp:
-        this.change((current) => current.goUp(Focus.Sessions));
+        this.change((current) => current.goUp(this.review.isOpen() ? Focus.Diff : Focus.Sessions));
         break;
       case Action.ToggleMainView:
         this.change((current) => current.toggleMainView());
@@ -78,6 +93,119 @@ export class KeyRouter {
     }
   }
 
+  /** `p` on the Board or a ticket's sessions: the review of the selected ticket's pull request, if its branch heads an open one. */
+  private openReview(): void {
+    const ticket = this.board.selectedTicket();
+    if ((this.focus() === Focus.Board || this.focus() === Focus.Sessions) && ticket !== undefined) {
+      this.lastLeft = Focus.Files;
+      void this.review.open(ticket.branch);
+    }
+  }
+
+  /** The keys of an open review: the confirm after the summary answers first, a comment box takes none, then the focused panel's. */
+  private pressInReview(current: OpenReview, action: Action): void {
+    if (current.submitPrompt()) {
+      current.answerSubmit(action === Action.Yes);
+    } else if (current.box() === undefined) {
+      this.pressInReviewPanel(current, action);
+    }
+  }
+
+  private pressInReviewPanel(current: OpenReview, action: Action): void {
+    const focus = this.focus();
+    switch (action) {
+      case Action.Back:
+        if (current.clearRange()) {
+          return;
+        }
+        return this.layout.get().zoomed ? this.change((current) => current.leaveZoom()) : this.review.leave();
+      case Action.Refresh:
+        return current.read();
+      case Action.Submit:
+        return void current.openSummary();
+      case Action.Resolved:
+        return current.toggleResolved();
+      case Action.Open:
+        return this.enterInReview(current, focus);
+      case Action.MoveDown:
+        return this.moveInReview(current, focus, 1);
+      case Action.MoveUp:
+        return this.moveInReview(current, focus, -1);
+      case Action.Capture:
+        return focus === Focus.Comments ? current.commentOnSelectedComment() : focus === Focus.Diff ? void current.comment() : undefined;
+      case Action.Delete:
+        return focus === Focus.Comments ? current.deleteSelectedComment() : focus === Focus.Diff ? current.deleteAtCursor() : undefined;
+      case Action.Range:
+        return focus === Focus.Diff ? void current.markRangeKey() : undefined;
+      case Action.NextFile:
+        return focus === Focus.Diff ? current.nextFile() : undefined;
+      case Action.PreviousFile:
+        return focus === Focus.Diff ? current.previousFile() : undefined;
+      case Action.HalfPageDown:
+        return focus === Focus.Diff ? current.halfPage(true) : undefined;
+      case Action.HalfPageUp:
+        return focus === Focus.Diff ? current.halfPage(false) : undefined;
+      default:
+        return this.moveFocusInReview(action);
+    }
+  }
+
+  private enterInReview(current: OpenReview, focus: Focus): void {
+    if (focus === Focus.Diff) {
+      current.enterInDiff();
+    } else if (focus === Focus.Files) {
+      current.goToSelectedFile();
+    } else if (focus === Focus.Comments) {
+      current.enterOnComment();
+    }
+  }
+
+  private moveInReview(current: OpenReview, focus: Focus, delta: number): void {
+    if (focus === Focus.Diff) {
+      current.moveLine(delta);
+    } else if (focus === Focus.Files) {
+      current.selectFile(current.selectedFile() + delta);
+    } else if (focus === Focus.Comments) {
+      current.moveComment(delta);
+    }
+  }
+
+  private moveFocusInReview(action: Action): void {
+    const focus = this.focus();
+    switch (action) {
+      case Action.PanelLeft:
+      case Action.FocusLeft:
+        return this.focusOnReview(this.lastLeft);
+      case Action.PanelRight:
+      case Action.FocusRight:
+        return this.focusOnReview(Focus.Diff);
+      case Action.FocusDown:
+        if (focus === Focus.Files) {
+          this.focusOnReview(Focus.Comments);
+        } else if (focus === Focus.Diff && this.sessions.hosting.hasTabs()) {
+          this.change((current) => current.focusOn(Focus.Dock));
+        }
+        return;
+      case Action.FocusUp:
+        if (focus === Focus.Comments) {
+          this.focusOnReview(Focus.Files);
+        }
+        return;
+      case Action.Zoom:
+        return this.change((current) => current.toggleZoom());
+      case Action.ToggleMainView:
+        return this.change((current) => current.toggleMainView());
+      case Action.NextWaiting:
+        return this.change((current) => current.leaveZoom());
+      default:
+        return undefined;
+    }
+  }
+
+  private focusOnReview(target: Focus): void {
+    this.change((current) => current.focusOn(target));
+  }
+
   private pressInPicker(action: Action): void {
     switch (action) {
       case Action.MoveDown:
@@ -101,6 +229,8 @@ export class KeyRouter {
         return this.move(-1);
       case Action.Open:
         return this.open();
+      case Action.Review:
+        return this.openReview();
       case Action.NewTicketSession:
         return void this.sessions.newSession();
       case Action.NewSession:

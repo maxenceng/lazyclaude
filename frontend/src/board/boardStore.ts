@@ -1,10 +1,10 @@
-import type { BoardLookupView, Client } from '../protocol';
+import type { BoardBoardLookupView, Client } from '../protocol';
 import { Store } from '../shared/store';
 import { type BoardState, EmptyBoard, FaultedBoard, LoadingBoard, PopulatedBoard, UnavailableBoard, UnavailableCause } from './boardState';
 
 const PROJECT_DIRECTORY = '.';
 
-const stateOf = (view: BoardLookupView): BoardState => {
+const stateOf = (view: BoardBoardLookupView): BoardState => {
   switch (view.kind) {
     case 'board':
       return view.groups.every((group) => group.tickets.length === 0) && view.unreadable.length === 0 ? new EmptyBoard() : new PopulatedBoard(view);

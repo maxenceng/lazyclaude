@@ -150,4 +150,8 @@ public final class PullRequestDiffViewFixture {
     public static ThreadInDiffView onNoLineView(ReviewThreadView thread) {
         return ThreadInDiffView.builder().thread(thread).line(new NoDiffLine()).build();
     }
+
+    public static CommentsInDiffPayload threadsOnlyPayload(PullRequestDiffView diff, ThreadsView threads) {
+        return new CommentsInDiffPayload(diff, threads, new LoadingPendingReviewView(), false);
+    }
 }

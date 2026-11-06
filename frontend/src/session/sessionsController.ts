@@ -1,4 +1,4 @@
-import type { Client, MergeState, NewSessionView, SessionPayload, TicketView } from '../protocol';
+import type { Client, SessionMergeState, SessionNewSessionView, SessionSessionPayload, BoardTicketView } from '../protocol';
 import { Store } from '../shared/store';
 import type { Hosting } from './hosting';
 import { type SessionRow, SessionRowKind, rowsFor } from './sessionRows';
@@ -6,16 +6,16 @@ import type { SessionStore } from './sessionStore';
 import { VerbPicker } from './verbPicker';
 
 // deferred: the desktop does not read review's merged pull requests, so `done` is never preselected here — close it when the window reads them.
-const MERGE_UNKNOWN: MergeState = 'UNKNOWN';
+const MERGE_UNKNOWN: SessionMergeState = 'UNKNOWN';
 
 export interface SessionsDeps {
   client: Client;
   store: SessionStore;
   hosting: Hosting;
   /** The project's root and the tickets on its board, none before the board is read. */
-  project: () => SessionPayload | undefined;
+  project: () => SessionSessionPayload | undefined;
   /** The ticket the Board's cursor is on. */
-  ticket: () => TicketView | undefined;
+  ticket: () => BoardTicketView | undefined;
   /** A session was opened or selected: its tab should take focus. */
   onOpened: () => void;
   /** The verb picker opened over the ticket's pane. */
@@ -134,7 +134,7 @@ export class SessionsController {
     }
   }
 
-  private async ask(call: () => Promise<NewSessionView>): Promise<NewSessionView | undefined> {
+  private async ask(call: () => Promise<SessionNewSessionView>): Promise<SessionNewSessionView | undefined> {
     try {
       return await call();
     } catch (error) {
