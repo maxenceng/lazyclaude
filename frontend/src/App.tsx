@@ -3,7 +3,7 @@ import { type ReactNode, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AppModel } from './app';
 import { BoardKeyBar, BoardTabKeyBar } from './board/BoardKeyBar';
-import { BoardColumns, BoardPane, TicketPane } from './board/BoardScreen';
+import { BoardColumns, BoardPane, BoardPreview, TicketPane } from './board/BoardScreen';
 import { inProgressCount } from './board/rows';
 import { ConnectionScreen } from './connection/ConnectionScreen';
 import { DocsKeyBar } from './docs/DocsKeyBar';
@@ -66,6 +66,7 @@ export const App = ({ app, packaged }: Props) => {
   const mouseReported = useStore(app.hosting.mouseReported);
   const review = useStore(app.review.current);
   const tab = useStore(app.tabs.selected);
+  const previewShown = useStore(app.tabs.previewShown);
   const pullRequests = useStore(app.review.pullRequests.state);
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
@@ -125,10 +126,21 @@ export const App = ({ app, packaged }: Props) => {
                 const pullRequest = app.review.tickets.of(ticket.branch);
                 return pullRequest === undefined ? undefined : cellsOf(pullRequest);
               }}
-              onOpen={(ticket) => app.tabs.openTicket(ticket)}
+              onPress={(ticket, cursor) => app.tabs.pressCard(ticket, cursor)}
+              onBackground={() => app.tabs.closePreview()}
               onRetry={() => void app.load()}
             />
           ),
+          preview: previewShown ? (
+            <BoardPreview
+              board={app.board.store}
+              selection={app.board.selection}
+              onLink={(href) => {
+                app.chooseTab(WindowTab.Base);
+                app.docs.followFromTicket(href);
+              }}
+            />
+          ) : null,
         }
       : {
           bar: <PullRequestsKeyBar extra={tabKeys} />,
@@ -141,13 +153,14 @@ export const App = ({ app, packaged }: Props) => {
               onRetry={() => app.retryPullRequests()}
             />
           ),
+          preview: null,
         };
   const tabbed =
     tab === WindowTab.Base || unready !== undefined
       ? undefined
       : {
           board: tabScreen.pane,
-          docs: null,
+          docs: tabScreen.preview,
           main: null,
           arrangement: Arrangement.Tab,
         };

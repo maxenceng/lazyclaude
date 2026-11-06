@@ -5,7 +5,7 @@ import java.util.List;
 import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** The tickets of one status, in id order. */
+/** The tickets of one status, in id order; done ones latest closed first. */
 public record StatusGroup(Status status, List<Ticket> tickets) {
 
     public StatusGroup {

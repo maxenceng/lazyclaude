@@ -114,6 +114,18 @@ class GitHubIssueTest {
     }
 
     @Test
+    void shouldCarryWhenADoneTicketClosed() {
+        assertThat(closedIssue("COMPLETED", "context:board", "type:feature").entry())
+                .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.closure()).isEqualTo(ClosedAtFixture.closedAt()));
+    }
+
+    @Test
+    void shouldReadAnOpenTicketAsNotClosed() {
+        assertThat(openIssue(todoLabels()).entry())
+                .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.closure()).isEqualTo(new NotClosed()));
+    }
+
+    @Test
     void shouldRefuseAnIssueClosedAsNotPlanned() {
         assertThat(closedIssue("NOT_PLANNED", "context:board", "type:feature").entry()).isEqualTo(unreadable("closed as not planned"));
     }

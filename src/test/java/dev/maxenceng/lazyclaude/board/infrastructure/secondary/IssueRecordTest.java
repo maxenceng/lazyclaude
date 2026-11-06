@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.board.domain.ClosedAtFixture.closedAt;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.closedIssue;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.issue;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.issueNumbered;
@@ -9,11 +10,13 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecor
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.openIssue;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.ClosedIssue;
 import dev.maxenceng.lazyclaude.board.domain.ClosedReason;
 import dev.maxenceng.lazyclaude.board.domain.OpenIssue;
@@ -31,13 +34,30 @@ class IssueRecordTest {
 
     @Test
     void shouldReadAClosedIssueWithTheReasonGitHubGives() {
-        assertThat(closedIssue("NOT_PLANNED").issue().state()).isEqualTo(new ClosedIssue(new ClosedReason("NOT_PLANNED")));
+        assertThat(closedIssue("NOT_PLANNED").issue().state()).isEqualTo(ClosedIssue.builder().reason(new ClosedReason("NOT_PLANNED")).closedAt(closedAt()).build());
     }
 
     @Test
     void shouldReadAClosedIssueWithoutAStateReasonFieldAsClosedWithNoReason() {
-        assertThat(new IssueRecord(1, "t", "b", List.of(), "CLOSED", null).issue().state())
-                .isEqualTo(new ClosedIssue(new ClosedReason("")));
+        assertThat(new IssueRecord(1, "t", "b", List.of(), "CLOSED", null, "2026-10-01T09:00:00Z").issue().state())
+                .isEqualTo(ClosedIssue.builder().reason(new ClosedReason("")).closedAt(closedAt()).build());
+    }
+
+    @Test
+    void shouldNameClosedAtAsMissingFromAClosedIssueThatLacksIt() {
+        assertThat(new IssueRecord(1, "t", "b", List.of(), "CLOSED", "COMPLETED", null).missingFields().listed()).isEqualTo("closedAt");
+    }
+
+    @Test
+    void shouldNotAskAnOpenIssueForClosedAt() {
+        assertThat(new IssueRecord(1, "t", "b", List.of(), "OPEN", "", null).missingFields().any()).isFalse();
+    }
+
+    @Test
+    void shouldRefuseAClosedAtThatIsNotATime() {
+        assertThatThrownBy(() -> new IssueRecord(1, "t", "b", List.of(), "CLOSED", "COMPLETED", "yesterday").issue())
+                .isInstanceOf(BacklogUnavailableException.class)
+                .hasMessage("gh issue list wrote a closedAt that is not a time: yesterday");
     }
 
     @Test
@@ -48,7 +68,7 @@ class IssueRecordTest {
 
     @Test
     void shouldDropALabelWrittenBlank() {
-        assertThat(new IssueRecord(1, "t", "b", labelsOf(" ", "bug"), "OPEN", "").issue().labels()).containsExactly(new LabelName("bug"));
+        assertThat(new IssueRecord(1, "t", "b", labelsOf(" ", "bug"), "OPEN", "", null).issue().labels()).containsExactly(new LabelName("bug"));
     }
 
     @Test
@@ -88,12 +108,12 @@ class IssueRecordTest {
 
     @Test
     void shouldReadAnIssueWithoutALabelsFieldAsHavingNone() {
-        assertThat(new IssueRecord(1, "t", "b", null, "OPEN", "").issue().labels()).isEmpty();
+        assertThat(new IssueRecord(1, "t", "b", null, "OPEN", "", null).issue().labels()).isEmpty();
     }
 
     @Test
     void shouldNameTheFieldsAnIssueLacks() {
-        assertThat(new IssueRecord(null, " ", "b", List.of(), null, "").missingFields().listed()).isEqualTo("number, title, state");
+        assertThat(new IssueRecord(null, " ", "b", List.of(), null, "", null).missingFields().listed()).isEqualTo("number, title, state");
     }
 
     @Test

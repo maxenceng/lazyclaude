@@ -1,7 +1,8 @@
 import type { BoardController } from './board/boardController';
+import { cursorTicketInColumns, goesToBase } from './board/rows';
 import { Action } from './keys/bindings';
 import { Focus, type Layout, WindowTab } from './layout';
-import type { ReviewPullRequestView } from './protocol';
+import type { BoardTicketView, ReviewPullRequestView } from './protocol';
 import type { ReviewController } from './review/reviewController';
 import { worstFirst } from './review/pullRequestList';
 import { Store } from './shared/store';
@@ -15,6 +16,8 @@ interface Deps {
 /** Which tab the window shows, and the keys of the Board and Pull requests tabs. The window opens on Base, and remembers no tab. */
 export class WindowTabs {
   readonly selected: Store<WindowTab> = new Store<WindowTab>(WindowTab.Base);
+  /** Whether the Board tab shows its preview: a click on no ticket closes it, a card chosen by click or key opens it again. */
+  readonly previewShown: Store<boolean> = new Store<boolean>(true);
 
   constructor(private readonly deps: Deps) {}
 
@@ -40,7 +43,22 @@ export class WindowTabs {
     }
   }
 
-  /** Enter or a click on a ticket of the Board tab: back to Base with that ticket selected. */
+  /** A click on a card of the Board tab: the card selected and previewed, or, already selected, gone to on Base. */
+  pressCard(ticket: BoardTicketView, cursor: string | undefined): void {
+    if (ticket.id === cursor && this.previewShown.get() && goesToBase(ticket)) {
+      this.openTicket(ticket.id);
+    } else {
+      this.deps.board.selection.select(ticket.id);
+      this.previewShown.set(true);
+    }
+  }
+
+  /** A click on the Board tab where no card is: the preview closes and the columns take its height. */
+  closePreview(): void {
+    this.previewShown.set(false);
+  }
+
+  /** Enter, or a click on the card already selected, on the Board tab: back to Base with that ticket selected. */
   openTicket(id: string): void {
     this.deps.board.selection.select(id);
     this.selected.set(WindowTab.Base);
@@ -70,6 +88,7 @@ export class WindowTabs {
     if (view === undefined) {
       return;
     }
+    this.previewShown.set(action === Action.Open ? this.previewShown.get() : true);
     switch (action) {
       case Action.MoveDown:
         return selection.moveInColumn(view, 1);
@@ -87,11 +106,13 @@ export class WindowTabs {
   }
 
   private openCursorTicket(): void {
-    const ticket = this.deps.board.selectedTicket();
-    if (ticket !== undefined) {
+    const view = this.deps.board.shown();
+    const ticket = view === undefined ? undefined : cursorTicketInColumns(view, this.deps.board.selection.selected.get());
+    if (ticket !== undefined && goesToBase(ticket)) {
       this.openTicket(ticket.id);
     }
   }
+
 
   private pressOnPullRequests(action: Action): void {
     const list = this.pullRequests();

@@ -104,12 +104,17 @@ describe('the window tabs', () => {
 });
 
 describe('the Board tab', () => {
-  it('draws a column per status headed by its count, a status with no ticket kept and done narrow', async () => {
+  it('draws a column of cards per status headed by its count, a status with no ticket kept and done showing its cards', async () => {
     const { user } = await started();
     await user.keyboard('2');
     const columns = ['IN PROGRESS', 'IN REVIEW', 'TODO', 'DRAFT', 'DONE'].map((name) => screen.getByRole('group', { name: new RegExp(name, 'i') }));
-    expect(columns.map((column) => column.textContent)).toEqual(['in progress1PROJ-1First', 'in review0', 'todo2PROJ-2SecondPROJ-3Third', 'draft0', 'done1']);
-    expect(screen.queryByText('Fourth')).not.toBeInTheDocument();
+    expect(columns.map((column) => column.textContent)).toEqual([
+      'in progress1FirstPROJ-1',
+      'in review0',
+      'todo2SecondPROJ-2ThirdPROJ-3',
+      'draft0',
+      'done1FourthPROJ-4',
+    ]);
   });
 
   it('marks a ticket\'s pull request with its draft mark and CI glyph, once review has joined them', async () => {
@@ -137,24 +142,59 @@ describe('the Board tab', () => {
   it('moves the cursor with j, k, h and l, and enter goes to Base with that ticket selected', async () => {
     const { user } = await started();
     await user.keyboard('2');
-    await user.keyboard('l');
+    expect(screen.getByRole('button', { name: /PROJ-1/ })).toHaveAttribute('aria-current', 'true');
+    await user.keyboard('h');
     expect(screen.getByRole('button', { name: /PROJ-2/ })).toHaveAttribute('aria-current', 'true');
     await user.keyboard('j');
     expect(screen.getByRole('button', { name: /PROJ-3/ })).toHaveAttribute('aria-current', 'true');
     await user.keyboard('k');
-    await user.keyboard('h');
+    await user.keyboard('l');
     expect(screen.getByRole('button', { name: /PROJ-1/ })).toHaveAttribute('aria-current', 'true');
-    await user.keyboard('l{Enter}');
+    await user.keyboard('h{Enter}');
     expect(tab('Base')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: /PROJ-2/ })).toHaveAttribute('aria-current', 'true');
   });
 
-  it('goes to Base on that ticket when it is clicked', async () => {
+  it('selects a card on a click and previews it beneath, staying on the Board', async () => {
     const { user } = await started();
     await user.keyboard('2');
     await user.click(screen.getByRole('button', { name: /PROJ-3/ }));
+    expect(tab(/^Board/)).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: /PROJ-3/ })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('heading', { name: 'Third' })).toBeInTheDocument();
+  });
+
+  it('goes to Base on a ticket when its selected card is clicked again', async () => {
+    const { user } = await started();
+    await user.keyboard('2');
+    await user.click(screen.getByRole('button', { name: /PROJ-3/ }));
+    await user.click(screen.getByRole('button', { name: /PROJ-3/ }));
     expect(tab('Base')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: /PROJ-3/ })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('closes the preview on a click where no card is, and a card clicked or a key moving the cursor opens it again', async () => {
+    const { user } = await started();
+    await user.keyboard('2');
+    expect(screen.getByRole('heading', { name: 'First' })).toBeInTheDocument();
+    await user.click(screen.getByRole('group', { name: /draft/i }));
+    expect(screen.queryByRole('heading', { name: 'First' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /PROJ-1/ }));
+    expect(screen.getByRole('heading', { name: 'First' })).toBeInTheDocument();
+    expect(tab(/^Board/)).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('group', { name: /draft/i }));
+    await user.keyboard('h');
+    expect(screen.getByRole('heading', { name: 'Second' })).toBeInTheDocument();
+  });
+
+  it('previews a done card without leaving the Board, by click or enter, as Base folds done away', async () => {
+    const { user } = await started();
+    await user.keyboard('2');
+    await user.click(screen.getByRole('button', { name: /PROJ-4/ }));
+    await user.click(screen.getByRole('button', { name: /PROJ-4/ }));
+    await user.keyboard('{Enter}');
+    expect(tab(/^Board/)).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Fourth' })).toBeInTheDocument();
   });
 });
 

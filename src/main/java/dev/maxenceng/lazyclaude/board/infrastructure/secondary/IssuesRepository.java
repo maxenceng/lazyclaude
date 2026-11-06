@@ -15,7 +15,7 @@ public final class IssuesRepository implements BacklogPort {
 
     // deferred: only the 1000 most recently created issues are asked for, so older ones, open or closed, show nowhere — close it when a project has that many.
     static final List<String> ARGUMENTS = List.of(
-            "issue", "list", "--state", "all", "--limit", "1000", "--json", "number,title,body,labels,state,stateReason");
+            "issue", "list", "--state", "all", "--limit", "1000", "--json", "number,title,body,labels,state,stateReason,closedAt");
 
     private final GhCommand gh;
 

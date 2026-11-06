@@ -14,7 +14,7 @@ import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
-/** One ticket as the board shows it: an issue's number, title, body and labels, with the branch its work happens on; a field the issue lacks is an explicit absence, never a stand-in. */
+/** One ticket as the board shows it: an issue's number, title, body and labels, with the branch its work happens on and when it closed; a field the issue lacks is an explicit absence, never a stand-in. */
 public record Ticket(
         TicketId id,
         TicketBranch branch,
@@ -25,7 +25,8 @@ public record Ticket(
         List<LabelName> otherLabels,
         TicketBody body,
         BranchChanges changes,
-        List<Verb> statusVerbs)
+        List<Verb> statusVerbs,
+        Closure closure)
         implements BacklogEntry {
 
     public Ticket {
@@ -39,6 +40,7 @@ public record Ticket(
         Assert.notNull("body", body);
         Assert.notNull("changes", changes);
         Assert.notNull("statusVerbs", statusVerbs);
+        Assert.notNull("closure", closure);
     }
 
     /** The verbs its status offers, in that order; {@code design}, where listed, only while the branch touches the frontend. */
@@ -52,11 +54,11 @@ public record Ticket(
     }
 
     public Ticket withChanges(BranchChanges changes) {
-        return new Ticket(id, branch, status, context, type, title, otherLabels, body, changes, statusVerbs);
+        return new Ticket(id, branch, status, context, type, title, otherLabels, body, changes, statusVerbs, closure);
     }
 
     public Ticket withStatusVerbs(List<Verb> statusVerbs) {
-        return new Ticket(id, branch, status, context, type, title, otherLabels, body, changes, statusVerbs);
+        return new Ticket(id, branch, status, context, type, title, otherLabels, body, changes, statusVerbs, closure);
     }
 
     public static TicketBuilder builder() {
@@ -74,6 +76,7 @@ public record Ticket(
         private TicketBody body;
         private BranchChanges changes = new UnreadChanges();
         private List<Verb> statusVerbs;
+        private Closure closure = new NotClosed();
 
         private TicketBuilder() {}
 
@@ -127,6 +130,11 @@ public record Ticket(
             return this;
         }
 
+        public TicketBuilder closure(Closure closure) {
+            this.closure = closure;
+            return this;
+        }
+
         /** A ticket not given its status's verbs offers the ones its status offers by default. */
         public Ticket build() {
             Assert.notNull("status", status);
@@ -140,7 +148,8 @@ public record Ticket(
                     otherLabels,
                     body,
                     changes,
-                    Optional.ofNullable(statusVerbs).orElseGet(() -> OfferedVerbs.byDefault().of(status)));
+                    Optional.ofNullable(statusVerbs).orElseGet(() -> OfferedVerbs.byDefault().of(status)),
+                    closure);
         }
     }
 }

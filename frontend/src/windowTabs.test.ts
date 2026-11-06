@@ -72,13 +72,13 @@ describe('the window tabs', () => {
   it('move the cursor over the columns on the Board tab and go to Base on enter', async () => {
     const { tabs, board: boardController, layout } = await setup();
     tabs.choose(WindowTab.Board);
-    tabs.press(Action.PanelRight);
+    tabs.press(Action.PanelLeft);
     expect(boardController.selection.selected.get()).toBe('PROJ-2');
     tabs.press(Action.MoveDown);
     expect(boardController.selection.selected.get()).toBe('PROJ-3');
-    tabs.press(Action.PanelLeft);
-    expect(boardController.selection.selected.get()).toBe('PROJ-1');
     tabs.press(Action.PanelRight);
+    expect(boardController.selection.selected.get()).toBe('PROJ-1');
+    tabs.press(Action.PanelLeft);
     tabs.press(Action.Open);
     expect(tabs.selected.get()).toBe(WindowTab.Base);
     expect(boardController.selection.selected.get()).toBe('PROJ-2');

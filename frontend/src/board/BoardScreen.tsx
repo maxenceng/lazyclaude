@@ -4,6 +4,7 @@ import {
   Alert,
   Busy,
   Button,
+  Cards,
   Column,
   Columns,
   Detail,
@@ -14,6 +15,7 @@ import {
   Text,
   Tone,
   Rows,
+  TicketCard,
   TicketRow,
   UnreadableRow,
 } from '../design-system';
@@ -21,7 +23,7 @@ import type { BoardBoardView, BoardTicketView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import { type BoardState, BoardStateKind, UnavailableCause } from './boardState';
 import type { BoardStore } from './boardStore';
-import { columnsOf, isFolded, orderedGroups, selectedIn } from './rows';
+import { columnsOf, cursorTicketInColumns, goesToBase, isFolded, orderedGroups, selectedIn, selectedInColumns } from './rows';
 import type { Selection } from './selection';
 
 interface ViewProps {
@@ -72,44 +74,73 @@ export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus
 interface ColumnsProps extends ViewProps {
   markerOf: (ticket: string) => LampColour | undefined;
   pullRequestOf: (ticket: BoardTicketView) => PullRequestCells | undefined;
-  onOpen: (ticket: string) => void;
+  onPress: (ticket: BoardTicketView, cursor: string | undefined) => void;
+  onBackground: () => void;
   onRetry: () => void;
 }
 
-/** The Board tab: the Board as status columns, as the TUI's zoomed Board. A press on a ticket goes to it on Base. */
-export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onOpen, onRetry }: ColumnsProps) => {
+/** The words a card's footer names after its number: its type, then its other labels. */
+const metaOf = (ticket: BoardTicketView): string[] => [
+  ...(ticket.type.kind === 'typeName' ? [ticket.type.value] : []),
+  ...ticket.otherLabels,
+];
+
+/** The Board tab: the Board as status columns of cards. A click on a card or on no card is handed up, which decides what it selects, opens or closes. */
+export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onPress, onBackground, onRetry }: ColumnsProps) => {
   const { t } = useTranslation('board');
-  const { state, populated, cursor } = useBoardView({ board, selection });
+  const state = useStore(board.state);
+  const chosen = useStore(selection.selected);
+  const populated = state.shown();
+  const cursor = populated === undefined ? undefined : selectedInColumns(populated, chosen);
   return (
     <Pane title={t('board.title')} focused>
       {populated === undefined ? (
         <Unread state={state} onRetry={onRetry} />
       ) : (
         <>
-          <Columns>
+          <Columns onBackground={onBackground}>
             {columnsOf(populated).map((column) => (
-              <Column key={column.status} label={t(`status.${column.status}`)} narrow={column.narrow}>
-                <StatusHeading status={t(`status.${column.status}`)} count={column.tickets.length} />
-                <Rows>
-                  {(column.narrow ? [] : column.tickets).map((ticket) => (
-                    <TicketRow
+              <Column key={column.status} label={t(`status.${column.status}`)}>
+                <StatusHeading status={t(`status.${column.status}`)} count={column.total} />
+                <Cards>
+                  {column.tickets.map((ticket) => (
+                    <TicketCard
                       key={ticket.id}
                       id={ticket.id}
                       title={ticket.title}
+                      meta={metaOf(ticket)}
                       selected={ticket.id === cursor}
-                      done={false}
+                      done={!goesToBase(ticket)}
                       lamp={markerOf(ticket.id)}
                       pullRequest={pullRequestOf(ticket)}
-                      onSelect={() => onOpen(ticket.id)}
+                      onSelect={() => onPress(ticket, cursor)}
                     />
                   ))}
-                </Rows>
+                </Cards>
               </Column>
             ))}
           </Columns>
           <Unreadable view={populated} />
         </>
       )}
+    </Pane>
+  );
+};
+
+interface PreviewProps extends ViewProps {
+  onLink: (href: string) => void;
+}
+
+/** The Board tab's preview: the ticket under its cursor, detailed as Base's main view details it. */
+export const BoardPreview = ({ board, selection, onLink }: PreviewProps) => {
+  const { t } = useTranslation('board');
+  const state = useStore(board.state);
+  const chosen = useStore(selection.selected);
+  const populated = state.shown();
+  const ticket = populated === undefined ? undefined : cursorTicketInColumns(populated, chosen);
+  return (
+    <Pane title={t('ticket.title')} focused={false}>
+      {ticket === undefined ? <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} onLink={onLink} />}
     </Pane>
   );
 };

@@ -52,6 +52,8 @@
 
   --focus: #5aa9e6;
   --selected: #d9d6cf;
+  --card: #232427;
+  --card-edge: #2f3034;
 
   --font-read: Barlow, system-ui, sans-serif;
   --font-stencil: 'Saira Stencil One', Barlow, sans-serif;
@@ -76,4 +78,5 @@
   --lamp-tile-width: 118px;
   --lamp-tile-height: 46px;
   --lamp-marker: 14px;
+  --card-radius: 3px;
 }

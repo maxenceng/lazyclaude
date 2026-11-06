@@ -1,6 +1,8 @@
 package dev.maxenceng.lazyclaude.board.domain;
 
 import static dev.maxenceng.lazyclaude.board.domain.BranchChangesFixture.frontendChanges;
+import static dev.maxenceng.lazyclaude.board.domain.ClosedAtFixture.closedAt;
+import static dev.maxenceng.lazyclaude.board.domain.ClosedAtFixture.laterClosedAt;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticket;
 import static dev.maxenceng.lazyclaude.board.domain.TicketFixture.ticketBuilder;
 import static dev.maxenceng.lazyclaude.board.domain.UnreadableTicketFixture.unreadableTicket;
@@ -85,6 +87,18 @@ class BoardManagerTest {
 
         assertThat(board.groups().get(Status.TODO.ordinal()).tickets()).containsExactly(ticket());
         assertThat(board.groups().get(Status.DONE.ordinal()).tickets()).containsExactly(done);
+    }
+
+    @Test
+    void shouldOrderDoneTicketsLatestClosedFirst() {
+        Ticket earlier = ticketBuilder().id(secondTicketId()).status(Status.DONE).closure(closedAt()).build();
+        Ticket later = ticketBuilder().id(tenthTicketId()).status(Status.DONE).closure(laterClosedAt()).build();
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(earlier, later));
+
+        assertThat(manager.boardFor(workingDirectory()).groups().get(Status.DONE.ordinal()).tickets())
+                .as("the ones just landed head the done group, whatever their number")
+                .containsExactly(later, earlier);
     }
 
     @Test

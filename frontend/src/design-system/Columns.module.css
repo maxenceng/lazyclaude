@@ -12,9 +12,3 @@
   background: var(--pane);
   overflow-y: auto;
 }
-
-.narrow {
-  flex: 0 0 auto;
-  min-width: 96px;
-  background: var(--pane);
-}

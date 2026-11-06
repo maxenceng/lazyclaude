@@ -1,21 +1,38 @@
 import type { ReactNode } from 'react';
 import styles from './Columns.module.css';
 
-/** Columns side by side that share the width, a narrow one keeping to its heading; they scroll sideways when a half tile cannot hold them. */
-export const Columns = ({ children }: { children: ReactNode }) => {
-  return <div className={styles.columns}>{children}</div>;
+interface ColumnsProps {
+  /** A click that lands on no button: a column's empty space or its heading. */
+  onBackground?: () => void;
+  children: ReactNode;
+}
+
+/** Columns side by side that share the width; they scroll sideways when a half tile cannot hold them. */
+export const Columns = ({ onBackground, children }: ColumnsProps) => {
+  return (
+    <div
+      className={styles.columns}
+      role="presentation"
+      onClick={(event) => {
+        if (onBackground !== undefined && !(event.target instanceof Element && event.target.closest('button') !== null)) {
+          onBackground();
+        }
+      }}
+    >
+      {children}
+    </div>
+  );
 };
 
 interface ColumnProps {
   label: string;
-  narrow: boolean;
   children: ReactNode;
 }
 
 /** One column: a status's heading over its rows. */
-export const Column = ({ label, narrow, children }: ColumnProps) => {
+export const Column = ({ label, children }: ColumnProps) => {
   return (
-    <div role="group" aria-label={label} className={narrow ? styles.narrow : styles.column}>
+    <div role="group" aria-label={label} className={styles.column}>
       {children}
     </div>
   );

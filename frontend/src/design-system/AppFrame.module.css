@@ -52,6 +52,10 @@
   min-width: 0;
 }
 
+.tab .left {
+  grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+}
+
 .left:has(> .foot) {
   grid-template-rows: minmax(0, 2fr) minmax(0, 1fr) auto;
 }

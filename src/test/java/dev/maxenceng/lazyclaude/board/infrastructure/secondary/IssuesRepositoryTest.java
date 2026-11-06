@@ -67,7 +67,7 @@ class IssuesRepositoryTest {
         assertThat(repositoryOver(gh).entries(projectAt(root)))
                 .singleElement()
                 .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.title().value())
-                        .isEqualTo("issue list --state all --limit 1000 --json number,title,body,labels,state,stateReason"));
+                        .isEqualTo("issue list --state all --limit 1000 --json number,title,body,labels,state,stateReason,closedAt"));
     }
 
     @Test

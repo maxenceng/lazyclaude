@@ -14,6 +14,7 @@ interface Props {
   statusLine: ReactNode;
   keyBar: ReactNode;
   board: ReactNode;
+  /** Under the board: the Docs panel, or a tab's preview of what its cursor is on. */
   docs: ReactNode;
   /** A short panel under the left column's others, as a review's pending review stands under Files and Comments. */
   foot?: ReactNode;

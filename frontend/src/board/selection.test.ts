@@ -32,12 +32,12 @@ describe('the board selection', () => {
       ticketFixture({ id: 'PROJ-3', status: 'IN_REVIEW' }),
     ]);
     const selection = new Selection();
-    selection.selected.set('PROJ-3');
+    selection.selected.set('PROJ-1');
     selection.moveAcross(columns, 1);
+    expect(selection.selected.get()).toBe('PROJ-3');
+    selection.moveAcross(columns, -1);
     expect(selection.selected.get()).toBe('PROJ-1');
     selection.moveInColumn(columns, 1);
     expect(selection.selected.get()).toBe('PROJ-2');
-    selection.moveAcross(columns, -1);
-    expect(selection.selected.get()).toBe('PROJ-3');
   });
 });
