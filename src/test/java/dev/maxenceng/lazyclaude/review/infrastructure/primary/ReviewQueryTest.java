@@ -17,8 +17,10 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.openPullRequestsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.pendingPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.pullRequestView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.siblingPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.unavailablePullRequestsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQueryFixture.reviewQuery;
+import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBranch;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.sharingTheIdPrefix;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.siblingHeadBranch;
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.secondHeadCommit;
@@ -164,5 +166,23 @@ class ReviewQueryTest {
         query.refresh();
 
         verify(watch).runNow();
+    }
+
+    @Test
+    void shouldFindTheOpenPullRequestWhoseHeadIsTheBranch() {
+        assertThat(query.pullRequestOn(new PullRequestOnPayload(openPullRequestsViewOf(siblingPullRequestView(), pullRequestView()), headBranch())))
+                .isEqualTo(new HeadedPullRequestView(pullRequestView()));
+    }
+
+    @Test
+    void shouldFindNoPullRequestForABranchNoOpenOneHeads() {
+        assertThat(query.pullRequestOn(new PullRequestOnPayload(openPullRequestsViewOf(pullRequestView()), sharingTheIdPrefix())))
+                .isEqualTo(new NoHeadedPullRequestView());
+    }
+
+    @Test
+    void shouldFindNoPullRequestWhileTheOpenOnesAreNotFetchedOrCannotBeRead() {
+        assertThat(query.pullRequestOn(new PullRequestOnPayload(checkingPullRequestsView(), headBranch()))).isEqualTo(new NoHeadedPullRequestView());
+        assertThat(query.pullRequestOn(new PullRequestOnPayload(unavailablePullRequestsView(), headBranch()))).isEqualTo(new NoHeadedPullRequestView());
     }
 }

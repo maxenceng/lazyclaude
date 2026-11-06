@@ -1,7 +1,7 @@
-import type { Client, WatchedPayload } from '../protocol';
+import type { Client, SessionWatchedPayload } from '../protocol';
 
 /** ADR 0058: the selected pane's session while that pane and the window both have focus, else none. */
-export const watchedPayload = (selected: string | undefined, paneFocused: boolean, windowFocused: boolean): WatchedPayload => {
+export const watchedPayload = (selected: string | undefined, paneFocused: boolean, windowFocused: boolean): SessionWatchedPayload => {
   return selected !== undefined && paneFocused && windowFocused
     ? { kind: 'watchedSessionPayload', session: selected }
     : { kind: 'noWatchedSessionPayload' };

@@ -1,4 +1,4 @@
-import type { DiffFileView } from '../protocol';
+import type { ReviewDiffFileView } from '../protocol';
 
 export enum DiffStateKind {
   Loading = 'loading',
@@ -39,7 +39,7 @@ export class EmptyDiff {
 export class PopulatedDiff {
   readonly kind = DiffStateKind.Populated;
 
-  constructor(readonly files: DiffFileView[]) {}
+  constructor(readonly files: ReviewDiffFileView[]) {}
 }
 
 export type DiffState = LoadingDiff | UnavailableDiff | FaultedDiff | EmptyDiff | PopulatedDiff;

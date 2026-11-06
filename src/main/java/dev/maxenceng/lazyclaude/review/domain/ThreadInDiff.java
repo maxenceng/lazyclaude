@@ -4,7 +4,7 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.review.published.ThreadLine;
 
 /** A thread and the diff line it shows under. */
-public record ThreadInDiff(ReviewThread thread, ThreadLine line) {
+public record ThreadInDiff(ReviewThread thread, ThreadLine line) implements CommentInDiff {
 
     public ThreadInDiff {
         Assert.notNull("thread", thread);

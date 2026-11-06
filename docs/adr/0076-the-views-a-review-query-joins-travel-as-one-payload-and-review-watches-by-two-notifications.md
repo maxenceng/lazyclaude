@@ -6,6 +6,8 @@ Date: 2026-10-31
 
 Accepted. Builds on ADR 0050, ADR 0073 and ADR 0074. Amends ADR 0074: a Payload may hold a sealed type. Amends ADR 0050: a
 watch may push more than one `<context>/changed`-style notification.
+Amended by ADR 0090: `threadsInDiff` and `pendingInDiff` are one `commentsInDiff`, which also takes whether resolved
+threads show.
 
 ## Context
 

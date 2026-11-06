@@ -91,3 +91,4 @@
 - 0087 [The desktop window follows a document's links itself and opens the rest through Tauri's opener](0087-the-desktop-window-follows-a-documents-links-itself-and-opens-the-rest-through-tauris-opener.md) — Accepted.
 - 0088 [The desktop window names every pattern at module level](0088-the-desktop-window-names-every-pattern-at-module-level.md) — Accepted.
 - 0089 [The desktop Review screen asks the sidecar where comments hang and writes them in a popup](0089-the-desktop-review-screen-asks-the-sidecar-where-comments-hang-and-writes-in-a-popup.md) — Accepted.
+- 0090 [`review` decides the review screen's rules both frontends show](0090-review-decides-the-review-screen-rules-both-frontends-show.md) — Accepted.

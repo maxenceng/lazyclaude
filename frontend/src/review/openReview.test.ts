@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RpcError } from '../protocol';
 import { RowKind } from './diffRows';
-import { added, diffFixture, fileFixture, hunk, kept, noLine, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
+import { added, commentsFixture, diffFixture, fileFixture, hunk, kept, noLine, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
 import { Harness, type Reads } from './reviewHarness';
 import { DiffStateKind } from './diffState';
 
@@ -9,6 +9,8 @@ const diff = diffFixture([
   fileFixture('src/a.ts', [hunk('@@ -1,2 +1,3 @@', [kept(1, 1, 'one'), removed(2, 'two'), added(2, 'deux')])]),
   fileFixture('src/b.ts', [hunk('@@ -1 +1 @@', [added(1, 'b')])]),
 ]);
+
+const WRITES = ['review/comment', 'review/reply', 'review/edit', 'review/delete', 'review/submit'];
 
 const readTo = (harness: Harness, overrides: Omit<Reads, 'diff'> = {}) => harness.readAll({ ...overrides, diff });
 
@@ -19,8 +21,10 @@ describe('a review being read', () => {
     await harness.answer('review/pendingOf', { kind: 'noPendingReview' });
     await harness.answer('review/threadsOf', threadsFixture([]));
     await harness.answer('review/diffOf', diff);
-    await harness.fail('review/threadsInDiff', new RpcError(-32000, 'sidecar gone'));
-    await harness.answer('review/pendingInDiff', []);
+    harness.client.answerAll('review/summaryToSubmit', '');
+    await harness.fail('review/commentsInDiff', new RpcError(-32000, 'stale'));
+    await harness.fail('review/commentsInDiff', new RpcError(-32000, 'stale'));
+    await harness.fail('review/commentsInDiff', new RpcError(-32000, 'sidecar gone'));
     expect(harness.review.diffState().kind).toBe(DiffStateKind.Fault);
     expect(harness.review.rows().lineCount()).toBe(4);
     expect(harness.refusals).toEqual([]);
@@ -45,10 +49,10 @@ describe('a review being read', () => {
     const comment = pendingCommentFixture();
     const threads = threadsFixture([thread]);
     const pending = openPending([comment]);
-    await readTo(harness, { threads, pending, placedThreads: [threadInDiff(thread, onLine(1))], placedPending: [pendingInDiff(comment, onLine(2))] });
-    expect(harness.client.calls.slice(3)).toEqual([
-      { method: 'review/threadsInDiff', params: { diff, threads } },
-      { method: 'review/pendingInDiff', params: { diff, pending } },
+    await readTo(harness, { threads, pending, comments: commentsFixture({ underLines: [threadInDiff(thread, onLine(1))], pending: [pendingInDiff(comment, onLine(2))] }) });
+    expect(harness.client.calls.slice(-2)).toEqual([
+      { method: 'review/commentsInDiff', params: { diff, threads, pending, resolvedShown: false } },
+      { method: 'review/summaryToSubmit', params: { pending, draft: { kind: 'untypedSummaryPayload' } } },
     ]);
     expect(harness.review.diffState().kind).toBe(DiffStateKind.Populated);
     expect(harness.review.rows().all().map((row) => row.kind)).toEqual([
@@ -65,17 +69,12 @@ describe('a review being read', () => {
     ]);
   });
 
-  it('lists the pending comments before the threads in Comments, and a thread on no line last among them', async () => {
+  it('lists in Comments what review lists, in its order', async () => {
     const harness = new Harness();
-    const thread = threadFixture({ id: 'T1' });
-    const comment = pendingCommentFixture();
-    await readTo(harness, {
-      threads: threadsFixture([thread]),
-      pending: openPending([comment]),
-      placedThreads: [threadInDiff(thread, noLine)],
-      placedPending: [pendingInDiff(comment, onLine(0))],
-    });
-    expect(harness.review.entries().map((entry) => entry.kind)).toEqual(['pending', 'thread']);
+    const thread = threadInDiff(threadFixture({ id: 'T1' }), noLine);
+    const comment = pendingInDiff(pendingCommentFixture(), onLine(0));
+    await readTo(harness, { comments: commentsFixture({ threads: [thread], pending: [comment], listed: [comment, thread] }) });
+    expect(harness.review.entries()).toEqual([comment, thread]);
   });
 
   it('takes only the answer to the latest read of each kind', async () => {
@@ -258,13 +257,15 @@ describe('the range of a review', () => {
 });
 
 describe('resolved threads of a review', () => {
-  it('stay out of the diff until they are asked for, and stay listed in Comments', async () => {
+  it('show under their lines once r asks review again with resolved threads shown, and the diff shows what it answers', async () => {
     const harness = new Harness();
-    const resolved = threadFixture({ id: 'T1', resolved: true, open: false });
-    await readTo(harness, { threads: threadsFixture([resolved]), placedThreads: [threadInDiff(resolved, onLine(1))] });
+    const resolved = threadInDiff(threadFixture({ id: 'T1', resolved: true, open: false }), onLine(1));
+    await readTo(harness, { comments: commentsFixture({ threads: [resolved], listed: [resolved] }) });
     expect(harness.review.rows().all().some((row) => row.kind === RowKind.Thread)).toBe(false);
-    expect(harness.review.entries()).toHaveLength(1);
     harness.review.toggleResolved();
+    expect(harness.client.calls.at(-2)).toMatchObject({ method: 'review/commentsInDiff', params: { resolvedShown: true } });
+    await harness.answerPlacement({ comments: commentsFixture({ threads: [resolved], underLines: [resolved], listed: [resolved] }) });
+    expect(harness.review.resolvedShown()).toBe(true);
     expect(harness.review.rows().all().some((row) => row.kind === RowKind.Thread)).toBe(true);
   });
 });
@@ -326,7 +327,7 @@ describe('the comment box of a review', () => {
     await harness.answer('review/comment', saved);
     expect(harness.review.box()).toBeUndefined();
     expect(harness.review.pending).toEqual(saved.pending);
-    expect(harness.methods().at(-1)).toBe('review/pendingInDiff');
+    expect(harness.methods().slice(-2)).toEqual(['review/commentsInDiff', 'review/summaryToSubmit']);
   });
 
   it('keeps the text and says why it was not saved when GitHub refuses the write', async () => {
@@ -364,7 +365,7 @@ describe('the comment box of a review', () => {
     const harness = new Harness();
     await readTo(harness);
     const opening = harness.review.comment();
-    harness.review.openSummary();
+    await harness.openSummary();
     harness.client.answerNext(anchored);
     await opening;
     expect(harness.review.box()?.target.kind).toBe('summary');
@@ -390,7 +391,8 @@ describe('the comment box of a review', () => {
   it('writes one after the other, the second only once the first is answered', async () => {
     const harness = new Harness();
     const comment = pendingCommentFixture({ id: 'C1' });
-    await readTo(harness, { pending: openPending([comment]), placedPending: [pendingInDiff(comment, onLine(0))] });
+    const placed = pendingInDiff(comment, onLine(0));
+    await readTo(harness, { pending: openPending([comment]), comments: commentsFixture({ pending: [placed], listed: [placed], lastOnLines: [placed] }) });
     harness.review.deleteAtCursor();
     harness.review.deleteAtCursor();
     await harness.answer('review/delete', written([]));
@@ -399,11 +401,13 @@ describe('the comment box of a review', () => {
 });
 
 const readWithComment = async (harness: Harness, comment: ReturnType<typeof pendingCommentFixture>) => {
-  await readTo(harness, { pending: openPending([comment]), placedPending: [pendingInDiff(comment, onLine(0))] });
+  const placed = pendingInDiff(comment, onLine(0));
+  await readTo(harness, { pending: openPending([comment]), comments: commentsFixture({ pending: [placed], listed: [placed], lastOnLines: [placed] }) });
 };
 
 const readWithThread = async (harness: Harness, thread: ReturnType<typeof threadFixture>) => {
-  await readTo(harness, { threads: threadsFixture([thread]), placedThreads: [threadInDiff(thread, onLine(2))] });
+  const placed = threadInDiff(thread, onLine(2));
+  await readTo(harness, { threads: threadsFixture([thread]), comments: commentsFixture({ threads: [placed], underLines: [placed], listed: [placed] }) });
 };
 
 describe('the pending comments of a review', () => {
@@ -471,44 +475,57 @@ describe('the summary of a review', () => {
   it('is typed in the box, kept without writing, and then confirmed before it submits the review as a Comment', async () => {
     const harness = new Harness();
     await readTo(harness);
-    const callsBefore = harness.client.calls.length;
-    harness.review.openSummary();
+    await harness.openSummary();
     harness.review.typeInBox('Looks good');
     harness.review.saveBox();
-    expect(harness.client.calls).toHaveLength(callsBefore);
+    expect(harness.methods().filter((method) => WRITES.includes(method))).toEqual([]);
+    expect(harness.client.calls.at(-1)).toEqual({ method: 'review/summaryToSubmit', params: { pending: { kind: 'noPendingReview' }, draft: { kind: 'typedSummaryPayload', summary: 'Looks good' } } });
     expect(harness.review.box()).toBeUndefined();
     expect(harness.review.submitPrompt()).toBe(true);
-    harness.review.answerSubmit(true);
+    await harness.confirmSubmit('Looks good');
     expect(harness.client.calls.at(-1)).toEqual({ method: 'review/submit', params: { root: '/p', number: 7, summary: 'Looks good' } });
     await harness.answer('review/submit', written());
     expect(harness.submitted).toBe(1);
   });
 
-  it('starts from the body of the pending review it adopted', async () => {
+  it('starts from what review says a submit would send', async () => {
     const harness = new Harness();
-    await readTo(harness, { pending: openPending([], { summary: 'From github.com' }) });
-    harness.review.openSummary();
+    const pending = openPending([], { summary: 'From github.com' });
+    await readTo(harness, { pending });
+    const opening = harness.review.openSummary();
+    expect(harness.client.calls.at(-1)).toEqual({ method: 'review/summaryToSubmit', params: { pending, draft: { kind: 'untypedSummaryPayload' } } });
+    harness.client.answer('review/summaryToSubmit', 'From github.com');
+    await opening;
     expect(harness.review.box()).toMatchObject({ text: 'From github.com' });
+  });
+
+  it('does not open, and says why, when review cannot be asked what a submit would send', async () => {
+    const harness = new Harness();
+    await readTo(harness);
+    const opening = harness.review.openSummary();
+    harness.client.fail('review/summaryToSubmit', new RpcError(-32000, 'sidecar gone'));
+    await opening;
+    expect(harness.review.box()).toBeUndefined();
+    expect(harness.refusals).toEqual(['sidecar gone']);
   });
 
   it('leaves the review pending, writing nothing, when the confirm is answered any other way', async () => {
     const harness = new Harness();
     await readTo(harness);
-    const callsBefore = harness.client.calls.length;
-    harness.review.openSummary();
+    await harness.openSummary();
     harness.review.saveBox();
     harness.review.answerSubmit(false);
     expect(harness.review.submitPrompt()).toBe(false);
-    expect(harness.client.calls).toHaveLength(callsBefore);
+    expect(harness.methods().filter((method) => WRITES.includes(method))).toEqual([]);
     expect(harness.submitted).toBe(0);
   });
 
   it('is not submitted, and the notice says so, when GitHub refuses', async () => {
     const harness = new Harness();
     await readTo(harness);
-    harness.review.openSummary();
+    await harness.openSummary();
     harness.review.saveBox();
-    harness.review.answerSubmit(true);
+    await harness.confirmSubmit('');
     await harness.answer('review/submit', { kind: 'refusedWrite', reason: 'nothing to submit' });
     expect(harness.refusals).toEqual(['not submitted (nothing to submit)']);
     expect(harness.submitted).toBe(0);
@@ -517,9 +534,9 @@ describe('the summary of a review', () => {
   it('drops the answer of a write for a review since closed', async () => {
     const harness = new Harness();
     await readTo(harness);
-    harness.review.openSummary();
+    await harness.openSummary();
     harness.review.saveBox();
-    harness.review.answerSubmit(true);
+    await harness.confirmSubmit('');
     harness.review.close();
     await harness.answer('review/submit', written());
     expect(harness.submitted).toBe(0);

@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RpcError } from '../protocol';
-import { added, diffFixture, fileFixture, hunk, kept, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
+import { added, commentsFixture, diffFixture, fileFixture, hunk, kept, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
 import { CommentsPane, DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './ReviewScreen';
 import { Harness, settle } from './reviewHarness';
 
@@ -94,8 +94,7 @@ describe('the diff of a review', () => {
       diff,
       threads: threadsFixture([thread]),
       pending: openPending([comment]),
-      placedThreads: [threadInDiff(thread, onLine(0))],
-      placedPending: [pendingInDiff(comment, onLine(0))],
+      comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))], pending: [pendingInDiff(comment, onLine(0))] }),
     });
     renderDiff(harness);
     const articles = screen.getAllByRole('article');
@@ -168,8 +167,13 @@ const withThreads = async (harness: Harness) => {
     diff,
     threads: threadsFixture([open, left, outdated]),
     pending: openPending([comment]),
-    placedThreads: [threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, { kind: 'noDiffLine' })],
-    placedPending: [pendingInDiff(comment, onLine(2))],
+    comments: commentsFixture({
+      threads: [threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, { kind: 'noDiffLine' })],
+      underLines: [threadInDiff(open, onLine(0))],
+      pending: [pendingInDiff(comment, onLine(2))],
+      listed: [pendingInDiff(comment, onLine(2)), threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, { kind: 'noDiffLine' })],
+      lastOnLines: [pendingInDiff(comment, onLine(2))],
+    }),
   });
 };
 
@@ -215,7 +219,7 @@ describe('the Files of a review', () => {
 });
 
 describe('the Comments of a review', () => {
-  it('lists the pending comments first, then the threads, each with where it hangs', async () => {
+  it('lists the entries in the order review lists them, each with where it hangs', async () => {
     const harness = new Harness();
     await withThreads(harness);
     render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
@@ -288,14 +292,14 @@ describe('the Review panel', () => {
 
   it('counts the pending comments under the first line of the summary, or says there is no summary', async () => {
     const harness = new Harness();
-    await harness.readAll({ diff, pending: openPending([pendingCommentFixture(), pendingCommentFixture({ id: 'C2' })], { summary: 'Mostly fine\nbut see below' }) });
+    await harness.readAll({ diff, pending: openPending([pendingCommentFixture(), pendingCommentFixture({ id: 'C2' })], { summary: 'Mostly fine\nbut see below' }), summary: 'Mostly fine\nbut see below' });
     render(<ReviewPanel review={harness.review} />);
     expect(screen.getByText('Mostly fine')).toBeInTheDocument();
     expect(screen.getByText('2 pending')).toBeInTheDocument();
     expect(screen.queryByText(/see below/)).not.toBeInTheDocument();
   });
 
-  it('says there is no summary when the pending review has none', async () => {
+  it('says there is no summary when review says a submit would send none', async () => {
     const harness = new Harness();
     await harness.readAll({ diff, pending: openPending([]) });
     render(<ReviewPanel review={harness.review} />);
@@ -315,11 +319,12 @@ describe('the Review panel', () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     render(<ReviewPanel review={harness.review} />);
+    await harness.openSummary();
     act(() => {
-      harness.review.openSummary();
       harness.review.typeInBox('Typed first');
       harness.review.saveBox();
     });
+    await harness.answerPlacement({ summary: 'Typed first' });
     expect(screen.getByText('Typed first')).toBeInTheDocument();
     expect(screen.getByText('0 pending')).toBeInTheDocument();
   });
@@ -388,7 +393,7 @@ describe('the comment box of a review', () => {
   it('shows the thread a reply answers above the box, titled with its first line', async () => {
     const harness = new Harness();
     const thread = threadFixture({ id: 'T1', comments: [{ author: 'ada', body: 'Why this?\nReally.' }, { author: 'bob', body: 'Speed' }] });
-    await harness.readAll({ diff, threads: threadsFixture([thread]), placedThreads: [threadInDiff(thread, onLine(0))] });
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }) });
     render(<ReviewDialogs review={harness.review} />);
     act(() => harness.review.commentOnSelectedComment());
     expect(screen.getByRole('dialog', { name: 'Why this?' })).toBeInTheDocument();
@@ -400,8 +405,9 @@ describe('the comment box of a review', () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     render(<ReviewDialogs review={harness.review} />);
-    act(() => harness.review.openSummary());
+    await harness.openSummary('From github.com');
     expect(screen.getByRole('dialog', { name: 'Summary' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Comment text' })).toHaveValue('From github.com');
   });
 });
 
@@ -409,10 +415,9 @@ const confirming = async () => {
   const harness = new Harness();
   await harness.readAll({ diff });
   render(<ReviewDialogs review={harness.review} />);
-  act(() => {
-    harness.review.openSummary();
-    harness.review.saveBox();
-  });
+  await harness.openSummary();
+  act(() => harness.review.saveBox());
+  await harness.answerPlacement();
   return harness;
 };
 
@@ -425,6 +430,7 @@ describe('the confirm after the summary', () => {
   it('submits on Submit', async () => {
     const harness = await confirming();
     await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await harness.answerPlacement();
     expect(harness.client.calls.at(-1)?.method).toBe('review/submit');
   });
 

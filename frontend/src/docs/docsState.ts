@@ -1,4 +1,4 @@
-import type { DocsView } from '../protocol';
+import type { DocsDocsView } from '../protocol';
 
 export enum DocsStateKind {
   Loading = 'loading',
@@ -8,7 +8,7 @@ export enum DocsStateKind {
   Populated = 'populated',
 }
 
-export type DocsTreeView = Extract<DocsView, { kind: 'docsTree' }>;
+export type DocsTreeView = Extract<DocsDocsView, { kind: 'docsTree' }>;
 
 /** `docs/watch` has not answered yet. */
 export class LoadingDocs {

@@ -5,17 +5,28 @@ import { pullRequestFixture } from './fixtures';
 import { PullRequestStore } from './pullRequestStore';
 
 describe('the pull requests', () => {
-  it('are being checked until review/watch answers, and then the open one whose head is a branch is that branch\'s', async () => {
+  it('are being checked until review/watch answers, and then held as it answered', async () => {
     const client = fakeClient();
     const store = new PullRequestStore(client);
-    expect(store.forBranch('proj-1-first')).toBeUndefined();
     const watching = store.watch('/p');
     expect(client.calls).toEqual([{ method: 'review/watch', params: { root: '/p' } }]);
     expect(store.state.get().kind).toBe('checkingPullRequests');
-    client.answerNext({ kind: 'openPullRequests', pullRequests: [pullRequestFixture({ number: 7, head: 'proj-1-first' }), pullRequestFixture({ number: 8, head: 'proj-2-second' })] });
+    const open = { kind: 'openPullRequests' as const, pullRequests: [pullRequestFixture({ number: 7, head: 'proj-1-first' })] };
+    client.answerNext(open);
     await watching;
-    expect(store.forBranch('proj-2-second')?.number).toBe(8);
-    expect(store.forBranch('proj-3-third')).toBeUndefined();
+    expect(store.state.get()).toEqual(open);
+  });
+
+  it('ask review which one a branch heads, from the pull requests last pushed', async () => {
+    const client = fakeClient();
+    const store = new PullRequestStore(client);
+    const asking = store.forBranch('proj-2-second');
+    expect(client.calls).toEqual([{ method: 'review/pullRequestOn', params: { pullRequests: { kind: 'checkingPullRequests' }, branch: 'proj-2-second' } }]);
+    client.answerNext({ kind: 'headedPullRequest', pullRequest: pullRequestFixture({ number: 8 }) });
+    expect((await asking)?.number).toBe(8);
+    const none = store.forBranch('proj-3-third');
+    client.answerNext({ kind: 'noHeadedPullRequest' });
+    expect(await none).toBeUndefined();
   });
 
   it('follow each review/changed after the watch', async () => {
@@ -25,17 +36,16 @@ describe('the pull requests', () => {
     client.answerNext({ kind: 'openPullRequests', pullRequests: [] });
     await watching;
     client.push('review/changed', { kind: 'openPullRequests', pullRequests: [pullRequestFixture({ head: 'b' })] });
-    expect(store.forBranch('b')?.number).toBe(7);
+    expect(store.state.get()).toEqual({ kind: 'openPullRequests', pullRequests: [pullRequestFixture({ head: 'b' })] });
   });
 
-  it('are unavailable, with the reason, when the sidecar says so, and none is anyone\'s', async () => {
+  it('are unavailable, with the reason, when the sidecar says so', async () => {
     const client = fakeClient();
     const store = new PullRequestStore(client);
     const watching = store.watch('/p');
     client.answerNext({ kind: 'unavailablePullRequests', reason: 'gh is not signed in' });
     await watching;
     expect(store.state.get()).toEqual({ kind: 'unavailablePullRequests', reason: 'gh is not signed in' });
-    expect(store.forBranch('b')).toBeUndefined();
   });
 
   it('are unavailable, with the message, when the call itself fails', async () => {

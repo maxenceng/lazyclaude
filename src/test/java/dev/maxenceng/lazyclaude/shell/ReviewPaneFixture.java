@@ -18,14 +18,13 @@ import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.review.domain.PullRequestDiffPort;
 import dev.maxenceng.lazyclaude.review.domain.ThreadPort;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentsInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.DiffFileView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.HunkView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQueryFixture;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.published.DiffLine;
 import dev.maxenceng.lazyclaude.review.published.DiffLineFixture;
@@ -46,7 +45,7 @@ final class ReviewPaneFixture {
     }
 
     static DiffRows rowsOf(PullRequestDiffView diff, ThreadsView threads, boolean showResolved) {
-        return DiffRows.of(diff, joiningReviews().threadsInDiff(new ThreadsInDiffPayload(diff, threads)), new PendingCommentsInDiffView(List.of()), Optional.empty(), showResolved);
+        return DiffRows.of(diff, joiningReviews().commentsInDiff(new CommentsInDiffPayload(diff, threads, noPendingReviewView(), showResolved)), Optional.empty());
     }
 
     static ReviewPane paneOver(PullRequestDiffView diff, ThreadsView threads) {

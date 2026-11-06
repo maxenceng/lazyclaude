@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.review.application;
 
 import java.util.List;
+import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.review.domain.DiffReading;
 import dev.maxenceng.lazyclaude.review.domain.PendingComment;
@@ -37,6 +38,10 @@ public final class PendingReviewApplicationService {
 
     public PendingCommentsInDiff pendingInDiff(DiffReading diff, List<PendingComment> comments) {
         return manager.pendingInDiff(diff, comments);
+    }
+
+    public Summary summaryToSubmit(Optional<Summary> typed, Optional<Summary> adopted) {
+        return manager.summaryToSubmit(typed, adopted);
     }
 
     public PendingOnDiff anchor(DiffReading diff, DiffLineIndex first, DiffLineIndex last) {

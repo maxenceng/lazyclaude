@@ -4,7 +4,7 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.review.published.ThreadLine;
 
 /** A pending comment and the diff line it shows under. */
-public record PendingInDiff(PendingComment comment, ThreadLine line) {
+public record PendingInDiff(PendingComment comment, ThreadLine line) implements CommentInDiff {
 
     public PendingInDiff {
         Assert.notNull("comment", comment);

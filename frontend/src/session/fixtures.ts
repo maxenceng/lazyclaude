@@ -1,6 +1,6 @@
-import type { HostedSessionView, LiveSessionView, PastSessionView, SessionsView } from '../protocol';
+import type { SessionHostedSessionView, SessionLiveSessionView, SessionPastSessionView, SessionSessionsView } from '../protocol';
 
-export const sessionFixture = (overrides: { id?: string; state?: LiveSessionView['state']; ticket?: string | undefined; tickets?: string[] } = {}): LiveSessionView => {
+export const sessionFixture = (overrides: { id?: string; state?: SessionLiveSessionView['state']; ticket?: string | undefined; tickets?: string[] } = {}): SessionLiveSessionView => {
   const tickets = overrides.tickets ?? (overrides.ticket === undefined ? [] : [overrides.ticket]);
   return {
     id: overrides.id ?? 's',
@@ -15,11 +15,11 @@ export const sessionFixture = (overrides: { id?: string; state?: LiveSessionView
   };
 };
 
-export const sessionsFixture = (live: LiveSessionView[], more: { past?: PastSessionView[]; hosted?: HostedSessionView[] } = {}): SessionsView => {
+export const sessionsFixture = (live: SessionLiveSessionView[], more: { past?: SessionPastSessionView[]; hosted?: SessionHostedSessionView[] } = {}): SessionSessionsView => {
   return { live, past: more.past ?? [], hosted: more.hosted ?? [] };
 };
 
-export const pastFixture = (overrides: { id?: string; title?: string; ticket?: string } = {}): PastSessionView => {
+export const pastFixture = (overrides: { id?: string; title?: string; ticket?: string } = {}): SessionPastSessionView => {
   return {
     id: overrides.id ?? 'old',
     title: overrides.title === undefined ? { kind: 'noTitle' } : { kind: 'aiTitle', value: overrides.title },
@@ -34,6 +34,6 @@ export const pastFixture = (overrides: { id?: string; title?: string; ticket?: s
   };
 };
 
-export const hostedFixture = (id: string, overrides: { ticket?: string; live?: LiveSessionView } = {}): HostedSessionView => {
+export const hostedFixture = (id: string, overrides: { ticket?: string; live?: SessionLiveSessionView } = {}): SessionHostedSessionView => {
   return { id, pid: 1, live: overrides.live ?? null, busyOrWaiting: false, ticket: overrides.ticket ?? null };
 };

@@ -1,6 +1,6 @@
-import type { BoardView, TicketView } from '../protocol';
+import type { BoardBoardView, BoardTicketView } from '../protocol';
 
-export const ticketFixture = (overrides: Partial<TicketView> = {}): TicketView => {
+export const ticketFixture = (overrides: Partial<BoardTicketView> = {}): BoardTicketView => {
   return {
     id: 'PROJ-1',
     branch: 'proj-1-a-ticket',
@@ -15,7 +15,7 @@ export const ticketFixture = (overrides: Partial<TicketView> = {}): TicketView =
   };
 };
 
-export const boardFixture = (tickets: TicketView[], unreadable: BoardView['unreadable'] = []): BoardView => {
+export const boardFixture = (tickets: BoardTicketView[], unreadable: BoardBoardView['unreadable'] = []): BoardBoardView => {
   const statuses = [...new Set(tickets.map((ticket) => ticket.status))];
   return {
     kind: 'board',

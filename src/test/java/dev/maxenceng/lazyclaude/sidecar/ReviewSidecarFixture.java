@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
+import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBranch;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.otherProjectPath;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.projectPath;
 
@@ -26,12 +27,17 @@ public final class ReviewSidecarFixture {
         return "{\"root\":\"%s\",\"number\":23}".formatted(projectPath());
     }
 
-    public static String loadingDiffAndThreadsParams() {
-        return "{\"diff\":{\"kind\":\"loadingDiff\"},\"threads\":{\"kind\":\"loadingThreads\"}}";
+    public static String loadingCommentsParams() {
+        return "{\"diff\":{\"kind\":\"loadingDiff\"},\"threads\":{\"kind\":\"loadingThreads\"},"
+                + "\"pending\":{\"kind\":\"loadingPendingReview\"},\"resolvedShown\":false}";
     }
 
-    public static String loadingDiffAndPendingParams() {
-        return "{\"diff\":{\"kind\":\"loadingDiff\"},\"pending\":{\"kind\":\"loadingPendingReview\"}}";
+    public static String untypedSummaryParams() {
+        return "{\"pending\":{\"kind\":\"loadingPendingReview\"},\"draft\":{\"kind\":\"untypedSummaryPayload\"}}";
+    }
+
+    public static String checkingPullRequestOnParams() {
+        return "{\"pullRequests\":{\"kind\":\"checkingPullRequests\"},\"branch\":\"" + headBranch().value() + "\"}";
     }
 
     public static String anchorParams() {
@@ -66,8 +72,16 @@ public final class ReviewSidecarFixture {
         return "{\"kind\":\"refusedAnchor\",\"reason\":\"gh: not logged in\"}";
     }
 
-    public static String noneInDiff() {
-        return "[]";
+    public static String noCommentsInDiff() {
+        return "{\"threads\":[],\"pending\":[],\"underLines\":[],\"listed\":[],\"lastOnLines\":[]}";
+    }
+
+    public static String summaryText() {
+        return "\"Looks close. Two nits.\\nThe second is about naming.\"";
+    }
+
+    public static String noHeadedPullRequest() {
+        return "{\"kind\":\"noHeadedPullRequest\"}";
     }
 
     public static String checking() {

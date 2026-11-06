@@ -8,15 +8,14 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.DiffFileView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadInDiffView;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffView;
 import dev.maxenceng.lazyclaude.review.published.AddedLine;
 import dev.maxenceng.lazyclaude.review.published.ContextLine;
 import dev.maxenceng.lazyclaude.review.published.DiffLine;
@@ -72,10 +71,8 @@ final class DiffRows {
     /** The rows of {@code diff} with the threads that show under its lines; none when the diff was not read. */
     static DiffRows of(
             PullRequestDiffView diff,
-            ThreadsInDiffView threads,
-            PendingCommentsInDiffView pending,
-            Optional<CommentBox> box,
-            boolean showResolved) {
+            CommentsInDiffView comments,
+            Optional<CommentBox> box) {
         if (!(diff instanceof ReadDiffView(List<DiffFileView> files))) {
             return NONE;
         }
@@ -83,20 +80,19 @@ final class DiffRows {
                 .boxed()
                 .flatMap(file -> fileRows(file, files.get(file)))
                 .toList();
-        return new DiffRows(files, withThreads(lineRows, inlineThreads(threads, showResolved), inlinePending(pending), box));
+        return new DiffRows(files, withThreads(lineRows, inlineThreads(comments.underLines()), inlinePending(comments.pending()), box));
     }
 
-    private static Map<Integer, List<ReviewThreadView>> inlineThreads(ThreadsInDiffView threads, boolean showResolved) {
-        return threads.threads().stream()
+    private static Map<Integer, List<ReviewThreadView>> inlineThreads(List<ThreadInDiffView> underLines) {
+        return underLines.stream()
                 .filter(placed -> placed.line() instanceof OnDiffLine)
-                .filter(placed -> !placed.thread().resolved() || showResolved)
                 .collect(Collectors.groupingBy(
                         placed -> ((OnDiffLine) placed.line()).index().value(),
                         Collectors.mapping(ThreadInDiffView::thread, Collectors.toList())));
     }
 
-    private static Map<Integer, List<PendingCommentView>> inlinePending(PendingCommentsInDiffView pending) {
-        return pending.comments().stream()
+    private static Map<Integer, List<PendingCommentView>> inlinePending(List<PendingInDiffView> pending) {
+        return pending.stream()
                 .filter(placed -> placed.line() instanceof OnDiffLine)
                 .collect(Collectors.groupingBy(
                         placed -> ((OnDiffLine) placed.line()).index().value(),

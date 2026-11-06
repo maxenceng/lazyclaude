@@ -1,4 +1,4 @@
-import type { BoardView } from '../protocol';
+import type { BoardBoardView } from '../protocol';
 import { Store } from '../shared/store';
 import { moveSelection } from './rows';
 
@@ -10,7 +10,7 @@ export class Selection {
     this.selected.set(ticket);
   }
 
-  move(view: BoardView, delta: number): void {
+  move(view: BoardBoardView, delta: number): void {
     this.selected.set(moveSelection(view, this.selected.get(), delta));
   }
 }

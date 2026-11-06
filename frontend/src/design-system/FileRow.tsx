@@ -1,9 +1,17 @@
 import { useTranslation } from 'react-i18next';
+import { COMMENT_MARKS, CommentKind } from './comment';
 import styles from './FileRow.module.css';
+
+export enum FileChange {
+  Added = 'added',
+  Modified = 'modified',
+  Deleted = 'deleted',
+  Renamed = 'renamed',
+}
 
 interface Props {
   letter: string;
-  change: 'added' | 'modified' | 'deleted' | 'renamed';
+  change: FileChange;
   name: string;
   openThreads: number;
   pending: number;
@@ -21,12 +29,14 @@ export const FileRow = ({ letter, change, name, openThreads, pending, selected, 
         <span className={styles.name}>{name}</span>
         {openThreads === 0 ? null : (
           <span className={styles.threads} aria-label={t('fileRow.openThreads', { count: openThreads })}>
-            ◆{openThreads}
+            {COMMENT_MARKS[CommentKind.Thread]}
+            {openThreads}
           </span>
         )}
         {pending === 0 ? null : (
           <span className={styles.pending} aria-label={t('fileRow.pending', { count: pending })}>
-            ✎{pending}
+            {COMMENT_MARKS[CommentKind.Pending]}
+            {pending}
           </span>
         )}
       </button>

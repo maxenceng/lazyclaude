@@ -1,4 +1,4 @@
-import type { ConfigurationView } from '../protocol';
+import type { SessionConfigurationView } from '../protocol';
 import { Action, type KeyPress } from './bindings';
 
 export enum KeyKind {
@@ -57,8 +57,8 @@ export class Binding {
   }
 }
 
-type Reserved = ConfigurationView['chords'][number]['action'];
-type PressedKeyName = Extract<ConfigurationView['chords'][number]['chord']['key'], { kind: 'pressedKey' }>['key'];
+type Reserved = SessionConfigurationView['chords'][number]['action'];
+type PressedKeyName = Extract<SessionConfigurationView['chords'][number]['chord']['key'], { kind: 'pressedKey' }>['key'];
 
 const ACTIONS: Readonly<Record<Reserved, Action>> = {
   FOCUS_LEFT: Action.FocusLeft,
@@ -89,7 +89,7 @@ const NAMES: Readonly<Record<string, string>> = {
 
 const keyName = (key: PressedKeyName): string => NAMES[key] ?? key;
 
-export const bindingsOf = (configuration: ConfigurationView): Binding[] =>
+export const bindingsOf = (configuration: SessionConfigurationView): Binding[] =>
   configuration.chords.map(
     ({ action, chord }) =>
       new Binding(

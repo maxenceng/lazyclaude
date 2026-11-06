@@ -6,7 +6,8 @@ import { Action } from './keys/bindings';
 import { Focus } from './layout';
 import { FaultedConfiguration } from './keys/configurationState';
 import { Connecting, Exited, Ready } from './protocol';
-import { fakeClient } from './test/fakeClient';
+import type { OpenReview } from './review/openReview';
+import { type FakeClient, fakeClient } from './test/fakeClient';
 import { testPlatform } from './testPlatform';
 
 describe('the app', () => {
@@ -146,6 +147,29 @@ const reviewing = async () => {
   return { client, app };
 };
 
+const PULL_REQUEST = { number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] };
+
+const opened = async (client: FakeClient, app: AppModel) => {
+  app.press(Action.Review);
+  client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+  await settled();
+};
+
+const placed = async (client: FakeClient) => {
+  client.answerAll('review/commentsInDiff', { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] });
+  client.answerAll('review/summaryToSubmit', '');
+  await settled();
+};
+
+const summaryKept = async (client: FakeClient, current: OpenReview | undefined) => {
+  const opening = current?.openSummary();
+  client.answer('review/summaryToSubmit', '');
+  await opening;
+  current?.saveBox();
+  client.answerAll('review/summaryToSubmit', '');
+  await settled();
+};
+
 describe('the app and a review', () => {
   it('watches the open pull requests of the project once the board is read', async () => {
     const client = fakeClient(new Ready());
@@ -157,31 +181,33 @@ describe('the app and a review', () => {
 
   it('opens the review of the selected ticket\'s pull request on p, focusing its diff', async () => {
     const { client, app } = await reviewing();
-    app.press(Action.Review);
+    await opened(client, app);
     expect(app.review.isOpen()).toBe(true);
     expect(app.layout.get().focus).toBe(Focus.Diff);
-    expect(client.calls.map((call) => call.method)).toEqual(['review/pendingOf', 'review/diffOf', 'review/threadsOf']);
+    expect(client.calls.map((call) => call.method)).toEqual(['review/pullRequestOn', 'review/pendingOf', 'review/diffOf', 'review/threadsOf']);
   });
 
   it('opens nothing on p for a ticket whose branch heads no open pull request', async () => {
     const { client, app } = await reviewing();
     app.press(Action.MoveDown);
     app.press(Action.Review);
+    expect(client.calls).toEqual([{ method: 'review/pullRequestOn', params: { pullRequests: { kind: 'openPullRequests', pullRequests: [PULL_REQUEST] }, branch: 'proj-2-second' } }]);
+    client.answer('review/pullRequestOn', { kind: 'noHeadedPullRequest' });
+    await settled();
     expect(app.review.isOpen()).toBe(false);
-    expect(client.calls).toEqual([]);
   });
 
   it('goes back to the Board on escape, and leaves the zoom first', async () => {
-    const { app } = await reviewing();
-    app.press(Action.Review);
+    const { client, app } = await reviewing();
+    await opened(client, app);
     app.press(Action.Back);
     expect(app.review.isOpen()).toBe(false);
     expect(app.layout.get().focus).toBe(Focus.Board);
   });
 
   it('moves focus between Files, Comments and the diff with the panel keys', async () => {
-    const { app } = await reviewing();
-    app.press(Action.Review);
+    const { client, app } = await reviewing();
+    await opened(client, app);
     app.press(Action.PanelLeft);
     expect(app.layout.get().focus).toBe(Focus.Files);
     app.press(Action.FocusDown);
@@ -194,7 +220,7 @@ describe('the app and a review', () => {
 
   it('takes j and k as the cursor of the diff, and of Files and Comments once they have focus', async () => {
     const { client, app } = await reviewing();
-    app.press(Action.Review);
+    await opened(client, app);
     const current = app.review.current.get();
     client.answer('review/diffOf', {
       kind: 'readDiff',
@@ -204,8 +230,7 @@ describe('the app and a review', () => {
       ],
     });
     await settled();
-    client.answer('review/threadsInDiff', []);
-    await settled();
+    await placed(client);
     app.press(Action.MoveDown);
     expect(current?.cursor()).toBe(1);
     app.press(Action.PanelLeft);
@@ -217,41 +242,46 @@ describe('the app and a review', () => {
 
   it('asks where a comment would hang on c in the diff, and toggles resolved threads on r', async () => {
     const { client, app } = await reviewing();
-    app.press(Action.Review);
+    await opened(client, app);
     const current = app.review.current.get();
     client.answer('review/diffOf', {
       kind: 'readDiff',
       files: [{ path: 'a.ts', status: { kind: 'modifiedFile' }, hunks: [{ header: '@@', lines: [{ kind: 'addedLine', content: 'a', newNumber: 1 }] }] }],
     });
     await settled();
+    await placed(client);
     client.calls.length = 0;
     app.press(Action.Capture);
     expect(client.calls.map((call) => call.method)).toEqual(['review/anchorOf']);
     app.press(Action.Resolved);
     expect(current?.resolvedShown()).toBe(true);
+    expect(client.calls.at(-2)).toMatchObject({ method: 'review/commentsInDiff', params: { resolvedShown: true } });
   });
 
   it('answers the confirm after the summary with y, and dismisses it with any other key', async () => {
     const { client, app } = await reviewing();
-    app.press(Action.Review);
+    await opened(client, app);
     const current = app.review.current.get();
-    current?.openSummary();
-    current?.saveBox();
+    await summaryKept(client, current);
     client.calls.length = 0;
     app.press(Action.MoveDown);
     expect(current?.submitPrompt()).toBe(false);
     expect(client.calls).toEqual([]);
-    current?.openSummary();
-    current?.saveBox();
+    await summaryKept(client, current);
+    client.calls.length = 0;
     app.press(Action.Yes);
-    expect(client.calls.map((call) => call.method)).toEqual(['review/submit']);
+    client.answerAll('review/summaryToSubmit', '');
+    await settled();
+    expect(client.calls.map((call) => call.method)).toEqual(['review/summaryToSubmit', 'review/submit']);
   });
 
   it('opens the summary on S, and ignores the keys of the diff while a box is open', async () => {
-    const { app } = await reviewing();
-    app.press(Action.Review);
+    const { client, app } = await reviewing();
+    await opened(client, app);
     const current = app.review.current.get();
     app.press(Action.Submit);
+    client.answer('review/summaryToSubmit', '');
+    await settled();
     expect(current?.box()).toBeDefined();
     app.press(Action.Back);
     expect(app.review.isOpen()).toBe(true);
@@ -259,11 +289,12 @@ describe('the app and a review', () => {
 
   it('leaves the review when the submit is taken', async () => {
     const { client, app } = await reviewing();
-    app.press(Action.Review);
+    await opened(client, app);
     const current = app.review.current.get();
-    current?.openSummary();
-    current?.saveBox();
+    await summaryKept(client, current);
     app.press(Action.Yes);
+    client.answerAll('review/summaryToSubmit', '');
+    await settled();
     client.answer('review/submit', { kind: 'writtenReview', pending: { kind: 'noPendingReview' } });
     await settled();
     expect(app.review.isOpen()).toBe(false);

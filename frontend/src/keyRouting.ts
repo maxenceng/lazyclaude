@@ -98,7 +98,7 @@ export class KeyRouter {
     const ticket = this.board.selectedTicket();
     if ((this.focus() === Focus.Board || this.focus() === Focus.Sessions) && ticket !== undefined) {
       this.lastLeft = Focus.Files;
-      this.review.open(ticket.branch);
+      void this.review.open(ticket.branch);
     }
   }
 
@@ -122,7 +122,7 @@ export class KeyRouter {
       case Action.Refresh:
         return current.read();
       case Action.Submit:
-        return current.openSummary();
+        return void current.openSummary();
       case Action.Resolved:
         return current.toggleResolved();
       case Action.Open:

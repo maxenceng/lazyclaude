@@ -1,5 +1,17 @@
 import { i18n } from '../i18n/i18n';
-import type { Client, PendingCommentView, PendingInDiffView, PendingReviewView, PendingReviewWriteView, PullRequestDiffView, ThreadInDiffView, ThreadsView } from '../protocol';
+import type {
+  Client,
+  ReviewCommentInDiffView,
+  ReviewCommentsInDiffView,
+  ReviewPendingCommentView,
+  ReviewPendingInDiffView,
+  ReviewPendingReviewView,
+  ReviewPendingReviewWriteView,
+  ReviewPullRequestDiffView,
+  ReviewSummaryDraftPayload,
+  ReviewThreadInDiffView,
+  ReviewThreadsView,
+} from '../protocol';
 import { Store } from '../shared/store';
 import { CommentBox, TargetKind } from './commentBox';
 import { DiffRows } from './diffRows';
@@ -16,12 +28,7 @@ export interface ReviewDeps {
   onSubmitted: () => void;
 }
 
-export enum EntryKind {
-  Pending = 'pending',
-  Thread = 'thread',
-}
-
-export type CommentEntry = { kind: EntryKind.Pending; placed: PendingInDiffView } | { kind: EntryKind.Thread; placed: ThreadInDiffView };
+const NO_COMMENTS: ReviewCommentsInDiffView = { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] };
 
 const HALF = 2;
 
@@ -36,13 +43,13 @@ const clamp = (index: number, size: number): number => Math.min(Math.max(index, 
  */
 export class OpenReview {
   readonly changed: Store<number> = new Store(0);
-  diff: PullRequestDiffView = { kind: 'loadingDiff' };
-  threads: ThreadsView = { kind: 'loadingThreads' };
-  pending: PendingReviewView = { kind: 'loadingPendingReview' };
+  diff: ReviewPullRequestDiffView = { kind: 'loadingDiff' };
+  threads: ReviewThreadsView = { kind: 'loadingThreads' };
+  pending: ReviewPendingReviewView = { kind: 'loadingPendingReview' };
   private diffFault: string | undefined;
-  private placedThreads: ThreadInDiffView[] = [];
-  private placedPending: PendingInDiffView[] = [];
-  private diffRows: DiffRows = DiffRows.of({ kind: 'loadingDiff' }, [], [], false);
+  private comments: ReviewCommentsInDiffView = NO_COMMENTS;
+  private summary = '';
+  private diffRows: DiffRows = DiffRows.of({ kind: 'loadingDiff' }, [], []);
   private showResolved = false;
   private line = 0;
   private fileSelected = 0;
@@ -113,21 +120,18 @@ export class OpenReview {
   }
 
   /** The pending comments in diff order, the ones on no line last; none until the pending review is read. */
-  pendingComments(): PendingInDiffView[] {
-    return this.placedPending;
+  pendingComments(): ReviewPendingInDiffView[] {
+    return this.comments.pending;
   }
 
   /** The threads in diff order, the ones on no line last; none until they are read. */
-  threadsPlaced(): ThreadInDiffView[] {
-    return this.placedThreads;
+  threadsPlaced(): ReviewThreadInDiffView[] {
+    return this.comments.threads;
   }
 
-  /** What Comments lists: the pending comments first, then the threads. */
-  entries(): CommentEntry[] {
-    return [
-      ...this.placedPending.map((placed): CommentEntry => ({ kind: EntryKind.Pending, placed })),
-      ...this.placedThreads.map((placed): CommentEntry => ({ kind: EntryKind.Thread, placed })),
-    ];
+  /** What Comments lists, in the order `review` lists it. */
+  entries(): ReviewCommentInDiffView[] {
+    return this.comments.listed;
   }
 
   /** Reads the pending review, the diff and the threads again; each lands unless a later read of its kind was begun. */
@@ -146,9 +150,10 @@ export class OpenReview {
   private async readPending(params: { root: string; number: number }): Promise<void> {
     this.pendingReads += 1;
     const read = this.pendingReads;
-    const view = await this.client('review/pendingOf', params).catch((error: unknown): PendingReviewView => ({ kind: 'unavailablePendingReview', reason: messageOf(error) }));
+    const view = await this.client('review/pendingOf', params).catch((error: unknown): ReviewPendingReviewView => ({ kind: 'unavailablePendingReview', reason: messageOf(error) }));
     if (read === this.pendingReads && !this.closed) {
       this.pending = view;
+      this.touch();
       await this.place();
     }
   }
@@ -160,6 +165,7 @@ export class OpenReview {
       const view = await this.deps.client.call('review/diffOf', params);
       if (read === this.diffReads && !this.closed) {
         this.diff = view;
+        this.touch();
         await this.place();
       }
     } catch (error) {
@@ -173,9 +179,10 @@ export class OpenReview {
   private async readThreads(params: { root: string; number: number }): Promise<void> {
     this.threadsReads += 1;
     const read = this.threadsReads;
-    const view = await this.client('review/threadsOf', params).catch((error: unknown): ThreadsView => ({ kind: 'unavailableThreads', reason: messageOf(error) }));
+    const view = await this.client('review/threadsOf', params).catch((error: unknown): ReviewThreadsView => ({ kind: 'unavailableThreads', reason: messageOf(error) }));
     if (read === this.threadsReads && !this.closed) {
       this.threads = view;
+      this.touch();
       await this.place();
     }
   }
@@ -185,37 +192,41 @@ export class OpenReview {
   }
 
   /**
-   * Asks where the threads and the pending comments sit on the diff, and builds the rows from the answer; only the latest ask lands. A
-   * failed ask faults the diff, offering its retry, and leaves rows of the diff now held, so no line answers for a diff since replaced.
+   * Asks `review` for the comments as the screen shows them and for the summary to submit, and builds the rows from the answer; only the
+   * latest ask lands. A failed ask faults the diff, offering its retry, and leaves rows of the diff now held, so no line answers for a
+   * diff since replaced.
    */
   private async place(): Promise<void> {
     this.placements += 1;
     const placement = this.placements;
-    const diff = this.diff;
-    const threads = this.threads;
-    const pending = this.pending;
+    const { diff, threads, pending, showResolved } = this;
     try {
-      const [placedThreads, placedPending] = await Promise.all([
-        diff.kind === 'readDiff' && threads.kind === 'readThreads' ? this.deps.client.call('review/threadsInDiff', { diff, threads }) : [],
-        diff.kind === 'readDiff' && pending.kind === 'openPendingReview' ? this.deps.client.call('review/pendingInDiff', { diff, pending }) : [],
+      const [comments, summary] = await Promise.all([
+        this.deps.client.call('review/commentsInDiff', { diff, threads, pending, resolvedShown: showResolved }),
+        this.askSummary(),
       ]);
       if (placement === this.placements && !this.closed) {
-        this.placedThreads = placedThreads;
-        this.placedPending = placedPending;
+        this.comments = comments;
+        this.summary = summary;
         this.rebuild();
       }
     } catch (error) {
       if (placement === this.placements && !this.closed) {
-        this.placedThreads = [];
-        this.placedPending = [];
+        this.comments = NO_COMMENTS;
         this.diffFault = messageOf(error);
         this.rebuild();
       }
     }
   }
 
+  /** What `review` says a submit sends now, from the summary typed here and the pending review as last read. */
+  private askSummary(): Promise<string> {
+    const draft: ReviewSummaryDraftPayload = this.typedSummary === undefined ? { kind: 'untypedSummaryPayload' } : { kind: 'typedSummaryPayload', summary: this.typedSummary };
+    return this.deps.client.call('review/summaryToSubmit', { pending: this.pending, draft });
+  }
+
   private rebuild(): void {
-    this.diffRows = DiffRows.of(this.diff, this.placedThreads, this.placedPending, this.showResolved);
+    this.diffRows = DiffRows.of(this.diff, this.comments.underLines, this.comments.pending);
     this.moveTo(this.line);
     this.commentSelected = clamp(this.commentSelected, this.entries().length);
     this.touch();
@@ -270,9 +281,11 @@ export class OpenReview {
     }
   }
 
+  /** `r`: resolved threads show under their lines or stop showing, once `review` has said which threads show. */
   toggleResolved(): void {
     this.showResolved = !this.showResolved;
-    this.rebuild();
+    this.touch();
+    void this.place();
   }
 
   /** Whether the diff line `line` is inside the range being marked. */
@@ -352,9 +365,9 @@ export class OpenReview {
     return this.confirming;
   }
 
-  /** What the summary box starts from and a submit sends: the one typed here, else the body of the adopted review, else nothing. */
+  /** What the summary box starts from and a submit sends, as `review` last said it. */
   summaryToSubmit(): string {
-    return this.typedSummary ?? (this.pending.kind === 'openPendingReview' ? this.pending.summary : '');
+    return this.summary;
   }
 
   /** `c` on the cursor's line, or on the range marked: the box opens once the sidecar says a comment can hang there. */
@@ -374,8 +387,18 @@ export class OpenReview {
     }
   }
 
-  openSummary(): void {
-    this.openBox(new CommentBox({ kind: TargetKind.Summary }, this.summaryToSubmit()));
+  /** `S`: the summary box opens on what `review` says a submit would send now, unless another box opened meanwhile. */
+  async openSummary(): Promise<void> {
+    try {
+      const summary = await this.askSummary();
+      if (this.open === undefined && !this.closed) {
+        this.openBox(new CommentBox({ kind: TargetKind.Summary }, summary));
+      }
+    } catch (error) {
+      if (!this.closed) {
+        this.deps.refuse(messageOf(error));
+      }
+    }
   }
 
   typeInBox(text: string): void {
@@ -408,6 +431,7 @@ export class OpenReview {
         this.cancelBox();
         this.confirming = true;
         this.touch();
+        void this.place();
         return;
       case TargetKind.New: {
         const { path, position } = box.target;
@@ -430,9 +454,8 @@ export class OpenReview {
     this.touch();
     if (yes) {
       const { root, number } = this.deps;
-      const summary = this.summaryToSubmit();
       this.inOrder(
-        () => this.deps.client.call('review/submit', { root, number, summary }),
+        async () => this.deps.client.call('review/submit', { root, number, summary: await this.askSummary() }),
         (answer) => {
           if (answer.kind === 'writtenReview') {
             this.deps.onSubmitted();
@@ -460,9 +483,9 @@ export class OpenReview {
     }
   }
 
-  /** The pending comment on the cursor's line that was written last, if the line has one. */
-  private pendingOnCursorLine(): PendingCommentView | undefined {
-    return this.placedPending.filter((placed) => placed.line.kind === 'onDiffLine' && placed.line.index === this.line).at(-1)?.comment;
+  /** The pending comment `enter` and `x` act on at the cursor's line, as `review` picks it, if the line has one. */
+  private pendingOnCursorLine(): ReviewPendingCommentView | undefined {
+    return this.comments.lastOnLines.find((placed) => placed.line.kind === 'onDiffLine' && placed.line.index === this.line)?.comment;
   }
 
   selectComment(index: number): void {
@@ -474,13 +497,13 @@ export class OpenReview {
     this.selectComment(this.commentSelected + delta);
   }
 
-  selectedEntry(): CommentEntry | undefined {
+  selectedEntry(): ReviewCommentInDiffView | undefined {
     return this.entries()[this.commentSelected];
   }
 
   /** To the line the selected entry shows under; nowhere for one on no line. */
   goToSelectedComment(): void {
-    const line = this.selectedEntry()?.placed.line;
+    const line = this.selectedEntry()?.line;
     if (line?.kind === 'onDiffLine') {
       this.moveTo(line.index);
     }
@@ -491,8 +514,8 @@ export class OpenReview {
     const entry = this.selectedEntry();
     if (entry !== undefined) {
       this.goToSelectedComment();
-      if (entry.kind === EntryKind.Pending) {
-        this.openBox(new CommentBox({ kind: TargetKind.Edit, comment: entry.placed.comment }, entry.placed.comment.body));
+      if (entry.kind === 'pendingInDiff') {
+        this.openBox(new CommentBox({ kind: TargetKind.Edit, comment: entry.comment }, entry.comment.body));
       }
     }
   }
@@ -500,17 +523,17 @@ export class OpenReview {
   /** `x` in Comments deletes a pending comment. */
   deleteSelectedComment(): void {
     const entry = this.selectedEntry();
-    if (entry?.kind === EntryKind.Pending) {
+    if (entry?.kind === 'pendingInDiff') {
       this.goToSelectedComment();
-      this.delete(entry.placed.comment);
+      this.delete(entry.comment);
     }
   }
 
   /** `c` in Comments replies to a thread. */
   commentOnSelectedComment(): void {
     const entry = this.selectedEntry();
-    if (entry?.kind === EntryKind.Thread) {
-      this.openBox(new CommentBox({ kind: TargetKind.Reply, thread: entry.placed.thread }));
+    if (entry?.kind === 'threadInDiff') {
+      this.openBox(new CommentBox({ kind: TargetKind.Reply, thread: entry.thread }));
     }
   }
 
@@ -561,7 +584,7 @@ export class OpenReview {
     this.touch();
   }
 
-  private delete(comment: PendingCommentView): void {
+  private delete(comment: ReviewPendingCommentView): void {
     const { root, number } = this.deps;
     this.inOrder(
       () => this.deps.client.call('review/delete', { root, number, comment: comment.id }),
@@ -579,7 +602,7 @@ export class OpenReview {
    * Writes off the render thread; GitHub's answer closes the box, or keeps it with the reason it was refused. A call that failed may
    * still have written, so it closes the box rather than offer a save that could write the comment twice.
    */
-  private write(box: CommentBox, write: () => Promise<PendingReviewWriteView>): void {
+  private write(box: CommentBox, write: () => Promise<ReviewPendingReviewWriteView>): void {
     box.saveBegun();
     this.touch();
     this.inOrder(
@@ -607,20 +630,20 @@ export class OpenReview {
   }
 
   /** What a write answered with replaces what was read, and any read begun before it. */
-  private applyWritten(pending: PendingReviewView): void {
+  private applyWritten(pending: ReviewPendingReviewView): void {
     this.pending = pending;
     this.pendingReads += 1;
     void this.place();
   }
 
   /** Writes to the pending review one after the other; an answer for a review since left is dropped. */
-  private inOrder(write: () => Promise<PendingReviewWriteView>, answered: (answer: PendingReviewWriteView) => void, failed: () => void = () => undefined): void {
+  private inOrder(write: () => Promise<ReviewPendingReviewWriteView>, answered: (answer: ReviewPendingReviewWriteView) => void, failed: () => void = () => undefined): void {
     this.waiting += 1;
     this.writes = this.waiting === 1 ? this.perform(write, answered, failed) : this.writes.then(() => this.perform(write, answered, failed));
   }
 
   /** A write GitHub answered is handed on; one whose call failed may or may not have landed, so the pending review is read again to show which. */
-  private async perform(write: () => Promise<PendingReviewWriteView>, answered: (answer: PendingReviewWriteView) => void, failed: () => void): Promise<void> {
+  private async perform(write: () => Promise<ReviewPendingReviewWriteView>, answered: (answer: ReviewPendingReviewWriteView) => void, failed: () => void): Promise<void> {
     try {
       const answer = await write();
       this.waiting -= 1;

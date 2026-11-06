@@ -60,8 +60,18 @@ export class FakeClient implements Client {
     this.take(method)?.resolve(result);
   }
 
+  /** Answers every call of `method` still waiting, the oldest first. */
+  answerAll(method: string, result: unknown): void {
+    this.waiting.filter((call) => call.method === method).forEach(() => this.take(method)?.resolve(result));
+  }
+
   fail(method: string, error: Error): void {
     this.take(method)?.reject(error);
+  }
+
+  /** Fails every call of `method` still waiting, the oldest first. */
+  failAll(method: string, error: Error): void {
+    this.waiting.filter((call) => call.method === method).forEach(() => this.take(method)?.reject(error));
   }
 
   failNext(error: Error): void {

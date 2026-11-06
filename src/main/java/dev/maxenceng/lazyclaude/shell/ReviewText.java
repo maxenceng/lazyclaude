@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.DiffFileView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.LoadingDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.LoadingPendingReviewView;
@@ -12,11 +13,13 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.LoadingThreadsView
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.NoPendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingAnchorView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadThreadsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewThreadView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailablePendingReviewView;
@@ -126,10 +129,10 @@ final class ReviewText {
         return pane.entries().stream().map(ReviewText::entryLine).toList();
     }
 
-    private static RowLine entryLine(CommentEntry entry) {
+    private static RowLine entryLine(CommentInDiffView entry) {
         return switch (entry) {
-            case PendingEntry pending -> pendingLine(pending.placed().comment().anchor());
-            case ThreadEntry thread -> commentLine(thread.placed().thread());
+            case PendingInDiffView pending -> pendingLine(pending.comment().anchor());
+            case ThreadInDiffView thread -> commentLine(thread.thread());
         };
     }
 

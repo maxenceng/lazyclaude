@@ -1,4 +1,4 @@
-import type { DiffFileView, DiffLine, PendingCommentView, PendingInDiffView, PullRequestDiffView, ThreadInDiffView, ThreadView } from '../protocol';
+import type { ReviewDiffFileView, ReviewDiffLine, ReviewPendingCommentView, ReviewPendingInDiffView, ReviewPullRequestDiffView, ReviewThreadInDiffView, ReviewReviewThreadView } from '../protocol';
 
 export enum RowKind {
   File = 'file',
@@ -10,7 +10,7 @@ export enum RowKind {
 
 export interface FileRow {
   kind: RowKind.File;
-  file: DiffFileView;
+  file: ReviewDiffFileView;
 }
 
 export interface HunkRow {
@@ -21,24 +21,24 @@ export interface HunkRow {
 /** A diff line, numbered from 0 in the order the lines are listed, which is where the cursor is. */
 export interface LineRow {
   kind: RowKind.Line;
-  line: DiffLine;
+  line: ReviewDiffLine;
   index: number;
   file: number;
 }
 
 export interface ThreadRow {
   kind: RowKind.Thread;
-  thread: ThreadView;
+  thread: ReviewReviewThreadView;
 }
 
 export interface PendingRow {
   kind: RowKind.Pending;
-  comment: PendingCommentView;
+  comment: ReviewPendingCommentView;
 }
 
 export type DiffRow = FileRow | HunkRow | LineRow | ThreadRow | PendingRow;
 
-const onLine = (line: ThreadInDiffView['line']): number | undefined => (line.kind === 'onDiffLine' ? line.index : undefined);
+const onLine = (line: ReviewThreadInDiffView['line']): number | undefined => (line.kind === 'onDiffLine' ? line.index : undefined);
 
 const groupedBy = <T>(items: T[], keyOf: (item: T) => number | undefined): Map<number, T[]> => {
   const groups = new Map<number, T[]>();
@@ -51,26 +51,23 @@ const groupedBy = <T>(items: T[], keyOf: (item: T) => number | undefined): Map<n
   return groups;
 };
 
-/** The rows of a review's main view, built whenever the diff, the threads or whether resolved threads show change. */
+/** The rows of a review's main view, built whenever the diff or `review`'s answer of which comments show changes. */
 export class DiffRows {
   private readonly lineRows: LineRow[];
   private readonly starts: number[];
 
   private constructor(
-    private readonly diffFiles: DiffFileView[],
+    private readonly diffFiles: ReviewDiffFileView[],
     private readonly rows: DiffRow[],
   ) {
     this.lineRows = rows.filter((row): row is LineRow => row.kind === RowKind.Line);
     this.starts = this.lineRows.flatMap((row, index) => (index === 0 || this.lineRows[index - 1]?.file !== row.file ? [index] : []));
   }
 
-  /** The rows of `diff` with the threads and pending comments that show under its lines; none when the diff was not read. */
-  static of(diff: PullRequestDiffView, threads: ThreadInDiffView[], pending: PendingInDiffView[], showResolved: boolean): DiffRows {
+  /** The rows of `diff` with the threads `review` shows under its lines and the pending comments; none when the diff was not read. */
+  static of(diff: ReviewPullRequestDiffView, underLines: ReviewThreadInDiffView[], pending: ReviewPendingInDiffView[]): DiffRows {
     const files = diff.kind === 'readDiff' ? diff.files : [];
-    const threadsAt = groupedBy(
-      threads.filter((placed) => showResolved || !placed.thread.resolved),
-      (placed) => onLine(placed.line),
-    );
+    const threadsAt = groupedBy(underLines, (placed) => onLine(placed.line));
     const pendingAt = groupedBy(pending, (placed) => onLine(placed.line));
     let next = 0;
     const rows = files.flatMap((file, fileIndex) => [
@@ -95,7 +92,7 @@ export class DiffRows {
     return this.rows;
   }
 
-  files(): DiffFileView[] {
+  files(): ReviewDiffFileView[] {
     return this.diffFiles;
   }
 

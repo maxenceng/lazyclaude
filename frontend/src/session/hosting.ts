@@ -1,5 +1,5 @@
 import type { Terminal } from '@xterm/xterm';
-import type { Client, HostStart, ListingPayload, PaneSize, SessionPayload, SessionsView, Verb } from '../protocol';
+import type { Client, SessionHostStart, SessionListingPayload, SessionPaneSize, SessionSessionPayload, SessionSessionsView, BoardVerb } from '../protocol';
 import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import { Dock } from './dock';
@@ -7,12 +7,12 @@ import { type Clipboard, Emulator } from './emulator';
 import type { ModeMemory } from './modeMemory';
 import type { PaneKeyPress } from './paneKeys';
 
-const DEFAULT_PANE: PaneSize = { width: 80, height: 24 };
+const DEFAULT_PANE: SessionPaneSize = { width: 80, height: 24 };
 
 export interface HostingDeps {
   client: Client;
   memory: ModeMemory;
-  sessions: Store<SessionsView | undefined>;
+  sessions: Store<SessionSessionsView | undefined>;
   newTerminal: () => { terminal: Terminal; fit: { fit(): void } };
   reserved: (press: PaneKeyPress) => (() => void) | undefined;
   clipboard: Clipboard;
@@ -79,12 +79,12 @@ export class Hosting {
     return this.start(() => this.deps.client.call('session/startUnlinked', { root, size: this.paneSize() }));
   }
 
-  startTicket(root: string, ticket: string, branch: string, verb: Verb): Promise<boolean> {
+  startTicket(root: string, ticket: string, branch: string, verb: BoardVerb): Promise<boolean> {
     return this.start(() => this.deps.client.call('session/startTicket', { root, ticket, branch, verb, size: this.paneSize() }));
   }
 
   /** Resumes a past session from its row; `session` decides whether in the ticket's worktree or where it ran. */
-  resumePast(sessions: SessionPayload, session: string, recordedDirectory: string, listing: ListingPayload): Promise<boolean> {
+  resumePast(sessions: SessionSessionPayload, session: string, recordedDirectory: string, listing: SessionListingPayload): Promise<boolean> {
     return this.start(() => this.deps.client.call('session/resumePast', { sessions, session, recordedDirectory, listing, size: this.paneSize() }));
   }
 
@@ -131,12 +131,12 @@ export class Hosting {
     this.refreshMouse();
   }
 
-  private paneSize(): PaneSize {
+  private paneSize(): SessionPaneSize {
     const fitted = [...this.emulators.values()].find((emulator) => emulator.terminal.element !== undefined);
     return fitted === undefined ? DEFAULT_PANE : { width: fitted.terminal.cols, height: fitted.terminal.rows };
   }
 
-  private opened(start: HostStart): boolean {
+  private opened(start: SessionHostStart): boolean {
     if (start.kind !== 'startedHost') {
       return false;
     }
@@ -145,7 +145,7 @@ export class Hosting {
     return true;
   }
 
-  private async start(ask: () => Promise<HostStart>): Promise<boolean> {
+  private async start(ask: () => Promise<SessionHostStart>): Promise<boolean> {
     try {
       const started = this.opened(await ask());
       this.failure.set(undefined);

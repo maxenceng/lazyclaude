@@ -1,8 +1,8 @@
-import type { Client, DocsView } from '../protocol';
+import type { Client, DocsDocsView } from '../protocol';
 import { Store } from '../shared/store';
 import { type DocsState, EmptyDocs, FaultedDocs, LoadingDocs, PopulatedDocs, UnavailableDocs } from './docsState';
 
-const stateOf = (view: DocsView): DocsState => {
+const stateOf = (view: DocsDocsView): DocsState => {
   switch (view.kind) {
     case 'docsTree':
       return view.documents.length === 0 && view.folders.length === 0 ? new EmptyDocs() : new PopulatedDocs(view);

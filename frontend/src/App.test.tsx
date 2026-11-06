@@ -507,6 +507,16 @@ const reviewDiff = {
   ],
 };
 
+const summaryAnswered = async (ready: Awaited<ReturnType<typeof readyApp>>, summary = '') => {
+  await act(async () => {
+    ready.client.answerAll('review/summaryToSubmit', summary);
+    ready.client.answerAll('review/commentsInDiff', { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] });
+    await settle();
+  });
+};
+
+const PULL_REQUEST = { number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] };
+
 const reviewOpened = async (answers: { pending?: unknown; threads?: unknown; diff?: unknown } = {}) => {
   const ready = await readyApp();
   await act(async () => {
@@ -518,14 +528,18 @@ const reviewOpened = async (answers: { pending?: unknown; threads?: unknown; dif
   });
   await ready.user.keyboard('p');
   await act(async () => {
+    ready.client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+    await settle();
+  });
+  await act(async () => {
     ready.client.answer('review/pendingOf', answers.pending ?? { kind: 'noPendingReview' });
     ready.client.answer('review/threadsOf', answers.threads ?? { kind: 'readThreads', threads: [] });
     ready.client.answer('review/diffOf', answers.diff ?? reviewDiff);
     await settle();
   });
   await act(async () => {
-    ready.client.answer('review/threadsInDiff', []);
-    ready.client.answer('review/pendingInDiff', []);
+    ready.client.answerAll('review/commentsInDiff', { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] });
+    ready.client.answerAll('review/summaryToSubmit', '');
     await settle();
   });
   return ready;
@@ -553,6 +567,10 @@ describe('the Review screen', () => {
       await settle();
     });
     await ready.user.keyboard('p');
+    await act(async () => {
+      ready.client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+      await settle();
+    });
     expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toHaveTextContent('Reading the diff');
   });
 
@@ -619,10 +637,13 @@ describe('the Review screen', () => {
   it('submits the review as a Comment: S, the summary, ctrl+s, y', async () => {
     const ready = await reviewOpened();
     await ready.user.keyboard('S');
+    await summaryAnswered(ready);
     await ready.user.keyboard('Looks good');
     await ready.user.keyboard('{Control>}s{/Control}');
+    await summaryAnswered(ready, 'Looks good');
     expect(screen.getByRole('dialog', { name: 'Submit review as Comment?' })).toBeInTheDocument();
     await ready.user.keyboard('y');
+    await summaryAnswered(ready, 'Looks good');
     expect(ready.client.calls.at(-1)).toEqual({ method: 'review/submit', params: { root: '/p', number: 7, summary: 'Looks good' } });
     await act(async () => {
       ready.client.answer('review/submit', { kind: 'writtenReview', pending: { kind: 'noPendingReview' } });
@@ -634,8 +655,11 @@ describe('the Review screen', () => {
   it('shows why the submit was refused on the status line, and stays in the review', async () => {
     const ready = await reviewOpened();
     await ready.user.keyboard('S');
+    await summaryAnswered(ready);
     await ready.user.keyboard('{Control>}s{/Control}');
+    await summaryAnswered(ready);
     await ready.user.keyboard('y');
+    await summaryAnswered(ready);
     await act(async () => {
       ready.client.answer('review/submit', { kind: 'refusedWrite', reason: 'nothing to submit' });
       await settle();

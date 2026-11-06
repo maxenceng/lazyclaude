@@ -28,11 +28,20 @@ export class ReviewController {
     return this.current.get() !== undefined;
   }
 
-  /** `p`: opens the review of the open pull request whose head is `branch`, and reads it; false when there is none. */
-  open(branch: string): boolean {
+  /**
+   * `p`: opens the review of the open pull request `review` says `branch` heads, and reads it; false when there is none, when the board
+   * is not read, when a review is already open or opened while asking, and when the ask failed, whose reason is a notice.
+   */
+  async open(branch: string): Promise<boolean> {
     const root = this.deps.root();
-    const pullRequest = this.pullRequests.forBranch(branch);
-    if (root === undefined || pullRequest === undefined || this.isOpen()) {
+    if (root === undefined || this.isOpen()) {
+      return false;
+    }
+    const pullRequest = await this.pullRequests.forBranch(branch).catch((error: unknown) => {
+      this.deps.notices.raise(error instanceof Error ? error.message : String(error));
+      return undefined;
+    });
+    if (pullRequest === undefined || this.isOpen()) {
       return false;
     }
     const review = new OpenReview({

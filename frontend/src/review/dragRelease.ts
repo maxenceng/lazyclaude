@@ -1,3 +1,4 @@
+import { LEFT_BUTTON } from '../design-system';
 import { type LineSpan, nearestLine } from './nearestLine';
 import type { OpenReview } from './openReview';
 
@@ -17,7 +18,6 @@ const lineAt = (root: Element, event: MouseEvent): number | undefined => {
 
 const onLine = (event: MouseEvent): boolean => event.target instanceof Element && event.target.closest(LINE) !== null;
 
-const LEFT = 0;
 
 /**
  * The end of a drag that began on a diff line: the left button let go anywhere in the window marks the range to the line nearest to it.
@@ -42,7 +42,7 @@ export class DragRelease implements EventListenerObject {
   handleEvent(event: Event): void {
     if (event.type === 'blur') {
       this.review.dropDrag();
-    } else if (event instanceof MouseEvent && event.button === LEFT) {
+    } else if (event instanceof MouseEvent && event.button === LEFT_BUTTON) {
       this.pointer(event);
     }
   }

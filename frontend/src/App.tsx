@@ -7,7 +7,7 @@ import { BoardPane, TicketPane } from './board/BoardScreen';
 import { ConnectionScreen } from './connection/ConnectionScreen';
 import { DocsKeyBar } from './docs/DocsKeyBar';
 import { DocsPane, DocumentPane } from './docs/DocsScreen';
-import { Alert, AppFrame, Button, Count, Lamp, Pane, StatusLine, Text } from './design-system';
+import { Alert, AppFrame, Button, Count, Lamp, Pane, StatusLine, Text, Tone } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { WindowKeys } from './keys/windowKeys';
@@ -32,7 +32,7 @@ const unboarded = (alternative: ReactNode, t: TFunction) => ({
   ),
   main: (
     <Pane title={t('app.ticketTitle')} focused={false}>
-      <Text tone="dim">{t('app.noTicketSelected')}</Text>
+      <Text tone={Tone.Dim}>{t('app.noTicketSelected')}</Text>
     </Pane>
   ),
   docs: null,

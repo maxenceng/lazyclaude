@@ -1,14 +1,14 @@
 import { act } from '@testing-library/react';
 import { fakeClient } from '../test/fakeClient';
-import { diffFixture, threadsFixture } from './fixtures';
+import { commentsFixture, diffFixture, threadsFixture } from './fixtures';
 import { OpenReview } from './openReview';
 
 export interface Reads {
   diff?: unknown;
   threads?: unknown;
   pending?: unknown;
-  placedThreads?: unknown;
-  placedPending?: unknown;
+  comments?: unknown;
+  summary?: string;
 }
 
 export const settle = () =>
@@ -50,8 +50,27 @@ export class Harness {
     await this.answer('review/pendingOf', reads.pending ?? { kind: 'noPendingReview' });
     await this.answer('review/threadsOf', reads.threads ?? threadsFixture([]));
     await this.answer('review/diffOf', reads.diff ?? diffFixture([]));
-    await this.answer('review/threadsInDiff', reads.placedThreads ?? []);
-    await this.answer('review/pendingInDiff', reads.placedPending ?? []);
+    await this.answerPlacement(reads);
+  }
+
+  /** Answers every ask still waiting of where the comments show and of the summary to submit; only the latest lands. */
+  async answerPlacement(reads: Pick<Reads, 'comments' | 'summary'> = {}): Promise<void> {
+    this.client.answerAll('review/commentsInDiff', reads.comments ?? commentsFixture());
+    this.client.answerAll('review/summaryToSubmit', reads.summary ?? '');
+    await settle();
+  }
+
+  /** `S`, answered with what `review` says a submit sends now. */
+  async openSummary(summary = ''): Promise<void> {
+    const opening = this.review.openSummary();
+    this.client.answer('review/summaryToSubmit', summary);
+    await opening;
+  }
+
+  /** The confirm answered yes, the summary to send asked of `review` and answered with `summary`. */
+  async confirmSubmit(summary: string): Promise<void> {
+    this.review.answerSubmit(true);
+    await this.answerPlacement({ summary });
   }
 
   async fail(method: string, error: Error): Promise<void> {

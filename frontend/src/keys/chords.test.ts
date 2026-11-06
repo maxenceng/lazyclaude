@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ConfigurationView } from '../protocol';
+import type { SessionConfigurationView } from '../protocol';
 import { bindingsOf } from './chords';
 import { Action, actionOf, type KeyPress } from './bindings';
 
@@ -12,11 +12,11 @@ const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
   ...held,
 });
 
-const configuration = (...chords: ConfigurationView['chords']): ConfigurationView => {
+const configuration = (...chords: SessionConfigurationView['chords']): SessionConfigurationView => {
   return { chords, desktopNotifications: true, mouse: true };
 };
 
-const alt = (character: string): ConfigurationView['chords'][number]['chord'] => ({
+const alt = (character: string): SessionConfigurationView['chords'][number]['chord'] => ({
   modifiers: ['ALT'],
   key: { kind: 'typedCharacter', codePoint: character.codePointAt(0) ?? 0 },
 });

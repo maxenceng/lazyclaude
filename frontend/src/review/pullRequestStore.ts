@@ -1,9 +1,9 @@
-import type { Client, PullRequestsView, PullRequestView } from '../protocol';
+import type { Client, ReviewPullRequestsView, ReviewPullRequestView } from '../protocol';
 import { Store } from '../shared/store';
 
 /** The open pull requests: `review/watch`'s answer, then every `review/changed` after it. */
 export class PullRequestStore {
-  readonly state: Store<PullRequestsView> = new Store<PullRequestsView>({ kind: 'checkingPullRequests' });
+  readonly state: Store<ReviewPullRequestsView> = new Store<ReviewPullRequestsView>({ kind: 'checkingPullRequests' });
 
   constructor(private readonly client: Client) {
     client.subscribe('review/changed', (view) => this.state.set(view));
@@ -18,9 +18,9 @@ export class PullRequestStore {
     }
   }
 
-  /** A ticket's pull request is the open one whose head is its ticket branch. */
-  forBranch(branch: string): PullRequestView | undefined {
-    const view = this.state.get();
-    return view.kind === 'openPullRequests' ? view.pullRequests.find((pullRequest) => pullRequest.head === branch) : undefined;
+  /** A ticket's pull request, as `review` joins its branch to the open pull requests last pushed; none when no open one has it as head. */
+  async forBranch(branch: string): Promise<ReviewPullRequestView | undefined> {
+    const answer = await this.client.call('review/pullRequestOn', { pullRequests: this.state.get(), branch });
+    return answer.kind === 'headedPullRequest' ? answer.pullRequest : undefined;
   }
 }

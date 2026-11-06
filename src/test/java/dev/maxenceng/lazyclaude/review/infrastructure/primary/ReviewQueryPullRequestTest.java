@@ -6,6 +6,7 @@ import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.pullRequest
 import static dev.maxenceng.lazyclaude.review.domain.PullRequestDiffManagerFixture.diffTooLarge;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.pullRequestsUnavailable;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.threadAt;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.loadingPendingView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.onLineView;
@@ -14,6 +15,8 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.outdatedThreadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.pullRequestPayload;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.resolvedThreadView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.threadsOnlyPayload;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.tooLargeDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.unavailableDiffView;
@@ -114,23 +117,42 @@ class ReviewQueryPullRequestTest {
         ReviewThreadView onTheOldSide = openThreadView(diffPath(), leftOn(3));
         ReviewThreadView outdated = outdatedThreadView(diffPath());
 
-        assertThat(query.threadsInDiff(new ThreadsInDiffPayload(twoFileDiffView(), readThreadsViewOf(outdated, onTheOldSide))))
-                .isEqualTo(new ThreadsInDiffView(List.of(onLineView(onTheOldSide, 1), onNoLineView(outdated))));
+        assertThat(query.commentsInDiff(threadsOnlyPayload(twoFileDiffView(), readThreadsViewOf(outdated, onTheOldSide))).threads())
+                .isEqualTo(List.of(onLineView(onTheOldSide, 1), onNoLineView(outdated)));
     }
 
     @Test
     void shouldPutEveryThreadOnNoLineWhileTheDiffItHandedOutIsNotRead() {
         ReviewThreadView thread = openThreadView(diffPath(), rightOn(3));
 
-        assertThat(query.threadsInDiff(new ThreadsInDiffPayload(tooLargeDiffView(), readThreadsViewOf(thread))))
-                .isEqualTo(new ThreadsInDiffView(List.of(onNoLineView(thread))));
-        assertThat(query.threadsInDiff(new ThreadsInDiffPayload(loadingDiffView(), readThreadsViewOf(thread))))
-                .isEqualTo(new ThreadsInDiffView(List.of(onNoLineView(thread))));
+        assertThat(query.commentsInDiff(threadsOnlyPayload(tooLargeDiffView(), readThreadsViewOf(thread))).threads()).isEqualTo(List.of(onNoLineView(thread)));
+        assertThat(query.commentsInDiff(threadsOnlyPayload(loadingDiffView(), readThreadsViewOf(thread))).threads()).isEqualTo(List.of(onNoLineView(thread)));
     }
 
     @Test
     void shouldPlaceNoThreadWhileTheThreadsItHandedOutAreNotRead() {
-        assertThat(query.threadsInDiff(new ThreadsInDiffPayload(twoFileDiffView(), loadingThreadsView()))).isEqualTo(new ThreadsInDiffView(List.of()));
-        assertThat(query.threadsInDiff(new ThreadsInDiffPayload(twoFileDiffView(), unavailableThreadsView()))).isEqualTo(new ThreadsInDiffView(List.of()));
+        assertThat(query.commentsInDiff(threadsOnlyPayload(twoFileDiffView(), loadingThreadsView())).threads()).isEqualTo(List.of());
+        assertThat(query.commentsInDiff(threadsOnlyPayload(twoFileDiffView(), unavailableThreadsView())).threads()).isEqualTo(List.of());
+    }
+
+    @Test
+    void shouldKeepAResolvedThreadFromUnderItsLineUntilResolvedThreadsAreShown() {
+        ReviewThreadView open = openThreadView(diffPath(), leftOn(3));
+        ReviewThreadView resolved = resolvedThreadView(diffPath(), rightOn(3));
+        ReadThreadsView threads = readThreadsViewOf(open, resolved);
+
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), threads, loadingPendingView(), false)).underLines())
+                .as("the TUI's r and the window's r both ask review which threads show")
+                .isEqualTo(List.of(onLineView(open, 1)));
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), threads, loadingPendingView(), true)).underLines())
+                .isEqualTo(List.of(onLineView(open, 1), onLineView(resolved, 2)));
+    }
+
+    @Test
+    void shouldListEveryThreadInCommentsResolvedOnesIncludedWhetherOrNotTheyShowUnderTheirLines() {
+        ReviewThreadView resolved = resolvedThreadView(diffPath(), rightOn(3));
+
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), readThreadsViewOf(resolved), loadingPendingView(), false)).listed())
+                .isEqualTo(List.of(onLineView(resolved, 2)));
     }
 }

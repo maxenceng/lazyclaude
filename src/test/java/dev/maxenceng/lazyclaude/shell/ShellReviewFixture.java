@@ -75,10 +75,10 @@ final class ShellReviewFixture {
         when(reviews.threadsOf(any())).thenReturn(threads);
         when(reviews.pendingOf(any())).thenReturn(pending);
         ReviewQuery joining = ReviewPaneFixture.joiningReviews();
-        when(reviews.threadsInDiff(any()))
-                .thenAnswer(call -> joining.threadsInDiff(call.getArgument(0)));
-        when(reviews.pendingInDiff(any()))
-                .thenAnswer(call -> joining.pendingInDiff(call.getArgument(0)));
+        when(reviews.commentsInDiff(any()))
+                .thenAnswer(call -> joining.commentsInDiff(call.getArgument(0)));
+        when(reviews.summaryToSubmit(any()))
+                .thenAnswer(call -> joining.summaryToSubmit(call.getArgument(0)));
         when(reviews.anchorOf(any()))
                 .thenAnswer(call -> joining.anchorOf(call.getArgument(0)));
         return reviews;

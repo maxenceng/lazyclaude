@@ -4,7 +4,7 @@ import dev.maxenceng.lazyclaude.review.domain.ThreadInDiff;
 import dev.maxenceng.lazyclaude.review.published.ThreadLine;
 
 /** A thread and the diff line it shows under. */
-public record ThreadInDiffView(ReviewThreadView thread, ThreadLine line) {
+public record ThreadInDiffView(ReviewThreadView thread, ThreadLine line) implements CommentInDiffView {
 
     static ThreadInDiffView from(ThreadInDiff placed) {
         return builder().thread(ReviewThreadView.from(placed.thread())).line(placed.line()).build();

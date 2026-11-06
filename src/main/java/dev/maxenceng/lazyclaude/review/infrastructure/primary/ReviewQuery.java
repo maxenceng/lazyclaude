@@ -1,12 +1,16 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
 import dev.maxenceng.lazyclaude.review.application.PendingReviewApplicationService;
 import dev.maxenceng.lazyclaude.review.application.PullRequestDiffApplicationService;
 import dev.maxenceng.lazyclaude.review.application.ReviewApplicationService;
+import dev.maxenceng.lazyclaude.review.domain.CommentsInDiff;
+import dev.maxenceng.lazyclaude.review.domain.DiffReading;
 import dev.maxenceng.lazyclaude.review.published.Reason;
+import dev.maxenceng.lazyclaude.review.published.Summary;
 
 /**
  * What a frontend asks of {@code review}: the open and the merged pull requests of a project as views, and a view again after each fetch,
@@ -48,12 +52,29 @@ public final class ReviewQuery {
     }
 
     /**
-     * The threads with the diff lines they show under, in diff order, from whatever each read last answered: none until the threads are
-     * read, and every one on no line until the diff is. It reads nothing.
+     * The pull request's comments as the review screen shows them, from whatever each read last answered: no thread until the threads are
+     * read, no pending comment until the pending review is, and every one on no line until the diff is. It reads nothing.
      */
-    public ThreadsInDiffView threadsInDiff(ThreadsInDiffPayload payload) {
-        return ThreadsInDiffView.from(pullRequestDiff.threadsInDiff(
-                ReviewReadings.diffOf(payload.diff()), ReviewReadings.threadsOf(payload.threads())));
+    public CommentsInDiffView commentsInDiff(CommentsInDiffPayload payload) {
+        DiffReading diff = ReviewReadings.diffOf(payload.diff());
+        CommentsInDiff comments = CommentsInDiff.builder()
+                .threads(pullRequestDiff.threadsInDiff(diff, ReviewReadings.threadsOf(payload.threads())))
+                .pending(pendingReview.pendingInDiff(diff, ReviewReadings.commentsOf(payload.pending())))
+                .build();
+        return CommentsInDiffView.from(comments, payload.resolvedShown());
+    }
+
+    /** What the summary box starts from and a submit sends, from the summary typed and the pending review as last read. It reads nothing. */
+    public SummaryToSubmitView summaryToSubmit(SummaryToSubmitPayload payload) {
+        Optional<Summary> adopted = payload.pending() instanceof OpenPendingReviewView open ? Optional.of(open.summary()) : Optional.empty();
+        return new SummaryToSubmitView(pendingReview.summaryToSubmit(payload.draft().typed(), adopted));
+    }
+
+    /** The open pull request whose head is the branch, from the pull requests as last pushed: a ticket's pull request. It reads nothing. */
+    public PullRequestOnView pullRequestOn(PullRequestOnPayload payload) {
+        return payload.pullRequests() instanceof OpenPullRequestsView open
+                ? open.on(payload.branch()).<PullRequestOnView>map(HeadedPullRequestView::new).orElseGet(NoHeadedPullRequestView::new)
+                : new NoHeadedPullRequestView();
     }
 
     /** What stands until the pending review's read answers. */
@@ -76,15 +97,6 @@ public final class ReviewQuery {
         } catch (DomainException refused) {
             return new RefusedAnchorView(new Reason(refused.getMessage()));
         }
-    }
-
-    /**
-     * The pending comments with the diff lines they show under, in diff order, from whatever each read last answered: none until the
-     * pending review is read, and every one on no line until the diff is. It reads nothing.
-     */
-    public PendingCommentsInDiffView pendingInDiff(PendingCommentsInDiffPayload payload) {
-        return PendingCommentsInDiffView.from(pendingReview.pendingInDiff(
-                ReviewReadings.diffOf(payload.diff()), ReviewReadings.commentsOf(payload.pending())));
     }
 
     /** What stands until the first fetch answers. */

@@ -14,12 +14,14 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentPayl
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingDeletePayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingEditPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReplyPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingSubmitPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedWriteView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadInDiffView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.WrittenReviewView;
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
@@ -329,8 +331,8 @@ final class ReviewKeys {
         pane.selectedEntry().ifPresent(entry -> {
             pane.goToSelectedComment();
             switch (entry) {
-                case PendingEntry pending -> edit(pane, pending.placed().comment(), pane.lineOf(pending.placed().line()));
-                case ThreadEntry _ -> {}
+                case PendingInDiffView pending -> edit(pane, pending.comment(), pane.lineOf(pending.line()));
+                case ThreadInDiffView _ -> {}
             }
         });
     }
@@ -339,13 +341,13 @@ final class ReviewKeys {
     private void actOnSelectedComment(ReviewPane pane, KeyEvent key) {
         pane.selectedEntry().ifPresent(entry -> {
             switch (entry) {
-                case PendingEntry pending when key.isChar(DELETE) -> {
+                case PendingInDiffView pending when key.isChar(DELETE) -> {
                     pane.goToSelectedComment();
-                    delete(pane, pending.placed().comment());
+                    delete(pane, pending.comment());
                 }
-                case ThreadEntry thread when key.isChar(COMMENT) ->
+                case ThreadInDiffView thread when key.isChar(COMMENT) ->
                     pane.openBox(new CommentBox(
-                            new ReplyTarget(thread.placed().thread()), pane.lineOfThread(thread.placed().thread())));
+                            new ReplyTarget(thread.thread()), pane.lineOfThread(thread.thread())));
                 default -> {}
             }
         });

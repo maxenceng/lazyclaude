@@ -6,6 +6,7 @@ Date: 2026-11-05
 
 Accepted. Builds on ADR 0009 and ADR 0041 (the pending review), ADR 0051 (the mouse), ADR 0057 (the protocol client) and
 ADR 0085 (a controller per context).
+Amended by ADR 0090: the screen rules this ADR ported from the shell are asked of `review`.
 
 ## Context
 
@@ -16,7 +17,7 @@ a webview has a native popup and a native scroll.
 
 ## Decision
 
-- **`threadsInDiff`, `pendingInDiff` and `anchorOf` are asked of the sidecar, never worked out again in TypeScript.** After
+- **Where comments hang (`commentsInDiff`, ADR 0090) and `anchorOf` are asked of the sidecar, never worked out again in TypeScript.** After
   each read, and each write's answer, the session asks where the threads and the pending comments sit and builds its rows
   from the answer; only the latest ask lands, and one that fails is the diff's fault, with its retry. `c`, `v` and a drag wait for `anchorOf` before they open the box or mark the
   range, and a refusal is the notice `review` raises on the status line, in the sidecar's words.
@@ -42,15 +43,9 @@ a webview has a native popup and a native scroll.
 - A range dragged upward asks for `first` the line released on and `last` the line pressed on.
 - deferred: after a submit the TUI offers to respond to the review when the ticket allows it; the window leaves the review
   and does not — close it when the window starts a session from a prompt.
-- The diff lines are numbered in the window, files then hunks then lines, to match the index `threadsInDiff`,
-  `pendingInDiff` and `anchorOf` speak; the `DiffLine` view does not carry it.
-- Some of the TUI's screen rules are ported from the shell rather than asked of `review`: what a submit sends (the summary
-  typed, else the adopted review's body), resolved threads kept out of the diff, pending comments listed before threads,
-  the last-written pending comment on a line as the one `enter` and `x` act on, and the join of a ticket's branch to its
-  pull request.
+- The diff lines are numbered in the window, files then hunks then lines, to match the index `commentsInDiff` and
+  `anchorOf` speak; the `DiffLine` view does not carry it.
 - deferred: the window counts diff lines itself and nothing ties the count to the domain's — close it when the domain's
   numbering changes, by putting the index on the `DiffLine` view.
-- deferred: the ported screen rules have a copy in the shell and one in `frontend/src/review/` — close it when either copy
-  changes, by moving the rule into `review` and asking it.
 - deferred: a half page is a count of the lines the view shows, measured from the first line's height; a diff whose lines
   wrap or differ in height pages by a different amount — close it when a page is seen to land wrong.

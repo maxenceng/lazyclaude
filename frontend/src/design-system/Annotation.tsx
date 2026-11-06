@@ -1,3 +1,4 @@
+import { COMMENT_MARKS, CommentKind } from './comment';
 import styles from './Annotation.module.css';
 
 interface Comment {
@@ -6,7 +7,7 @@ interface Comment {
 }
 
 interface Props {
-  kind: 'thread' | 'pending';
+  kind: CommentKind;
   heading: string;
   comments: readonly Comment[];
   dim: boolean;
@@ -18,7 +19,7 @@ export const Annotation = ({ kind, heading, comments, dim }: Props) => {
     <li>
       <article className={[styles.annotation, styles[kind], dim ? styles.dim : ''].join(' ')}>
         <p className={styles.heading}>
-          <span className={styles.mark}>{kind === 'pending' ? '✎' : '◆'}</span> {heading}
+          <span className={styles.mark}>{COMMENT_MARKS[kind]}</span> {heading}
         </p>
         {comments.map((comment, index) => (
           <p key={index} className={index === 0 ? undefined : styles.reply}>

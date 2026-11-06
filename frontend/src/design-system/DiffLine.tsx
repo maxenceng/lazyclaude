@@ -1,7 +1,14 @@
+import { LEFT_BUTTON } from './mouse';
 import styles from './DiffLine.module.css';
 
+export enum LineChange {
+  Added = 'added',
+  Removed = 'removed',
+  Context = 'context',
+}
+
 interface Props {
-  change: 'added' | 'removed' | 'context';
+  change: LineChange;
   oldNumber: number | undefined;
   newNumber: number | undefined;
   text: string;
@@ -11,7 +18,7 @@ interface Props {
   onPress: (index: number) => void;
 }
 
-const SIGNS = { added: '+', removed: '-', context: ' ' } as const;
+const SIGNS: Readonly<Record<LineChange, string>> = { added: '+', removed: '-', context: ' ' };
 
 /**
  * One line of a diff between its two number gutters: the sign carries what changed, the pane's muted tint only backs it. The cursor's
@@ -27,7 +34,7 @@ export const DiffLine = ({ change, oldNumber, newNumber, text, index, cursor, in
         data-line={index}
         aria-current={cursor ? 'true' : undefined}
         onMouseDown={(event) => {
-          if (event.button === 0) {
+          if (event.button === LEFT_BUTTON) {
             onPress(index);
           }
         }}

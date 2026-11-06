@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react';
 import styles from './TextArea.module.css';
 
+const CANCEL_KEY = 'escape';
+const SAVE_KEY = 's';
+
 interface Props {
   label: string;
   value: string;
@@ -27,10 +30,11 @@ export const TextArea = ({ label, value, readOnly, onChange, onSave, onCancel }:
         rows={6}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') {
+          const key = event.key.toLowerCase();
+          if (key === CANCEL_KEY) {
             event.preventDefault();
             onCancel();
-          } else if (event.key.toLowerCase() === 's' && event.ctrlKey) {
+          } else if (key === SAVE_KEY && event.ctrlKey) {
             event.preventDefault();
             onSave();
           }

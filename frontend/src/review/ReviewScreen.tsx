@@ -1,14 +1,33 @@
 import type { TFunction } from 'i18next';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Annotation, Busy, Button, CommentRow, Dialog, DiffLine, DiffRule, FileRow, Pane, Rows, Text, TextArea } from '../design-system';
-import type { DiffFileView, PendingCommentView, PlacedThread, ThreadView } from '../protocol';
+import {
+  Alert,
+  Annotation,
+  Busy,
+  Button,
+  CommentKind,
+  CommentRow,
+  Dialog,
+  DiffLine,
+  DiffRule,
+  FileChange,
+  FileRow,
+  LineChange,
+  Pane,
+  Rows,
+  RuleKind,
+  Text,
+  TextArea,
+  Tone,
+} from '../design-system';
+import type { ReviewCommentInDiffView, ReviewDiffFileView, ReviewDiffLine, ReviewPendingCommentView, ReviewPlacedThread, ReviewReviewThreadView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import { DragRelease } from './dragRelease';
 import { type CommentBox, TargetKind } from './commentBox';
 import { type DiffRow, RowKind } from './diffRows';
 import { type DiffState, DiffStateKind } from './diffState';
-import { type CommentEntry, EntryKind, type OpenReview } from './openReview';
+import type { OpenReview } from './openReview';
 
 interface ReviewProps {
   review: OpenReview;
@@ -22,9 +41,9 @@ interface DiffProps extends ReviewProps {
 
 const RANGE_DASH = '–';
 
-const linesOf = (placed: PlacedThread): string => (placed.first === placed.last ? String(placed.last) : `${placed.first}${RANGE_DASH}${placed.last}`);
+const linesOf = (placed: ReviewPlacedThread): string => (placed.first === placed.last ? String(placed.last) : `${placed.first}${RANGE_DASH}${placed.last}`);
 
-const labelOf = (file: DiffFileView, renamed: (from: string, to: string) => string): string =>
+const labelOf = (file: ReviewDiffFileView, renamed: (from: string, to: string) => string): string =>
   file.status.kind === 'renamedFile' ? renamed(file.status.from, file.path) : file.path;
 
 /** The main view of a review: the diff, unified, with the threads and your pending comments under their lines. */
@@ -44,9 +63,9 @@ const Body = ({ state, review, focused, onFocus, onRetry }: DiffProps & { state:
     case DiffStateKind.Loading:
       return <Busy>{t('diff.loading')}</Busy>;
     case DiffStateKind.Unavailable:
-      return <Text tone="dim">{t(state.tooLarge ? 'diff.tooLarge' : 'diff.unavailable', { reason: state.reason })}</Text>;
+      return <Text tone={Tone.Dim}>{t(state.tooLarge ? 'diff.tooLarge' : 'diff.unavailable', { reason: state.reason })}</Text>;
     case DiffStateKind.Empty:
-      return <Text tone="dim">{t('diff.empty')}</Text>;
+      return <Text tone={Tone.Dim}>{t('diff.empty')}</Text>;
     case DiffStateKind.Fault:
       return (
         <Alert title={t('diff.fault')} action={<Button onClick={onRetry}>{t('diff.retry')}</Button>}>
@@ -88,14 +107,14 @@ const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow
   const { t } = useTranslation('review');
   switch (row.kind) {
     case RowKind.File:
-      return <DiffRule kind="file" text={labelOf(row.file, (from, to) => t('files.renamed', { from, to }))} />;
+      return <DiffRule kind={RuleKind.File} text={labelOf(row.file, (from, to) => t('files.renamed', { from, to }))} />;
     case RowKind.Hunk:
-      return <DiffRule kind="hunk" text={row.header} />;
+      return <DiffRule kind={RuleKind.Hunk} text={row.header} />;
     case RowKind.Line: {
       const line = row.line;
       return (
         <DiffLine
-          change={line.kind === 'addedLine' ? 'added' : line.kind === 'removedLine' ? 'removed' : 'context'}
+          change={LINE_CHANGES[line.kind]}
           oldNumber={line.kind === 'addedLine' ? undefined : line.oldNumber}
           newNumber={line.kind === 'removedLine' ? undefined : line.newNumber}
           text={line.content}
@@ -116,16 +135,16 @@ const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow
   }
 };
 
-const ThreadAnnotation = ({ thread }: { thread: ThreadView }) => {
+const ThreadAnnotation = ({ thread }: { thread: ReviewReviewThreadView }) => {
   const { t } = useTranslation('review');
   const placed = thread.position.kind === 'placedThread' ? thread.position : undefined;
-  return <Annotation kind="thread" heading={placed === undefined ? '' : t('annotation.lines', { lines: linesOf(placed) })} comments={thread.comments} dim={thread.resolved} />;
+  return <Annotation kind={CommentKind.Thread} heading={placed === undefined ? '' : t('annotation.lines', { lines: linesOf(placed) })} comments={thread.comments} dim={thread.resolved} />;
 };
 
-const PendingAnnotation = ({ comment }: { comment: PendingCommentView }) => {
+const PendingAnnotation = ({ comment }: { comment: ReviewPendingCommentView }) => {
   const { t } = useTranslation('review');
   const heading = comment.anchor.kind === 'onDiffAnchor' ? t('annotation.lines', { lines: linesOf(comment.anchor.position) }) : t('annotation.reply');
-  return <Annotation kind="pending" heading={heading} comments={[{ author: t('annotation.you'), body: comment.body }]} dim={false} />;
+  return <Annotation kind={CommentKind.Pending} heading={heading} comments={[{ author: t('annotation.you'), body: comment.body }]} dim={false} />;
 };
 
 const LAST_SEGMENT = /[^/]*$/;
@@ -133,12 +152,18 @@ const COMMIT_LENGTH = 7;
 
 const lastSegment = (path: string): string => LAST_SEGMENT.exec(path)?.[0] ?? path;
 
-const CHANGES = {
-  addedFile: 'added',
-  modifiedFile: 'modified',
-  deletedFile: 'deleted',
-  renamedFile: 'renamed',
-} as const satisfies Record<DiffFileView['status']['kind'], string>;
+const CHANGES: Readonly<Record<ReviewDiffFileView['status']['kind'], FileChange>> = {
+  addedFile: FileChange.Added,
+  modifiedFile: FileChange.Modified,
+  deletedFile: FileChange.Deleted,
+  renamedFile: FileChange.Renamed,
+};
+
+const LINE_CHANGES: Readonly<Record<ReviewDiffLine['kind'], LineChange>> = {
+  addedLine: LineChange.Added,
+  removedLine: LineChange.Removed,
+  contextLine: LineChange.Context,
+};
 
 /** The panel of the files the pull request changes. */
 export const FilesPane = ({ review, focused, onFocus }: ReviewProps) => {
@@ -174,7 +199,7 @@ export const FilesPane = ({ review, focused, onFocus }: ReviewProps) => {
   );
 };
 
-const whereOf = (path: string, position: ThreadView['position'], t: TFunction<'review'>, author?: string): string => {
+const whereOf = (path: string, position: ReviewReviewThreadView['position'], t: TFunction<'review'>, author?: string): string => {
   const file = lastSegment(path);
   if (position.kind !== 'placedThread') {
     return t('comments.outdated', { file });
@@ -194,13 +219,13 @@ export const CommentsPane = ({ review, focused, onFocus }: ReviewProps) => {
       {threads.kind === 'loadingThreads' ? (
         <Busy>{t('comments.loading')}</Busy>
       ) : threads.kind === 'unavailableThreads' ? (
-        <Text tone="dim">{t('comments.unknown', { reason: threads.reason })}</Text>
+        <Text tone={Tone.Dim}>{t('comments.unknown', { reason: threads.reason })}</Text>
       ) : review.entries().length === 0 ? (
-        <Text tone="dim">{t('comments.none')}</Text>
+        <Text tone={Tone.Dim}>{t('comments.none')}</Text>
       ) : (
         <Rows>
           {review.entries().map((entry, index) => (
-            <EntryRow key={entry.kind === EntryKind.Pending ? entry.placed.comment.id : entry.placed.thread.id} entry={entry} selected={index === selected} onPress={() => {
+            <EntryRow key={entry.kind === 'pendingInDiff' ? entry.comment.id : entry.thread.id} entry={entry} selected={index === selected} onPress={() => {
               onFocus();
               review.pressComment(index, focused);
             }} />
@@ -224,25 +249,25 @@ export const ReviewPanel = ({ review }: { review: OpenReview }) => {
       {pending.kind === 'loadingPendingReview' ? (
         <Busy>{t('panel.loading')}</Busy>
       ) : pending.kind === 'unavailablePendingReview' ? (
-        <Text tone="dim" tight>
+        <Text tone={Tone.Dim} tight>
           {t('panel.unknown', { reason: pending.reason })}
         </Text>
       ) : pending.kind === 'noPendingReview' && summary === '' ? (
-        <Text tone="dim" tight>
+        <Text tone={Tone.Dim} tight>
           {t('panel.none')}
         </Text>
       ) : (
         <>
-          <Text tight tone={summary === '' ? 'dim' : 'plain'}>
+          <Text tight tone={summary === '' ? Tone.Dim : Tone.Plain}>
             {summary === '' ? t('panel.noSummary') : summary}
           </Text>
           <Text tight>{t('panel.count', { count: pending.kind === 'openPendingReview' ? pending.comments.length : 0 })}</Text>
           {pending.kind === 'openPendingReview' && pending.headMove.kind === 'movedHead' ? (
             <>
-              <Text tight tone="warning">
+              <Text tight tone={Tone.Warning}>
                 {t('panel.writtenOn', { commit: pending.headMove.writtenOn.slice(0, COMMIT_LENGTH) })}
               </Text>
-              <Text tight tone="warning">
+              <Text tight tone={Tone.Warning}>
                 {t('panel.headIs', { commit: pending.headMove.head.slice(0, COMMIT_LENGTH) })}
               </Text>
             </>
@@ -284,8 +309,8 @@ const BoxDialog = ({ review, box }: { review: OpenReview; box: CommentBox }) => 
         onSave={() => review.saveBox()}
         onCancel={() => review.cancelBox()}
       />
-      {box.saving ? <Text tone="dim" tight>{t('box.saving')}</Text> : null}
-      {box.notSaved === undefined ? null : <Text tone="warning" tight>{t('box.notSaved', { reason: box.notSaved })}</Text>}
+      {box.saving ? <Text tone={Tone.Dim} tight>{t('box.saving')}</Text> : null}
+      {box.notSaved === undefined ? null : <Text tone={Tone.Warning} tight>{t('box.notSaved', { reason: box.notSaved })}</Text>}
     </Dialog>
   );
 };
@@ -306,16 +331,16 @@ export const ReviewDialogs = ({ review }: { review: OpenReview }) => {
   ) : null;
 };
 
-const EntryRow = ({ entry, selected, onPress }: { entry: CommentEntry; selected: boolean; onPress: () => void }) => {
+const EntryRow = ({ entry, selected, onPress }: { entry: ReviewCommentInDiffView; selected: boolean; onPress: () => void }) => {
   const { t } = useTranslation('review');
-  if (entry.kind === EntryKind.Pending) {
-    const { anchor } = entry.placed.comment;
-    return <CommentRow kind="pending" open={false} where={whereOf(anchor.path, anchor.position, t)} dim={false} selected={selected} onSelect={onPress} />;
+  if (entry.kind === 'pendingInDiff') {
+    const { anchor } = entry.comment;
+    return <CommentRow kind={CommentKind.Pending} open={false} where={whereOf(anchor.path, anchor.position, t)} dim={false} selected={selected} onSelect={onPress} />;
   }
-  const { thread } = entry.placed;
+  const { thread } = entry;
   return (
     <CommentRow
-      kind="thread"
+      kind={CommentKind.Thread}
       open={thread.open}
       where={whereOf(thread.path, thread.position, t, thread.comments[0]?.author)}
       dim={thread.resolved}

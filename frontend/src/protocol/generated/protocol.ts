@@ -61,7 +61,6 @@ export type ReviewDiffLine = ReviewAddedLine | ReviewRemovedLine | ReviewContext
 export type ReviewThreadsView = ReviewLoadingThreadsView | ReviewReadThreadsView | ReviewUnavailableThreadsView;
 export type ReviewThreadPosition = ReviewPlacedThread | ReviewOutdatedThread;
 export type ReviewThreadSide = 'LEFT' | 'RIGHT';
-export type ReviewThreadLine = ReviewOnDiffLine | ReviewNoDiffLine;
 export type ReviewPendingReviewView =
   | ReviewLoadingPendingReviewView
   | ReviewNoPendingReviewView
@@ -69,10 +68,14 @@ export type ReviewPendingReviewView =
   | ReviewUnavailablePendingReviewView;
 export type ReviewPendingAnchorView = ReviewOnDiffAnchorView | ReviewReplyAnchorView;
 export type ReviewHeadMove = ReviewMovedHead | ReviewHeldHead;
+export type ReviewThreadLine = ReviewOnDiffLine | ReviewNoDiffLine;
+export type ReviewCommentInDiffView = ReviewThreadInDiffView | ReviewPendingInDiffView;
 export type ReviewCommentAnchorView = ReviewOnDiffAnchorView | ReviewRefusedAnchorView;
+export type ReviewSummaryDraftPayload = ReviewTypedSummaryPayload | ReviewUntypedSummaryPayload;
 export type ReviewPullRequestsView =
   ReviewCheckingPullRequestsView | ReviewOpenPullRequestsView | ReviewUnavailablePullRequestsView;
 export type ReviewCheckOutcome = 'FAILED' | 'PENDING' | 'PASSED';
+export type ReviewPullRequestOnView = ReviewHeadedPullRequestView | ReviewNoHeadedPullRequestView;
 export type ReviewPendingReviewWriteView = ReviewWrittenReviewView | ReviewRefusedWriteView;
 export type SessionWatchedPayload = SessionWatchedSessionPayload | SessionNoWatchedSessionPayload;
 
@@ -141,9 +144,9 @@ export interface LazyclaudeProtocol {
       params: ReviewPullRequestPayload;
       result: ReviewThreadsView;
     };
-    'review/threadsInDiff': {
-      params: ReviewThreadsInDiffPayload;
-      result: ReviewThreadInDiffView[];
+    'review/commentsInDiff': {
+      params: ReviewCommentsInDiffPayload;
+      result: ReviewCommentsInDiffView;
     };
     'review/loadingPending': {
       params: SidecarNoParams;
@@ -157,9 +160,13 @@ export interface LazyclaudeProtocol {
       params: ReviewCommentAnchorPayload;
       result: ReviewCommentAnchorView;
     };
-    'review/pendingInDiff': {
-      params: ReviewPendingCommentsInDiffPayload;
-      result: ReviewPendingInDiffView[];
+    'review/summaryToSubmit': {
+      params: ReviewSummaryToSubmitPayload;
+      result: string;
+    };
+    'review/pullRequestOn': {
+      params: ReviewPullRequestOnPayload;
+      result: ReviewPullRequestOnView;
     };
     'review/checking': {
       params: SidecarNoParams;
@@ -593,20 +600,11 @@ export interface ReviewPullRequestPayload {
   root: string;
   number: number;
 }
-export interface ReviewThreadsInDiffPayload {
+export interface ReviewCommentsInDiffPayload {
   diff: ReviewPullRequestDiffView;
   threads: ReviewThreadsView;
-}
-export interface ReviewThreadInDiffView {
-  thread: ReviewReviewThreadView;
-  line: ReviewThreadLine;
-}
-export interface ReviewOnDiffLine {
-  kind: 'onDiffLine';
-  index: number;
-}
-export interface ReviewNoDiffLine {
-  kind: 'noDiffLine';
+  pending: ReviewPendingReviewView;
+  resolvedShown: boolean;
 }
 export interface ReviewLoadingPendingReviewView {
   kind: 'loadingPendingReview';
@@ -648,6 +646,30 @@ export interface ReviewUnavailablePendingReviewView {
   kind: 'unavailablePendingReview';
   reason: string;
 }
+export interface ReviewCommentsInDiffView {
+  threads: ReviewThreadInDiffView[];
+  pending: ReviewPendingInDiffView[];
+  underLines: ReviewThreadInDiffView[];
+  listed: ReviewCommentInDiffView[];
+  lastOnLines: ReviewPendingInDiffView[];
+}
+export interface ReviewThreadInDiffView {
+  kind: 'threadInDiff';
+  thread: ReviewReviewThreadView;
+  line: ReviewThreadLine;
+}
+export interface ReviewOnDiffLine {
+  kind: 'onDiffLine';
+  index: number;
+}
+export interface ReviewNoDiffLine {
+  kind: 'noDiffLine';
+}
+export interface ReviewPendingInDiffView {
+  kind: 'pendingInDiff';
+  comment: ReviewPendingCommentView;
+  line: ReviewThreadLine;
+}
 export interface ReviewCommentAnchorPayload {
   diff: ReviewPullRequestDiffView;
   first: number;
@@ -657,13 +679,20 @@ export interface ReviewRefusedAnchorView {
   kind: 'refusedAnchor';
   reason: string;
 }
-export interface ReviewPendingCommentsInDiffPayload {
-  diff: ReviewPullRequestDiffView;
+export interface ReviewSummaryToSubmitPayload {
   pending: ReviewPendingReviewView;
+  draft: ReviewSummaryDraftPayload;
 }
-export interface ReviewPendingInDiffView {
-  comment: ReviewPendingCommentView;
-  line: ReviewThreadLine;
+export interface ReviewTypedSummaryPayload {
+  kind: 'typedSummaryPayload';
+  summary: string;
+}
+export interface ReviewUntypedSummaryPayload {
+  kind: 'untypedSummaryPayload';
+}
+export interface ReviewPullRequestOnPayload {
+  pullRequests: ReviewPullRequestsView;
+  branch: string;
 }
 export interface ReviewCheckingPullRequestsView {
   kind: 'checkingPullRequests';
@@ -686,6 +715,13 @@ export interface ReviewCheckView {
 export interface ReviewUnavailablePullRequestsView {
   kind: 'unavailablePullRequests';
   reason: string;
+}
+export interface ReviewHeadedPullRequestView {
+  kind: 'headedPullRequest';
+  pullRequest: ReviewPullRequestView;
+}
+export interface ReviewNoHeadedPullRequestView {
+  kind: 'noHeadedPullRequest';
 }
 export interface ReviewReviewPayload {
   root: string;

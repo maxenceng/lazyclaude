@@ -1,6 +1,6 @@
 import { headingSlugs } from '../design-system';
 import { i18n } from '../i18n/i18n';
-import type { Client, DocumentView } from '../protocol';
+import type { Client, DocsDocumentView } from '../protocol';
 import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import { DocsSelection, type RowKey } from './docsSelection';
@@ -25,7 +25,7 @@ const keyOf = (row: DocsRow): RowKey => ({ kind: row.kind, path: row.path });
 
 const sameKey = (row: DocsRow, key: RowKey): boolean => row.kind === key.kind && row.path === key.path;
 
-const contentOf = (document: DocumentView): string | undefined =>
+const contentOf = (document: DocsDocumentView): string | undefined =>
   document.kind === 'readDocument' && document.text.kind === 'content' ? document.text.value : undefined;
 
 const ancestorsOf = (path: string): string[] => path.split('/').slice(0, -1).map((_, index, folders) => folders.slice(0, index + 1).join('/'));

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Alert, Busy, Button, Detail, DocsTreeRow, Document, Pane, Text, Rows } from '../design-system';
+import { Alert, Busy, Button, Detail, DocsTreeRow, Document, Pane, Text, Tone, Rows } from '../design-system';
 import { useStore } from '../shared/useStore';
 import type { DocsController } from './docsController';
 import { type DocsState, DocsStateKind } from './docsState';
@@ -54,12 +54,12 @@ const Unread = ({ state, onRetry }: { state: DocsState; onRetry: () => void }) =
     case DocsStateKind.Loading:
       return <Busy>{t('docs.loading')}</Busy>;
     case DocsStateKind.Empty:
-      return <Text tone="dim">{t('docs.empty')}</Text>;
+      return <Text tone={Tone.Dim}>{t('docs.empty')}</Text>;
     case DocsStateKind.Unavailable:
       return (
         <>
           <Text>{t('docs.unavailable')}</Text>
-          <Text tone="dim">{state.reason}</Text>
+          <Text tone={Tone.Dim}>{state.reason}</Text>
         </>
       );
     case DocsStateKind.Fault:
@@ -91,12 +91,12 @@ const Shown = ({ shown, docs, target }: { shown: ReturnType<DocsController['show
   const { t } = useTranslation('docs');
   switch (shown.kind) {
     case ShownKind.None:
-      return <Text tone="dim">{t('document.noneSelected')}</Text>;
+      return <Text tone={Tone.Dim}>{t('document.noneSelected')}</Text>;
     case ShownKind.Missing:
       return (
         <>
           <Detail facts={[]} title={shown.path} body={undefined} onLink={() => {}} />
-          <Text tone="dim">{t('document.missing')}</Text>
+          <Text tone={Tone.Dim}>{t('document.missing')}</Text>
         </>
       );
     case ShownKind.Found: {
@@ -105,14 +105,14 @@ const Shown = ({ shown, docs, target }: { shown: ReturnType<DocsController['show
         return (
           <>
             <Detail facts={[]} title={document.path} body={undefined} onLink={() => {}} />
-            <Text tone="dim">{document.reason}</Text>
+            <Text tone={Tone.Dim}>{document.reason}</Text>
           </>
         );
       }
       return document.text.kind === 'content' ? (
         <Document source={document.text.value} onLink={(href) => docs.follow(href)} target={target} />
       ) : (
-        <Text tone="dim">{t('document.emptyDocument')}</Text>
+        <Text tone={Tone.Dim}>{t('document.emptyDocument')}</Text>
       );
     }
   }

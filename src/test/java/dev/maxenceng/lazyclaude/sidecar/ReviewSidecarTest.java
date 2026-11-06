@@ -10,28 +10,33 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.unavailableThreadsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.unavailablePullRequestsView;
+import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBranch;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static dev.maxenceng.lazyclaude.review.published.ReasonFixture.reason;
+import static dev.maxenceng.lazyclaude.review.published.SummaryFixture.summary;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.anchorParams;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.checking;
+import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.checkingPullRequestOnParams;
+import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.loadingCommentsParams;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.loadingDiff;
-import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.loadingDiffAndPendingParams;
-import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.loadingDiffAndThreadsParams;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.loadingPending;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.loadingThreads;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.mergedAtOnce;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.mergedChanged;
-import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.noneInDiff;
+import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.noCommentsInDiff;
+import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.noHeadedPullRequest;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.otherReviewParams;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.pullRequestParams;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.pullRequestsAtOnce;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.refusedAnchor;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.reviewChanged;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.reviewParams;
+import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.summaryText;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.unavailableDiff;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.unavailablePending;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.unavailablePullRequests;
 import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.unavailableThreads;
+import static dev.maxenceng.lazyclaude.sidecar.ReviewSidecarFixture.untypedSummaryParams;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.failingAfterReleasing;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.invalidParamsCode;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.linesWritten;
@@ -57,13 +62,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentAnchorPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingCommentsInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentsInDiffPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.CommentsInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.NoHeadedPullRequestView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestOnPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.RefusedAnchorView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewPayload;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffPayload;
-import dev.maxenceng.lazyclaude.review.infrastructure.primary.ThreadsInDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.SummaryToSubmitPayload;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.SummaryToSubmitView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.UntypedSummaryPayload;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
 
 @ExtendWith(MockitoExtension.class)
@@ -125,21 +133,36 @@ class ReviewSidecarTest {
     }
 
     @Test
-    void joins_the_diff_and_the_threads_it_is_sent() {
-        when(review.threadsInDiff(new ThreadsInDiffPayload(loadingDiffView(), loadingThreadsView())))
-                .thenReturn(new ThreadsInDiffView(List.of()));
+    void joins_the_diff_the_threads_and_the_pending_review_it_is_sent() {
+        when(review.commentsInDiff(new CommentsInDiffPayload(loadingDiffView(), loadingThreadsView(), loadingPendingView(), false)))
+                .thenReturn(CommentsInDiffView.builder()
+                        .threads(List.of())
+                        .pending(List.of())
+                        .underLines(List.of())
+                        .listed(List.of())
+                        .lastOnLines(List.of())
+                        .build());
 
-        assertThat(linesWritten(review, request(1, "review/threadsInDiff", loadingDiffAndThreadsParams())))
-                .containsExactly(ready(), resultOf(1, noneInDiff()));
+        assertThat(linesWritten(review, request(1, "review/commentsInDiff", loadingCommentsParams())))
+                .containsExactly(ready(), resultOf(1, noCommentsInDiff()));
     }
 
     @Test
-    void joins_the_diff_and_the_pending_review_it_is_sent() {
-        when(review.pendingInDiff(new PendingCommentsInDiffPayload(loadingDiffView(), loadingPendingView())))
-                .thenReturn(new PendingCommentsInDiffView(List.of()));
+    void answers_the_summary_to_submit_as_its_text() {
+        when(review.summaryToSubmit(new SummaryToSubmitPayload(loadingPendingView(), new UntypedSummaryPayload())))
+                .thenReturn(new SummaryToSubmitView(summary()));
 
-        assertThat(linesWritten(review, request(1, "review/pendingInDiff", loadingDiffAndPendingParams())))
-                .containsExactly(ready(), resultOf(1, noneInDiff()));
+        assertThat(linesWritten(review, request(1, "review/summaryToSubmit", untypedSummaryParams())))
+                .containsExactly(ready(), resultOf(1, summaryText()));
+    }
+
+    @Test
+    void answers_no_pull_request_for_a_branch_while_the_open_ones_are_not_fetched() {
+        when(review.pullRequestOn(new PullRequestOnPayload(checkingPullRequestsView(), headBranch())))
+                .thenReturn(new NoHeadedPullRequestView());
+
+        assertThat(linesWritten(review, request(1, "review/pullRequestOn", checkingPullRequestOnParams())))
+                .containsExactly(ready(), resultOf(1, noHeadedPullRequest()));
     }
 
     @Test
