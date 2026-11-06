@@ -16,6 +16,7 @@ import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSiz
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.raisedTexts;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
@@ -107,7 +108,7 @@ class HostedSessionManagerLaunchLogTest {
         when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         when(worktrees.checkedOutAt(any(), any())).thenReturn(Optional.of(worktreeDirectory()));
 
-        SessionId started = idOf(manager.startTicket(ticketStart(Verb.DESIGN), paneSize()));
+        SessionId started = idOf(manager.startTicket(ticketStart(Verb.DESIGN), ticketPlugin(), paneSize()));
 
         verify(log).change(eq(project()), any(), change.capture());
         assertThat(afterChange(change, 0, emptyLaunchLog()).entries())

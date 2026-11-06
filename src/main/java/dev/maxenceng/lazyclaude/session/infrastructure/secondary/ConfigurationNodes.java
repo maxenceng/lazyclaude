@@ -29,6 +29,7 @@ import dev.maxenceng.lazyclaude.session.published.InvalidChordException;
 import dev.maxenceng.lazyclaude.session.published.ReservedAction;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
 import dev.maxenceng.lazyclaude.session.published.TakenChordException;
+import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 
 /**
  * Reads the text of {@code config.yml} node by node, so that every refusal can name the line it is on. SnakeYAML Engine's YAML 1.2
@@ -42,9 +43,10 @@ final class ConfigurationNodes {
     private static final String NOTIFICATIONS = "notifications";
     private static final String DESKTOP = "desktop";
     private static final String MOUSE = "mouse";
+    private static final String TICKET_PLUGIN = "ticket-plugin";
     private static final Map<String, ReservedAction> ACTIONS = Arrays.stream(ReservedAction.values())
             .collect(Collectors.toUnmodifiableMap(ReservedAction::configurationName, Function.identity()));
-    private static final List<String> TOP_KEYS = List.of(KEYBINDING, NOTIFICATIONS, MOUSE);
+    private static final List<String> TOP_KEYS = List.of(KEYBINDING, NOTIFICATIONS, MOUSE, TICKET_PLUGIN);
     private static final int FIRST_LINE = 1;
     private static final int NO_LINE = 0;
     private static final String LOCATED = "%s:%d: %s";
@@ -63,6 +65,8 @@ final class ConfigurationNodes {
     private static final String ON_LINE = " on line %d";
     private static final String BY_DEFAULT = " by default";
     private static final boolean DESKTOP_BY_DEFAULT = true;
+    private static final String TICKET_PLUGIN_BY_DEFAULT = "ddd-workflow";
+    private static final String NEEDS_A_PLUGIN = "%s needs the name of a plugin such as %s";
 
     private final String file;
     private final boolean mouseByDefault;
@@ -79,6 +83,7 @@ final class ConfigurationNodes {
                 .reservedChords(ReservedChords.defaults())
                 .desktopNotifications(DESKTOP_BY_DEFAULT)
                 .mouse(mouseByDefault)
+                .ticketPlugin(new TicketPlugin(TICKET_PLUGIN_BY_DEFAULT))
                 .build();
     }
 
@@ -90,6 +95,11 @@ final class ConfigurationNodes {
                 .reservedChords(reserved(bindings))
                 .desktopNotifications(notifications.stream().findFirst().map(this::flag).orElse(DESKTOP_BY_DEFAULT))
                 .mouse(top.stream().filter(entry -> entry.key().equals(MOUSE)).findFirst().map(this::flag).orElse(mouseByDefault))
+                .ticketPlugin(top.stream()
+                        .filter(entry -> entry.key().equals(TICKET_PLUGIN))
+                        .findFirst()
+                        .map(this::plugin)
+                        .orElse(new TicketPlugin(TICKET_PLUGIN_BY_DEFAULT)))
                 .build();
     }
 
@@ -189,6 +199,13 @@ final class ConfigurationNodes {
             throw refused(entry.line(), NOT_A_BOOLEAN.formatted(scalar.getValue(), entry.key()));
         }
         return Boolean.parseBoolean(scalar.getValue());
+    }
+
+    private TicketPlugin plugin(ConfigurationEntry entry) {
+        if (!(entry.value() instanceof ScalarNode scalar) || !Tag.STR.equals(scalar.getTag()) || !TicketPlugin.isName(scalar.getValue())) {
+            throw refused(entry.line(), NEEDS_A_PLUGIN.formatted(entry.key(), TICKET_PLUGIN_BY_DEFAULT));
+        }
+        return new TicketPlugin(scalar.getValue());
     }
 
     private ConfigurationRefusedException refused(int line, String reason) {

@@ -25,7 +25,7 @@ public final class ConfigurationSidecarFixture {
     }
 
     private static String configuration(String chords, boolean desktopNotifications, boolean mouse) {
-        return "{\"chords\":[%s],\"desktopNotifications\":%b,\"mouse\":%b}".formatted(chords, desktopNotifications, mouse);
+        return "{\"chords\":[%s],\"desktopNotifications\":%b,\"mouse\":%b,\"ticketPlugin\":\"ddd-workflow\"}".formatted(chords, desktopNotifications, mouse);
     }
 
     private static String chords(String modifier, String rebound, char reboundKey) {

@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.rebindingFocusLeft;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.reboundConfigurationView;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -22,7 +23,7 @@ class ConfigurationViewTest {
     void holds_one_chord_per_action_in_their_order_whatever_list_it_is_given() {
         ReservedChordView zoom = reboundConfigurationView().chords().get(ReservedAction.ZOOM.ordinal());
 
-        ConfigurationView view = new ConfigurationView(List.of(zoom), true, true);
+        ConfigurationView view = new ConfigurationView(List.of(zoom), true, true, ticketPlugin());
 
         assertThat(view.chords())
                 .as("an action the list leaves out keeps its default, as config.yml's does")
@@ -34,7 +35,7 @@ class ConfigurationViewTest {
     void refuses_chords_that_name_one_action_twice() {
         ReservedChordView zoom = reboundConfigurationView().chords().get(ReservedAction.ZOOM.ordinal());
 
-        assertThatThrownBy(() -> new ConfigurationView(List.of(zoom, zoom), true, true))
+        assertThatThrownBy(() -> new ConfigurationView(List.of(zoom, zoom), true, true, ticketPlugin()))
                 .isInstanceOf(ReservedActionTwiceException.class)
                 .hasMessageContaining(ReservedAction.ZOOM.configurationName());
     }

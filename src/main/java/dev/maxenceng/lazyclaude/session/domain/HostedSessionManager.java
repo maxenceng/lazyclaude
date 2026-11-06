@@ -21,6 +21,7 @@ import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
+import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.Warning;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
@@ -84,15 +85,20 @@ public final class HostedSessionManager {
     }
 
     /**
-     * {@code /ticket <verb> <ID>} in the ticket's worktree: where its branch is already checked out, else a worktree added at the
+     * {@code /<plugin>:ticket <verb> <ID>} in the ticket's worktree: where its branch is already checked out, else a worktree added at the
      * path the project keeps it at, on the branch when it exists and on a new one from {@code main} when not. None, with a warning,
      * when that path is taken by something else or git refuses.
      */
-    public HostStart startTicket(TicketStart ticket, PaneSize size) {
+    public HostStart startTicket(TicketStart ticket, TicketPlugin ticketPlugin, PaneSize size) {
         try {
             return start(
                     ticket.worktree().project(),
-                    TicketClaude.builder().session(SessionId.random()).ticket(ticket.ticket()).verb(ticket.verb()).build(),
+                    TicketClaude.builder()
+                            .session(SessionId.random())
+                            .ticket(ticket.ticket())
+                            .verb(ticket.verb())
+                            .plugin(ticketPlugin)
+                            .build(),
                     ticketDirectory(ticket.worktree()),
                     size);
         } catch (WorktreeUnavailableException unavailable) {

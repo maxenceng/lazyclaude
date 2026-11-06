@@ -9,9 +9,11 @@ import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
+import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 
-/** {@code claude --session-id <id> -n "<ID> <verb>" "/ticket <verb> <ID>"}: a session begun to run a verb on a ticket. */
-public record TicketClaude(SessionId session, LinkedTicketId ticket, Verb verb) implements LaunchCommand {
+/** {@code claude --session-id <id> -n "<ID> <verb>" "/<plugin>:ticket <verb> <ID>"}: a session begun to run a verb on a ticket. */
+public record TicketClaude(SessionId session, LinkedTicketId ticket, Verb verb, TicketPlugin plugin)
+        implements LaunchCommand {
 
     private static final String SESSION_NAME = "%s %s";
 
@@ -19,6 +21,7 @@ public record TicketClaude(SessionId session, LinkedTicketId ticket, Verb verb) 
         Assert.notNull("session", session);
         Assert.notNull("ticket", ticket);
         Assert.notNull("verb", verb);
+        Assert.notNull("plugin", plugin);
     }
 
     @Override
@@ -42,6 +45,7 @@ public record TicketClaude(SessionId session, LinkedTicketId ticket, Verb verb) 
         private SessionId session;
         private LinkedTicketId ticket;
         private Verb verb;
+        private TicketPlugin plugin;
 
         private TicketClaudeBuilder() {}
 
@@ -60,8 +64,13 @@ public record TicketClaude(SessionId session, LinkedTicketId ticket, Verb verb) 
             return this;
         }
 
+        public TicketClaudeBuilder plugin(TicketPlugin plugin) {
+            this.plugin = plugin;
+            return this;
+        }
+
         public TicketClaude build() {
-            return new TicketClaude(session, ticket, verb);
+            return new TicketClaude(session, ticket, verb, plugin);
         }
     }
 }

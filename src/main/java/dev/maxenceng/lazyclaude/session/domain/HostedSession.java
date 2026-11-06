@@ -33,7 +33,7 @@ public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCom
 
     /** The ticket this session was started for, none for a plain or resumed one. */
     public Optional<LinkedTicketId> ticket() {
-        return command instanceof TicketClaude(_, LinkedTicketId ticket, _) ? Optional.of(ticket) : Optional.empty();
+        return command instanceof TicketClaude(_, LinkedTicketId ticket, _, _) ? Optional.of(ticket) : Optional.empty();
     }
 
     /**
@@ -56,12 +56,12 @@ public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCom
 
     /** The ticket this session was started to close out with {@code /ticket done}, none for a session that ran any other verb. */
     public Optional<LinkedTicketId> doneTicket() {
-        return command instanceof TicketClaude(_, LinkedTicketId ticket, Verb verb) && verb == Verb.DONE ? Optional.of(ticket) : Optional.empty();
+        return command instanceof TicketClaude(_, LinkedTicketId ticket, Verb verb, _) && verb == Verb.DONE ? Optional.of(ticket) : Optional.empty();
     }
 
     /** Whether this session was started to run {@code verb} on {@code ticket}. */
     public boolean runs(LinkedTicketId ticket, Verb verb) {
-        return command instanceof TicketClaude(_, LinkedTicketId started, Verb ran) && started.equals(ticket) && ran == verb;
+        return command instanceof TicketClaude(_, LinkedTicketId started, Verb ran, _) && started.equals(ticket) && ran == verb;
     }
 
     public static HostedSessionBuilder builder() {

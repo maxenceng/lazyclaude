@@ -364,6 +364,7 @@ export interface SessionConfigurationView {
   chords: SessionReservedChordView[];
   desktopNotifications: boolean;
   mouse: boolean;
+  ticketPlugin: string;
 }
 export interface SessionReservedChordView {
   action: SessionReservedAction;

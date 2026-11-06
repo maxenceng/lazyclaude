@@ -18,15 +18,23 @@ import dev.maxenceng.lazyclaude.session.domain.StartedAt;
 import dev.maxenceng.lazyclaude.session.domain.TicketClaude;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * One line of the launch log, one launch: the session, where it ran, when it started, the kind of {@code claude} it was and,
- * for a {@code /ticket} one, its ticket and verb; and when its {@code claude} exited by itself, none otherwise. Every field is as
+ * for a ticket one, its ticket, verb and plugin; and when its {@code claude} exited by itself, none otherwise. Every field is as
  * the line has it, null where the line lacks it.
  */
 record LaunchLogLine(
-        String session, String directory, String startedAt, String kind, String ticket, String verb, String endedAt) {
+        String session,
+        String directory,
+        String startedAt,
+        String kind,
+        String ticket,
+        String verb,
+        String plugin,
+        String endedAt) {
 
     private static final String NEW = "new";
     private static final String RESUME = "resume";
@@ -38,6 +46,7 @@ record LaunchLogLine(
     private static final String UNKNOWN_KIND = "a kind of launch it does not know";
     private static final String NO_TICKET = "a ticket launch with no ticket";
     private static final String NO_VERB = "a ticket launch with no verb it knows";
+    private static final String NO_PLUGIN = "a ticket launch with no plugin";
 
     static LaunchLogLine of(LaunchEntry entry) {
         String ended = switch (entry.end()) {
@@ -45,13 +54,14 @@ record LaunchLogLine(
             case NotEnded _ -> null;
         };
         return switch (entry.command()) {
-            case NewClaude _ -> line(entry, NEW, null, null, ended);
-            case ResumeClaude _ -> line(entry, RESUME, null, null, ended);
-            case TicketClaude run -> line(entry, TICKET, run.ticket().value(), run.verb().label(), ended);
+            case NewClaude _ -> line(entry, NEW, null, null, null, ended);
+            case ResumeClaude _ -> line(entry, RESUME, null, null, null, ended);
+            case TicketClaude run -> line(entry, TICKET, run.ticket().value(), run.verb().label(), run.plugin().value(), ended);
         };
     }
 
-    private static LaunchLogLine line(LaunchEntry entry, String kind, String ticket, String verb, String endedAt) {
+    private static LaunchLogLine line(
+            LaunchEntry entry, String kind, String ticket, String verb, String plugin, String endedAt) {
         return new LaunchLogLine(
                 entry.id().value(),
                 entry.directory().path().toString(),
@@ -59,6 +69,7 @@ record LaunchLogLine(
                 kind,
                 ticket,
                 verb,
+                plugin,
                 endedAt);
     }
 
@@ -89,7 +100,10 @@ record LaunchLogLine(
         if (isBlank(ticket)) {
             return Optional.of(NO_TICKET);
         }
-        return verbOf(verb).isPresent() ? Optional.empty() : Optional.of(NO_VERB);
+        if (verbOf(verb).isEmpty()) {
+            return Optional.of(NO_VERB);
+        }
+        return isBlank(plugin) ? Optional.of(NO_PLUGIN) : Optional.empty();
     }
 
     /** The entry this line holds, none for a line whose {@link #flaw()} is not none. */
@@ -113,6 +127,7 @@ record LaunchLogLine(
                     .session(id)
                     .ticket(new LinkedTicketId(ticket))
                     .verb(known)
+                    .plugin(new TicketPlugin(plugin))
                     .build());
         };
     }

@@ -4,6 +4,7 @@ package dev.maxenceng.lazyclaude.session.application;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketStart;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
 import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
@@ -130,6 +131,7 @@ public final class SessionApplicationServiceFixture {
                 notifications,
                 desktopNotifications,
                 mock(TimerPort.class),
+                ticketPlugin(),
                 new SpawnedEarlierClock());
     }
 }

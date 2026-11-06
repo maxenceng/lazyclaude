@@ -60,6 +60,7 @@ describe('the app', () => {
     client.answerNext({
       chords: [{ action: 'ZOOM', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 120 } } }],
       desktopNotifications: true,
+      ticketPlugin: 'ddd-workflow',
       mouse: true,
     });
     await Promise.resolve();
@@ -94,7 +95,7 @@ describe('the app', () => {
     const app = new AppModel(client, testPlatform());
     app.start();
     client.fail('board/watch', new Error('gh timed out'));
-    client.answer('session/configuration', { chords: [], desktopNotifications: true, mouse: true });
+    client.answer('session/configuration', { chords: [], desktopNotifications: true, mouse: true, ticketPlugin: 'ddd-workflow' });
     await Promise.resolve();
     await Promise.resolve();
     void app.load();
