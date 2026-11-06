@@ -1,8 +1,13 @@
 import { useTranslation } from 'react-i18next';
-import { CiGlyph } from './CiGlyph';
+import { type Ci, CiGlyph } from './CiGlyph';
 import { Lamp, type LampColour, LampSize } from './Lamp';
 import styles from './TicketCard.module.css';
-import type { PullRequestCells } from './TicketRow';
+
+/** A ticket's pull request as its card shows it: a dim mark for a draft or one without checks, then its CI result. */
+export interface PullRequestCells {
+  marked: boolean;
+  ci: Ci | undefined;
+}
 
 interface Props {
   id: string;
@@ -36,7 +41,7 @@ export const TicketCard = ({ id, title, meta, selected, done, lamp, pullRequest,
             {pullRequest === undefined ? null : (
               <>
                 {pullRequest.marked ? (
-                  <span className={styles.mark} role="img" aria-label={t('pullRequestMark.draft')}>
+                  <span className={styles.mark} role="img" aria-label={t('pullRequestMark.label')}>
                     ⊙
                   </span>
                 ) : null}

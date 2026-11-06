@@ -3,6 +3,7 @@ import type { ReviewCheckOutcome, ReviewPullRequestView } from '../protocol';
 
 const WORST_FIRST: readonly ReviewCheckOutcome[] = ['FAILED', 'PENDING', 'PASSED'];
 
+// deferred: restates `PullRequestView.ciResult()` and the shell's mark cell, not read from `review` — move both onto review's view when the protocol next changes for it.
 /** A pull request's CI result: the outcome of its worst check, since `review` lists them worst first; none when it has no check. */
 export const ciResultOf = (pullRequest: ReviewPullRequestView): ReviewCheckOutcome | undefined => pullRequest.checks[0]?.outcome;
 

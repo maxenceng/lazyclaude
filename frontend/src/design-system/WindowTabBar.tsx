@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import styles from './WindowTabs.module.css';
+import styles from './WindowTabBar.module.css';
 
-export interface WindowTab {
+export interface WindowTabEntry {
   id: string;
   label: string;
   /** What the tab reports of its own screen, beside its name. */
@@ -10,13 +10,13 @@ export interface WindowTab {
 }
 
 interface Props {
-  tabs: readonly WindowTab[];
+  tabs: readonly WindowTabEntry[];
   selected: string;
   onSelect: (id: string) => void;
 }
 
 /** What the window shows, chosen from the left of the status line: the selected tab on the terminal ground like a dock tab, the rest dim. */
-export const WindowTabs = ({ tabs, selected, onSelect }: Props) => {
+export const WindowTabBar = ({ tabs, selected, onSelect }: Props) => {
   const { t } = useTranslation('designSystem');
   return (
     <div className={styles.tabs} role="tablist" aria-label={t('windowTabs.label')}>

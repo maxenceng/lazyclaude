@@ -102,6 +102,18 @@ class BoardManagerTest {
     }
 
     @Test
+    void shouldPutADoneTicketLeftOpenBeforeTheClosedOnes() {
+        Ticket closed = ticketBuilder().id(secondTicketId()).status(Status.DONE).closure(laterClosedAt()).build();
+        Ticket open = ticketBuilder().id(tenthTicketId()).status(Status.DONE).closure(new NotClosed()).build();
+        when(locator.locate(workingDirectory())).thenReturn(project());
+        when(backlog.entries(project())).thenReturn(List.of(closed, open));
+
+        assertThat(manager.boardFor(workingDirectory()).groups().get(Status.DONE.ordinal()).tickets())
+                .as("an open issue labelled done was marked done just now, so the window's cut to the latest ten must not hide it")
+                .containsExactly(open, closed);
+    }
+
+    @Test
     void shouldOrderTicketsWithinAGroupNumerically() {
         Ticket tenth = ticketBuilder().id(tenthTicketId()).build();
         Ticket second = ticketBuilder().id(secondTicketId()).build();

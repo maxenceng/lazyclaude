@@ -16,7 +16,9 @@ as status columns and a list of pull requests, both reachable by key and by clic
 
 - **Three window tabs, Base, Board and Pull requests, start the status line.** The selected tab is `WindowTabs` in
   `frontend/src/windowTabs.ts`, a class beside `Layout`, not a field of it: the layout is where focus and the dock stand, the
-  tab is what the window draws over them. It opens on Base at every launch and is kept nowhere.
+  tab is what the window draws over them. It opens on Base at every launch and is kept nowhere. The Board tab's own
+  state, whether its preview is shown and what a second press on a ticket does, sits there too: going to Base is a
+  window move, as Base's keys are routed in the composition.
 - **The keys are `1`, `2` and `3`.** They are plain keys no binding uses, no reserved chord is a digit, and they read in the
   key bar as `1/2/3 tabs`. `KeyRouter` takes them only where it already takes a plain key: a hosted pane that has focus
   passes every plain key to its terminal, and an open review or the verb picker ignores them, so a digit typed to `claude`
@@ -43,8 +45,14 @@ as status columns and a list of pull requests, both reachable by key and by clic
 
 ## Consequences
 
-- A ticket's pull request is asked once per branch on every change while the Board tab is shown; a long board sends many
-  small calls. Closing that means a `review` operation that joins a whole board at once.
+- A ticket's pull request is asked once per drawn ticket on every change while the Board tab is shown, done cut to its
+  ten; a long board sends many small calls. Closing that means a `review` operation that joins a whole board at once.
+  A branch whose ask fails keeps the pull request it last answered.
+- The Board tab's mark and CI glyph restate the TUI's rule (a draft or no check is marked; the result is the worst
+  check, `review` listing them worst first) instead of reading it from `review`, since the decision keeps the protocol
+  unchanged. A `deferred:` marker in `pullRequestList.ts` says so; a protocol change for `review` moves both onto its view.
+- A done ticket whose issue is still open (labelled `status:done`) sorts before the closed ones, so the ten never hide
+  the ticket marked done just now.
 - The digits are not yet configurable; `config.yml` reserves only chords.
 - The board read asks `gh` for `closedAt` as well; a closed issue without one, or with one that is not a time, makes the
   board unavailable with that reason, as any field it lacks does.

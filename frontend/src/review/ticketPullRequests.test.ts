@@ -27,7 +27,18 @@ describe('the pull requests of the tickets', () => {
     expect(joined.of('proj-2-second')).toBeUndefined();
   });
 
-  it('takes a branch whose ask failed for one with no pull request', async () => {
+  it('keeps what a branch last answered when its ask fails', async () => {
+    const { client, joined } = setup();
+    const first = joined.join(['proj-1-first']);
+    client.answerNext({ kind: 'headedPullRequest', pullRequest: pullRequestFixture({ number: 7 }) });
+    await first;
+    const second = joined.join(['proj-1-first']);
+    client.failNext(new Error('refused'));
+    await second;
+    expect(joined.of('proj-1-first')?.number, 'a failed ask says nothing of the pull request, so the glyph it had stays').toBe(7);
+  });
+
+  it('holds no pull request for a branch whose first ask failed', async () => {
     const { client, joined } = setup();
     const joining = joined.join(['proj-1-first']);
     client.failNext(new Error('refused'));

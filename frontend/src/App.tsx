@@ -8,7 +8,7 @@ import { inProgressCount } from './board/rows';
 import { ConnectionScreen } from './connection/ConnectionScreen';
 import { DocsKeyBar } from './docs/DocsKeyBar';
 import { DocsPane, DocumentPane } from './docs/DocsScreen';
-import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Lamp, LampSize, Pane, StatusLine, Text, Tone, WindowTabs } from './design-system';
+import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Lamp, LampSize, Pane, StatusLine, Text, Tone, WindowTabBar } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { WindowKeys } from './keys/windowKeys';
@@ -70,7 +70,7 @@ export const App = ({ app, packaged }: Props) => {
   const pullRequests = useStore(app.review.pullRequests.state);
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
-  useStore(app.review.tickets.joined);
+  useStore(app.review.ticketPullRequests.joined);
 
   useEffect(() => {
     const keys = new WindowKeys((action) => app.press(action), { packaged, reserved: () => app.reserved() });
@@ -123,10 +123,10 @@ export const App = ({ app, packaged }: Props) => {
               selection={app.board.selection}
               markerOf={(ticket) => (sessions === undefined ? undefined : markerOfTicket(sessions, ticket))}
               pullRequestOf={(ticket) => {
-                const pullRequest = app.review.tickets.of(ticket.branch);
+                const pullRequest = app.review.ticketPullRequests.of(ticket.branch);
                 return pullRequest === undefined ? undefined : cellsOf(pullRequest);
               }}
-              onPress={(ticket, cursor) => app.tabs.pressCard(ticket, cursor)}
+              onPress={(ticket, cursor) => app.tabs.pressTicket(ticket, cursor)}
               onBackground={() => app.tabs.closePreview()}
               onRetry={() => void app.load()}
             />
@@ -156,7 +156,7 @@ export const App = ({ app, packaged }: Props) => {
           preview: null,
         };
   const tabbed =
-    tab === WindowTab.Base || unready !== undefined
+    tab === WindowTab.Base || unready !== undefined || reviewing !== undefined
       ? undefined
       : {
           board: tabScreen.pane,
@@ -226,7 +226,7 @@ export const App = ({ app, packaged }: Props) => {
         statusLine={
           <StatusLine
             tabs={
-              <WindowTabs
+              <WindowTabBar
                 tabs={[
                   { id: WindowTab.Base, label: t('tabs.base') },
                   {

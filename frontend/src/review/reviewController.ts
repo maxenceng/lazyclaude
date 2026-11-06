@@ -20,13 +20,13 @@ export interface ReviewControllerDeps {
 /** The Review: the pull requests that can be reviewed, and the review that is open, if one is. */
 export class ReviewController {
   readonly pullRequests: PullRequestStore;
-  readonly tickets: TicketPullRequests;
+  readonly ticketPullRequests: TicketPullRequests;
   readonly cursor: PullRequestSelection = new PullRequestSelection();
   readonly current: Store<OpenReview | undefined> = new Store<OpenReview | undefined>(undefined);
 
   constructor(private readonly deps: ReviewControllerDeps) {
     this.pullRequests = new PullRequestStore(deps.client);
-    this.tickets = new TicketPullRequests(this.pullRequests);
+    this.ticketPullRequests = new TicketPullRequests(this.pullRequests);
   }
 
   isOpen(): boolean {

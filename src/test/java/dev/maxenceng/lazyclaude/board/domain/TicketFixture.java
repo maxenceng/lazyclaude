@@ -28,7 +28,8 @@ public final class TicketFixture {
                 .type(typeName())
                 .title(title())
                 .otherLabels(List.of())
-                .body(body());
+                .body(body())
+                .closure(new NotClosed());
     }
 
     public static Ticket ticket() {

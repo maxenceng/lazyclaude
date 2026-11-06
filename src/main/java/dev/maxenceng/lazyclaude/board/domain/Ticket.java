@@ -76,7 +76,7 @@ public record Ticket(
         private TicketBody body;
         private BranchChanges changes = new UnreadChanges();
         private List<Verb> statusVerbs;
-        private Closure closure = new NotClosed();
+        private Closure closure;
 
         private TicketBuilder() {}
 

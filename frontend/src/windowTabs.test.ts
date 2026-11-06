@@ -55,7 +55,7 @@ describe('the window tabs', () => {
   it('ask review for the pull request of each ticket when the Board tab is chosen', async () => {
     const { tabs, client } = await setup();
     tabs.choose(WindowTab.Board);
-    expect(client.calls.map((call) => call.params)).toMatchObject([{ branch: 'proj-1-first' }, { branch: 'proj-2-second' }, { branch: 'proj-3-third' }]);
+    expect(new Set(client.calls.map((call) => (call.params as { branch: string }).branch))).toEqual(new Set(['proj-1-first', 'proj-2-second', 'proj-3-third']));
   });
 
   it('ask again when the pull requests change while the Board tab is shown, and not on Base', async () => {

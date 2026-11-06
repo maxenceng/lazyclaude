@@ -39,12 +39,12 @@ export class WindowTabs {
   /** The Board tab draws each ticket's pull request, so it asks `review` for them when it is shown and whenever they or the tickets change. */
   pullRequestsChanged(): void {
     if (this.selected.get() === WindowTab.Board) {
-      void this.deps.review.tickets.join(this.deps.board.branches());
+      void this.deps.review.ticketPullRequests.join(this.deps.board.branches());
     }
   }
 
   /** A click on a card of the Board tab: the card selected and previewed, or, already selected, gone to on Base. */
-  pressCard(ticket: BoardTicketView, cursor: string | undefined): void {
+  pressTicket(ticket: BoardTicketView, cursor: string | undefined): void {
     if (ticket.id === cursor && this.previewShown.get() && goesToBase(ticket)) {
       this.openTicket(ticket.id);
     } else {

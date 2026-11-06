@@ -33,13 +33,13 @@ const passing = pullRequestFixture({ number: 10, title: 'Fix it', head: 'proj-1-
 const pending = pullRequestFixture({ number: 11, title: 'Wait for it', head: 'chore-tidy', checks: [{ name: 'build', outcome: 'PENDING' }] });
 const draft = pullRequestFixture({ number: 13, title: 'Not yet', head: 'proj-3-third', draft: true, checks: [] });
 
-const started = async (watch: unknown = { kind: 'openPullRequests', pullRequests: [passing, draft, failing, pending] }) => {
+const started = async (watch: unknown = { kind: 'openPullRequests', pullRequests: [passing, draft, failing, pending] }, read = board) => {
   const client = fakeClient(new Ready());
   const app = new AppModel(client, testPlatform());
   app.start();
   render(<App app={app} packaged={false} />);
   await act(async () => {
-    client.answer('board/watch', board);
+    client.answer('board/watch', read);
     client.answer('session/configuration', configuration);
     client.answer('warning/watch', { kind: 'noWarning' });
     await Promise.resolve();
@@ -121,16 +121,32 @@ describe('the Board tab', () => {
     const { client, user } = await started();
     await user.keyboard('2');
     await act(async () => {
-      client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: passing });
-      client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: failing });
-      client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: draft });
-      client.answerAll('review/pullRequestOn', { kind: 'noHeadedPullRequest' });
+      const headed = new Map([passing, failing, draft].map((pullRequest) => [pullRequest.head, pullRequest]));
+      client.calls
+        .filter((call) => call.method === 'review/pullRequestOn')
+        .map((call) => headed.get((call.params as { branch: string }).branch))
+        .forEach((pullRequest) =>
+          client.answer('review/pullRequestOn', pullRequest === undefined ? { kind: 'noHeadedPullRequest' } : { kind: 'headedPullRequest', pullRequest }),
+        );
       await Promise.resolve();
     });
     await settle();
     expect(within(screen.getByRole('button', { name: /PROJ-1/ })).getByRole('img', { name: 'checks passed' })).toBeInTheDocument();
     expect(within(screen.getByRole('button', { name: /PROJ-2/ })).getByRole('img', { name: 'checks failed' })).toBeInTheDocument();
     expect(within(screen.getByRole('button', { name: /PROJ-3/ })).getByRole('img', { name: 'draft or without checks' })).toBeInTheDocument();
+  });
+
+  it('asks review for the pull requests of the cards drawn only, done cut to its latest closed', async () => {
+    const closed = Array.from({ length: 12 }, (_, index) =>
+      ticketFixture({ id: `PROJ-${index + 20}`, title: `Closed ${index}`, status: 'DONE', branch: `proj-${index + 20}-closed` }),
+    );
+    const { client, user } = await started(undefined, boardFixture(closed, []));
+    await user.keyboard('2');
+    await settle();
+    const asked = client.calls.filter((call) => call.method === 'review/pullRequestOn').map((call) => (call.params as { branch: string }).branch);
+    expect(new Set(asked), 'the two done tickets past the ten drawn have no card to mark, so asking for them is a round trip for nothing').toEqual(
+      new Set(closed.slice(0, 10).map((ticket) => ticket.branch)),
+    );
   });
 
   it('shows the tickets that could not be read, with their reasons', async () => {
@@ -263,6 +279,22 @@ describe('the window tabs and a hosted session', () => {
     expect(screen.queryByRole('group', { name: 'session terminal' })).not.toBeInTheDocument();
     await ready.user.keyboard('1');
     expect(screen.getByRole('group', { name: 'session terminal' })).toBeInTheDocument();
+  });
+
+  it('keep the review\'s key bar and unfolded dock while a review opened from Pull requests is open', async () => {
+    const ready = await started();
+    await hostSession(ready);
+    await ready.user.click(tab(/^Pull requests/));
+    await ready.user.click(screen.getByRole('button', { name: /#11/ }));
+    await act(async () => {
+      ready.client.answerAll('review/pendingOf', { kind: 'noPendingReview' });
+      ready.client.answerAll('review/threadsOf', { kind: 'readThreads', threads: [] });
+      ready.client.answerAll('review/diffOf', { kind: 'readDiff', files: [] });
+      await Promise.resolve();
+    });
+    await settle();
+    expect(screen.queryByText('enter review'), 'the review draws its own panels, so the tab\'s keys no longer apply').not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'session terminal' }), 'the review keeps the full dock, so a session focused under it can be used').toBeInTheDocument();
   });
 
   it('go back to Base with the session\'s pane focused when its folded tab is clicked', async () => {

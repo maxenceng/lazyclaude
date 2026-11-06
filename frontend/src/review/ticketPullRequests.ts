@@ -13,12 +13,12 @@ export class TicketPullRequests {
     return this.joined.get().get(branch);
   }
 
-  /** Asks `review` for each branch's pull request; the answers of a join a later one overtook are dropped. */
+  /** Asks `review` for each branch's pull request, a branch whose ask failed keeping what it last answered; the answers of a join a later one overtook are dropped. */
   async join(branches: readonly string[]): Promise<void> {
     this.generation += 1;
     const mine = this.generation;
     const asked = await Promise.all(
-      branches.map(async (branch) => [branch, await this.pullRequests.forBranch(branch).catch(() => undefined)] as const),
+      branches.map(async (branch) => [branch, await this.pullRequests.forBranch(branch).catch(() => this.of(branch))] as const),
     );
     if (mine === this.generation) {
       this.joined.set(new Map(asked.filter((entry): entry is readonly [string, ReviewPullRequestView] => entry[1] !== undefined)));

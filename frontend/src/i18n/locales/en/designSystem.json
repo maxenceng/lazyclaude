@@ -39,6 +39,6 @@
     "label": "window tabs"
   },
   "pullRequestMark": {
-    "draft": "draft or without checks"
+    "label": "draft or without checks"
   }
 }
