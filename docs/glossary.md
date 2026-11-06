@@ -65,7 +65,7 @@ words mean.
 | No project | What asking for a board answers when the working directory belongs to no project, or whether it does could not be told: no board, and why. The TUI prints the reason and does not start; the sidecar answers it as a result. | `board` |
 | Issues poll | The board's watch: every 30 s a conditional request for the most recently updated issue with the last answer's `ETag`; a 304 costs nothing and the board stays, anything else reads it again. A check that fails counts as a change, so the board is read and says why it cannot be. | `board` |
 | Capture | `c` on the Board: a title typed into a popup becomes a GitHub issue with no labels, read as an unassigned `draft`, its body the sections of the project's ticket template, or empty without one. lazyclaude's one ticket write; every other goes through a `/ticket` verb in a session (ADR 0054). | `board` |
-| Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `/ticket` accepts for its status; `design` also needs the ticket branch to touch `frontend/**`. | `board` |
+| Verb | A `/ticket` verb. A ticket's allowed verbs are the ones `verbs:` in `config.yml` gives its status, by default the ones `/ticket` accepts for it; `design` also needs the ticket branch to touch `frontend/**`. | `board` |
 
 ## session
 
@@ -95,7 +95,7 @@ words mean.
 | Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session (its *Worktree state*). Removal is `git worktree remove` only; the local ticket branch stays. | `shared` (its path), `session` (creates and removes it) |
 | Worktree state | A ticket worktree's dirty paths (`git status --porcelain`, untracked files included), its commits beyond the merged pull request's head that no remote ref has, and the live sessions whose `cwd` is in it; clear when all three are empty, or *no merged pull request* when the merge cannot be read, or *no sessions read* when the sessions cannot be. The detail shows it and removal is refused by it, from the one value. | `session` |
 | Verb picker | The popup `n` opens on a ticket, listing its allowed verbs with the preselected one under the cursor. A ticket with no verb left opens no picker: `n` starts an unlinked session instead, as `session` answers. | `shell`, the desktop frontend |
-| Preselected verb | The allowed verb the verb picker opens on, from status, past sessions and the pull request's state. | `session` |
+| Preselected verb | The first of its allowed verbs, in the order its status lists them, unless `design` has not run yet or `done` meets a merged pull request. | `session` |
 | Merge state | Whether a ticket's branch is among the merged pull requests' heads, as far as the asker has read them: *merged*, *not merged*, or *unknown* before review's merged read lands or where it is not read. Only *merged* preselects `done`. | `session` |
 | Waiting | The session is blocked on you: *waiting for permission* (a permission prompt) or *waiting for input* (any other question). The only state that notifies. | `session` |
 | Unknown (state) | What an unread session shows: its record cannot be used, or reports a `status` lazyclaude does not know, as a newer Claude Code may. Still listed, with a grey `·` and one warning; never notified. | `session` |

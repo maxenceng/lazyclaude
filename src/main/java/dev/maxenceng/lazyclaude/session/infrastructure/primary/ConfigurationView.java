@@ -6,19 +6,21 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import dev.maxenceng.lazyclaude.board.published.StatusVerbs;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.domain.Configuration;
 import dev.maxenceng.lazyclaude.session.published.ReservedAction;
 import dev.maxenceng.lazyclaude.session.published.ReservedChords;
 import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 
-/** What the user configured: the chords the shell takes inside a hosted session, and whether a waiting session shows a desktop notification, whether the shell captures the mouse, and the plugin a ticket's new session runs. */
-public record ConfigurationView(List<ReservedChordView> chords, boolean desktopNotifications, boolean mouse, TicketPlugin ticketPlugin) {
+/** What the user configured: the chords the shell takes inside a hosted session, and whether a waiting session shows a desktop notification, whether the shell captures the mouse, and the plugin a ticket's new session runs, and the verbs it gives the statuses it names. */
+public record ConfigurationView(List<ReservedChordView> chords, boolean desktopNotifications, boolean mouse, TicketPlugin ticketPlugin, List<StatusVerbs> statusVerbs) {
 
     /** One chord per reserved action in {@link ReservedAction}'s order, an action left out keeping its default, whatever list it is given. */
     public ConfigurationView {
         Assert.notNull("chords", chords);
         Assert.notNull("ticketPlugin", ticketPlugin);
+        Assert.notNull("statusVerbs", statusVerbs);
         chords = chordsOf(boundIn(chords));
     }
 
@@ -55,6 +57,7 @@ public record ConfigurationView(List<ReservedChordView> chords, boolean desktopN
                 .desktopNotifications(configuration.desktopNotifications())
                 .mouse(configuration.mouse())
                 .ticketPlugin(configuration.ticketPlugin())
+                .statusVerbs(configuration.statusVerbs())
                 .build();
     }
 
@@ -67,6 +70,7 @@ public record ConfigurationView(List<ReservedChordView> chords, boolean desktopN
         private Boolean desktopNotifications;
         private Boolean mouse;
         private TicketPlugin ticketPlugin;
+        private List<StatusVerbs> statusVerbs = List.of();
 
         private ConfigurationViewBuilder() {}
 
@@ -90,11 +94,16 @@ public record ConfigurationView(List<ReservedChordView> chords, boolean desktopN
             return this;
         }
 
+        public ConfigurationViewBuilder statusVerbs(List<StatusVerbs> statusVerbs) {
+            this.statusVerbs = statusVerbs;
+            return this;
+        }
+
         public ConfigurationView build() {
             Assert.notNull("desktopNotifications", desktopNotifications);
             Assert.notNull("mouse", mouse);
             Assert.notNull("reservedChords", reservedChords);
-            return new ConfigurationView(chordsOf(reservedChords), desktopNotifications, mouse, ticketPlugin);
+            return new ConfigurationView(chordsOf(reservedChords), desktopNotifications, mouse, ticketPlugin, statusVerbs);
         }
     }
 }

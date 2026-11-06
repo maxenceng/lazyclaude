@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -19,8 +20,12 @@ import org.snakeyaml.engine.v2.nodes.MappingNode;
 import org.snakeyaml.engine.v2.nodes.Node;
 import org.snakeyaml.engine.v2.nodes.NodeTuple;
 import org.snakeyaml.engine.v2.nodes.ScalarNode;
+import org.snakeyaml.engine.v2.nodes.SequenceNode;
 import org.snakeyaml.engine.v2.nodes.Tag;
 
+import dev.maxenceng.lazyclaude.board.published.Status;
+import dev.maxenceng.lazyclaude.board.published.StatusVerbs;
+import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.Configuration;
 import dev.maxenceng.lazyclaude.session.domain.ConfigurationRefusedException;
 import dev.maxenceng.lazyclaude.session.published.Chord;
@@ -46,7 +51,22 @@ final class ConfigurationNodes {
     private static final String TICKET_PLUGIN = "ticket-plugin";
     private static final Map<String, ReservedAction> ACTIONS = Arrays.stream(ReservedAction.values())
             .collect(Collectors.toUnmodifiableMap(ReservedAction::configurationName, Function.identity()));
-    private static final List<String> TOP_KEYS = List.of(KEYBINDING, NOTIFICATIONS, MOUSE, TICKET_PLUGIN);
+    private static final String VERBS = "verbs";
+    private static final List<String> TOP_KEYS = List.of(KEYBINDING, NOTIFICATIONS, MOUSE, TICKET_PLUGIN, VERBS);
+    private static final List<String> STATUS_LABELS = Arrays.stream(Status.values()).map(Status::label).toList();
+    private static final String VERB_LABELS = Arrays.stream(Verb.values())
+            .map(Verb::label)
+            .collect(Collectors.joining(", "))
+            .replaceFirst(", ([a-z]+)$", " or $1");
+    private static final String NEW = "new";
+    private static final String NEW_IS_NOT_A_VERB = "new is not a verb a status offers: it creates a ticket";
+    private static final String UNKNOWN_VERB = "unknown verb '%s': use %s";
+    private static final String NEEDS_A_LIST = "%s needs a list of verbs such as [respond, done]";
+    private static final String NOT_A_VERB_NAME = "a verb must be a name";
+    private static final String VERB_TWICE = "%s is listed twice under %s";
+    private static final String VERB_ELSEWHERE = "%s is only offered under %s, not %s";
+    private static final String VERB_UNDER_FINISHED = "%s is not offered under %s: a finished ticket has no verb";
+    private static final String OR = " or ";
     private static final int FIRST_LINE = 1;
     private static final int NO_LINE = 0;
     private static final String LOCATED = "%s:%d: %s";
@@ -100,6 +120,7 @@ final class ConfigurationNodes {
                         .findFirst()
                         .map(this::plugin)
                         .orElse(new TicketPlugin(TICKET_PLUGIN_BY_DEFAULT)))
+                .statusVerbs(statusVerbs(section(top, VERBS, STATUS_LABELS)))
                 .build();
     }
 
@@ -124,14 +145,18 @@ final class ConfigurationNodes {
             throw refused(lineOf(node.getStartMark()), notMapping);
         }
         List<ConfigurationEntry> entries = mapping.getValue().stream().map(tuple -> entryOf(tuple, known)).toList();
+        refuseRepeated(entries, DUPLICATE_KEY::formatted);
+        return entries;
+    }
+
+    private void refuseRepeated(List<ConfigurationEntry> entries, UnaryOperator<String> reason) {
         IntStream.range(0, entries.size())
                 .filter(index -> entries.subList(0, index).stream()
                         .anyMatch(earlier -> earlier.key().equals(entries.get(index).key())))
                 .findFirst()
                 .ifPresent(index -> {
-                    throw refused(entries.get(index).line(), DUPLICATE_KEY.formatted(entries.get(index).key()));
+                    throw refused(entries.get(index).line(), reason.apply(entries.get(index).key()));
                 });
-        return entries;
     }
 
     private ConfigurationEntry entryOf(NodeTuple tuple, Collection<String> known) {
@@ -206,6 +231,53 @@ final class ConfigurationNodes {
             throw refused(entry.line(), NEEDS_A_PLUGIN.formatted(entry.key(), TICKET_PLUGIN_BY_DEFAULT));
         }
         return new TicketPlugin(scalar.getValue());
+    }
+
+    private List<StatusVerbs> statusVerbs(List<ConfigurationEntry> entries) {
+        return entries.stream()
+                .flatMap(entry -> Status.find(entry.key()).stream().map(status -> StatusVerbs.builder().status(status).verbs(verbsOf(status, entry)).build()))
+                .toList();
+    }
+
+    private List<Verb> verbsOf(Status status, ConfigurationEntry entry) {
+        if (!(entry.value() instanceof SequenceNode sequence)) {
+            throw refused(entry.line(), NEEDS_A_LIST.formatted(entry.key()));
+        }
+        List<ConfigurationEntry> items = sequence.getValue().stream().map(this::verbEntry).toList();
+        List<Verb> verbs = items.stream().map(item -> verbOf(status, item)).toList();
+        refuseRepeated(items, verb -> VERB_TWICE.formatted(verb, status.label()));
+        return verbs;
+    }
+
+    private ConfigurationEntry verbEntry(Node node) {
+        int line = lineOf(node.getStartMark());
+        if (!(node instanceof ScalarNode scalar)) {
+            throw refused(line, NOT_A_VERB_NAME);
+        }
+        return new ConfigurationEntry(scalar.getValue(), line, node);
+    }
+
+    private Verb verbOf(Status status, ConfigurationEntry item) {
+        if (item.key().equals(NEW)) {
+            throw refused(item.line(), NEW_IS_NOT_A_VERB);
+        }
+        Verb verb = Verb.find(item.key()).orElseThrow(() -> refused(item.line(), UNKNOWN_VERB.formatted(item.key(), VERB_LABELS)));
+        if (!verb.mayBeOfferedIn(status)) {
+            throw refused(item.line(), refusalOf(verb, status));
+        }
+        return verb;
+    }
+
+    private static String refusalOf(Verb verb, Status status) {
+        return status.finished()
+                ? VERB_UNDER_FINISHED.formatted(verb.label(), status.label())
+                : VERB_ELSEWHERE.formatted(
+                        verb.label(),
+                        Arrays.stream(Status.values())
+                                .filter(verb::mayBeOfferedIn)
+                                .map(Status::label)
+                                .collect(Collectors.joining(OR)),
+                        status.label());
     }
 
     private ConfigurationRefusedException refused(int line, String reason) {

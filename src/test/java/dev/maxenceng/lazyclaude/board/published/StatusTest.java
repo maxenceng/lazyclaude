@@ -40,6 +40,6 @@ class StatusTest {
         assertThat(List.of(Status.values()))
                 .extracting(status -> status.verbs().stream().map(Verb::label).toList())
                 .containsExactly(
-                        List.of("refine"), List.of("start"), List.of("review"), List.of("respond", "done"), List.of());
+                        List.of("refine"), List.of("start"), List.of("review", "design"), List.of("respond", "done"), List.of());
     }
 }

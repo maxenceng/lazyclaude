@@ -365,6 +365,7 @@ export interface SessionConfigurationView {
   desktopNotifications: boolean;
   mouse: boolean;
   ticketPlugin: string;
+  statusVerbs: BoardStatusVerbs[];
 }
 export interface SessionReservedChordView {
   action: SessionReservedAction;
@@ -381,6 +382,10 @@ export interface SessionTypedCharacter {
 export interface SessionPressedKey {
   kind: 'pressedKey';
   key: SessionNamedKey;
+}
+export interface BoardStatusVerbs {
+  status: BoardStatus;
+  verbs: BoardVerb[];
 }
 export interface SessionSessionsView {
   live: SessionLiveSessionView[];

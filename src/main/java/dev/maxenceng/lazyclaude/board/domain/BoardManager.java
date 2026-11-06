@@ -16,7 +16,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * Builds the board of the project a working directory belongs to. It owns the board's rules: one group per status in lifecycle
- * order, tickets in id order, and the unreadable tickets listed beside them, in id order.
+ * order, the verbs each status offers, tickets in id order, and the unreadable tickets listed beside them, in id order.
  */
 public final class BoardManager {
 
@@ -27,6 +27,7 @@ public final class BoardManager {
     private final BranchChangesPort changes;
     private final BoardWatchPort watch;
     private final WarningPort warnings;
+    private final ConfiguredVerbsPort configuredVerbs;
     private final WarnOnce unreadable = new WarnOnce();
 
     public BoardManager(
@@ -34,12 +35,14 @@ public final class BoardManager {
             BacklogPort backlog,
             BranchChangesPort changes,
             BoardWatchPort watch,
-            WarningPort warnings) {
+            WarningPort warnings,
+            ConfiguredVerbsPort configuredVerbs) {
         this.locator = locator;
         this.backlog = backlog;
         this.changes = changes;
         this.watch = watch;
         this.warnings = warnings;
+        this.configuredVerbs = configuredVerbs;
     }
 
     /** Runs {@code changed} on the watcher's thread whenever the project's issues changed, or the check could not tell. */
@@ -78,16 +81,21 @@ public final class BoardManager {
     }
 
     private Board board(Project project, List<BacklogEntry> entries) {
+        OfferedVerbs offered = new OfferedVerbs(configuredVerbs.configured());
         return Board.builder()
                 .project(project)
                 .groups(groups(entries.stream()
-                        .flatMap(entry -> entry instanceof Ticket read ? Stream.of(withChanges(project, read)) : Stream.empty())
+                        .flatMap(entry -> entry instanceof Ticket read ? Stream.of(withChanges(project, withStatusVerbs(offered, read))) : Stream.empty())
                         .toList()))
                 .unreadable(entries.stream()
                         .flatMap(entry -> entry instanceof UnreadableTicket refused ? Stream.of(refused) : Stream.empty())
                         .sorted(Comparator.comparing(UnreadableTicket::id))
                         .toList())
                 .build();
+    }
+
+    private static Ticket withStatusVerbs(OfferedVerbs offered, Ticket ticket) {
+        return ticket.withStatusVerbs(offered.of(ticket.status()));
     }
 
     /** The branch is read only for a ticket whose changes decide what it is offered. */

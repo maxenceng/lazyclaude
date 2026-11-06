@@ -118,6 +118,52 @@ class TicketTest {
     }
 
     @Test
+    void shouldOfferTheVerbsItsStatusIsGivenInTheirOrder() {
+        Ticket ticket = ticketBuilder().status(Status.IN_REVIEW).statusVerbs(List.of(Verb.DONE, Verb.RESPOND)).build();
+
+        assertThat(ticket.verbs()).containsExactly(Verb.DONE, Verb.RESPOND);
+    }
+
+    @Test
+    void shouldOfferDesignWhereListedAheadOfReviewWhenTheBranchTouchesTheFrontend() {
+        Ticket ticket = ticketBuilder()
+                .status(Status.IN_PROGRESS)
+                .statusVerbs(List.of(Verb.DESIGN, Verb.REVIEW))
+                .changes(frontendChanges())
+                .build();
+
+        assertThat(ticket.verbs()).containsExactly(Verb.DESIGN, Verb.REVIEW);
+    }
+
+    @Test
+    void shouldHoldDesignBackWhereListedWhenTheBranchLeavesTheFrontendAlone() {
+        Ticket ticket = ticketBuilder()
+                .status(Status.IN_PROGRESS)
+                .statusVerbs(List.of(Verb.DESIGN, Verb.REVIEW))
+                .changes(backendChanges())
+                .build();
+
+        assertThat(ticket.verbs()).containsExactly(Verb.REVIEW);
+    }
+
+    @Test
+    void shouldNotOfferDesignWhenItsStatusDoesNotListIt() {
+        Ticket ticket = ticketBuilder()
+                .status(Status.IN_PROGRESS)
+                .statusVerbs(List.of(Verb.REVIEW))
+                .changes(frontendChanges())
+                .build();
+
+        assertThat(ticket.verbs()).containsExactly(Verb.REVIEW);
+    }
+
+    @Test
+    void shouldReadTheBranchOnlyWhenDesignIsListed() {
+        assertThat(ticketBuilder().status(Status.IN_PROGRESS).build().mayOfferDesign()).isTrue();
+        assertThat(ticketBuilder().status(Status.IN_PROGRESS).statusVerbs(List.of()).build().mayOfferDesign()).isFalse();
+    }
+
+    @Test
     void shouldOfferNoVerbOnADoneTicket() {
         assertThat(ticketBuilder().status(Status.DONE).build().verbs()).isEmpty();
     }
