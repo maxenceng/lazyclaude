@@ -75,7 +75,7 @@ final class CaptureKeys {
         open.createBegun();
         TicketCapturePayload payload = new TicketCapturePayload(root, open.content());
         CompletableFuture.supplyAsync(() -> capturing.capture(payload), background)
-                .exceptionally(CaptureReads::refused)
+                .exceptionally(TicketCaptureCommand::refusedBecause)
                 .thenAccept(answer -> onRenderThread.accept(() -> answered(open, answer)));
     }
 

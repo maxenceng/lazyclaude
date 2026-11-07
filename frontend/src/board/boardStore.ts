@@ -19,8 +19,18 @@ const stateOf = (view: BoardBoardLookupView): BoardState => {
 export class BoardStore {
   readonly state: Store<BoardState> = new Store<BoardState>(new LoadingBoard());
 
+  private readonly pushed = new Set<() => void>();
+
   constructor(private readonly client: Client) {
-    client.subscribe('board/changed', (view) => this.state.set(stateOf(view)));
+    client.subscribe('board/changed', (view) => {
+      this.state.set(stateOf(view));
+      this.pushed.forEach((listener) => listener());
+    });
+  }
+
+  /** Told after each `board/changed` is applied, and not after a read of the board's own. */
+  onPushed(listener: () => void): void {
+    this.pushed.add(listener);
   }
 
   async load(): Promise<void> {

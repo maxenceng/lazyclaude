@@ -92,8 +92,21 @@ describe('the protocol client', () => {
     client.subscribe('board/changed', (view) => changed.push(view));
     client.subscribe('docs/changed', (view) => other.push(view));
     relay.push(JSON.stringify({ jsonrpc: '2.0', method: 'board/changed', params: noProject }));
+    await Promise.resolve();
     expect(changed).toEqual([noProject]);
     expect(other).toEqual([]);
+  });
+
+  it('lets a caller awaiting an answer see it before a notification on a later line of the same batch', async () => {
+    const { relay, client } = await readyClient();
+    const seen: string[] = [];
+    client.subscribe('board/changed', () => seen.push('pushed'));
+    const call = client.call('board/watch', { from: '.' }).then(() => seen.push('answered'));
+    await Promise.resolve();
+    relay.push(answer(relay.sentRequests()[0]!.id, noProject), JSON.stringify({ jsonrpc: '2.0', method: 'board/changed', params: noProject }));
+    await call;
+    await Promise.resolve();
+    expect(seen).toEqual(['answered', 'pushed']);
   });
 
   it('stops routing to a handler once it unsubscribed', async () => {

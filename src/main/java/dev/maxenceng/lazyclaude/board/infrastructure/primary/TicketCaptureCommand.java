@@ -1,5 +1,8 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 
+import java.util.Optional;
+import java.util.concurrent.CompletionException;
+
 import dev.maxenceng.lazyclaude.board.application.TicketCaptureApplicationService;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.board.published.Title;
@@ -27,5 +30,13 @@ public final class TicketCaptureCommand {
             return new RefusedTicketCaptureView(new Reason(invalid.getMessage()));
         }
         return TicketCaptureView.from(tickets.capture(new Project(payload.root()), title));
+    }
+
+    /** A capture that threw instead of answering, as a refusal that says what it threw, so the popup stays and says why. */
+    public static RefusedTicketCaptureView refusedBecause(Throwable failed) {
+        Throwable cause = failed instanceof CompletionException wrapped && wrapped.getCause() != null ? wrapped.getCause() : failed;
+        return new RefusedTicketCaptureView(new Reason(Optional.ofNullable(cause.getMessage())
+                .filter(message -> !message.isBlank())
+                .orElseGet(() -> cause.getClass().getSimpleName())));
     }
 }

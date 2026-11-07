@@ -2,7 +2,8 @@ import type { TFunction } from 'i18next';
 import { type ReactNode, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AppModel } from './app';
-import { BoardKeyBar, BoardTabKeyBar } from './board/BoardKeyBar';
+import { BoardKeyBar, BoardTabKeyBar, CaptureKeyBar } from './board/BoardKeyBar';
+import { CapturePopup } from './board/CapturePopup';
 import { BoardColumns, BoardPane, BoardPreview, TicketPane } from './board/BoardScreen';
 import { inProgressCount } from './board/rows';
 import { ConnectionScreen } from './connection/ConnectionScreen';
@@ -68,6 +69,7 @@ export const App = ({ app, packaged }: Props) => {
   const tab = useStore(app.tabs.selected);
   const previewShown = useStore(app.tabs.previewShown);
   const pullRequests = useStore(app.review.pullRequests.state);
+  const capturing = useStore(app.board.capture.state).isOpen();
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
@@ -273,7 +275,7 @@ export const App = ({ app, packaged }: Props) => {
             notice={notice}
           />
         }
-        keyBar={picker === undefined ? (tabbed === undefined ? keyBar : tabScreen.bar) : <SessionsKeyBar picking />}
+        keyBar={capturing ? <CaptureKeyBar /> : picker === undefined ? (tabbed === undefined ? keyBar : tabScreen.bar) : <SessionsKeyBar picking />}
         board={shown.board}
         docs={shown.docs}
         foot={reviewing?.foot}
@@ -281,7 +283,8 @@ export const App = ({ app, packaged }: Props) => {
         dock={dock.tabs.length === 0 ? null : dockScreen}
         arrangement={shown.arrangement}
       />
-        {review === undefined ? null : <ReviewDialogs review={review} />}
+      {review === undefined ? null : <ReviewDialogs review={review} />}
+      <CapturePopup capture={app.board.capture} />
     </>
   );
 };

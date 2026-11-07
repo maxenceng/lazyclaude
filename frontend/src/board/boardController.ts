@@ -1,5 +1,6 @@
 import type { BoardBoardView, Client, BoardTicketView } from '../protocol';
 import { BoardStore } from './boardStore';
+import { CaptureController } from './captureController';
 import { columnsOf, selectedIn, ticketIds } from './rows';
 import { Selection } from './selection';
 
@@ -7,10 +8,16 @@ import { Selection } from './selection';
 export class BoardController {
   readonly store: BoardStore;
   readonly selection: Selection;
+  readonly capture: CaptureController;
+  /** The ticket a capture made, to select: it rides with the one board push that capture starts, and is spent by it, found or not. */
+  private intended: string | undefined;
 
   constructor(client: Client) {
     this.store = new BoardStore(client);
     this.selection = new Selection();
+    this.capture = new CaptureController({ client, root: () => this.root(), onCaptured: (id) => (this.intended = id) });
+    this.store.onPushed(() => this.spendIntent());
+    this.selection.selected.subscribe(() => (this.intended = undefined));
   }
 
   shown(): BoardBoardView | undefined {
@@ -49,6 +56,15 @@ export class BoardController {
   }
 
   load(): Promise<void> {
+    this.intended = undefined;
     return this.store.load();
+  }
+
+  private spendIntent(): void {
+    const id = this.intended;
+    this.intended = undefined;
+    if (id !== undefined && this.ticketIds().includes(id)) {
+      this.selection.select(id);
+    }
   }
 }

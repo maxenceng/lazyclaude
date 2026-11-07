@@ -48,7 +48,9 @@ export class KeyRouter {
   /** A key the window-level handler took: whatever the focused pane does with it. */
   press(action: Action): void {
     const current = this.review.current.get();
-    if (this.sessions.isPicking()) {
+    if (this.board.capture.state.get().isOpen()) {
+      this.pressInCapture(action);
+    } else if (this.sessions.isPicking()) {
       this.pressInPicker(action);
     } else if (this.focus() === Focus.Dock && this.sessions.hosting.hasTabs()) {
       if (FOCUS_KEYS.includes(action)) {
@@ -233,6 +235,15 @@ export class KeyRouter {
     this.change((current) => current.focusOn(target));
   }
 
+  /** The capture popup is modal (ADR 0051): typing is the input's own, so the window answers only enter and esc, for when focus has left the input. */
+  private pressInCapture(action: Action): void {
+    if (action === Action.Back) {
+      this.board.capture.cancel();
+    } else if (action === Action.Open) {
+      this.board.capture.create();
+    }
+  }
+
   private pressInPicker(action: Action): void {
     switch (action) {
       case Action.MoveDown:
@@ -258,6 +269,8 @@ export class KeyRouter {
         return this.open();
       case Action.Review:
         return this.openReview();
+      case Action.Capture:
+        return this.focus() === Focus.Board ? this.board.capture.open() : undefined;
       case Action.NewTicketSession:
         return void this.sessions.newSession();
       case Action.NewSession:
