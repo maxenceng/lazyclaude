@@ -105,6 +105,7 @@ export class KeyRouter {
   open(): void {
     if (this.focus() === Focus.Docs) {
       this.docs.activate();
+      this.change((current) => current.showDocument());
     } else if (this.focus() === Focus.Sessions) {
       this.sessions.activate();
     } else if (this.board.selectedTicket() !== undefined) {
@@ -219,8 +220,10 @@ export class KeyRouter {
         return this.change((current) => current.toggleZoom());
       case Action.ToggleMainView:
         return this.change((current) => current.toggleMainView());
+      case Action.MinimiseDock:
+        return this.minimiseDock();
       case Action.NextWaiting:
-        return this.change((current) => current.leaveZoom());
+        return this.change((current) => current.leaveZoom().restoreDock());
       default:
         return undefined;
     }
@@ -260,7 +263,7 @@ export class KeyRouter {
       case Action.NewSession:
         return void this.sessions.newUnlinked();
       case Action.Back:
-        return this.change((current) => (current.zoomed || current.focus === Focus.Board ? current.leaveZoom() : current.focusOn(Focus.Board)));
+        return this.change((current) => this.back(current));
       case Action.PanelLeft:
       case Action.FocusLeft:
         return this.change((current) => current.focusOn(Focus.Board));
@@ -275,11 +278,28 @@ export class KeyRouter {
         return this.change((current) => current.toggleZoom());
       case Action.ToggleMainView:
         return this.change((current) => current.toggleMainView());
+      case Action.MinimiseDock:
+        return this.minimiseDock();
       case Action.NextWaiting:
-        return this.change((current) => current.leaveZoom());
+        return this.change((current) => current.leaveZoom().restoreDock());
       default:
         return undefined;
     }
+  }
+
+  // deferred: `w` does not jump to the next waiting session, only restores the dock and ends the zoom — close it when the window cycles waiting sessions.
+  /** `M` or the dock's button: the dock folds to its strip or unfolds, when there is a dock to fold. */
+  minimiseDock(): void {
+    if (this.sessions.hosting.hasTabs()) {
+      this.change((current) => current.toggleDockMinimised(this.review.isOpen() ? Focus.Diff : Focus.Sessions));
+    }
+  }
+
+  private back(current: Layout): Layout {
+    if (current.zoomed || current.focus === Focus.Board) {
+      return current.leaveZoom();
+    }
+    return current.focus === Focus.Docs && current.showsDocument() ? current.closeDocument() : current.focusOn(Focus.Board);
   }
 
   private focusDown(): void {
@@ -293,6 +313,7 @@ export class KeyRouter {
   private move(delta: number): void {
     if (this.focus() === Focus.Docs) {
       this.docs.move(delta);
+      this.change((current) => current.showDocument());
     } else if (this.focus() === Focus.Sessions) {
       this.sessions.move(delta);
     } else if (this.board.move(delta)) {

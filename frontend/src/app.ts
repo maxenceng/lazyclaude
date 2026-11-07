@@ -107,6 +107,16 @@ export class AppModel {
     this.focusOn(Focus.Dock);
   }
 
+  /** The dock's minimise button: the dock folds to its strip, or unfolds. */
+  minimiseDock(): void {
+    this.keys.minimiseDock();
+  }
+
+  /** The close button of a shown document: the main view goes back to the selected ticket, focus staying where it was. */
+  closeDocument(): void {
+    this.layout.set(this.layout.get().closeDocument());
+  }
+
   /** Retry on the Pull requests tab: reads the open pull requests again. */
   retryPullRequests(): void {
     const root = this.board.root();
@@ -165,6 +175,9 @@ export class AppModel {
   }
 
   private dockChanged(): void {
+    if (!this.hosting.hasTabs() && this.layout.get().dockMinimised) {
+      this.layout.set(this.layout.get().restoreDock());
+    }
     if (!this.hosting.hasTabs() && this.layout.get().focus === Focus.Dock) {
       this.focusOn(this.review.isOpen() ? Focus.Diff : Focus.Board);
     }
