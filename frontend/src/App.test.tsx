@@ -305,7 +305,43 @@ describe('the dock minimised', () => {
     });
     await ready.user.click(screen.getByRole('button', { name: 'README.md' }));
     widths.push(keyBarWidth());
+    act(() => ready.app.hideMainView());
+    [Focus.Board, Focus.Docs, Focus.Dock].forEach((focus) => {
+      act(() => ready.app.focusOn(focus));
+      widths.push(keyBarWidth());
+    });
     expect(Math.max(...widths)).toBeLessThanOrEqual(KEY_BAR_COLUMNS);
+  });
+});
+
+describe('the ticket hidden', () => {
+  it('has no hide button while no session is hosted', async () => {
+    await readyApp();
+    expect(screen.getByRole('region', { name: 'Ticket' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hide ticket' })).not.toBeInTheDocument();
+  });
+
+  it('hides on its button so the dock takes the column, the key bar offering m to show it again', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    act(() => ready.app.focusOn(Focus.Board));
+    await ready.user.click(screen.getByRole('button', { name: 'Hide ticket' }));
+    expect(screen.queryByRole('region', { name: 'Ticket' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'session terminal' })).toBeInTheDocument();
+    expect(keyBar()).toHaveTextContent('m ticket');
+    await ready.user.keyboard('m');
+    expect(screen.getByRole('region', { name: 'Ticket' })).toBeInTheDocument();
+    expect(keyBar()).not.toHaveTextContent('m ticket');
+  });
+
+  it('unfolds a minimised dock when the ticket hides', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    act(() => ready.app.focusOn(Focus.Board));
+    await ready.user.keyboard('M');
+    await ready.user.click(screen.getByRole('button', { name: 'Hide ticket' }));
+    expect(ready.app.layout.get().dockMinimised).toBe(false);
+    expect(screen.getByRole('group', { name: 'session terminal' })).toBeInTheDocument();
   });
 });
 

@@ -11,6 +11,7 @@ import {
   type LampColour,
   type PullRequestCells,
   Pane,
+  PaneActionKind,
   StatusHeading,
   Text,
   Tone,
@@ -148,15 +149,21 @@ export const BoardPreview = ({ board, selection, onLink }: PreviewProps) => {
 interface TicketProps extends ViewProps {
   focused: boolean;
   onLink: (href: string) => void;
+  /** Given while a dock is open: the ticket's button hides the main view so the dock takes the column. */
+  onHide?: () => void;
   children?: ReactNode;
 }
 
 /** The ticket under the cursor, detailed, and whatever the screen shows beneath it. */
-export const TicketPane = ({ board, selection, focused, onLink, children }: TicketProps) => {
+export const TicketPane = ({ board, selection, focused, onLink, onHide, children }: TicketProps) => {
   const { t } = useTranslation('board');
   const { ticket } = useBoardView({ board, selection });
   return (
-    <Pane title={t('ticket.title')} focused={focused}>
+    <Pane
+      title={t('ticket.title')}
+      focused={focused}
+      action={onHide === undefined ? undefined : { kind: PaneActionKind.Close, label: t('ticket.hide'), onClick: onHide }}
+    >
       {ticket === undefined ? <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} onLink={onLink} />}
       {children}
     </Pane>

@@ -54,7 +54,12 @@ export const DockScreen = ({ hosting, sessions, focused, onFocus, onMinimise }: 
   }, [focused, emulator]);
 
   return (
-    <Pane title={t('dock.title')} focused={focused} layout={PaneLayout.Fill}>
+    <Pane
+      title={t('dock.title')}
+      focused={focused}
+      layout={PaneLayout.Fill}
+      action={{ kind: PaneActionKind.Minimise, label: t('dock.minimise'), onClick: onMinimise }}
+    >
       <DockTabs
         tabs={tabs}
         selected={selected}
@@ -62,7 +67,6 @@ export const DockScreen = ({ hosting, sessions, focused, onFocus, onMinimise }: 
           hosting.select(id);
           onFocus();
         }}
-        action={{ kind: PaneActionKind.Minimise, label: t('dock.minimise'), onClick: onMinimise }}
       />
       <TerminalSurface ref={surface} label={t('dock.terminal')} onFocus={onFocus} />
     </Pane>

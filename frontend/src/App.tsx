@@ -80,7 +80,8 @@ export const App = ({ app, packaged }: Props) => {
   const markers = sessions === undefined ? [] : markersOf(sessions);
   const project = board.shown()?.root ?? t('app.project');
   const hasDock = dock.tabs.length > 0;
-  const dockKeys = hasDock ? [t(layout.dockMinimised ? 'keyBar.restoreDock' : 'keyBar.minimiseDock')] : [];
+  const dockKey = layout.mainHidden ? 'keyBar.showTicket' : layout.dockMinimised ? 'keyBar.restoreDock' : 'keyBar.minimiseDock';
+  const dockKeys = hasDock ? [t(dockKey)] : [];
   const tabKeys = [t('keyBar.tabs'), ...dockKeys];
   const keyBar = {
     [Focus.Board]: <BoardKeyBar extra={tabKeys} />,
@@ -198,6 +199,7 @@ export const App = ({ app, packaged }: Props) => {
               selection={app.board.selection}
               focused={layout.focus === Focus.Sessions}
               onLink={(href) => app.docs.followFromTicket(href)}
+              onHide={hasDock ? () => app.hideMainView() : undefined}
             >
               <SessionsList
                 rows={app.sessions.rows()}

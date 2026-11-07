@@ -30,6 +30,7 @@ export const DockTabs = ({ tabs, selected, onSelect, action }: Props) => {
           role="tab"
           aria-selected={tab.id === selected}
           className={tab.id === selected ? `${styles.tab} ${styles.selected}` : styles.tab}
+          onMouseDown={(event) => event.preventDefault()}
           onClick={() => onSelect(tab.id)}
         >
           <Lamp colour={tab.lamp} size={LampSize.Marker} />

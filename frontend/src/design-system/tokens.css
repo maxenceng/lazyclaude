@@ -52,6 +52,9 @@
 
   --focus: #5aa9e6;
   --selected: #d9d6cf;
+  --cursor-ground: var(--selected);
+  --cursor-ink: var(--text-on-light);
+  --cursor-edge: none;
   --card: #232427;
   --card-edge: #2f3034;
   --card-dim: #908d86;
@@ -79,5 +82,7 @@
   --lamp-tile-width: 118px;
   --lamp-tile-height: 46px;
   --lamp-marker: 14px;
+  --pane-action: 24px;
+  --pane-action-icon: 12px;
   --card-radius: 3px;
 }

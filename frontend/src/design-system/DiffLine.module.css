@@ -25,8 +25,9 @@
 }
 
 .cursor {
-  background: var(--selected);
-  color: var(--text-on-light);
+  background: var(--cursor-ground);
+  color: var(--cursor-ink);
+  box-shadow: var(--cursor-edge);
 }
 
 .number {
@@ -38,7 +39,7 @@
 }
 
 .cursor .number {
-  color: var(--text-on-light);
+  color: var(--cursor-ink);
 }
 
 .sign {
@@ -55,7 +56,7 @@
 }
 
 .cursor .sign {
-  color: var(--text-on-light);
+  color: var(--cursor-ink);
 }
 
 .text {

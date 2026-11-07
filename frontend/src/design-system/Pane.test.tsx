@@ -19,4 +19,18 @@ describe('a pane', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Close document' }));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
+
+  it('leaves the focus where it was when its action is clicked', async () => {
+    render(
+      <>
+        <input aria-label="Elsewhere" />
+        <Pane title="Document" focused={false} action={{ kind: PaneActionKind.Close, label: 'Close document', onClick: vi.fn() }}>
+          body
+        </Pane>
+      </>,
+    );
+    screen.getByRole('textbox', { name: 'Elsewhere' }).focus();
+    await userEvent.click(screen.getByRole('button', { name: 'Close document' }));
+    expect(screen.getByRole('textbox', { name: 'Elsewhere' }), 'the window keeps its own focus; a click must not hand it to the button').toHaveFocus();
+  });
 });

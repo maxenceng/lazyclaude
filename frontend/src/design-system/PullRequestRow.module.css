@@ -14,8 +14,9 @@
 }
 
 .selected {
-  background: var(--selected);
-  color: var(--text-on-light);
+  background: var(--cursor-ground);
+  color: var(--cursor-ink);
+  box-shadow: var(--cursor-edge);
 }
 
 .number {
@@ -42,6 +43,6 @@
 }
 
 .selected .head {
-  color: var(--text-on-light);
+  color: var(--cursor-ink);
   opacity: 0.7;
 }

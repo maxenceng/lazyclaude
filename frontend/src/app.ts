@@ -117,6 +117,14 @@ export class AppModel {
     this.layout.set(this.layout.get().closeDocument());
   }
 
+  /** The ticket's close button: the main view hides and the dock takes the column, as `m` does; `m` shows it again. */
+  hideMainView(): void {
+    const current = this.layout.get();
+    if (!current.mainHidden) {
+      this.layout.set(current.toggleMainView());
+    }
+  }
+
   /** Retry on the Pull requests tab: reads the open pull requests again. */
   retryPullRequests(): void {
     const root = this.board.root();

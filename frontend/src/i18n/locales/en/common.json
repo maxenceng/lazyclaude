@@ -26,6 +26,7 @@
   "keyBar": {
     "tabs": "1/2/3 tabs",
     "minimiseDock": "M minimise",
-    "restoreDock": "M restore"
+    "restoreDock": "M restore",
+    "showTicket": "m ticket"
   }
 }
