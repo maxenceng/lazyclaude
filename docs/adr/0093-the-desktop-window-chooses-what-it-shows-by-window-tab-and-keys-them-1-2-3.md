@@ -5,6 +5,7 @@ Date: 2026-11-06
 ## Status
 
 Accepted. Builds on ADR 0082 (the composition side) and ADR 0090 (`review` decides the rules both frontends show).
+Amended by ADR 0100: Base lists the ten latest closed done tickets, and a done card goes to Base.
 
 ## Context
 

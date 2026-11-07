@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.doneOfferingDone;
+import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.doneWithoutVerbs;
 import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.inProgressDesignThenReview;
 import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.inReviewDoneThenRespond;
 import static dev.maxenceng.lazyclaude.board.published.StatusVerbsFixture.todoWithoutVerbs;
@@ -82,6 +84,14 @@ public final class ConfigurationFixture {
 
     public static Configuration withTodoWithoutVerbs() {
         return configurationBuilderWith(List.of(todoWithoutVerbs()));
+    }
+
+    public static Configuration withDoneOfferingDone() {
+        return configurationBuilderWith(List.of(doneOfferingDone()));
+    }
+
+    public static Configuration withDoneWithoutVerbs() {
+        return configurationBuilderWith(List.of(doneWithoutVerbs()));
     }
 
     public static Configuration withInProgressDesignFirst() {

@@ -6,6 +6,7 @@ Date: 2026-11-06
 
 Accepted. Amends ADR 0030: `session` reads `Status` and `StatusVerbs` from `board.published` beside `Verb`. Builds on ADR
 0078: the section is read once at start-up.
+Amended by ADR 0100: `done:` holds `done` or nothing, since a finished ticket offers `done`.
 
 ## Context
 

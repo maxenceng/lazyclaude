@@ -1,6 +1,8 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.defaultConfiguration;
+import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withDoneOfferingDone;
+import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withDoneWithoutVerbs;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withInProgressDesignFirst;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withInReviewVerbs;
 import static dev.maxenceng.lazyclaude.session.domain.ConfigurationFixture.withTodoWithoutVerbs;
@@ -126,12 +128,35 @@ class ConfigurationRepositoryVerbsTest {
     }
 
     @Test
-    void shouldRefuseAnyVerbUnderDone() throws IOException {
+    void shouldAcceptDoneUnderDone() throws IOException {
         configYml(configHome, "verbs:", "  done: [done]");
+
+        assertThat(repository.configuration()).isEqualTo(withDoneOfferingDone());
+    }
+
+    @Test
+    void shouldLeaveDoneNoVerbWhenItsListIsEmpty() throws IOException {
+        configYml(configHome, "verbs:", "  done: []");
+
+        assertThat(repository.configuration()).isEqualTo(withDoneWithoutVerbs());
+    }
+
+    @Test
+    void shouldRefuseAnyVerbButDoneUnderDone() throws IOException {
+        configYml(configHome, "verbs:", "  done: [done, start]");
 
         assertThatThrownBy(repository::configuration)
                 .isExactlyInstanceOf(ConfigurationRefusedException.class)
-                .hasMessage(FILE + ":2: done is not offered under done: a finished ticket has no verb");
+                .hasMessage(FILE + ":2: start is only offered under todo, not done");
+    }
+
+    @Test
+    void shouldRefuseReviewUnderDoneNamingTheOpenStatusesItIsOfferedUnder() throws IOException {
+        configYml(configHome, "verbs:", "  done: [review]");
+
+        assertThatThrownBy(repository::configuration)
+                .isExactlyInstanceOf(ConfigurationRefusedException.class)
+                .hasMessage(FILE + ":2: review is only offered under draft or todo or in-progress or in-review, not done");
     }
 
     @Test
