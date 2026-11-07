@@ -309,7 +309,7 @@ mod tests {
         (on_message, receiver)
     }
 
-    fn reading() -> (Relay, Receiver<RelayMessage>) {
+    fn unspawned() -> (Relay, Receiver<RelayMessage>) {
         let relay = Relay::new(Sidecar {
             program: "unspawned".into(),
             args: Vec::new(),
@@ -323,7 +323,7 @@ mod tests {
     fn lines_of(message: RelayMessage) -> Vec<String> {
         match message {
             RelayMessage::Lines { lines } => lines,
-            RelayMessage::Exited(exit) => panic!("the stand-in exited: {:?} {:?}", exit.code, exit.stderr),
+            RelayMessage::Exited(exit) => panic!("the sidecar exited: {:?} {:?}", exit.code, exit.stderr),
         }
     }
 
@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn lines_read_together_reach_the_page_in_one_message_as_they_were_written() {
-        let (relay, receiver) = reading();
+        let (relay, receiver) = unspawned();
         let stdout = format!("{READY}\n{CHANGED}\nthird\n");
 
         relay.read_stdout(Cursor::new(stdout), 0);
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn a_line_cut_across_two_reads_reaches_the_page_once_whole_in_the_second_message() {
-        let (relay, receiver) = reading();
+        let (relay, receiver) = unspawned();
         let stdout = format!("{READY}\n{CHANGED}\nthird\n");
         let (before, after) = stdout.split_at(READY.len() + "\n".len() + CHANGED.len() / 2);
 
