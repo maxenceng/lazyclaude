@@ -1093,6 +1093,12 @@ describe('quitting the window', () => {
     expect(platform.closes).toBe(1);
   });
 
+  it('quits on ctrl+c outside a pane as on q', async () => {
+    const { platform, user } = await readyApp();
+    await user.keyboard('{Control>}c{/Control}');
+    expect(platform.closes).toBe(1);
+  });
+
   it('quits from the status line button as q does', async () => {
     const { platform, user } = await readyApp();
     await user.click(screen.getByRole('button', { name: 'Quit lazyclaude' }));
