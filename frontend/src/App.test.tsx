@@ -905,3 +905,150 @@ describe('the Review screen', () => {
     expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
   });
 });
+
+const captureBox = () => screen.getByRole('textbox', { name: 'Ticket title' });
+
+const answerCapture = (started: Started, result: unknown) =>
+  act(async () => {
+    started.client.answer('board/capture', result);
+    await settle();
+  });
+
+describe('capturing a draft ticket', () => {
+  it('opens a titled popup on c with the focus on its input and only its own keys on the key bar', async () => {
+    const { user } = await readyApp();
+    await user.keyboard('c');
+    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+    expect(captureBox()).toHaveFocus();
+    expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['enter create', 'esc cancel']);
+  });
+
+  it("opens on the Board pane's New ticket button, with the focus on its input", async () => {
+    const { user, app } = await readyApp();
+    act(() => app.focusOn(Focus.Docs));
+    await user.click(screen.getByRole('button', { name: 'New ticket' }));
+    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+    expect(captureBox()).toHaveFocus();
+    expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+
+  it("keeps a click behind the popup from reaching a ticket or a window tab, and from taking the input's focus", async () => {
+    const { user, app } = await readyApp();
+    await user.keyboard('c');
+    await user.click(screen.getByRole('button', { name: /PROJ-2/ }));
+    await user.click(screen.getByRole('tab', { name: /^Board/ }));
+    expect(app.board.selection.selected.get()).toBeUndefined();
+    expect(screen.getByRole('tab', { name: 'Base' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+    expect(captureBox()).toHaveFocus();
+  });
+
+  it('lets clicks reach the window again once the popup has closed', async () => {
+    const { user, app } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: /PROJ-2/ }));
+    expect(app.board.selection.selected.get()).toBe('PROJ-2');
+  });
+
+  it('does not open from a panel other than the Board', async () => {
+    const { user, app } = await readyApp();
+    act(() => app.focusOn(Focus.Docs));
+    await user.keyboard('c');
+    expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
+  });
+
+  it('leaves every typed key to the input, the window taking none of them', async () => {
+    const { user, app } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('cRqjk Ab{Backspace}');
+    expect(captureBox()).toHaveValue('cRqjk A');
+    expect(app.board.selection.selected.get()).toBeUndefined();
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  });
+
+  it('leaves word deletion, select all and paste to the webview by not preventing their default', async () => {
+    const { user } = await readyApp(true);
+    await user.keyboard('c');
+    const chords: KeyboardEventInit[] = [{ key: 'Backspace', ctrlKey: true }, { key: 'a', ctrlKey: true }, { key: 'v', ctrlKey: true }, { key: 'ArrowLeft', ctrlKey: true, shiftKey: true }];
+    const prevented = chords.map((init) => {
+      const event = new KeyboardEvent('keydown', { ...init, cancelable: true, bubbles: true });
+      captureBox().dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    expect(prevented).toEqual([false, false, false, false]);
+  });
+
+  it('leaves an esc that ends an input method composition to the composition, keeping the popup', async () => {
+    const { user } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('A title');
+    act(() => {
+      captureBox().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', isComposing: true, bubbles: true, cancelable: true }));
+    });
+    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+    expect(captureBox()).toHaveValue('A title');
+  });
+
+  it('closes on esc without sending anything', async () => {
+    const { user, client } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('A title{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
+    expect(client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(0);
+  });
+
+  it('sends the title once on enter, says it is creating, and ignores a second enter and esc', async () => {
+    const { user, client } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('A title{Enter}{Enter}{Escape}');
+    expect(client.calls.filter((call) => call.method === 'board/capture')).toEqual([{ method: 'board/capture', params: { root: '/p', title: 'A title' } }]);
+    expect(within(screen.getByRole('dialog', { name: 'New ticket' })).getByRole('status')).toHaveTextContent('creating…');
+    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+  });
+
+  it('keeps the popup and its text on a refusal, says why, and sends again only on another enter', async () => {
+    const started = await readyApp();
+    await started.user.keyboard('c');
+    await started.user.keyboard('A title{Enter}');
+    await answerCapture(started, { kind: 'refusedTicketCapture', reason: 'gh is not signed in' });
+    expect(screen.getByRole('alert')).toHaveTextContent('⚠ gh is not signed in');
+    expect(captureBox()).toHaveValue('A title');
+    expect(started.client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(1);
+    await started.user.keyboard('{Enter}');
+    expect(started.client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(2);
+  });
+
+  it('keeps the popup and says why when the call itself fails', async () => {
+    const started = await readyApp();
+    await started.user.keyboard('c');
+    await started.user.keyboard('A title{Enter}');
+    await act(async () => {
+      started.client.fail('board/capture', new Error('the sidecar is not running'));
+      await settle();
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('⚠ the sidecar is not running');
+    expect(captureBox()).toHaveValue('A title');
+  });
+
+  it('closes on a captured answer and selects the new ticket on the board the answer carries', async () => {
+    const started = await readyApp();
+    await started.user.keyboard('c');
+    await started.user.keyboard('A title{Enter}');
+    const read = boardFixture([...board.groups.flatMap((group) => group.tickets), ticketFixture({ id: 'PROJ-3', title: 'A title' })]);
+    await answerCapture(started, { kind: 'capturedOnBoard', id: 'PROJ-3', board: read });
+    expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
+    expect(screen.getByRole('button', { name: /PROJ-3/ })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('answers enter and esc from the window when focus has left the input, and nothing else', async () => {
+    const started = await readyApp();
+    await started.user.keyboard('c');
+    await started.user.keyboard('A title');
+    act(() => (document.activeElement as HTMLElement).blur());
+    await started.user.keyboard('j');
+    expect(started.app.board.selection.selected.get()).toBeUndefined();
+    await started.user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
+  });
+});

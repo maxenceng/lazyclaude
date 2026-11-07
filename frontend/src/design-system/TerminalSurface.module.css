@@ -4,6 +4,7 @@
   background: var(--terminal-ground);
   padding: var(--space-2) var(--space-3);
   overflow: hidden;
+  isolation: isolate;
 }
 
 .surface :global(.xterm) {

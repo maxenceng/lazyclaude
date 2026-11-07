@@ -94,7 +94,6 @@ public final class ProtocolCoverageFixture {
 
     public static List<String> notYetOnTheProtocol() {
         return List.of(
-"board/capture",
 "session/emulate",
 "session/followsPointer",
 "session/knowTickets",

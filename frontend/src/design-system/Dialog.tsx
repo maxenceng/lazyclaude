@@ -22,7 +22,7 @@ const dismissOn =
 export const Dialog = ({ title, hint, children, onDismiss }: Props) => {
   const heading = useId();
   return (
-    <div className={styles.scrim} role="presentation" onMouseDown={dismissOn(onDismiss)}>
+    <div className={styles.scrim} role="presentation" data-modal="" onMouseDown={dismissOn(onDismiss)}>
       <section role="dialog" aria-modal="true" aria-labelledby={heading} className={styles.dialog}>
         <h2 id={heading} className={styles.title}>
           {title}

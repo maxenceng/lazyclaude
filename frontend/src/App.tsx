@@ -2,7 +2,8 @@ import type { TFunction } from 'i18next';
 import { type ReactNode, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AppModel } from './app';
-import { BoardKeyBar, BoardTabKeyBar } from './board/BoardKeyBar';
+import { BoardKeyBar, BoardTabKeyBar, CaptureKeyBar } from './board/BoardKeyBar';
+import { CapturePopup } from './board/CapturePopup';
 import { BoardColumns, BoardPane, BoardPreview, TicketPane } from './board/BoardScreen';
 import { inProgressCount } from './board/rows';
 import { ConnectionScreen } from './connection/ConnectionScreen';
@@ -11,6 +12,7 @@ import { DocsPane, DocumentPane } from './docs/DocsScreen';
 import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Lamp, LampSize, Pane, StatusLine, Text, Tone, WindowTabBar } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
+import { ModalClicks } from './keys/modalClicks';
 import { WindowKeys } from './keys/windowKeys';
 import { Focus, WindowTab } from './layout';
 import { StatusKind } from './protocol';
@@ -68,13 +70,18 @@ export const App = ({ app, packaged }: Props) => {
   const tab = useStore(app.tabs.selected);
   const previewShown = useStore(app.tabs.previewShown);
   const pullRequests = useStore(app.review.pullRequests.state);
+  const capturing = useStore(app.board.capture.state).isOpen();
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
 
   useEffect(() => {
     const keys = new WindowKeys((action) => app.press(action), { packaged, reserved: () => app.reserved() });
-    return () => keys.remove();
+    const clicks = new ModalClicks(() => app.isModal());
+    return () => {
+      keys.remove();
+      clicks.remove();
+    };
   }, [app, packaged]);
 
   const markers = sessions === undefined ? [] : markersOf(sessions);
@@ -182,6 +189,7 @@ export const App = ({ app, packaged }: Props) => {
               onOpen={() => app.press(Action.Open)}
               onFocus={() => app.focusOn(Focus.Board)}
               onRetry={() => void app.load()}
+              onCapture={app.board.root() === undefined ? undefined : () => app.capture()}
             />
           ),
           docs: (
@@ -273,7 +281,7 @@ export const App = ({ app, packaged }: Props) => {
             notice={notice}
           />
         }
-        keyBar={picker === undefined ? (tabbed === undefined ? keyBar : tabScreen.bar) : <SessionsKeyBar picking />}
+        keyBar={capturing ? <CaptureKeyBar /> : picker === undefined ? (tabbed === undefined ? keyBar : tabScreen.bar) : <SessionsKeyBar picking />}
         board={shown.board}
         docs={shown.docs}
         foot={reviewing?.foot}
@@ -281,7 +289,8 @@ export const App = ({ app, packaged }: Props) => {
         dock={dock.tabs.length === 0 ? null : dockScreen}
         arrangement={shown.arrangement}
       />
-        {review === undefined ? null : <ReviewDialogs review={review} />}
+      {review === undefined ? null : <ReviewDialogs review={review} />}
+      <CapturePopup capture={app.board.capture} />
     </>
   );
 };

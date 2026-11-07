@@ -1,0 +1,14 @@
+.input {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--pane-sunk);
+  color: var(--text);
+  border: 1px solid var(--seam);
+  font: var(--size-body) / 1.5 var(--font-mono);
+}
+
+.input:focus-visible {
+  outline: var(--focus-edge) solid var(--focus);
+  outline-offset: 0;
+}

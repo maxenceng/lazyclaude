@@ -7,7 +7,8 @@
     "unavailableBoard": "The board cannot be read",
     "fault": "The board could not be read",
     "retry": "Retry",
-    "unreadable": "unreadable"
+    "unreadable": "unreadable",
+    "capture": "New ticket"
   },
   "status": {
     "IN_PROGRESS": "in progress",
@@ -24,9 +25,18 @@
   "keyBar": {
     "move": "j/k move",
     "open": "enter open",
-    "new": "n new session",
-    "newUnlinked": "N new unlinked",
+    "new": "n new",
+    "newUnlinked": "N new",
     "columns": "h/j/k/l move",
-    "openTicket": "enter go to ticket"
+    "openTicket": "enter go to ticket",
+    "capture": "c capture",
+    "create": "enter create",
+    "cancel": "esc cancel"
+  },
+  "capture": {
+    "title": "New ticket",
+    "label": "Ticket title",
+    "creating": "creating…",
+    "refused": "⚠ {{reason}}"
   }
 }

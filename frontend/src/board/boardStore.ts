@@ -20,7 +20,12 @@ export class BoardStore {
   readonly state: Store<BoardState> = new Store<BoardState>(new LoadingBoard());
 
   constructor(private readonly client: Client) {
-    client.subscribe('board/changed', (view) => this.state.set(stateOf(view)));
+    client.subscribe('board/changed', (view) => this.show(view));
+  }
+
+  /** Shows a board the sidecar read for another answer, as a capture's. */
+  show(view: BoardBoardLookupView): void {
+    this.state.set(stateOf(view));
   }
 
   async load(): Promise<void> {

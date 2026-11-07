@@ -56,7 +56,7 @@ public final class Sidecar {
     /** What is served on {@code output}, with the pushes of what a hosted {@code claude} writes and how it exits wired to it. */
     Map<String, SidecarMethod> methods(SidecarOutput output) {
         return Stream.of(
-                        new BoardMethods(contexts.board(), output).methods(),
+                        new BoardMethods(contexts.board(), contexts.capturing(), output).methods(),
                         new SessionMethods(contexts.sessions(), contexts.hosting(), contexts.watching(), contexts.configuration(), output)
                                 .methods(),
                         new WarningMethods(contexts.warnings(), output).methods(),

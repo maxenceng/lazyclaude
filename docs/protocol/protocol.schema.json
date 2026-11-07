@@ -33,6 +33,19 @@
           "required" : [ "params", "result" ],
           "additionalProperties" : false
         },
+        "board/capture" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/board.TicketCapturePayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/board.BoardCaptureView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
         "session/startUnlinked" : {
           "type" : "object",
           "properties" : {
@@ -385,7 +398,7 @@
           "additionalProperties" : false
         }
       },
-      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startTicket", "session/resumePast", "session/newSessionFor", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/commentsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/summaryToSubmit", "review/pullRequestOn", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
+      "required" : [ "board/boardFor", "board/watch", "board/capture", "session/startUnlinked", "session/startTicket", "session/resumePast", "session/newSessionFor", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/commentsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/summaryToSubmit", "review/pullRequestOn", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
       "additionalProperties" : false
     },
     "inputs" : {
@@ -546,6 +559,26 @@
   "required" : [ "methods", "inputs", "notifications" ],
   "additionalProperties" : false,
   "$defs" : {
+    "board.BoardAfterCaptureView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/board.BoardReadingView"
+      }, {
+        "$ref" : "#/$defs/board.NoBoardAfterCaptureView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "board.BoardCaptureView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/board.CapturedOnBoardView"
+      }, {
+        "$ref" : "#/$defs/board.RefusedTicketCaptureView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
     "board.BoardLookupView" : {
       "oneOf" : [ {
         "$ref" : "#/$defs/board.BoardReadingView"
@@ -614,6 +647,22 @@
       "required" : [ "kind", "value" ],
       "additionalProperties" : false
     },
+    "board.CapturedOnBoardView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "capturedOnBoard"
+        },
+        "id" : {
+          "type" : "string"
+        },
+        "board" : {
+          "$ref" : "#/$defs/board.BoardAfterCaptureView"
+        }
+      },
+      "required" : [ "kind", "id", "board" ],
+      "additionalProperties" : false
+    },
     "board.ContextName" : {
       "type" : "object",
       "properties" : {
@@ -625,6 +674,16 @@
         }
       },
       "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "board.NoBoardAfterCaptureView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noBoardAfterCapture"
+        }
+      },
+      "required" : [ "kind" ],
       "additionalProperties" : false
     },
     "board.NoBody" : {
@@ -668,6 +727,19 @@
         }
       },
       "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "board.RefusedTicketCaptureView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "refusedTicketCapture"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason" ],
       "additionalProperties" : false
     },
     "board.Status" : {
@@ -715,6 +787,19 @@
       "discriminator" : {
         "propertyName" : "kind"
       }
+    },
+    "board.TicketCapturePayload" : {
+      "type" : "object",
+      "properties" : {
+        "root" : {
+          "type" : "string"
+        },
+        "title" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "root", "title" ],
+      "additionalProperties" : false
     },
     "board.TicketContext" : {
       "oneOf" : [ {
