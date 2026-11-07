@@ -923,6 +923,34 @@ describe('capturing a draft ticket', () => {
     expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['enter create', 'esc cancel']);
   });
 
+  it("opens on the Board pane's New ticket button, with the focus on its input", async () => {
+    const { user, app } = await readyApp();
+    act(() => app.focusOn(Focus.Docs));
+    await user.click(screen.getByRole('button', { name: 'New ticket' }));
+    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+    expect(captureBox()).toHaveFocus();
+    expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+
+  it("keeps a click behind the popup from reaching a ticket or a window tab, and from taking the input's focus", async () => {
+    const { user, app } = await readyApp();
+    await user.keyboard('c');
+    await user.click(screen.getByRole('button', { name: /PROJ-2/ }));
+    await user.click(screen.getByRole('tab', { name: /^Board/ }));
+    expect(app.board.selection.selected.get()).toBeUndefined();
+    expect(screen.getByRole('tab', { name: 'Base' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+    expect(captureBox()).toHaveFocus();
+  });
+
+  it('lets clicks reach the window again once the popup has closed', async () => {
+    const { user, app } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: /PROJ-2/ }));
+    expect(app.board.selection.selected.get()).toBe('PROJ-2');
+  });
+
   it('does not open from a panel other than the Board', async () => {
     const { user, app } = await readyApp();
     act(() => app.focusOn(Focus.Docs));
@@ -1003,13 +1031,13 @@ describe('capturing a draft ticket', () => {
     expect(captureBox()).toHaveValue('A title');
   });
 
-  it('closes on a captured answer and selects the new ticket when the board push arrives', async () => {
+  it('closes on a captured answer and selects the new ticket on the board the answer carries', async () => {
     const started = await readyApp();
     await started.user.keyboard('c');
     await started.user.keyboard('A title{Enter}');
-    await answerCapture(started, { kind: 'capturedTicket', id: 'PROJ-3' });
+    const read = boardFixture([...board.groups.flatMap((group) => group.tickets), ticketFixture({ id: 'PROJ-3', title: 'A title' })]);
+    await answerCapture(started, { kind: 'capturedOnBoard', id: 'PROJ-3', board: read });
     expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
-    act(() => started.client.push('board/changed', boardFixture([...board.groups.flatMap((group) => group.tickets), ticketFixture({ id: 'PROJ-3', title: 'A title' })])));
     expect(screen.getByRole('button', { name: /PROJ-3/ })).toHaveAttribute('aria-current', 'true');
   });
 

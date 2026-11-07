@@ -88,6 +88,17 @@ export class AppModel {
     return this.configuration.reserved();
   }
 
+  /** Whether a popup is open that takes every key and click, so nothing behind it answers either. */
+  isModal(): boolean {
+    return this.keys.isModal();
+  }
+
+  /** The capture popup's button, in the Board pane's title: the Board takes focus and `c` is done there. */
+  capture(): void {
+    this.focusOn(Focus.Board);
+    this.board.capture.open();
+  }
+
   press(action: Action): void {
     if (this.review.isOpen()) {
       this.notices.clear();

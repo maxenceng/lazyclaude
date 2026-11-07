@@ -12,6 +12,7 @@ import { DocsPane, DocumentPane } from './docs/DocsScreen';
 import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Lamp, LampSize, Pane, StatusLine, Text, Tone, WindowTabBar } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
+import { ModalClicks } from './keys/modalClicks';
 import { WindowKeys } from './keys/windowKeys';
 import { Focus, WindowTab } from './layout';
 import { StatusKind } from './protocol';
@@ -76,7 +77,11 @@ export const App = ({ app, packaged }: Props) => {
 
   useEffect(() => {
     const keys = new WindowKeys((action) => app.press(action), { packaged, reserved: () => app.reserved() });
-    return () => keys.remove();
+    const clicks = new ModalClicks(() => app.isModal());
+    return () => {
+      keys.remove();
+      clicks.remove();
+    };
   }, [app, packaged]);
 
   const markers = sessions === undefined ? [] : markersOf(sessions);
@@ -184,6 +189,7 @@ export const App = ({ app, packaged }: Props) => {
               onOpen={() => app.press(Action.Open)}
               onFocus={() => app.focusOn(Focus.Board)}
               onRetry={() => void app.load()}
+              onCapture={app.board.root() === undefined ? undefined : () => app.capture()}
             />
           ),
           docs: (

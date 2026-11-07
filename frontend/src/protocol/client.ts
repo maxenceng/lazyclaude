@@ -152,9 +152,7 @@ export class ProtocolClient implements Client {
     } else if (message.method === READY) {
       this.onReady(message.params);
     } else if (message.method !== undefined) {
-      const handlers = this.handlers.get(message.method);
-      // A push waits one microtask, so a caller awaiting the answer on an earlier line of its batch sees that answer first.
-      queueMicrotask(() => handlers?.forEach((handler) => handler(message.params as never)));
+      this.handlers.get(message.method)?.forEach((handler) => handler(message.params as never));
     }
   }
 

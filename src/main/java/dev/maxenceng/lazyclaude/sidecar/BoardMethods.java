@@ -6,14 +6,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardAfterCaptureView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardAfterChangePayload;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardCaptureView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardLookupView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardWatchPayload;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.CapturedOnBoardView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.CapturedTicketView;
+import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoBoardAfterCaptureView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.RefusedTicketCaptureView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
@@ -29,8 +33,8 @@ final class BoardMethods {
             ServedMethod.of("board/boardFor", BoardPayload.class, BoardLookupView.class, BoardQuery::boardFor);
     private static final ProtocolMethod<BoardPayload, BoardLookupView> WATCH =
             new ProtocolMethod<>("board/watch", BoardPayload.class, BoardLookupView.class);
-    private static final ProtocolMethod<TicketCapturePayload, TicketCaptureView> CAPTURE =
-            new ProtocolMethod<>("board/capture", TicketCapturePayload.class, TicketCaptureView.class);
+    private static final ProtocolMethod<TicketCapturePayload, BoardCaptureView> CAPTURE =
+            new ProtocolMethod<>("board/capture", TicketCapturePayload.class, BoardCaptureView.class);
     private static final ProtocolNotification<BoardReadingView> CHANGED =
             new ProtocolNotification<>("board/changed", BoardReadingView.class);
 
@@ -54,15 +58,21 @@ final class BoardMethods {
     }
 
     /**
-     * A captured ticket is followed, once its answer is queued, by the board read at once: the frontend selects the ticket on the first
-     * board it receives after the answer, so one must follow it even when the read fails, and a board before it would be taken for it.
+     * A captured ticket is answered with the board read once GitHub took it, so the frontend selects it on that board: a watch read that
+     * began before the create is sent before this answer, under the same lock, and can no longer be taken for the capture's board.
      */
     private SidecarAnswer capture(JsonNode params) {
-        TicketCaptureView answer = CAPTURE.answer(params, this::captureOrRefuse);
-        JsonNode result = SidecarJson.tree(answer);
-        return switch (answer) {
-            case CapturedTicketView _ -> new SidecarAnswer(result, () -> pushBoardAfterCapture(SidecarJson.params(params, CAPTURE.params()).root()));
-            case RefusedTicketCaptureView _ -> SidecarAnswer.of(result);
+        return SidecarAnswer.of(SidecarJson.tree(CAPTURE.answer(params, this::captureOnBoard)));
+    }
+
+    private BoardCaptureView captureOnBoard(TicketCapturePayload payload) {
+        TicketCaptureView capture = captureOrRefuse(payload);
+        return switch (capture) {
+            case CapturedTicketView captured -> CapturedOnBoardView.builder()
+                    .id(captured.id())
+                    .board(boardAfterCapture(payload.root()))
+                    .build();
+            case RefusedTicketCaptureView refused -> refused;
         };
     }
 
@@ -101,7 +111,7 @@ final class BoardMethods {
         }
     }
 
-    /** Synchronized with the push after a capture, so each board kept in {@code shown} is the one sent last. */
+    /** Synchronized with the read after a capture, so each board kept in {@code shown} is the one sent last. */
     private synchronized void pushBoardOf(Path root) {
         boardRead(root).ifPresent(view -> {
             shown.put(root, view);
@@ -109,16 +119,11 @@ final class BoardMethods {
         });
     }
 
-    /**
-     * The board is read again, and the board last sent is pushed again when that read fails. A project nobody watches keeps no board,
-     * so a failed read there has nothing to push; the watch it would open is the frontend's to ask for.
-     */
-    // deferred: a capture on a project with no watch and a failing read pushes nothing — close it when a frontend captures before it watches.
-    private synchronized void pushBoardAfterCapture(Path root) {
-        boardRead(root).or(() -> Optional.ofNullable(shown.get(root))).ifPresent(view -> {
-            shown.computeIfPresent(root, (_, _) -> view);
-            output.send(CHANGED.message(view));
-        });
+    /** A project nobody watches keeps no board, so a read there is not kept as the board last sent; the watch is the frontend's to ask for. */
+    private synchronized BoardAfterCaptureView boardAfterCapture(Path root) {
+        Optional<BoardReadingView> read = boardRead(root);
+        read.ifPresent(view -> shown.computeIfPresent(root, (_, _) -> view));
+        return read.<BoardAfterCaptureView>map(view -> view).orElseGet(NoBoardAfterCaptureView::new);
     }
 
     private Optional<BoardReadingView> boardRead(Path root) {

@@ -10,8 +10,12 @@ public final class CaptureSidecarFixture {
         return "{\"root\":\"%s\",\"title\":\"A board from the backlog\"}".formatted(projectPath());
     }
 
-    public static String captured() {
-        return "{\"kind\":\"capturedTicket\",\"id\":\"1\"}";
+    public static String capturedOn(String board) {
+        return "{\"kind\":\"capturedOnBoard\",\"id\":\"1\",\"board\":%s}".formatted(board);
+    }
+
+    public static String noBoardAfterCapture() {
+        return "{\"kind\":\"noBoardAfterCapture\"}";
     }
 
     public static String refusedBecauseOfTheReason() {

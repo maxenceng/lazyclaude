@@ -47,14 +47,20 @@ interface BoardProps extends ViewProps {
   onOpen: (ticket: string) => void;
   onFocus: () => void;
   onRetry: () => void;
+  /** Given while there is a project to capture into: the title's button opens the capture popup, as `c` does. */
+  onCapture?: () => void;
 }
 
 /** The Board: the tickets by status. A press on the selected ticket opens it. */
-export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus, onRetry }: BoardProps) => {
+export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus, onRetry, onCapture }: BoardProps) => {
   const { t } = useTranslation('board');
   const { state, populated, cursor } = useBoardView({ board, selection });
   return (
-    <Pane title={t('board.title')} focused={focused}>
+    <Pane
+      title={t('board.title')}
+      focused={focused}
+      action={onCapture === undefined ? undefined : { kind: PaneActionKind.Add, label: t('board.capture'), onClick: onCapture }}
+    >
       {populated === undefined ? (
         <Unread state={state} onRetry={onRetry} />
       ) : (

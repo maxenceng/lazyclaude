@@ -5,12 +5,12 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptur
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureViewFixture.capturedTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureViewFixture.refusedTicketCaptureView;
 import static dev.maxenceng.lazyclaude.sidecar.CaptureSidecarFixture.captureParams;
-import static dev.maxenceng.lazyclaude.sidecar.CaptureSidecarFixture.captured;
+import static dev.maxenceng.lazyclaude.sidecar.CaptureSidecarFixture.capturedOn;
+import static dev.maxenceng.lazyclaude.sidecar.CaptureSidecarFixture.noBoardAfterCapture;
 import static dev.maxenceng.lazyclaude.sidecar.CaptureSidecarFixture.refusedBecauseGhFailed;
 import static dev.maxenceng.lazyclaude.sidecar.CaptureSidecarFixture.refusedBecauseOfTheReason;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.afterChangeOverABoard;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.afterChangeOverAReason;
-import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.changed;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.linesWritten;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.payload;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.ready;
@@ -49,11 +49,13 @@ class CaptureSidecarTest {
     private TicketCaptureCommand capturing;
 
     @Test
-    void answers_the_number_github_gave_a_captured_ticket() {
+    void answers_a_captured_ticket_with_the_board_read_once_github_took_it() {
+        when(board.boardAfterChange(afterChangeOverAReason())).thenReturn(Optional.of(boardViewOf()));
         when(capturing.capture(capturePayload())).thenReturn(capturedTicketView());
 
         assertThat(linesWritten(board, capturing, request(1, "board/capture", captureParams())))
-                .contains(ready(), resultOf(1, captured()));
+                .as("the frontend selects the new ticket on the board its answer carries, so no push is the capture's")
+                .containsExactly(ready(), resultOf(1, capturedOn(ticketlessBoard())));
     }
 
     @Test
@@ -75,7 +77,7 @@ class CaptureSidecarTest {
     }
 
     @Test
-    void pushes_the_board_read_again_after_the_answer_of_a_capture_on_a_watched_project() {
+    void reads_the_board_after_a_capture_against_the_board_a_watched_project_last_sent() {
         BoardView shown = boardViewOf();
         when(board.boardFor(payload())).thenReturn(shown);
         when(board.boardAfterChange(afterChangeOverABoard())).thenReturn(Optional.of(shown));
@@ -84,40 +86,17 @@ class CaptureSidecarTest {
         when(capturing.capture(capturePayload())).thenAnswer(waitingFor(watching, capturedTicketView()));
 
         assertThat(linesWritten(board, capturing, watchProject(1), request(2, "board/capture", captureParams())))
-                .as("a board before the answer would leave the frontend's selection waiting for a later, unrelated board")
-                .containsExactly(ready(), resultOf(1, ticketlessBoard()), resultOf(2, captured()), changed(ticketlessBoard()));
+                .containsExactly(ready(), resultOf(1, ticketlessBoard()), resultOf(2, capturedOn(ticketlessBoard())));
     }
 
     @Test
-    void pushes_the_board_read_again_after_a_capture_on_a_project_nobody_watches() {
-        when(board.boardAfterChange(afterChangeOverAReason())).thenReturn(Optional.of(boardViewOf()));
-        when(capturing.capture(capturePayload())).thenReturn(capturedTicketView());
-
-        assertThat(linesWritten(board, capturing, request(1, "board/capture", captureParams())))
-                .containsExactly(ready(), resultOf(1, captured()), changed(ticketlessBoard()));
-    }
-
-    @Test
-    void pushes_the_board_last_sent_when_it_cannot_be_read_again_after_a_capture() {
-        BoardView shown = boardViewOf();
-        when(board.boardFor(payload())).thenReturn(shown);
-        when(board.boardAfterChange(afterChangeOverABoard())).thenReturn(Optional.empty());
-        CountDownLatch watching = new CountDownLatch(1);
-        doAnswer(releasingOnceSubscribed(watching)).when(board).subscribe(any(), any());
-        when(capturing.capture(capturePayload())).thenAnswer(waitingFor(watching, capturedTicketView()));
-
-        assertThat(linesWritten(board, capturing, watchProject(1), request(2, "board/capture", captureParams())))
-                .as("the frontend consumes its selection on the first board it receives after the answer")
-                .containsExactly(ready(), resultOf(1, ticketlessBoard()), resultOf(2, captured()), changed(ticketlessBoard()));
-    }
-
-    @Test
-    void pushes_nothing_when_a_board_never_sent_cannot_be_read_after_a_capture() {
+    void answers_a_captured_ticket_with_no_board_when_it_cannot_be_read_after_the_capture() {
         when(board.boardAfterChange(afterChangeOverAReason())).thenReturn(Optional.empty());
         when(capturing.capture(capturePayload())).thenReturn(capturedTicketView());
 
         assertThat(linesWritten(board, capturing, request(1, "board/capture", captureParams())))
-                .containsExactly(ready(), resultOf(1, captured()));
+                .as("a failed read leaves the frontend the board it shows, rather than a board resent as if it were new")
+                .containsExactly(ready(), resultOf(1, capturedOn(noBoardAfterCapture())));
     }
 
     @Test

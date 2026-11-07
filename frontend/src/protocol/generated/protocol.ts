@@ -9,7 +9,8 @@ export type BoardTicketContext = BoardContextName | BoardNoContext;
 export type BoardTicketType = BoardTypeName | BoardNoType;
 export type BoardTicketBody = BoardBody | BoardNoBody;
 export type BoardVerb = 'REFINE' | 'START' | 'REVIEW' | 'DESIGN' | 'RESPOND' | 'DONE';
-export type BoardTicketCaptureView = BoardCapturedTicketView | BoardRefusedTicketCaptureView;
+export type BoardBoardCaptureView = BoardCapturedOnBoardView | BoardRefusedTicketCaptureView;
+export type BoardBoardAfterCaptureView = BoardBoardReadingView | BoardNoBoardAfterCaptureView;
 export type SessionHostStart = SessionStartedHost | SessionNotStartedHost;
 export type SessionListingPayload = SessionTicketListingPayload | SessionNoTicketListingPayload;
 export type SessionMergeState = 'MERGED' | 'NOT_MERGED' | 'UNKNOWN';
@@ -95,7 +96,7 @@ export interface LazyclaudeProtocol {
     };
     'board/capture': {
       params: BoardTicketCapturePayload;
-      result: BoardTicketCaptureView;
+      result: BoardBoardCaptureView;
     };
     'session/startUnlinked': {
       params: SessionNewHostedPayload;
@@ -314,9 +315,13 @@ export interface BoardTicketCapturePayload {
   root: string;
   title: string;
 }
-export interface BoardCapturedTicketView {
-  kind: 'capturedTicket';
+export interface BoardCapturedOnBoardView {
+  kind: 'capturedOnBoard';
   id: string;
+  board: BoardBoardAfterCaptureView;
+}
+export interface BoardNoBoardAfterCaptureView {
+  kind: 'noBoardAfterCapture';
 }
 export interface BoardRefusedTicketCaptureView {
   kind: 'refusedTicketCapture';

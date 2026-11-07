@@ -7,7 +7,8 @@
     "unavailableBoard": "The board cannot be read",
     "fault": "The board could not be read",
     "retry": "Retry",
-    "unreadable": "unreadable"
+    "unreadable": "unreadable",
+    "capture": "New ticket"
   },
   "status": {
     "IN_PROGRESS": "in progress",

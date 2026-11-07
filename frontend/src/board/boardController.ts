@@ -1,4 +1,4 @@
-import type { BoardBoardView, Client, BoardTicketView } from '../protocol';
+import type { BoardBoardAfterCaptureView, BoardBoardView, Client, BoardTicketView } from '../protocol';
 import { BoardStore } from './boardStore';
 import { CaptureController } from './captureController';
 import { columnsOf, selectedIn, ticketIds } from './rows';
@@ -9,15 +9,11 @@ export class BoardController {
   readonly store: BoardStore;
   readonly selection: Selection;
   readonly capture: CaptureController;
-  /** The ticket a capture made, to select: it rides with the one board push that capture starts, and is spent by it, found or not. */
-  private intended: string | undefined;
 
   constructor(client: Client) {
     this.store = new BoardStore(client);
     this.selection = new Selection();
-    this.capture = new CaptureController({ client, root: () => this.root(), onCaptured: (id) => (this.intended = id) });
-    this.store.onPushed(() => this.spendIntent());
-    this.selection.selected.subscribe(() => (this.intended = undefined));
+    this.capture = new CaptureController({ client, root: () => this.root(), onCaptured: (id, board) => this.showCaptured(id, board) });
   }
 
   shown(): BoardBoardView | undefined {
@@ -56,14 +52,15 @@ export class BoardController {
   }
 
   load(): Promise<void> {
-    this.intended = undefined;
     return this.store.load();
   }
 
-  private spendIntent(): void {
-    const id = this.intended;
-    this.intended = undefined;
-    if (id !== undefined && this.ticketIds().includes(id)) {
+  /** The new ticket is selected on the board its capture was answered with; with no board read, on the board shown, if it is there. */
+  private showCaptured(id: string, board: BoardBoardAfterCaptureView): void {
+    if (board.kind !== 'noBoardAfterCapture') {
+      this.store.show(board);
+    }
+    if (this.ticketIds().includes(id)) {
       this.selection.select(id);
     }
   }

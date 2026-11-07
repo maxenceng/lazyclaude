@@ -40,7 +40,7 @@
               "$ref" : "#/$defs/board.TicketCapturePayload"
             },
             "result" : {
-              "$ref" : "#/$defs/board.TicketCaptureView"
+              "$ref" : "#/$defs/board.BoardCaptureView"
             }
           },
           "required" : [ "params", "result" ],
@@ -559,6 +559,26 @@
   "required" : [ "methods", "inputs", "notifications" ],
   "additionalProperties" : false,
   "$defs" : {
+    "board.BoardAfterCaptureView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/board.BoardReadingView"
+      }, {
+        "$ref" : "#/$defs/board.NoBoardAfterCaptureView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "board.BoardCaptureView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/board.CapturedOnBoardView"
+      }, {
+        "$ref" : "#/$defs/board.RefusedTicketCaptureView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
     "board.BoardLookupView" : {
       "oneOf" : [ {
         "$ref" : "#/$defs/board.BoardReadingView"
@@ -627,17 +647,20 @@
       "required" : [ "kind", "value" ],
       "additionalProperties" : false
     },
-    "board.CapturedTicketView" : {
+    "board.CapturedOnBoardView" : {
       "type" : "object",
       "properties" : {
         "kind" : {
-          "const" : "capturedTicket"
+          "const" : "capturedOnBoard"
         },
         "id" : {
           "type" : "string"
+        },
+        "board" : {
+          "$ref" : "#/$defs/board.BoardAfterCaptureView"
         }
       },
-      "required" : [ "kind", "id" ],
+      "required" : [ "kind", "id", "board" ],
       "additionalProperties" : false
     },
     "board.ContextName" : {
@@ -651,6 +674,16 @@
         }
       },
       "required" : [ "kind", "value" ],
+      "additionalProperties" : false
+    },
+    "board.NoBoardAfterCaptureView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noBoardAfterCapture"
+        }
+      },
+      "required" : [ "kind" ],
       "additionalProperties" : false
     },
     "board.NoBody" : {
@@ -767,16 +800,6 @@
       },
       "required" : [ "root", "title" ],
       "additionalProperties" : false
-    },
-    "board.TicketCaptureView" : {
-      "oneOf" : [ {
-        "$ref" : "#/$defs/board.CapturedTicketView"
-      }, {
-        "$ref" : "#/$defs/board.RefusedTicketCaptureView"
-      } ],
-      "discriminator" : {
-        "propertyName" : "kind"
-      }
     },
     "board.TicketContext" : {
       "oneOf" : [ {

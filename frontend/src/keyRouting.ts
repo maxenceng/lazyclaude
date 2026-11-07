@@ -45,10 +45,15 @@ export class KeyRouter {
 
   private lastLeft: Focus = Focus.Files;
 
+  /** Whether a popup holds the keys and the mouse alone (ADR 0051): the one answer both the keys here and the window's clicks read. */
+  isModal(): boolean {
+    return this.board.capture.state.get().isOpen();
+  }
+
   /** A key the window-level handler took: whatever the focused pane does with it. */
   press(action: Action): void {
     const current = this.review.current.get();
-    if (this.board.capture.state.get().isOpen()) {
+    if (this.isModal()) {
       this.pressInCapture(action);
     } else if (this.sessions.isPicking()) {
       this.pressInPicker(action);

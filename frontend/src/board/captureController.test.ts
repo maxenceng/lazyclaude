@@ -63,7 +63,7 @@ describe('capturing a draft ticket', () => {
     controller.open();
     controller.edit('Fix');
     controller.create();
-    client.answerNext({ kind: 'capturedTicket', id: 'PROJ-9' });
+    client.answerNext({ kind: 'capturedOnBoard', id: 'PROJ-9', board: { kind: 'noBoardAfterCapture' } });
     await Promise.resolve();
     await Promise.resolve();
     expect(controller.state.get().kind).toBe(CaptureStateKind.Closed);

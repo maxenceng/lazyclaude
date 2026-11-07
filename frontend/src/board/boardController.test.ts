@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { BoardBoardAfterCaptureView } from '../protocol';
 import { type FakeClient, fakeClient } from '../test/fakeClient';
 import { BoardController } from './boardController';
 import { boardFixture, ticketFixture } from './fixtures';
@@ -7,16 +8,15 @@ const before = boardFixture([ticketFixture({ id: 'PROJ-1' }), ticketFixture({ id
 const after = boardFixture([ticketFixture({ id: 'PROJ-1' }), ticketFixture({ id: 'PROJ-2' }), ticketFixture({ id: 'PROJ-9' })]);
 
 const flush = async () => {
-  for (let turn = 0; turn < 4; turn += 1) {
-    await Promise.resolve();
-  }
+  await Promise.resolve();
+  await Promise.resolve();
 };
 
-const capturing = async ({ board, client }: { board: BoardController; client: FakeClient }) => {
+const capturing = async ({ board, client }: { board: BoardController; client: FakeClient }, read: BoardBoardAfterCaptureView) => {
   board.capture.open();
   board.capture.edit('A ticket');
   board.capture.create();
-  client.answer('board/capture', { kind: 'capturedTicket', id: 'PROJ-9' });
+  client.answer('board/capture', { kind: 'capturedOnBoard', id: 'PROJ-9', board: read });
   await flush();
 };
 
@@ -31,58 +31,43 @@ const setup = async () => {
 };
 
 describe('the new ticket selected after a capture', () => {
-  it('is selected by the first board push after the captured answer', async () => {
-    const { client, board } = await setup();
-    await capturing({ client, board });
-    expect(board.selection.selected.get()).toBe('PROJ-1');
-    client.push('board/changed', after);
-    expect(board.selection.selected.get()).toBe('PROJ-9');
+  it('is selected on the board the captured answer carries', async () => {
+    const started = await setup();
+    await capturing(started, after);
+    expect(started.board.ticketIds()).toContain('PROJ-9');
+    expect(started.board.selection.selected.get()).toBe('PROJ-9');
   });
 
-  it('is spent by that push even when the ticket is not in it, so a later push does not move the cursor', async () => {
-    const { client, board } = await setup();
-    await capturing({ client, board });
-    client.push('board/changed', before);
-    client.push('board/changed', after);
-    expect(board.selection.selected.get()).toBe('PROJ-1');
+  it('is not moved off by a stale push after the answer', async () => {
+    const started = await setup();
+    await capturing(started, after);
+    started.client.push('board/changed', after);
+    expect(started.board.selection.selected.get()).toBe('PROJ-9');
   });
 
-  it('is dropped when the user moves the selection before the push', async () => {
-    const { client, board } = await setup();
-    await capturing({ client, board });
-    board.move(1);
-    client.push('board/changed', after);
-    expect(board.selection.selected.get()).toBe('PROJ-2');
+  it('keeps the board shown and the cursor where it was when the answer carries no board', async () => {
+    const started = await setup();
+    await capturing(started, { kind: 'noBoardAfterCapture' });
+    expect(started.board.ticketIds()).toEqual(['PROJ-1', 'PROJ-2']);
+    expect(started.board.selection.selected.get()).toBe('PROJ-1');
   });
 
-  it('is not made by a push that arrived before the answer', async () => {
-    const { client, board } = await setup();
-    board.capture.open();
-    board.capture.edit('A ticket');
-    board.capture.create();
-    client.push('board/changed', after);
-    client.answer('board/capture', { kind: 'capturedTicket', id: 'PROJ-9' });
-    await flush();
-    expect(board.selection.selected.get()).toBe('PROJ-1');
-  });
-
-  it('is dropped when the board is read afresh', async () => {
-    const { client, board } = await setup();
-    await capturing({ client, board });
-    const reload = board.load();
-    client.answerNext(after);
-    await reload;
-    client.push('board/changed', after);
-    expect(board.selection.selected.get()).toBe('PROJ-1');
+  it('is not selected by a push that arrived before the answer', async () => {
+    const started = await setup();
+    started.board.capture.open();
+    started.board.capture.edit('A ticket');
+    started.board.capture.create();
+    started.client.push('board/changed', after);
+    expect(started.board.selection.selected.get()).toBe('PROJ-1');
   });
 
   it('is not made by a refusal', async () => {
-    const { client, board } = await setup();
-    board.capture.open();
-    board.capture.create();
-    client.answer('board/capture', { kind: 'refusedTicketCapture', reason: 'no' });
+    const started = await setup();
+    started.board.capture.open();
+    started.board.capture.create();
+    started.client.answer('board/capture', { kind: 'refusedTicketCapture', reason: 'no' });
     await flush();
-    client.push('board/changed', after);
-    expect(board.selection.selected.get()).toBe('PROJ-1');
+    started.client.push('board/changed', after);
+    expect(started.board.selection.selected.get()).toBe('PROJ-1');
   });
 });
