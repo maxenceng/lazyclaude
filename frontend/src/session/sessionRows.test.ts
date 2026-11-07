@@ -17,20 +17,20 @@ describe('the sessions listed under a ticket', () => {
     const rows = rowsFor(view, 'PROJ-1');
     expect(rows.map((row) => row.kind)).toEqual([SessionRowKind.Hosted, SessionRowKind.Live, SessionRowKind.Past, SessionRowKind.New]);
     expect(rows[0]).toEqual(new HostedRow('h1', 'session', LampColour.Input));
-    expect(rows[1]).toEqual(new LiveRow('session', LampColour.Off, '1m'));
+    expect(rows[1]).toEqual(new LiveRow('session', LampColour.Off));
     expect((rows[2] as PastRow).session.id).toBe('p1');
   });
 
-  it('lists a past session linked to no ticket after the new row, to resume where it was', () => {
-    const view = sessionsFixture([], { past: [pastFixture({ id: 'free' })] });
-    const rows = rowsFor(view, 'PROJ-1');
-    expect(rows.map((row) => row.kind)).toEqual([SessionRowKind.New, SessionRowKind.Unlinked]);
-    expect((rows[1] as UnlinkedRow).session.id).toBe('free');
+  it('lists no session linked to no ticket under a selected ticket, an interrupted one included', () => {
+    const view = sessionsFixture([], { past: [pastFixture({ id: 'free' }), pastFixture({ id: 'cut', interrupted: true })] });
+    expect(rowsFor(view, 'PROJ-1')).toEqual([new NewRow()]);
   });
 
-  it('lists the sessions linked to no ticket when no ticket is selected, without the new row', () => {
+  it('lists the sessions linked to no ticket when no ticket is selected, without the new row, to resume where they were', () => {
     const view = sessionsFixture([], { past: [pastFixture({ id: 'free' })] });
-    expect(rowsFor(view, undefined).map((row) => row.kind)).toEqual([SessionRowKind.Unlinked]);
+    const rows = rowsFor(view, undefined);
+    expect(rows.map((row) => row.kind)).toEqual([SessionRowKind.Unlinked]);
+    expect((rows[0] as UnlinkedRow).session.id).toBe('free');
   });
 
   it('lists a hosted session whose live record is not read yet as starting', () => {

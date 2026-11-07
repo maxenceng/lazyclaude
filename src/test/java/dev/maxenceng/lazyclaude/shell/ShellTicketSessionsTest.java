@@ -55,17 +55,17 @@ class ShellTicketSessionsTest {
     }
 
     @Test
-    void shouldFollowTheTicketsSectionWithTheUnlinkedOneUnderADimHeader() {
+    void shouldListNoUnlinkedSessionUnderASelectedTicket() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
                 List.of(
                         linkedNamedSessionView(1, "linked-one", new Busy(), ticketLink("1", "start")),
                         linkedNamedSessionView(2, "loose-one", new Busy())),
                 pastSessionViewsNumbered(2)));
 
-        Screen screen = Screen.of(shell);
-
-        assertThat(screen.boardPanelText()).containsSubsequence("#1", "linked-one", "unlinked", "loose-one", "Past session 1");
-        assertThat(screen.dimText()).contains("unlinked");
+        assertThat(Screen.of(shell).boardPanelText())
+                .as("a session no ticket names is listed only with no ticket selected")
+                .contains("#1", "linked-one")
+                .doesNotContain("unlinked", "loose-one", "Past session 1");
     }
 
     @Test
@@ -104,6 +104,9 @@ class ShellTicketSessionsTest {
     @Test
     void shouldKeepTheTextOfAnUnlinkedRowWithNoVerb() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(List.of(linkedNamedSessionView(1, "loose-one", new Busy()))));
+        shell.press(alt('k'));
+        shell.press(key('k'));
+        shell.press(alt('j'));
 
         assertThat(Screen.of(shell).boardPanelLines()).anySatisfy(line -> assertThat(line).matches("∼ loose-one\\s+pane"));
     }
@@ -147,18 +150,14 @@ class ShellTicketSessionsTest {
     }
 
     @Test
-    void shouldSkipTheHeaderRowsWithJAndK() {
+    void shouldSkipTheHeaderRowWithJAndK() {
         Shell shell = shellOnTicketSessionsPanel(sessionsViewOf(
-                List.of(
-                        linkedNamedSessionView(1, "linked-one", new Busy(), ticketLink("1", "start")),
-                        linkedNamedSessionView(2, "loose-one", new Busy()))));
+                List.of(linkedNamedSessionView(1, "linked-one", new Busy(), ticketLink("1", "start")))));
 
         shell.press(key('j'));
         assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("n new");
         shell.press(key('j'));
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("loose-one");
-        shell.press(key('j'));
-        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("loose-one");
+        assertThat(Screen.of(shell).reversedText()).singleElement().asString().contains("n new");
         shell.press(key('k'));
         shell.press(key('k'));
 

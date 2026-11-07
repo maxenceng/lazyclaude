@@ -18,9 +18,9 @@ import dev.maxenceng.lazyclaude.session.published.Marker;
 /**
  * The Sessions panel's rows and what the shell remembers about them: the selection, by session id, so it survives the
  * sessions being read again and does not move when a row above it appears or a state changes, the ticket whose section is
- * shown, and whether the older unlinked past sessions are unfolded. The selected ticket's section comes first, under its id,
- * with every session linked to it; the unlinked section follows, where only the newest few past sessions show until the
- * rest are unfolded, followed by a row that counts them. Header rows are labels the cursor skips.
+ * shown, and whether the older unlinked past sessions are unfolded. With a ticket selected, only its section shows, under its
+ * id, with every session linked to it; with none, only the unlinked section, where the newest few past sessions show until
+ * the rest are unfolded, followed by a row that counts them. Header rows are labels the cursor skips.
  */
 final class SessionRows {
 
@@ -40,9 +40,8 @@ final class SessionRows {
     }
 
     List<SessionRow> visible() {
-        return Stream.concat(
-                        ticket.stream().flatMap(selectedTicket -> ticketSection(sessions, selectedTicket)),
-                        unlinkedSection(sessions))
+        return ticket.map(selectedTicket -> ticketSection(sessions, selectedTicket))
+                .orElseGet(() -> unlinkedSection(sessions))
                 .toList();
     }
 

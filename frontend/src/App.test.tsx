@@ -535,18 +535,11 @@ describe('starting a session from the board', () => {
     });
   });
 
-  it('resumes a past session linked to no ticket from its row, where being session\'s to decide', async () => {
+  it('lists no past session linked to no ticket under the selected ticket', async () => {
     const ready = await readyApp();
     act(() => ready.client.push('session/changed', sessionsFixture([], { past: [pastFixture({ id: 'free', title: 'Loose end' })] })));
     await ready.user.keyboard('{Enter}');
-    await ready.user.click(screen.getByRole('button', { name: /Loose end/ }));
-    expect(ready.client.calls.find((call) => call.method === 'session/resumePast')?.params).toEqual({
-      sessions: { root: '/p', ticketIds: ['PROJ-1', 'PROJ-2'] },
-      session: 'free',
-      recordedDirectory: '/p/wt',
-      listing: { kind: 'ticketListingPayload', branch: 'proj-1-first' },
-      size: { width: 80, height: 24 },
-    });
+    expect(screen.queryByRole('button', { name: /Loose end/ })).toBeNull();
   });
 
   it('focuses the tab of a hosted session of the ticket on enter', async () => {
