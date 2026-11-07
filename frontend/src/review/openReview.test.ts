@@ -463,6 +463,16 @@ describe('the threads of a review', () => {
     expect(harness.client.calls.at(-1)).toEqual({ method: 'review/reply', params: { root: '/p', number: 7, thread: 'T1', body: 'Because' } });
   });
 
+  it('are replied to from a Reply on the thread, in the box, moving neither the cursor nor the selection', async () => {
+    const harness = new Harness();
+    const resolved = threadFixture({ id: 'T1', resolved: true, open: false });
+    await readWithThread(harness, resolved);
+    harness.review.replyTo(resolved);
+    expect(harness.review.box()?.target).toEqual({ kind: 'reply', thread: resolved });
+    expect(harness.review.cursor()).toBe(0);
+    expect(harness.review.selectedComment()).toBe(0);
+  });
+
   it('are gone to by enter on their entry in Comments', async () => {
     const harness = new Harness();
     await readWithThread(harness, thread);
@@ -620,13 +630,37 @@ describe('the mouse over a review', () => {
     expect(harness.review.cursor()).toBe(3);
   });
 
-  it('selects a comment by a press, and a second press on the selected one goes to its line', async () => {
+  it('selects a thread by one press and goes to its line, whether or not Comments had focus', async () => {
     const harness = new Harness();
-    const thread = threadFixture({ id: 'T1' });
-    await readWithThread(harness, thread);
+    await readWithThread(harness, threadFixture({ id: 'T1' }));
     harness.review.pressComment(0, false);
-    expect(harness.review.cursor()).toBe(0);
+    expect(harness.review.selectedComment()).toBe(0);
+    expect(harness.review.cursor()).toBe(2);
+    harness.review.moveTo(0);
     harness.review.pressComment(0, true);
     expect(harness.review.cursor()).toBe(2);
+  });
+
+  it('opens a pending comment in the box on a second press, and not on the first', async () => {
+    const harness = new Harness();
+    await readWithComment(harness, pendingCommentFixture({ id: 'C1', body: 'Rename this' }));
+    harness.review.moveLine(2);
+    harness.review.pressComment(0, false);
+    expect(harness.review.cursor()).toBe(0);
+    expect(harness.review.box()).toBeUndefined();
+    harness.review.pressComment(0, true);
+    expect(harness.review.box()).toMatchObject({ text: 'Rename this' });
+  });
+
+  it('selects an outdated thread by one press and leaves the cursor where it was, refusing nothing', async () => {
+    const harness = new Harness();
+    const outdated = threadFixture({ id: 'T9', position: { kind: 'outdatedThread' }, open: false });
+    const entry = threadInDiff(outdated, noLine);
+    await readTo(harness, { threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], listed: [entry] }) });
+    harness.review.moveLine(1);
+    harness.review.pressComment(0, false);
+    expect(harness.review.selectedComment()).toBe(0);
+    expect(harness.review.cursor()).toBe(1);
+    expect(harness.refusals).toEqual([]);
   });
 });

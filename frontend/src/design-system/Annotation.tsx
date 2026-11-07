@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import { COMMENT_MARKS, CommentKind } from './comment';
 import styles from './Annotation.module.css';
 
@@ -6,15 +7,27 @@ interface Comment {
   body: string;
 }
 
+export interface AnnotationReply {
+  /** The button's text. */
+  text: string;
+  /** What the button does, for a screen reader, since the text alone does not say which thread. */
+  label: string;
+  onReply: () => void;
+}
+
 interface Props {
   kind: CommentKind;
   heading: string;
   comments: readonly Comment[];
   dim: boolean;
+  reply?: AnnotationReply;
 }
 
-/** What has been said on a line, set under it: a thread's comments, or your own pending comment. A resolved thread is dimmed. */
-export const Annotation = ({ kind, heading, comments, dim }: Props) => {
+/** A click keeps the focus where the window's panes put it. */
+const keepFocus = (event: MouseEvent) => event.preventDefault();
+
+/** What has been said on a line, set under it: a thread's comments, or your own pending comment. A resolved thread is dimmed. Given a reply, it ends with a quiet Reply button, lit when hovered. */
+export const Annotation = ({ kind, heading, comments, dim, reply }: Props) => {
   return (
     <li>
       <article className={[styles.annotation, styles[kind], dim ? styles.dim : ''].join(' ')}>
@@ -26,6 +39,11 @@ export const Annotation = ({ kind, heading, comments, dim }: Props) => {
             <strong className={styles.author}>{comment.author}</strong> {comment.body}
           </p>
         ))}
+        {reply === undefined ? null : (
+          <button type="button" className={styles.replyAction} aria-label={reply.label} onMouseDown={keepFocus} onClick={reply.onReply}>
+            {reply.text}
+          </button>
+        )}
       </article>
     </li>
   );

@@ -8,6 +8,7 @@ import type {
   ReviewPendingReviewView,
   ReviewPendingReviewWriteView,
   ReviewPullRequestDiffView,
+  ReviewReviewThreadView,
   ReviewSummaryDraftPayload,
   ReviewThreadInDiffView,
   ReviewThreadsView,
@@ -54,6 +55,7 @@ export class OpenReview {
   private line = 0;
   private fileSelected = 0;
   private commentSelected = 0;
+  private commentGoneTo = 0;
   private viewLines = 0;
   private diffReads = 0;
   private threadsReads = 0;
@@ -502,12 +504,18 @@ export class OpenReview {
     return this.entries()[this.commentSelected];
   }
 
-  /** To the line the selected entry shows under; nowhere for one on no line. */
+  /** To the line the selected entry shows under, its comments to be shown whole; nowhere for one on no line. */
   goToSelectedComment(): void {
     const line = this.selectedEntry()?.line;
     if (line?.kind === 'onDiffLine') {
+      this.commentGoneTo += 1;
       this.moveTo(line.index);
     }
+  }
+
+  /** How many times the cursor went to a comment: the diff shows the comments under the cursor's line each time it changes, the cursor moved or not. */
+  goneToComment(): number {
+    return this.commentGoneTo;
   }
 
   /** `enter` in Comments: goes to the entry's line and, on a pending comment, opens it in the box. */
@@ -519,6 +527,11 @@ export class OpenReview {
         this.openBox(new CommentBox({ kind: TargetKind.Edit, comment: entry.comment }, entry.comment.body));
       }
     }
+  }
+
+  /** The Reply under a thread's line: the box opens to reply to it, resolved or not, and neither the cursor nor the selection moves. */
+  replyTo(thread: ReviewReviewThreadView): void {
+    this.openBox(new CommentBox({ kind: TargetKind.Reply, thread }));
   }
 
   /** `x` in Comments deletes a pending comment. */
@@ -534,7 +547,7 @@ export class OpenReview {
   commentOnSelectedComment(): void {
     const entry = this.selectedEntry();
     if (entry?.kind === 'threadInDiff') {
-      this.openBox(new CommentBox({ kind: TargetKind.Reply, thread: entry.thread }));
+      this.replyTo(entry.thread);
     }
   }
 
@@ -575,12 +588,18 @@ export class OpenReview {
     this.goToSelectedFile();
   }
 
-  /** A press on a comment: it is selected, and a second press on the selected one is `enter`. */
+  /**
+   * A press on a comment: it is selected and the cursor goes to its line, whether or not Comments had focus; a second press on the
+   * selected one, in the focused Comments, is `enter`.
+   */
   pressComment(index: number, focused: boolean): void {
     const second = focused && index === this.commentSelected;
     this.selectComment(index);
     if (second) {
       this.enterOnComment();
+    } else {
+      // deferred: an outdated thread has no diff line, so a press selects it and the diff stays — closes when the sidecar places an outdated thread on the nearest line
+      this.goToSelectedComment();
     }
   }
 

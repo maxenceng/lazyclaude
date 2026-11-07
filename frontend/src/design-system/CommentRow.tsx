@@ -5,20 +5,26 @@ interface Props {
   kind: CommentKind;
   open: boolean;
   where: string;
+  trailing: string;
+  preview: string;
   dim: boolean;
   selected: boolean;
   onSelect: () => void;
 }
 
-/** One entry of Comments: a thread's mark while it still waits for an answer, or a pending comment's, and where it hangs. The selected row is a light bar; a press on it again goes to its line. */
-export const CommentRow = ({ kind, open, where, dim, selected, onSelect }: Props) => {
+/** One entry of Comments, in two lines that never wrap: the mark and where it hangs with who spoke last on the right, and under it, dimmer, the first line of what was said. The selected row is a light bar; a press on it goes to its line, and a second opens it. */
+export const CommentRow = ({ kind, open, where, trailing, preview, dim, selected, onSelect }: Props) => {
   const mark = kind === CommentKind.Pending || open ? COMMENT_MARKS[kind] : '';
   const classes = [styles.row, selected ? styles.selected : '', dim ? styles.dim : ''].join(' ');
   return (
     <li>
       <button type="button" className={classes} aria-current={selected ? 'true' : undefined} onClick={onSelect}>
-        <span className={[styles.mark, styles[kind]].join(' ')}>{mark}</span>
-        <span className={styles.where}>{where}</span>
+        <span className={styles.head}>
+          <span className={[styles.mark, styles[kind]].join(' ')}>{mark}</span>
+          <span className={styles.where}>{where}</span>
+          <span className={styles.trailing}>{trailing}</span>
+        </span>
+        <span className={styles.preview}>{preview}</span>
       </button>
     </li>
   );

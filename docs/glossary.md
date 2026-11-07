@@ -129,7 +129,7 @@ words mean.
 | Summary | What the review says as a whole: typed on the review screen, or an adopted pending review's body, and sent as its body by the submit (ADR 0042). | `review` |
 | Submit | Send the pending review as a *Comment* review — the only kind GitHub allows on your own pull request. | `review` |
 | Moved head | The pull request's head is no longer the commit the pending review was written on. Warned about, never blocking. | `review` |
-| Reply | A pending comment answering an existing thread, sent with the pending review rather than on its own. | `review` |
+| Reply | A comment after a thread's first, answering it. One you write is a pending comment, sent with the pending review rather than on its own; a Comments row counts the ones already sent. | `review` |
 
 ## docs
 
