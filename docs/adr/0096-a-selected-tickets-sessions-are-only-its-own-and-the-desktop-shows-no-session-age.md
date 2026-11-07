@@ -16,8 +16,9 @@ carried (`PT3H12M5S`), because the sidecar writes the same views the terminal re
 ## Decision
 
 - **A selected ticket lists only the sessions linked to it**, in the terminal and the desktop window alike. The Unlinked
-  section shows only while no ticket is selected, unchanged: the newest five past sessions, the rest behind the
-  older-sessions row.
+  section shows only while no ticket is selected, and each frontend's keeps what it held: the terminal's lists the unlinked
+  live sessions and the newest five past ones, the rest behind the older-sessions row; the desktop's lists the newest five
+  past ones and no more.
 - **The age leaves the session views.** `LiveSessionView` and `PastSessionView` no longer carry it, so neither the protocol
   nor the generated types do. The terminal asks `SessionAgeQuery` for a row's age when it draws it, measured from the
   `startedAt` or `lastActivity` the view already carries; the protocol keeps writing every component of a view, with no
@@ -27,10 +28,12 @@ carried (`PT3H12M5S`), because the sidecar writes the same views the terminal re
 
 ## Consequences
 
-- An unlinked session can be resumed only with no ticket selected; in the desktop window that is an empty board.
+- An unlinked session can be resumed only with no ticket selected: in the terminal, with the board's cursor on a row that
+  is not a ticket; in the desktop window, which always selects the first ticket, only on an empty board.
 - `SessionAgeQuery`'s operations are listed as asked only by the terminal; giving the desktop an age again means a
   protocol method or a view component, and a formatted one.
 - `SessionAgeQuery` is asked about a view it served and answers a published value, not a `*Payload` in and a `*View` out
-  (ADR 0012): the age is a measure of that view against the clock, and its `label()` is already the shell's to draw.
+  (ADR 0012, amended for this query alone): the age is a measure of that view against the clock, and its `label()` is
+  already the shell's to draw.
 - An age is elapsed time: the local time a view carries is read back in the clock's zone, so a clock change between it
   and now keeps its length; only a time inside the hour a change repeats is read at its earlier offset.
