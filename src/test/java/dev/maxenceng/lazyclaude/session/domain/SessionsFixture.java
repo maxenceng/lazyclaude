@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 
@@ -26,6 +28,14 @@ public final class SessionsFixture {
 
     public static SessionClock sessionClock() {
         return new SessionClock(clock());
+    }
+
+    public static SessionClock parisClockAfterSummerTimeEnds() {
+        return new SessionClock(Clock.fixed(Instant.parse("2026-10-25T01:30:00Z"), ZoneId.of("Europe/Paris")));
+    }
+
+    public static LocalDateTime parisTimeBeforeSummerTimeEnds() {
+        return LocalDateTime.of(2026, 10, 25, 1, 30);
     }
 
     public static SessionClock sessionClockAt(Instant instant) {

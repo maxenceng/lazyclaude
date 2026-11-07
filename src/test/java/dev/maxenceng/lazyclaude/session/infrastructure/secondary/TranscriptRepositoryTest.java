@@ -11,6 +11,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.Transcri
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.folder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.lastActivityOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.later;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.mentionedMarkup;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.metaLine;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.modifiedAt;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.notJsonLine;
@@ -327,6 +328,17 @@ class TranscriptRepositoryTest {
                         .as("the command markup Claude Code writes is not what was typed")
                         .extracting(TranscriptFacts::title, TranscriptFacts::opening)
                         .containsExactly(new FirstPrompt("/ticket start 12"), new FirstPrompt("/ticket start 12")));
+    }
+
+    @Test
+    void shouldKeepAPromptThatOnlyMentionsCommandMarkupAsItIs() throws IOException {
+        writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), mentionedMarkup()));
+
+        assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
+                .singleElement()
+                .satisfies(session -> assertThat(session.title())
+                        .as("only a prompt opening on the markup is a slash command")
+                        .isEqualTo(new FirstPrompt(mentionedMarkup())));
     }
 
     @Test
