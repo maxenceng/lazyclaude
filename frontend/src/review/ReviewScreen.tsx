@@ -217,7 +217,7 @@ const whereOf = (path: string, position: ReviewReviewThreadView['position'], t: 
   return t('comments.placed', { file, lines });
 };
 
-const sideOf = (thread: ReviewReviewThreadView, t: TFunction<'review'>): string => {
+const trailingOf = (thread: ReviewReviewThreadView, t: TFunction<'review'>): string => {
   const author = thread.comments.at(-1)?.author ?? '';
   const replies = thread.comments.length - 1;
   return replies > 0 ? t('comments.replies', { count: replies, author }) : author;
@@ -350,7 +350,7 @@ const EntryRow = ({ entry, selected, onPress }: { entry: ReviewCommentInDiffView
   const { t } = useTranslation('review');
   if (entry.kind === 'pendingInDiff') {
     const { anchor, body } = entry.comment;
-    return <CommentRow kind={CommentKind.Pending} open={false} where={whereOf(anchor.path, anchor.position, t)} side="" preview={firstLine(body)} dim={false} selected={selected} onSelect={onPress} />;
+    return <CommentRow kind={CommentKind.Pending} open={false} where={whereOf(anchor.path, anchor.position, t)} trailing="" preview={firstLine(body)} dim={false} selected={selected} onSelect={onPress} />;
   }
   const { thread } = entry;
   return (
@@ -358,7 +358,7 @@ const EntryRow = ({ entry, selected, onPress }: { entry: ReviewCommentInDiffView
       kind={CommentKind.Thread}
       open={thread.open}
       where={whereOf(thread.path, thread.position, t)}
-      side={sideOf(thread, t)}
+      trailing={trailingOf(thread, t)}
       preview={firstLine(thread.comments[0]?.body ?? '')}
       dim={thread.resolved}
       selected={selected}

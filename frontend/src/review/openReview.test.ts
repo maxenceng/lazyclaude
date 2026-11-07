@@ -663,5 +663,4 @@ describe('the mouse over a review', () => {
     expect(harness.review.cursor()).toBe(1);
     expect(harness.refusals).toEqual([]);
   });
-
 });

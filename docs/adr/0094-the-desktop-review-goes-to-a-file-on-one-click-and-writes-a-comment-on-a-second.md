@@ -4,7 +4,8 @@ Date: 2026-11-06
 
 ## Status
 
-Accepted. Amends ADR 0051 for the desktop window's Review screen; the TUI keeps ADR 0051 as it is.
+Accepted. Amends ADR 0051 for the desktop window's Review screen; the TUI keeps ADR 0051 as it is. Amended by ADR 0099: one
+click in Comments goes to the line.
 
 ## Context
 

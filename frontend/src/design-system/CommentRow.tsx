@@ -5,7 +5,7 @@ interface Props {
   kind: CommentKind;
   open: boolean;
   where: string;
-  side: string;
+  trailing: string;
   preview: string;
   dim: boolean;
   selected: boolean;
@@ -13,7 +13,7 @@ interface Props {
 }
 
 /** One entry of Comments, in two lines that never wrap: the mark and where it hangs with who spoke last on the right, and under it, dimmer, the first line of what was said. The selected row is a light bar; a press on it goes to its line, and a second opens it. */
-export const CommentRow = ({ kind, open, where, side, preview, dim, selected, onSelect }: Props) => {
+export const CommentRow = ({ kind, open, where, trailing, preview, dim, selected, onSelect }: Props) => {
   const mark = kind === CommentKind.Pending || open ? COMMENT_MARKS[kind] : '';
   const classes = [styles.row, selected ? styles.selected : '', dim ? styles.dim : ''].join(' ');
   return (
@@ -22,7 +22,7 @@ export const CommentRow = ({ kind, open, where, side, preview, dim, selected, on
         <span className={styles.head}>
           <span className={[styles.mark, styles[kind]].join(' ')}>{mark}</span>
           <span className={styles.where}>{where}</span>
-          <span className={styles.side}>{side}</span>
+          <span className={styles.trailing}>{trailing}</span>
         </span>
         <span className={styles.preview}>{preview}</span>
       </button>

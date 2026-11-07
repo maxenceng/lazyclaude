@@ -26,7 +26,7 @@ interface Props {
 /** A click keeps the focus where the window's panes put it. */
 const keepFocus = (event: MouseEvent) => event.preventDefault();
 
-/** What has been said on a line, set under it: a thread's comments, or your own pending comment. A resolved thread is dimmed. A thread ends with a quiet Reply, lit when hovered; your own comment has none. */
+/** What has been said on a line, set under it: a thread's comments, or your own pending comment. A resolved thread is dimmed. Given a reply, it ends with a quiet Reply button, lit when hovered. */
 export const Annotation = ({ kind, heading, comments, dim, reply }: Props) => {
   return (
     <li>

@@ -540,7 +540,7 @@ export class OpenReview {
   commentOnSelectedComment(): void {
     const entry = this.selectedEntry();
     if (entry?.kind === 'threadInDiff') {
-      this.openBox(new CommentBox({ kind: TargetKind.Reply, thread: entry.thread }));
+      this.replyTo(entry.thread);
     }
   }
 
