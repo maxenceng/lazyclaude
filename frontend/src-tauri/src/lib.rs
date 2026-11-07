@@ -67,7 +67,10 @@ fn offer_reload_when_silent(app: AppHandle) {
 }
 
 pub fn run() {
-    let launch_dir = std::env::current_dir().unwrap_or_default();
+    let launch_dir = launch::launch_dir(
+        std::env::var("OWD").ok(),
+        std::env::current_dir().unwrap_or_default(),
+    );
     let named = std::env::var("LAZYCLAUDE_SIDECAR").ok();
     let project = launch::project(std::env::args().nth(1), launch_dir.clone());
     let openable = opening::scope(&project);

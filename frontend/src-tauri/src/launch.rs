@@ -34,9 +34,19 @@ pub fn sidecar(
     }
 }
 
-/// The first argument after the program name, else the directory the app was launched from.
+/// The directory the app was launched from: the AppImage runtime's `OWD`, since its `AppRun` moves into the AppImage before the relay starts, else the current one.
+pub fn launch_dir(original: Option<String>, current: PathBuf) -> PathBuf {
+    original
+        .filter(|directory| !directory.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or(current)
+}
+
+/// The first argument after the program name, read from the launch directory when relative, else the launch directory.
 pub fn project(first_argument: Option<String>, launch_dir: PathBuf) -> PathBuf {
-    first_argument.map(PathBuf::from).unwrap_or(launch_dir)
+    first_argument
+        .map(|argument| launch_dir.join(argument))
+        .unwrap_or(launch_dir)
 }
 
 #[cfg(test)]
@@ -67,6 +77,30 @@ mod tests {
             PathBuf::from("/work/p")
         );
         assert_eq!(project(None, "/here".into()), PathBuf::from("/here"));
+    }
+
+    #[test]
+    fn a_relative_project_argument_is_read_from_the_launch_directory() {
+        assert_eq!(
+            project(Some("p".into()), "/here".into()),
+            PathBuf::from("/here/p")
+        );
+    }
+
+    #[test]
+    fn an_appimage_is_launched_from_its_original_directory_not_the_one_apprun_moved_to() {
+        assert_eq!(
+            launch_dir(Some("/work/p".into()), "/tmp/.mount_x/usr".into()),
+            PathBuf::from("/work/p")
+        );
+        assert_eq!(
+            launch_dir(None, "/work/p".into()),
+            PathBuf::from("/work/p")
+        );
+        assert_eq!(
+            launch_dir(Some(String::new()), "/work/p".into()),
+            PathBuf::from("/work/p")
+        );
     }
 
     const RES: &str = "/usr/lib/lazyclaude";
