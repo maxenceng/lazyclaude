@@ -82,3 +82,11 @@
   min-height: 0;
   min-width: 0;
 }
+
+.minimised {
+  grid-template-columns: minmax(280px, 440px) 1fr;
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'board main'
+    'board dock';
+}

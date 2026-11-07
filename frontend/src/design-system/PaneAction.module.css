@@ -1,0 +1,33 @@
+.action {
+  margin-left: auto;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--pane-action);
+  height: var(--pane-action);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--card-radius);
+  background: var(--card);
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.action:hover {
+  border-color: var(--dim);
+  color: var(--text);
+}
+
+.action:focus-visible {
+  outline: var(--focus-edge) solid var(--focus);
+  outline-offset: 1px;
+}
+
+.icon {
+  width: var(--pane-action-icon);
+  height: var(--pane-action-icon);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

@@ -11,7 +11,8 @@
     "title": "Document",
     "noneSelected": "No document selected.",
     "emptyDocument": "Empty document.",
-    "missing": "No document at this path in the docs tree."
+    "missing": "No document at this path in the docs tree.",
+    "close": "Close document"
   },
   "links": {
     "fragmentNotFound": "No heading \"{{fragment}}\" in {{path}}; opened at its top.",
@@ -21,6 +22,7 @@
   },
   "keyBar": {
     "move": "j/k move",
-    "open": "enter open or fold"
+    "open": "enter open or fold",
+    "close": "esc close"
   }
 }

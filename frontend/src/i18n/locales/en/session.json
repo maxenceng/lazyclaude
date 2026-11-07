@@ -28,7 +28,9 @@
   "dock": {
     "title": "Dock",
     "terminal": "session terminal",
-    "starting": "starting"
+    "starting": "starting",
+    "minimise": "Minimise dock",
+    "restore": "Restore dock"
   },
   "keyBar": {
     "move": "j/k move",

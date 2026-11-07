@@ -18,7 +18,8 @@
   },
   "ticket": {
     "title": "Ticket",
-    "noneSelected": "No ticket selected."
+    "noneSelected": "No ticket selected.",
+    "hide": "Hide ticket"
   },
   "keyBar": {
     "move": "j/k move",

@@ -79,4 +79,60 @@ describe('the window\'s layout', () => {
     expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Files).showsDocument()).toBe(false);
     expect(new Layout().focusOn(Focus.Comments).showsDocument()).toBe(false);
   });
+
+  it('closes a shown document back to the ticket with focus staying on the Docs panel, and shows one again', () => {
+    const closed = new Layout().focusOn(Focus.Docs).closeDocument();
+    expect(closed.showsDocument()).toBe(false);
+    expect(closed.focus).toBe(Focus.Docs);
+    expect(closed.showDocument().showsDocument()).toBe(true);
+  });
+
+  it('keeps a closed document closed through a move of focus into the dock', () => {
+    expect(new Layout().focusOn(Focus.Docs).closeDocument().focusOn(Focus.Dock).showsDocument()).toBe(false);
+  });
+
+  it('minimises the dock to its strip under the main view, and restores it', () => {
+    const minimised = new Layout().toggleDockMinimised(Focus.Sessions);
+    expect(minimised.arrangement(true)).toBe(Arrangement.Minimised);
+    expect(minimised.toggleDockMinimised(Focus.Sessions).arrangement(true)).toBe(Arrangement.Full);
+    expect(minimised.restoreDock().arrangement(true)).toBe(Arrangement.Full);
+  });
+
+  it('shows no minimised dock while there is no hosted session', () => {
+    expect(new Layout().toggleDockMinimised(Focus.Sessions).arrangement(false)).toBe(Arrangement.NoDock);
+  });
+
+  it('moves focus from a minimised dock to the main view pane it is given', () => {
+    const minimised = new Layout().focusOn(Focus.Dock).toggleDockMinimised(Focus.Sessions);
+    expect(minimised.focus).toBe(Focus.Sessions);
+    expect(new Layout().focusOn(Focus.Dock).toggleDockMinimised(Focus.Diff).focus).toBe(Focus.Diff);
+    expect(new Layout().focusOn(Focus.Docs).toggleDockMinimised(Focus.Sessions).focus).toBe(Focus.Docs);
+  });
+
+  it('restores a minimised dock before focusing it, so a session is never focused while hidden', () => {
+    const focused = new Layout().toggleDockMinimised(Focus.Sessions).focusOn(Focus.Dock);
+    expect(focused.focus).toBe(Focus.Dock);
+    expect(focused.arrangement(true)).toBe(Arrangement.Full);
+  });
+
+  it('keeps the dock minimised while focus moves between the other panes', () => {
+    expect(new Layout().toggleDockMinimised(Focus.Sessions).focusOn(Focus.Docs).focusOn(Focus.Sessions).arrangement(true)).toBe(Arrangement.Minimised);
+  });
+
+  it('shows the main view and folds the dock when the dock is minimised while the main view is hidden', () => {
+    const layout = new Layout().focusOn(Focus.Dock).toggleMainView().toggleDockMinimised(Focus.Sessions);
+    expect(layout.mainHidden).toBe(false);
+    expect(layout.arrangement(true)).toBe(Arrangement.Minimised);
+    expect(layout.focus).toBe(Focus.Sessions);
+  });
+
+  it('unfolds the dock and hides the main view when the main view is hidden while the dock is minimised', () => {
+    const layout = new Layout().toggleDockMinimised(Focus.Sessions).toggleMainView();
+    expect(layout.dockMinimised).toBe(false);
+    expect(layout.arrangement(true)).toBe(Arrangement.NoMain);
+  });
+
+  it('keeps the document through the dock being minimised and restored', () => {
+    expect(new Layout().focusOn(Focus.Docs).toggleDockMinimised(Focus.Sessions).restoreDock().showsDocument()).toBe(true);
+  });
 });

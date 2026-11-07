@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import styles from './AppFrame.module.css';
 
-/** Which panes the window shows: every one, all but the dock, all but the main view, the dock zoomed over the rest, or a tab's screen over a dock folded to a strip. */
+/** Which panes the window shows: every one, all but the dock, all but the main view, the dock minimised to its strip under the main view, the dock zoomed over the rest, or a tab's screen over a dock folded to a strip. */
 export enum Arrangement {
   Full = 'full',
   NoDock = 'noDock',
   NoMain = 'noMain',
   Zoomed = 'zoomed',
   Tab = 'tab',
+  Minimised = 'minimised',
 }
 
 interface Props {

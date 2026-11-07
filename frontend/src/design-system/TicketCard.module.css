@@ -23,9 +23,10 @@
 
 .selected,
 .selected:hover {
-  background: var(--selected);
-  border-color: var(--selected);
-  color: var(--text-on-light);
+  background: var(--cursor-ground);
+  border-color: var(--cursor-border);
+  color: var(--cursor-ink);
+  box-shadow: var(--cursor-edge);
 }
 
 .done {
@@ -33,7 +34,7 @@
 }
 
 .selected.done {
-  color: var(--text-on-light);
+  color: var(--cursor-ink);
 }
 
 .title {
@@ -56,7 +57,7 @@
 }
 
 .selected .footer {
-  color: var(--text-on-light);
+  color: var(--cursor-ink);
 }
 
 .id {

@@ -1,12 +1,24 @@
 .pane {
+  --cursor-ground: var(--card);
+  --cursor-ink: var(--text);
+  --cursor-border: var(--dim);
+  --cursor-edge: inset var(--focus-edge) 0 0 var(--dim);
+  display: flex;
+  flex-direction: column;
   background: var(--pane);
   min-height: 0;
-  overflow: auto;
-  padding-bottom: var(--space-3);
+  overflow: hidden;
   height: 100%;
 }
 
-.fill {
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: var(--space-3);
+}
+
+.fill .body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -14,7 +26,22 @@
 }
 
 .focused {
-  box-shadow: inset 0 0 0 var(--focus-edge) var(--focus);
+  --cursor-ground: var(--selected);
+  --cursor-ink: var(--text-on-light);
+  --cursor-border: var(--selected);
+  --cursor-edge: none;
+  box-shadow: inset 0 var(--focus-edge) 0 var(--focus);
+}
+
+.focused .title {
+  color: var(--text);
+}
+
+.head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding-right: var(--space-2);
 }
 
 .title {

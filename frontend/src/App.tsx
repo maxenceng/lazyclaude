@@ -80,10 +80,13 @@ export const App = ({ app, packaged }: Props) => {
   const markers = sessions === undefined ? [] : markersOf(sessions);
   const project = board.shown()?.root ?? t('app.project');
   const hasDock = dock.tabs.length > 0;
-  const tabKeys = [t('keyBar.tabs')];
+  const dockKey = layout.mainHidden ? 'keyBar.showTicket' : layout.dockMinimised ? 'keyBar.restoreDock' : 'keyBar.minimiseDock';
+  const dockKeys = hasDock ? [t(dockKey)] : [];
+  const windowTabKeys = [t('keyBar.tabs')];
+  const tabKeys = [...windowTabKeys, ...dockKeys];
   const keyBar = {
     [Focus.Board]: <BoardKeyBar extra={tabKeys} />,
-    [Focus.Docs]: <DocsKeyBar extra={tabKeys} />,
+    [Focus.Docs]: <DocsKeyBar documentShown={layout.showsDocumentInView()} extra={tabKeys} />,
     [Focus.Sessions]: <SessionsKeyBar picking={false} extra={tabKeys} />,
     [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
     [Focus.Comments]: <ReviewKeyBar panel={ReviewFocus.Comments} />,
@@ -116,7 +119,7 @@ export const App = ({ app, packaged }: Props) => {
   const tabScreen =
     tab === WindowTab.Board
       ? {
-          bar: <BoardTabKeyBar extra={tabKeys} />,
+          bar: <BoardTabKeyBar extra={windowTabKeys} />,
           pane: (
             <BoardColumns
               board={app.board.store}
@@ -143,7 +146,7 @@ export const App = ({ app, packaged }: Props) => {
           ) : null,
         }
       : {
-          bar: <PullRequestsKeyBar extra={tabKeys} />,
+          bar: <PullRequestsKeyBar extra={windowTabKeys} />,
           pane: (
             <PullRequestsPane
               state={pullRequests}
@@ -190,13 +193,14 @@ export const App = ({ app, packaged }: Props) => {
             />
           ),
           main: layout.showsDocument() ? (
-            <DocumentPane docs={app.docs} focused={false} />
+            <DocumentPane docs={app.docs} focused={false} onClose={() => app.closeDocument()} />
           ) : (
             <TicketPane
               board={app.board.store}
               selection={app.board.selection}
               focused={layout.focus === Focus.Sessions}
               onLink={(href) => app.docs.followFromTicket(href)}
+              onHide={hasDock ? () => app.hideMainView() : undefined}
             >
               <SessionsList
                 rows={app.sessions.rows()}
@@ -214,10 +218,18 @@ export const App = ({ app, packaged }: Props) => {
       : unboarded(unready, t));
 
   const dockScreen =
-    tabbed === undefined ? (
-      <DockScreen hosting={app.hosting} sessions={sessions} focused={layout.focus === Focus.Dock} onFocus={() => app.focusOn(Focus.Dock)} />
-    ) : (
+    tabbed !== undefined ? (
       <DockStrip hosting={app.hosting} sessions={sessions} onSelect={(id) => app.openDockTab(id)} />
+    ) : layout.arrangement(hasDock) === Arrangement.Minimised ? (
+      <DockStrip hosting={app.hosting} sessions={sessions} onSelect={(id) => app.focusDockTab(id)} onRestore={() => app.toggleDockMinimised()} />
+    ) : (
+      <DockScreen
+        hosting={app.hosting}
+        sessions={sessions}
+        focused={layout.focus === Focus.Dock}
+        onFocus={() => app.focusOn(Focus.Dock)}
+        onMinimise={() => app.toggleDockMinimised()}
+      />
     );
 
   return (

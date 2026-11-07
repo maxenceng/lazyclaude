@@ -1,7 +1,18 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-right: var(--space-2);
+  background: var(--pane);
+}
+
 .tabs {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   gap: 1px;
   background: var(--seam);
+  align-self: stretch;
   overflow: hidden;
 }
 

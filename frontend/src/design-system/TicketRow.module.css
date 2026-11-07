@@ -14,8 +14,9 @@
 }
 
 .selected {
-  background: var(--selected);
-  color: var(--text-on-light);
+  background: var(--cursor-ground);
+  color: var(--cursor-ink);
+  box-shadow: var(--cursor-edge);
 }
 
 .done {
@@ -23,7 +24,7 @@
 }
 
 .selected.done {
-  color: var(--text-on-light);
+  color: var(--cursor-ink);
 }
 
 .noLamp {
