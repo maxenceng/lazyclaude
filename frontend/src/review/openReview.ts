@@ -8,6 +8,7 @@ import type {
   ReviewPendingReviewView,
   ReviewPendingReviewWriteView,
   ReviewPullRequestDiffView,
+  ReviewReviewThreadView,
   ReviewSummaryDraftPayload,
   ReviewThreadInDiffView,
   ReviewThreadsView,
@@ -521,6 +522,11 @@ export class OpenReview {
     }
   }
 
+  /** The Reply under a thread's line: the box opens to reply to it, resolved or not, and neither the cursor nor the selection moves. */
+  replyTo(thread: ReviewReviewThreadView): void {
+    this.openBox(new CommentBox({ kind: TargetKind.Reply, thread }));
+  }
+
   /** `x` in Comments deletes a pending comment. */
   deleteSelectedComment(): void {
     const entry = this.selectedEntry();
@@ -575,12 +581,18 @@ export class OpenReview {
     this.goToSelectedFile();
   }
 
-  /** A press on a comment: it is selected, and a second press on the selected one is `enter`. */
+  /**
+   * A press on a comment: it is selected and the cursor goes to its line, whether or not Comments had focus; a second press on the
+   * selected one, in the focused Comments, is `enter`.
+   * deferred: an outdated thread has no line, so a press selects it and leaves the diff where it was — closing it needs the sidecar to place an outdated thread on the nearest line.
+   */
   pressComment(index: number, focused: boolean): void {
     const second = focused && index === this.commentSelected;
     this.selectComment(index);
     if (second) {
       this.enterOnComment();
+    } else {
+      this.goToSelectedComment();
     }
   }
 
