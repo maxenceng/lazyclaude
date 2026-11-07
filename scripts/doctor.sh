@@ -55,11 +55,11 @@ done
 echo
 echo "Bundle (make bundle, make bundle-smoke; not needed by make verify)"
 
-for tool in curl sha256sum tar; do
+for tool in curl sha256sum tar python3; do
 	if command -v "${tool}" >/dev/null 2>&1; then
 		report "${tool}" "found"
 	else
-		report "${tool}" "not installed — make bundle downloads and checks a Temurin with it"
+		report "${tool}" "not installed — make bundle needs it to fetch and check the Temurin, or to read the pom's version"
 	fi
 done
 

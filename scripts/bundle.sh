@@ -18,7 +18,7 @@ CONFIG="${WORK}/tauri.bundle.conf.json"
 
 fail() { echo "bundle: $*" >&2; exit 1; }
 
-for tool in curl sha256sum tar pnpm cargo; do
+for tool in curl sha256sum tar python3 pnpm cargo; do
 	command -v "${tool}" >/dev/null 2>&1 || fail "${tool} is missing: make doctor lists what a bundle needs"
 done
 [[ -f "${ROOT}/target/lazyclaude.jar" ]] || fail "target/lazyclaude.jar is missing: run make package"

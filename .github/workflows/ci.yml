@@ -148,6 +148,8 @@ jobs:
         run: sudo apt-get install -y ./target/bundle/out/*.deb
 
       - name: Smoke-test the installed deb and the extracted AppImage
+        env:
+          BUNDLE_SMOKE_INSTALLED: '1'
         run: make bundle-smoke
 
       - name: Keep the deb and the AppImage

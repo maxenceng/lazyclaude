@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Smoke-tests a bundle's own runtime, jar and natives with a stub `claude`, then the relay under
 # Xvfb (ADR 0059). With no arguments it tests the deb and the AppImage that `make bundle` built:
-# an installed deb if there is one, else the deb unpacked; the AppImage extracted.
+# the deb installed when BUNDLE_SMOKE_INSTALLED=1 says it was just installed, else unpacked; the AppImage extracted.
 # With `<label> <resource-dir> <relay>` it tests that one bundle root, which is how a broken copy is tried.
 set -uo pipefail
 
@@ -136,7 +136,7 @@ relay_check() {
 	mkdir -p "${project}"
 	git init -q "${project}"
 	# Never the real display: Wayland is unset and xvfb-run brings its own X server.
-	setsid env -u WAYLAND_DISPLAY -u DISPLAY HOME="${work}/home" timeout 60 xvfb-run -a "${relay}" "${project}" > "${work}/relay.out" 2>&1 &
+	setsid env -u WAYLAND_DISPLAY -u DISPLAY -u LAZYCLAUDE_SIDECAR HOME="${work}/home" timeout 60 xvfb-run -a "${relay}" "${project}" > "${work}/relay.out" 2>&1 &
 	local group=$!
 	pids+=("${group}")
 
@@ -145,7 +145,9 @@ relay_check() {
 		for java in $(pgrep -f "${res}/lazyclaude.jar"); do
 			local parent
 			parent="$(ps -o ppid= -p "${java}" | tr -d ' ')"
-			if [[ "$(readlink "/proc/${parent}/exe" 2>/dev/null)" == "$(readlink -f "${relay}")" ]]; then
+			# Only this check's own relay, by its process group, never a lazyclaude already running.
+			if [[ "$(readlink "/proc/${parent}/exe" 2>/dev/null)" == "$(readlink -f "${relay}")" \
+				&& "$(ps -o pgid= -p "${parent}" | tr -d ' ')" == "${group}" ]]; then
 				echo "${java} ${parent}"
 				return 0
 			fi
@@ -174,7 +176,7 @@ relay_check() {
 smoke() {
 	local label="$1" res="$2" relay="$3"
 	echo "${label}: ${res}"
-	for part in runtime/bin/java lazyclaude.jar; do
+	for part in runtime/bin/java lazyclaude.jar natives/linux/x86-64/libpty.so natives/libjnidispatch.so; do
 		[[ -e "${res}/${part}" ]] || { fail "${label}: ${res}/${part} is missing from the bundle"; return; }
 	done
 	[[ -x "${relay}" ]] || { fail "${label}: the relay ${relay} is not an executable"; return; }
@@ -200,7 +202,7 @@ elif [[ $# -eq 0 ]]; then
 	appimage=("${OUT}"/*.AppImage)
 	[[ -f "${deb[0]}" && -f "${appimage[0]}" ]] || { echo "bundle-smoke: no deb and AppImage in ${OUT}: run make bundle" >&2; exit 1; }
 
-	if dpkg -s lazyclaude >/dev/null 2>&1; then
+	if [[ "${BUNDLE_SMOKE_INSTALLED:-}" == 1 ]]; then
 		smoke deb /usr/lib/lazyclaude /usr/bin/lazyclaude
 	else
 		echo "deb: not installed, unpacking it instead of installing it"
