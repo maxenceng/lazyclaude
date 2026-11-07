@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use pulse::{Pulse, Verdict, SILENCE_LIMIT};
-use relay::{Attached, OnMessage, Relay, RelayMessage, Sidecar};
+use relay::{Attached, OnMessage, Relay, RelayMessage};
 use tauri::ipc::{CapabilityBuilder, Channel};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::{AppHandle, Manager, State, WindowEvent};
@@ -68,15 +68,21 @@ fn offer_reload_when_silent(app: AppHandle) {
 
 pub fn run() {
     let launch_dir = std::env::current_dir().unwrap_or_default();
-    let jar = launch::jar(std::env::var("LAZYCLAUDE_SIDECAR").ok(), &launch_dir);
-    let project = launch::project(std::env::args().nth(1), launch_dir);
+    let named = std::env::var("LAZYCLAUDE_SIDECAR").ok();
+    let project = launch::project(std::env::args().nth(1), launch_dir.clone());
     let openable = opening::scope(&project);
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
-        .manage(Relay::new(Sidecar::java(jar, project)))
         .manage(Pulse::new(Instant::now(), SILENCE_LIMIT))
         .setup(move |app| {
+            app.manage(Relay::new(launch::sidecar(
+                named,
+                &launch_dir,
+                cfg!(debug_assertions),
+                app.path().resource_dir().map_err(|error| error.to_string()),
+                project,
+            )));
             app.add_capability(
                 CapabilityBuilder::new("project-paths")
                     .window("main")

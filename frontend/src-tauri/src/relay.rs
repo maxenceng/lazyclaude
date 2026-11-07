@@ -2,7 +2,7 @@
 
 use std::ffi::OsString;
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
@@ -52,13 +52,45 @@ impl Sidecar {
         }
     }
 
+    /// The runtime a bundle carries under its resource directory, told where the natives are since nothing is unpacked at run time.
+    pub fn bundled(resources: &Path, project: PathBuf) -> Self {
+        let natives = resources.join("natives");
+        let flag = |name: &str| -> OsString {
+            let mut flag = OsString::from(format!("-D{name}="));
+            flag.push(&natives);
+            flag
+        };
+        Self {
+            program: resources.join("runtime/bin/java").into_os_string(),
+            args: vec![
+                flag("pty4j.preferred.native.folder"),
+                flag("jna.boot.library.path"),
+                "-Djna.nounpack=true".into(),
+                "--enable-native-access=ALL-UNNAMED".into(),
+                "-jar".into(),
+                resources.join("lazyclaude.jar").into_os_string(),
+                "--sidecar".into(),
+            ],
+            directory: project,
+        }
+    }
+
+    /// A command that cannot start, so the failure to find the bundle shows as the spawn failure with `reason` in it.
+    pub fn unavailable(reason: &str, project: PathBuf) -> Self {
+        Self {
+            program: reason.into(),
+            args: Vec::new(),
+            directory: project,
+        }
+    }
+
     fn command(&self) -> Command {
         let mut command = Command::new(&self.program);
         command.args(&self.args).current_dir(&self.directory);
         command
     }
 
-    fn describe(&self) -> String {
+    pub(crate) fn describe(&self) -> String {
         let args: Vec<_> = self.args.iter().map(|arg| arg.to_string_lossy()).collect();
         format!("{} {}", self.program.to_string_lossy(), args.join(" "))
     }
