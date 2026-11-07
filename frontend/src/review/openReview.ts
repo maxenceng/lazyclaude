@@ -584,7 +584,6 @@ export class OpenReview {
   /**
    * A press on a comment: it is selected and the cursor goes to its line, whether or not Comments had focus; a second press on the
    * selected one, in the focused Comments, is `enter`.
-   * deferred: an outdated thread has no line, so a press selects it and leaves the diff where it was — closing it needs the sidecar to place an outdated thread on the nearest line.
    */
   pressComment(index: number, focused: boolean): void {
     const second = focused && index === this.commentSelected;
@@ -592,6 +591,7 @@ export class OpenReview {
     if (second) {
       this.enterOnComment();
     } else {
+      // deferred: an outdated thread has no diff line, so a press selects it and the diff stays — closes when the sidecar places an outdated thread on the nearest line
       this.goToSelectedComment();
     }
   }

@@ -100,3 +100,4 @@
 - 0096 [A selected ticket's sessions are only its own, and the desktop shows no session age](0096-a-selected-tickets-sessions-are-only-its-own-and-the-desktop-shows-no-session-age.md) — Accepted.
 - 0097 [A desktop popup without a scrim is modal to the mouse, and a capture answers with its board](0097-a-desktop-popup-without-a-scrim-is-modal-to-the-mouse-and-a-capture-answers-with-its-board.md) — Accepted.
 - 0098 [`q` asks before quitting whenever a session is hosted, in either frontend](0098-q-asks-before-quitting-whenever-a-session-is-hosted-in-either-frontend.md) — Accepted.
+- 0099 [The desktop Comments row goes to its line on one click, and a thread is replied to from under its line](0099-the-desktop-comments-row-goes-to-its-line-on-one-click-and-a-thread-is-replied-to-from-its-line.md) — Accepted.
