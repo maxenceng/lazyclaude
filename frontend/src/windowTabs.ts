@@ -1,5 +1,5 @@
 import type { BoardController } from './board/boardController';
-import { cursorTicketInColumns, goesToBase } from './board/rows';
+import { cursorTicketInColumns } from './board/rows';
 import { Action } from './keys/bindings';
 import { Focus, type Layout, WindowTab } from './layout';
 import type { BoardTicketView, ReviewPullRequestView } from './protocol';
@@ -50,7 +50,7 @@ export class WindowTabs {
 
   /** A click on a card of the Board tab: the card selected and previewed, or, already selected, gone to on Base. */
   pressTicket(ticket: BoardTicketView, cursor: string | undefined): void {
-    if (ticket.id === cursor && this.previewShown.get() && goesToBase(ticket)) {
+    if (ticket.id === cursor && this.previewShown.get()) {
       this.openTicket(ticket.id);
     } else {
       this.deps.board.selection.select(ticket.id);
@@ -113,7 +113,7 @@ export class WindowTabs {
   private openCursorTicket(): void {
     const view = this.deps.board.shown();
     const ticket = view === undefined ? undefined : cursorTicketInColumns(view, this.deps.board.selection.selected.get());
-    if (ticket !== undefined && goesToBase(ticket)) {
+    if (ticket !== undefined) {
       this.openTicket(ticket.id);
     }
   }

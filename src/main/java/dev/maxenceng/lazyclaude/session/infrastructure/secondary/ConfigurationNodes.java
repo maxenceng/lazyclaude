@@ -65,7 +65,6 @@ final class ConfigurationNodes {
     private static final String NOT_A_VERB_NAME = "a verb must be a name";
     private static final String VERB_TWICE = "%s is listed twice under %s";
     private static final String VERB_ELSEWHERE = "%s is only offered under %s, not %s";
-    private static final String VERB_UNDER_FINISHED = "%s is not offered under %s: a finished ticket has no verb";
     private static final String OR = " or ";
     private static final int FIRST_LINE = 1;
     private static final int NO_LINE = 0;
@@ -269,15 +268,10 @@ final class ConfigurationNodes {
     }
 
     private static String refusalOf(Verb verb, Status status) {
-        return status.finished()
-                ? VERB_UNDER_FINISHED.formatted(verb.label(), status.label())
-                : VERB_ELSEWHERE.formatted(
-                        verb.label(),
-                        Arrays.stream(Status.values())
-                                .filter(verb::mayBeOfferedIn)
-                                .map(Status::label)
-                                .collect(Collectors.joining(OR)),
-                        status.label());
+        return VERB_ELSEWHERE.formatted(
+                verb.label(),
+                Arrays.stream(Status.values()).filter(verb::mayBeOfferedIn).map(Status::label).collect(Collectors.joining(OR)),
+                status.label());
     }
 
     private ConfigurationRefusedException refused(int line, String reason) {

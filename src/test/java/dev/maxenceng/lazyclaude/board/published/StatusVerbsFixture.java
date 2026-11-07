@@ -21,4 +21,12 @@ public final class StatusVerbsFixture {
     public static StatusVerbs inProgressReviewOnly() {
         return StatusVerbs.builder().status(Status.IN_PROGRESS).verbs(List.of(Verb.REVIEW)).build();
     }
+
+    public static StatusVerbs doneOfferingDone() {
+        return StatusVerbs.builder().status(Status.DONE).verbs(List.of(Verb.DONE)).build();
+    }
+
+    public static StatusVerbs doneWithoutVerbs() {
+        return StatusVerbs.builder().status(Status.DONE).verbs(List.of()).build();
+    }
 }

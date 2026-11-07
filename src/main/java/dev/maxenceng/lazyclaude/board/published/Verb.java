@@ -29,15 +29,16 @@ public enum Verb {
 
     /**
      * Whether {@code /ticket} accepts this verb for a ticket in {@code status}: the gates {@code ticket-tracker ready} enforces for
-     * {@code refine}, {@code start} and {@code design}, and no verb at all once the ticket is done.
+     * {@code refine}, {@code start} and {@code design}, and only {@code done} once the ticket is finished, so a ticket a merge has closed
+     * can still be taken through {@code /ticket done}.
      */
     public boolean mayBeOfferedIn(Status status) {
-        return !status.finished()
-                && switch (this) {
-                    case REFINE -> status == Status.DRAFT;
-                    case START -> status == Status.TODO;
-                    case DESIGN -> status == Status.IN_PROGRESS;
-                    case REVIEW, RESPOND, DONE -> true;
-                };
+        return switch (this) {
+            case REFINE -> status == Status.DRAFT;
+            case START -> status == Status.TODO;
+            case DESIGN -> status == Status.IN_PROGRESS;
+            case REVIEW, RESPOND -> !status.finished();
+            case DONE -> true;
+        };
     }
 }

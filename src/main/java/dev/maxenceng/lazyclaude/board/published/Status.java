@@ -10,7 +10,7 @@ public enum Status {
     TODO("todo", Verb.START),
     IN_PROGRESS("in-progress", Verb.REVIEW, Verb.DESIGN),
     IN_REVIEW("in-review", Verb.RESPOND, Verb.DONE),
-    DONE("done");
+    DONE("done", Verb.DONE);
 
     private final String label;
     private final List<Verb> verbs;
@@ -25,7 +25,7 @@ public enum Status {
     }
 
     /**
-     * The verbs this status offers when {@code config.yml} does not say, in the order they are offered; none once it is done. {@code design}
+     * The verbs this status offers when {@code config.yml} does not say, in the order they are offered; only {@code done} once it is finished. {@code design}
      * also needs the ticket branch to touch the frontend, which only a ticket knows.
      */
     public List<Verb> verbs() {

@@ -164,8 +164,8 @@ class TicketTest {
     }
 
     @Test
-    void shouldOfferNoVerbOnADoneTicket() {
-        assertThat(ticketBuilder().status(Status.DONE).build().verbs()).isEmpty();
+    void shouldOfferDoneOnADoneTicket() {
+        assertThat(ticketBuilder().status(Status.DONE).build().verbs()).containsExactly(Verb.DONE);
     }
 
     @Test

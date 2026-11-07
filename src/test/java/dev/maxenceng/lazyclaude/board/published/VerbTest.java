@@ -38,10 +38,23 @@ class VerbTest {
     @ParameterizedTest
     @EnumSource(
             value = Verb.class,
-            names = {"REVIEW", "RESPOND", "DONE"})
-    void shouldOfferReviewRespondAndDoneUnderAnyOpenStatus(Verb verb) {
+            names = {"REVIEW", "RESPOND"})
+    void shouldOfferReviewAndRespondUnderAnyOpenStatus(Verb verb) {
         assertThat(List.of(Status.values()))
                 .filteredOn(verb::mayBeOfferedIn)
                 .containsExactly(Status.DRAFT, Status.TODO, Status.IN_PROGRESS, Status.IN_REVIEW);
+    }
+
+    @Test
+    void shouldOfferDoneUnderEveryStatusFinishedIncluded() {
+        assertThat(List.of(Status.values())).filteredOn(Verb.DONE::mayBeOfferedIn).containsExactly(Status.values());
+    }
+
+    @Test
+    void shouldOfferOnlyDoneOnceTheTicketIsFinished() {
+        assertThat(List.of(Verb.values()))
+                .as("a ticket a merge has closed can still be taken through /ticket done, and through nothing else")
+                .filteredOn(verb -> verb.mayBeOfferedIn(Status.DONE))
+                .containsExactly(Verb.DONE);
     }
 }
