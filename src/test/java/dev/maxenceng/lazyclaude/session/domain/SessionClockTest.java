@@ -14,8 +14,8 @@ import dev.maxenceng.lazyclaude.session.published.SessionAge;
 class SessionClockTest {
 
     @Test
-    void shouldReadAnAgeFromTheInjectedClock() {
-        assertThat(sessionClock().ageOf(startedAt())).isEqualTo(new SessionAge(Duration.ofHours(2)));
+    void shouldReadTheAgeOfALocalTimeInTheClocksZone() {
+        assertThat(sessionClock().ageSince(LocalDateTime.of(2026, 10, 10, 13, 50))).isEqualTo(new SessionAge(Duration.ofMinutes(10)));
     }
 
     @Test

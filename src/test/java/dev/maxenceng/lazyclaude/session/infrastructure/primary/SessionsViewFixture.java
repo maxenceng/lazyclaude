@@ -20,7 +20,6 @@ import static dev.maxenceng.lazyclaude.session.published.SessionTitleFixture.fir
 import static dev.maxenceng.lazyclaude.session.published.TranscriptReadingFixture.readable;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +29,6 @@ import dev.maxenceng.lazyclaude.session.published.AiTitle;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
-import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
@@ -51,7 +49,6 @@ public final class SessionsViewFixture {
                 .name(sessionName())
                 .directory(projectRootDirectory().path())
                 .startedAt(LocalDateTime.of(2026, 10, 10, 12, 0))
-                .age(new SessionAge(Duration.ofHours(2)))
                 .version(version())
                 .state(new Busy())
                 .links(List.of());
@@ -140,7 +137,6 @@ public final class SessionsViewFixture {
                 .pid(secondProcessId())
                 .name(secondSessionName())
                 .startedAt(LocalDateTime.of(2026, 10, 10, 13, 48))
-                .age(new SessionAge(Duration.ofMinutes(12)))
                 .build();
     }
 
@@ -150,7 +146,6 @@ public final class SessionsViewFixture {
                 .pid(thirdProcessId())
                 .name(thirdSessionName())
                 .startedAt(LocalDateTime.of(2026, 10, 9, 12, 0))
-                .age(new SessionAge(Duration.ofHours(26)))
                 .state(new YourTurn())
                 .build();
     }
@@ -179,7 +174,6 @@ public final class SessionsViewFixture {
                 .reading(readable())
                 .directory(projectRootDirectory().path())
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 13, 50))
-                .age(new SessionAge(Duration.ofMinutes(10)))
                 .startedAt(LocalDateTime.of(2026, 10, 10, 12, 40))
                 .links(List.of());
     }
@@ -197,7 +191,6 @@ public final class SessionsViewFixture {
                 .id(pastSessionIdOf(number))
                 .title(new AiTitle("Past session %d".formatted(number))).opening(noFirstPrompt())
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 14, 0).minusMinutes(number * 10L))
-                .age(new SessionAge(Duration.ofMinutes(number * 10L)))
                 .build();
     }
 
@@ -206,7 +199,6 @@ public final class SessionsViewFixture {
                 .id(pastSessionIdOf(number))
                 .title(new AiTitle("Past %d".formatted(number))).opening(noFirstPrompt())
                 .lastActivity(LocalDateTime.of(2026, 10, 10, 14, 0).minusMinutes(number * 10L))
-                .age(new SessionAge(Duration.ofMinutes(number * 10L)))
                 .links(List.of(links))
                 .build();
     }

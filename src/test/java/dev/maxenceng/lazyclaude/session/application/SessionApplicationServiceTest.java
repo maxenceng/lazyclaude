@@ -166,6 +166,8 @@ class SessionApplicationServiceTest {
         when(past.transcriptsOf(any())).thenReturn(transcriptsRead(pastTranscriptFacts(pastSessionId(1))));
 
         assertThat(sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts).sessionsFor(project(), noTickets()))
+                .usingRecursiveComparison()
+                .ignoringFields("clock")
                 .isEqualTo(pastSessionsOf(List.of(pastSession())));
     }
 
@@ -180,6 +182,7 @@ class SessionApplicationServiceTest {
 
         assertThat(received)
                 .as("the transcripts are read on their own thread, so their landing must reach the panel without waiting for the registry")
+                .usingRecursiveFieldByFieldElementComparatorIgnoringFields("clock")
                 .containsExactly(liveSessionsOf(List.of()));
     }
 
@@ -356,7 +359,9 @@ class SessionApplicationServiceTest {
 
         service.refresh(project(), noTickets());
 
-        assertThat(received).containsExactly(liveSessionsOf(List.of()));
+        assertThat(received)
+                .usingRecursiveFieldByFieldElementComparatorIgnoringFields("clock")
+                .containsExactly(liveSessionsOf(List.of()));
         verify(transcriptWatch).rescanNow();
     }
 

@@ -31,7 +31,6 @@ import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSes
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionId;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastTranscriptFacts;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastTranscriptFactsActiveMinutesAgo;
-import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.quietPastSessions;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.transcriptsGone;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.transcriptsRead;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.newestReportedSession;
@@ -39,7 +38,6 @@ import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.rep
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWaitingFor;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedWith;
-import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.advancingClock;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsHosting;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.availableSessionsOf;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.hostingSessions;
@@ -71,7 +69,6 @@ import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -234,18 +231,6 @@ class SessionManagerTest {
         assertThat(read.live()).singleElement().extracting(LiveSession::links)
                 .asInstanceOf(InstanceOfAssertFactories.LIST)
                 .containsExactly(ticketLink("1", "design"));
-    }
-
-    @Test
-    void shouldMeasureEveryAgeOfOneReadFromTheSameInstant() {
-        when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
-
-        AvailableSessions read = new SessionManager(sessions, quietPastSessions(), log, watch, mock(TranscriptWatchPort.class), warnings, advancingClock())
-                .sessionsFor(project(), noTickets(), oneHosted());
-
-        assertThat(read.ageOf(liveSession()))
-                .as("rows of one read drawn at different instants would disagree on how long ago they started")
-                .isEqualTo(read.ageOf(liveSession()));
     }
 
     @Test

@@ -66,6 +66,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.RefusedRemovalVie
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemovedWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumePastPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
@@ -204,6 +205,7 @@ public final class Shell extends ToolkitApp {
     private WatchedPayload lastWatched = new NoWatchedSessionPayload();
     private CompletableFuture<Void> watchUpdates = CompletableFuture.completedFuture(null);
     private final SessionQuery screens;
+    private final SessionAgeQuery ages;
     private final BoardQuery boards;
     private final DocsQuery docsQuery;
     private final ReviewQuery reviews;
@@ -264,7 +266,7 @@ public final class Shell extends ToolkitApp {
                 contexts.emulators(),
                 contexts.watching(),
                 contexts.removing(),
-                contexts.sessions(),
+                contexts.sessions(), contexts.ages(),
                 contexts.board(),
                 contexts.docs(),
                 contexts.review(),
@@ -287,6 +289,7 @@ public final class Shell extends ToolkitApp {
             WatchedSessionCommand watching,
             TicketWorktreeCommand removing,
             SessionQuery screens,
+            SessionAgeQuery ages,
             BoardQuery boards,
             DocsQuery docsQuery,
             ReviewQuery reviews,
@@ -312,6 +315,7 @@ public final class Shell extends ToolkitApp {
         this.removing = removing;
         this.captureKeys = new CaptureKeys(capturing, board.root().value(), background, this::onRenderThread, this::captured);
         this.screens = screens;
+        this.ages = ages;
         this.boards = boards;
         this.docsQuery = docsQuery;
         this.reviews = reviews;
@@ -1739,6 +1743,7 @@ public final class Shell extends ToolkitApp {
                 ? text(NO_LIVE_SESSION).dim()
                 : new SessionRowsElement(
                         sessions.visible(),
+                        ages,
                         sessions.selectedIndex(),
                         focus == Focus.SESSIONS,
                         rows -> hits.add(new RowsHit(Focus.SESSIONS, rows)));
@@ -1793,9 +1798,9 @@ public final class Shell extends ToolkitApp {
         return sessions.selected()
                 .map(row -> switch (row) {
                     case LiveSessionRow live ->
-                        new DetailElement(width -> SessionText.facts(live.session()), Optional.empty(), mainViewScroll);
+                        new DetailElement(width -> SessionText.facts(live.session(), ages.startedAgo(live.session())), Optional.empty(), mainViewScroll);
                     case PastSessionRow past ->
-                        new DetailElement(width -> SessionText.card(past.session()), Optional.empty(), mainViewScroll);
+                        new DetailElement(width -> SessionText.card(past.session(), ages.lastActiveAgo(past.session())), Optional.empty(), mainViewScroll);
                     case OlderSessionsRow _ -> column();
                     case SectionHeaderRow _ -> column();
                     case NoSessionRow _ -> column();

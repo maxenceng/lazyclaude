@@ -14,17 +14,9 @@ public record SessionClock(Clock clock) {
         Assert.notNull("clock", clock);
     }
 
-    /** This clock stopped at the instant it is asked, so every age of one read is measured from the same now. */
-    public SessionClock frozen() {
-        return new SessionClock(Clock.fixed(clock.instant(), clock.getZone()));
-    }
-
-    public SessionAge ageOf(StartedAt startedAt) {
-        return new SessionAge(Duration.between(startedAt.value(), clock.instant()));
-    }
-
-    public SessionAge ageOf(LastActivity lastActivity) {
-        return new SessionAge(Duration.between(lastActivity.value(), clock.instant()));
+    /** How long ago {@code local}, a time in this clock's zone, was. */
+    public SessionAge ageSince(LocalDateTime local) {
+        return new SessionAge(Duration.between(local, LocalDateTime.now(clock)));
     }
 
     public LocalDateTime localTimeOf(StartedAt startedAt) {

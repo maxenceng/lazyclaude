@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.shell;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewIn;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQueryFixture.sessionAgeQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedPastSessionView;
@@ -144,7 +145,7 @@ class ShellTicketStartTest {
                 ShellFixture.blankEmulators(),
                 mock(dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand.class),
                 mock(dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand.class),
-                blankScreens(),
+                blankScreens(), sessionAgeQuery(),
                 mock(dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery.class),
                 mock(dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery.class),
                 mock(dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery.class),

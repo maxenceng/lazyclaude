@@ -398,7 +398,6 @@ export interface SessionLiveSessionView {
   name: string;
   directory: string;
   startedAt: string;
-  age: string;
   version: SessionClaudeVersion;
   state: SessionSessionState;
   links: SessionTicketLink[];
@@ -445,7 +444,6 @@ export interface SessionPastSessionView {
   reading: SessionTranscriptReading;
   directory: string;
   lastActivity: string;
-  age: string;
   startedAt: string;
   links: SessionTicketLink[];
   interrupted: boolean;

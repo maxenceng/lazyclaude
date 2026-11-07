@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.application;
 
 import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -22,6 +23,7 @@ import dev.maxenceng.lazyclaude.session.domain.NewSession;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
 import dev.maxenceng.lazyclaude.session.domain.PtyListener;
+import dev.maxenceng.lazyclaude.session.domain.SessionClock;
 import dev.maxenceng.lazyclaude.session.domain.SessionExitListener;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
@@ -38,6 +40,7 @@ import dev.maxenceng.lazyclaude.session.published.HostStart;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.MergeState;
 import dev.maxenceng.lazyclaude.session.published.PaneSize;
+import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
@@ -57,6 +60,7 @@ public final class SessionApplicationService {
     private final boolean desktopNotifications;
     private final TicketPlugin ticketPlugin;
     private final LastPushedSessions lastPushed = new LastPushedSessions();
+    private final SessionClock clock;
     private final AtomicReference<Consumer<AvailableSessions>> delivering = new AtomicReference<>(sessions -> {});
 
     public SessionApplicationService(
@@ -79,6 +83,12 @@ public final class SessionApplicationService {
         this.notifying = new DesktopNotificationManager(notifications, warnings);
         this.desktopNotifications = desktopNotifications;
         this.manager = new SessionManager(sessions, pastSessions, launchLog, watch, transcriptWatch, warnings, clock);
+        this.clock = new SessionClock(clock);
+    }
+
+    /** How long ago {@code local}, a time in the clock's zone, was. */
+    public SessionAge ageSince(LocalDateTime local) {
+        return clock.ageSince(local);
     }
 
     public AvailableSessions sessionsFor(Project project, KnownTickets tickets) {

@@ -9,7 +9,6 @@ import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.PastSession;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.OpeningPrompt;
-import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
@@ -23,7 +22,6 @@ public record PastSessionView(
         TranscriptReading reading,
         Path directory,
         LocalDateTime lastActivity,
-        SessionAge age,
         LocalDateTime startedAt,
         List<TicketLink> links,
         boolean interrupted) {
@@ -36,7 +34,6 @@ public record PastSessionView(
                 .reading(session.reading())
                 .directory(session.directory().path())
                 .lastActivity(available.lastActiveLocally(session))
-                .age(available.ageOf(session))
                 .startedAt(available.startedLocally(session))
                 .links(session.links())
                 .interrupted(session.interrupted())
@@ -64,7 +61,6 @@ public record PastSessionView(
         private TranscriptReading reading;
         private Path directory;
         private LocalDateTime lastActivity;
-        private SessionAge age;
         private LocalDateTime startedAt;
         private List<TicketLink> links;
         private boolean interrupted;
@@ -101,11 +97,6 @@ public record PastSessionView(
             return this;
         }
 
-        public PastSessionViewBuilder age(SessionAge age) {
-            this.age = age;
-            return this;
-        }
-
         public PastSessionViewBuilder startedAt(LocalDateTime startedAt) {
             this.startedAt = startedAt;
             return this;
@@ -122,7 +113,7 @@ public record PastSessionView(
         }
 
         public PastSessionView build() {
-            return new PastSessionView(id, title, opening, reading, directory, lastActivity, age, startedAt, links, interrupted);
+            return new PastSessionView(id, title, opening, reading, directory, lastActivity, startedAt, links, interrupted);
         }
     }
 }

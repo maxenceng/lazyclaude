@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
 import static dev.maxenceng.lazyclaude.sidecar.ProtocolCoverageFixture.notYetOnTheProtocol;
+import static dev.maxenceng.lazyclaude.sidecar.ProtocolCoverageFixture.onlyTheTerminalAsks;
 import static dev.maxenceng.lazyclaude.sidecar.ProtocolCoverageFixture.operations;
 import static dev.maxenceng.lazyclaude.sidecar.ProtocolCoverageFixture.protocolMethods;
 import static dev.maxenceng.lazyclaude.sidecar.ProtocolCoverageFixture.servedByAWatch;
@@ -21,6 +22,7 @@ class ProtocolCoverageTest {
                 .filter(operation -> !servedByAWatch().contains(operation))
                 .filter(operation -> !servedUnderAnotherName().contains(operation))
                 .filter(operation -> !notYetOnTheProtocol().contains(operation))
+                .filter(operation -> !onlyTheTerminalAsks().contains(operation))
                 .toList();
 
         assertThat(unaccounted)
@@ -30,7 +32,7 @@ class ProtocolCoverageTest {
 
     @Test
     void an_operation_listed_as_not_yet_on_the_protocol_is_not_a_protocol_method() {
-        List<String> listedAndServed = Stream.of(notYetOnTheProtocol(), servedByAWatch(), servedUnderAnotherName())
+        List<String> listedAndServed = Stream.of(notYetOnTheProtocol(), servedByAWatch(), servedUnderAnotherName(), onlyTheTerminalAsks())
                 .flatMap(List::stream)
                 .filter(protocolMethods()::contains)
                 .toList();
@@ -40,7 +42,7 @@ class ProtocolCoverageTest {
 
     @Test
     void every_operation_listed_as_not_yet_on_the_protocol_still_exists() {
-        assertThat(operations()).as("an operation that was removed or renamed goes off the list").containsAll(notYetOnTheProtocol()).containsAll(servedByAWatch()).containsAll(servedUnderAnotherName());
+        assertThat(operations()).as("an operation that was removed or renamed goes off the list").containsAll(notYetOnTheProtocol()).containsAll(servedByAWatch()).containsAll(servedUnderAnotherName()).containsAll(onlyTheTerminalAsks());
     }
 
     @Test

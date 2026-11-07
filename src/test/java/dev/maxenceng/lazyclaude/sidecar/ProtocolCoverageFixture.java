@@ -88,6 +88,10 @@ public final class ProtocolCoverageFixture {
         return List.of("session/write", "session/resizePty", "session/onOutput", "session/onExit", "session/endAll");
     }
 
+    public static List<String> onlyTheTerminalAsks() {
+        return List.of("session/startedAgo", "session/lastActiveAgo");
+    }
+
     public static List<String> notYetOnTheProtocol() {
         return List.of(
 "board/capture",

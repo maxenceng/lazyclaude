@@ -10,6 +10,7 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFi
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewNumbered;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQueryFixture.sessionAgeQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedTab;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.linkedNamedSessionView;
@@ -107,7 +108,7 @@ final class ShellFixture {
                 blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                blankScreens(),
+                blankScreens(), sessionAgeQuery(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), mock(TicketCaptureCommand.class), ReservedChords.defaults(), mouse, Runnable::run);
     }
 
@@ -122,7 +123,7 @@ final class ShellFixture {
                 blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                blankScreens(),
+                blankScreens(), sessionAgeQuery(),
                 boards, mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), mock(TicketCaptureCommand.class), ReservedChords.defaults(), true, Runnable::run);
     }
 
@@ -138,7 +139,7 @@ final class ShellFixture {
                 blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                screens,
+                screens, sessionAgeQuery(),
                 boards,
                 docs,
                 reviews,
@@ -170,7 +171,7 @@ final class ShellFixture {
                 blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                blankScreens(),
+                blankScreens(), sessionAgeQuery(),
                 boards,
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
@@ -201,7 +202,7 @@ final class ShellFixture {
                 blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                blankScreens(),
+                blankScreens(), sessionAgeQuery(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), mock(TicketCaptureCommand.class), ReservedChords.defaults(), true, Runnable::run);
         shell.press(key('j'));
         return shell;
@@ -218,7 +219,7 @@ final class ShellFixture {
                 blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                blankScreens(),
+                blankScreens(), sessionAgeQuery(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), mock(TicketCaptureCommand.class), ReservedChords.defaults(), true, Runnable::run);
         shell.press(key('j'));
         return shell;
@@ -270,7 +271,7 @@ final class ShellFixture {
                 blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                screens,
+                screens, sessionAgeQuery(),
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
@@ -300,7 +301,7 @@ final class ShellFixture {
                 blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 removing,
-                screens,
+                screens, sessionAgeQuery(),
                 boards,
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
@@ -367,7 +368,7 @@ final class ShellFixture {
                 blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                screens,
+                screens, sessionAgeQuery(),
                 mock(BoardQuery.class), mock(DocsQuery.class), mock(ReviewQuery.class), mock(PendingReviewCommand.class), mock(TicketCaptureCommand.class), ReservedChords.defaults(), true, Runnable::run);
         pressed(shell, key('j'), ticket.status().ordinal());
         if (ticket.status().finished()) {
@@ -497,7 +498,7 @@ final class ShellFixture {
                 emulators,
                 watching,
                 mock(TicketWorktreeCommand.class),
-                screens,
+                screens, sessionAgeQuery(),
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
@@ -594,7 +595,7 @@ final class ShellFixture {
                 blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                screens,
+                screens, sessionAgeQuery(),
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 reviews,

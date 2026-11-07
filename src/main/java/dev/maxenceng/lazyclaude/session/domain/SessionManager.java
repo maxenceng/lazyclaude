@@ -150,7 +150,7 @@ public final class SessionManager {
                         .flatMap(entry -> pastSessionOf(entry, transcripts, tickets).stream())
                         .sorted(INTERRUPTED_THEN_MOST_RECENTLY_ACTIVE_FIRST)
                         .toList())
-                .clock(clock.frozen())
+                .clock(clock)
                 .build();
     }
 

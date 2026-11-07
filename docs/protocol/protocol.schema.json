@@ -2184,9 +2184,6 @@
         "startedAt" : {
           "type" : "string"
         },
-        "age" : {
-          "type" : "string"
-        },
         "version" : {
           "$ref" : "#/$defs/session.ClaudeVersion"
         },
@@ -2200,7 +2197,7 @@
           }
         }
       },
-      "required" : [ "id", "pid", "name", "directory", "startedAt", "age", "version", "state", "links" ],
+      "required" : [ "id", "pid", "name", "directory", "startedAt", "version", "state", "links" ],
       "additionalProperties" : false
     },
     "session.MergeState" : {
@@ -2374,9 +2371,6 @@
         "lastActivity" : {
           "type" : "string"
         },
-        "age" : {
-          "type" : "string"
-        },
         "startedAt" : {
           "type" : "string"
         },
@@ -2390,7 +2384,7 @@
           "type" : "boolean"
         }
       },
-      "required" : [ "id", "title", "opening", "reading", "directory", "lastActivity", "age", "startedAt", "links", "interrupted" ],
+      "required" : [ "id", "title", "opening", "reading", "directory", "lastActivity", "startedAt", "links", "interrupted" ],
       "additionalProperties" : false
     },
     "session.PressedKey" : {

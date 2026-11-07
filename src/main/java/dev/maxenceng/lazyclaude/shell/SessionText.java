@@ -17,6 +17,7 @@ import dev.maxenceng.lazyclaude.session.published.NoTitle;
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.NoWaitingReason;
 import dev.maxenceng.lazyclaude.session.published.ReadableTranscript;
+import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.TranscriptReading;
@@ -180,7 +181,7 @@ final class SessionText {
     }
 
     /** The rows of the main view for a session: its name and state, then cwd, pid, start time and, when its source says, version. */
-    static List<DetailRow> facts(LiveSessionView session) {
+    static List<DetailRow> facts(LiveSessionView session, SessionAge age) {
         Stream<DetailRow> version = switch (session.version()) {
             case Version known -> Stream.of(fact(VERSION, known.value()));
             case NoVersion _ -> Stream.empty();
@@ -196,7 +197,7 @@ final class SessionText {
                                 fact(
                                         STARTED_FACT,
                                         STARTED_FORMAT.formatted(
-                                                STARTED.format(session.startedAt()), session.age().label()))),
+                                                STARTED.format(session.startedAt()), age.label()))),
                         version)
                 .toList();
     }
@@ -206,7 +207,7 @@ final class SessionText {
      * prompt itself, and why the transcript cannot be read now when it cannot; then each ticket it is linked to, its directory,
      * and when it ran.
      */
-    static List<DetailRow> card(PastSessionView session) {
+    static List<DetailRow> card(PastSessionView session, SessionAge age) {
         return Stream.of(
                         cardHead(session),
                         Stream.of(BLANK_ROW),
@@ -215,7 +216,7 @@ final class SessionText {
                                 new DetailRow(session.directory().toString(), Style.EMPTY),
                                 new DetailRow(
                                         ACTIVITY_FORMAT.formatted(
-                                                STARTED.format(session.startedAt()), session.age().label()),
+                                                STARTED.format(session.startedAt()), age.label()),
                                         Style.EMPTY)))
                 .flatMap(Function.identity())
                 .toList();

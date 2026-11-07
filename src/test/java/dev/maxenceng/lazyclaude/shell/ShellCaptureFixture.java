@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.shell;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.boardViewOf;
 import static dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsViewFixture.emptyDocsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.checkingPullRequestsView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQueryFixture.sessionAgeQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static org.mockito.Mockito.mock;
 
@@ -36,7 +37,7 @@ final class ShellCaptureFixture {
                 ShellFixture.blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                ShellFixture.blankScreens(),
+                ShellFixture.blankScreens(), sessionAgeQuery(),
                 boards,
                 mock(DocsQuery.class),
                 mock(ReviewQuery.class),
