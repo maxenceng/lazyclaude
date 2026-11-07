@@ -48,6 +48,7 @@ const PLAIN: ReadonlyMap<string, Action> = new Map<string, Action>(Object.entrie
   k: Action.MoveUp,
   h: Action.PanelLeft,
   l: Action.PanelRight,
+  // deferred: g, G and d are bound and prevented but nothing in the window acts on them — close it when each is handled or unbound.
   g: Action.Top,
   G: Action.Bottom,
   Enter: Action.Open,
