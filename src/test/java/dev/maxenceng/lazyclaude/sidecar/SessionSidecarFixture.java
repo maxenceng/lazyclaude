@@ -65,7 +65,7 @@ public final class SessionSidecarFixture {
     }
 
     public static String noSessions() {
-        return "{\"live\":[],\"past\":[],\"hosted\":[]}";
+        return "{\"live\":[],\"past\":[],\"hosted\":[],\"tickets\":[],\"unlinked\":{\"live\":[],\"past\":[]}}";
     }
 
     public static String sessionsChanged(String sessions) {

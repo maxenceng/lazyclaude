@@ -2580,9 +2580,18 @@
           "items" : {
             "$ref" : "#/$defs/session.HostedSessionView"
           }
+        },
+        "tickets" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.TicketSessionsView"
+          }
+        },
+        "unlinked" : {
+          "$ref" : "#/$defs/session.UnlinkedSessionsView"
         }
       },
-      "required" : [ "live", "past", "hosted" ],
+      "required" : [ "live", "past", "hosted", "tickets", "unlinked" ],
       "additionalProperties" : false
     },
     "session.StartedHost" : {
@@ -2646,6 +2655,34 @@
       "required" : [ "kind", "branch" ],
       "additionalProperties" : false
     },
+    "session.TicketSessionsView" : {
+      "type" : "object",
+      "properties" : {
+        "ticket" : {
+          "type" : "string"
+        },
+        "live" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.LiveSessionView"
+          }
+        },
+        "past" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.PastSessionView"
+          }
+        },
+        "hosted" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.HostedSessionView"
+          }
+        }
+      },
+      "required" : [ "ticket", "live", "past", "hosted" ],
+      "additionalProperties" : false
+    },
     "session.TranscriptReading" : {
       "oneOf" : [ {
         "$ref" : "#/$defs/session.ReadableTranscript"
@@ -2677,6 +2714,25 @@
         }
       },
       "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.UnlinkedSessionsView" : {
+      "type" : "object",
+      "properties" : {
+        "live" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.LiveSessionView"
+          }
+        },
+        "past" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/$defs/session.PastSessionView"
+          }
+        }
+      },
+      "required" : [ "live", "past" ],
       "additionalProperties" : false
     },
     "session.UnlinkedStartView" : {

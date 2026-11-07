@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
-import dev.maxenceng.lazyclaude.session.published.SessionAge;
 
 /** Now, as the composition root's clock says it, so no rule reads the system time on its own. */
 public record SessionClock(Clock clock) {

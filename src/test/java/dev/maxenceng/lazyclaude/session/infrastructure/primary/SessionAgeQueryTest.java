@@ -9,17 +9,19 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
-import dev.maxenceng.lazyclaude.session.published.SessionAge;
+import dev.maxenceng.lazyclaude.session.domain.SessionAge;
 
 class SessionAgeQueryTest {
 
     @Test
     void shouldAgeALiveSessionFromItsStart() {
-        assertThat(sessionAgeQuery().startedAgo(sessionView())).isEqualTo(new SessionAge(Duration.ofHours(2)));
+        assertThat(sessionAgeQuery().ageSince(SessionAgePayload.startOf(sessionView())))
+                .isEqualTo(new SessionAgeView(new SessionAge(Duration.ofHours(2))));
     }
 
     @Test
     void shouldAgeAPastSessionFromItsLastActivity() {
-        assertThat(sessionAgeQuery().lastActiveAgo(pastSessionView())).isEqualTo(new SessionAge(Duration.ofMinutes(10)));
+        assertThat(sessionAgeQuery().ageSince(SessionAgePayload.lastActivityOf(pastSessionView())))
+                .isEqualTo(new SessionAgeView(new SessionAge(Duration.ofMinutes(10))));
     }
 }

@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQuery;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
@@ -69,7 +70,7 @@ final class SessionRowsElement implements Element {
             case PastSessionRow past -> {
                 Style title = SessionText.titleIsStandIn(past.session()) ? plain.dim() : plain;
                 line(frame, area, y, SessionText.pastGlyph(past.session()), plain.dim(),
-                        middle(past.link(), SessionText.title(past.session()), plain, title, verbWidth), ages.lastActiveAgo(past.session()).label(), plain);
+                        middle(past.link(), SessionText.title(past.session()), plain, title, verbWidth), ages.ageSince(SessionAgePayload.lastActivityOf(past.session())).label(), plain);
             }
             case OlderSessionsRow older ->
                 line(frame, area, y, SessionText.olderGlyph(), plain.dim(),

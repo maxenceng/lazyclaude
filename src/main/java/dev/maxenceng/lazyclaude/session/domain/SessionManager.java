@@ -14,7 +14,6 @@ import java.util.stream.Collectors;
 
 import dev.maxenceng.lazyclaude.session.published.NoVersion;
 import dev.maxenceng.lazyclaude.session.published.Reason;
-import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.Unknown;

@@ -8,7 +8,7 @@ import { Focus, WindowTab } from './layout';
 import { Exited, Ready } from './protocol';
 import { bytesOfText, toBase64 } from './protocol';
 import { folderFixture, readFixture, treeFixture } from './docs/fixtures';
-import { hostedFixture, pastFixture, sessionFixture, sessionsFixture } from './session/fixtures';
+import { hostedFixture, pastFixture, sessionFixture, sessionsFixture, ticketSessionsFixture } from './session/fixtures';
 import { Dock } from './session/dock';
 import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './session/recordings';
 import { fakeClient } from './test/fakeClient';
@@ -523,7 +523,8 @@ describe('starting a session from the board', () => {
 
   it('resumes a past session of the ticket in the ticket\'s worktree', async () => {
     const ready = await readyApp();
-    act(() => ready.client.push('session/changed', sessionsFixture([], { past: [pastFixture({ id: 'old', title: 'Earlier work', ticket: 'PROJ-1' })] })));
+    const past = pastFixture({ id: 'old', title: 'Earlier work', ticket: 'PROJ-1' });
+    act(() => ready.client.push('session/changed', sessionsFixture([], { past: [past], tickets: [ticketSessionsFixture('PROJ-1', { past: [past] })] })));
     await ready.user.keyboard('{Enter}');
     await ready.user.click(screen.getByRole('button', { name: /Earlier work/ }));
     expect(ready.client.calls.find((call) => call.method === 'session/resumePast')?.params).toEqual({
@@ -537,7 +538,8 @@ describe('starting a session from the board', () => {
 
   it('lists no past session linked to no ticket under the selected ticket', async () => {
     const ready = await readyApp();
-    act(() => ready.client.push('session/changed', sessionsFixture([], { past: [pastFixture({ id: 'free', title: 'Loose end' })] })));
+    const free = pastFixture({ id: 'free', title: 'Loose end' });
+    act(() => ready.client.push('session/changed', sessionsFixture([], { past: [free], unlinked: { past: [free] } })));
     await ready.user.keyboard('{Enter}');
     expect(screen.queryByRole('button', { name: /Loose end/ })).toBeNull();
   });
@@ -545,7 +547,8 @@ describe('starting a session from the board', () => {
   it('focuses the tab of a hosted session of the ticket on enter', async () => {
     const ready = await readyApp();
     act(() => {
-      ready.client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1', { ticket: 'PROJ-1' })] });
+      const hosted = hostedFixture('h1', { ticket: 'PROJ-1' });
+      ready.client.push('session/changed', sessionsFixture([], { hosted: [hosted], tickets: [ticketSessionsFixture('PROJ-1', { hosted: [hosted] })] }));
     });
     await ready.user.keyboard('{Enter}');
     await ready.user.click(screen.getByRole('button', { name: /starting/ }));

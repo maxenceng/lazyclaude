@@ -50,11 +50,6 @@ public record LiveSessionView(
         return TicketLink.to(links, ticket);
     }
 
-    /** Whether the session is linked to no ticket. */
-    public boolean isUnlinked() {
-        return links.isEmpty();
-    }
-
     public static LiveSessionViewBuilder builder() {
         return new LiveSessionViewBuilder();
     }

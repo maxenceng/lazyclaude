@@ -6,13 +6,24 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
+import dev.maxenceng.lazyclaude.session.published.TicketLink;
 
-/** The project's sessions: the hosted live ones newest start first, then the past ones newest activity first, and the hosted ones in tab order. */
-public record SessionsView(List<LiveSessionView> live, List<PastSessionView> past, List<HostedSessionView> hosted) {
+/**
+ * The project's sessions: the hosted live ones newest start first, then the past ones newest activity first, and the hosted ones
+ * in tab order; then, from those, the sessions each ticket lists and the ones linked to no ticket, so neither frontend decides
+ * which sessions a ticket lists.
+ */
+public record SessionsView(
+        List<LiveSessionView> live,
+        List<PastSessionView> past,
+        List<HostedSessionView> hosted,
+        List<TicketSessionsView> tickets,
+        UnlinkedSessionsView unlinked) {
 
     public static SessionsView from(AvailableSessions available) {
         return builder()
@@ -47,14 +58,12 @@ public record SessionsView(List<LiveSessionView> live, List<PastSessionView> pas
                 .max(Comparator.comparing(session -> session.marker().orElse(Marker.YOUR_TURN)));
     }
 
-    /** The live sessions linked to no ticket. */
-    public List<LiveSessionView> unlinkedLive() {
-        return live.stream().filter(LiveSessionView::isUnlinked).toList();
-    }
-
-    /** The past sessions linked to no ticket, newest activity first. */
-    public List<PastSessionView> unlinkedPast() {
-        return past.stream().filter(PastSessionView::isUnlinked).toList();
+    /** The sessions {@code ticket} lists, none when no session is linked to it or hosted for it. */
+    public TicketSessionsView sessionsOf(LinkedTicketId ticket) {
+        return tickets.stream()
+                .filter(listed -> listed.ticket().equals(ticket))
+                .findFirst()
+                .orElseGet(() -> TicketSessionsView.builder().ticket(ticket).build());
     }
 
     public static SessionsViewBuilder builder() {
@@ -84,7 +93,15 @@ public record SessionsView(List<LiveSessionView> live, List<PastSessionView> pas
         }
 
         public SessionsView build() {
-            return new SessionsView(live, past, hosted);
+            List<TicketSessionsView> tickets = Stream.of(
+                            live.stream().flatMap(session -> session.links().stream()).map(TicketLink::ticket),
+                            past.stream().flatMap(session -> session.links().stream()).map(TicketLink::ticket),
+                            hosted.stream().flatMap(tab -> tab.ticket().stream()))
+                    .flatMap(Function.identity())
+                    .distinct()
+                    .map(ticket -> TicketSessionsView.of(ticket, live, past, hosted))
+                    .toList();
+            return new SessionsView(live, past, hosted, tickets, UnlinkedSessionsView.of(live, past));
         }
     }
 }

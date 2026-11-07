@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
 
-import dev.maxenceng.lazyclaude.session.published.SessionAge;
 
 class SessionClockTest {
 

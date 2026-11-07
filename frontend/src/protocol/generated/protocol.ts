@@ -391,6 +391,8 @@ export interface SessionSessionsView {
   live: SessionLiveSessionView[];
   past: SessionPastSessionView[];
   hosted: SessionHostedSessionView[];
+  tickets: SessionTicketSessionsView[];
+  unlinked: SessionUnlinkedSessionsView;
 }
 export interface SessionLiveSessionView {
   id: string;
@@ -475,6 +477,16 @@ export interface SessionHostedSessionView {
   live: SessionLiveSessionView | null;
   busyOrWaiting: boolean;
   ticket: string | null;
+}
+export interface SessionTicketSessionsView {
+  ticket: string;
+  live: SessionLiveSessionView[];
+  past: SessionPastSessionView[];
+  hosted: SessionHostedSessionView[];
+}
+export interface SessionUnlinkedSessionsView {
+  live: SessionLiveSessionView[];
+  past: SessionPastSessionView[];
 }
 export interface SharedWarningView {
   kind: 'warning';

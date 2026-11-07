@@ -89,7 +89,7 @@ public final class ProtocolCoverageFixture {
     }
 
     public static List<String> onlyTheTerminalAsks() {
-        return List.of("session/startedAgo", "session/lastActiveAgo");
+        return List.of("session/ageSince");
     }
 
     public static List<String> notYetOnTheProtocol() {

@@ -12,6 +12,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionView
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.LiveSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PastSessionView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketSessionsView;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 
@@ -19,7 +20,7 @@ import dev.maxenceng.lazyclaude.session.published.Marker;
  * The Sessions panel's rows and what the shell remembers about them: the selection, by session id, so it survives the
  * sessions being read again and does not move when a row above it appears or a state changes, the ticket whose section is
  * shown, and whether the older unlinked past sessions are unfolded. With a ticket selected, only its section shows, under its
- * id, with every session linked to it; with none, only the unlinked section, where the newest few past sessions show until
+ * id, with the sessions {@code session} says it lists; with none, only the unlinked section, where the newest few past sessions show until
  * the rest are unfolded, followed by a row that counts them. Header rows are labels the cursor skips.
  */
 final class SessionRows {
@@ -46,17 +47,14 @@ final class SessionRows {
     }
 
     private Stream<SessionRow> ticketSection(SessionsView available, LinkedTicketId selectedTicket) {
+        TicketSessionsView own = available.sessionsOf(selectedTicket);
         List<SessionRow> linked = Stream.of(
-                        available.live().stream()
-                                .flatMap(session -> session.linkTo(selectedTicket)
-                                        .<SessionRow>map(link -> new LiveSessionRow(session, Optional.of(link)))
-                                        .stream()),
-                        available.past().stream()
-                                .flatMap(session -> session.linkTo(selectedTicket)
-                                        .<SessionRow>map(link -> new PastSessionRow(session, Optional.of(link)))
-                                        .stream()),
-                        available.hosted().stream()
-                                .filter(tab -> tab.live().isEmpty() && tab.ticket().filter(selectedTicket::equals).isPresent())
+                        own.live().stream()
+                                .<SessionRow>map(session -> new LiveSessionRow(session, session.linkTo(selectedTicket))),
+                        own.past().stream()
+                                .<SessionRow>map(session -> new PastSessionRow(session, session.linkTo(selectedTicket))),
+                        own.hosted().stream()
+                                .filter(tab -> tab.live().isEmpty())
                                 .<SessionRow>map(StartingSessionRow::new))
                 .flatMap(Function.identity())
                 .toList();
@@ -68,8 +66,8 @@ final class SessionRows {
     }
 
     private Stream<SessionRow> unlinkedSection(SessionsView available) {
-        List<LiveSessionView> live = available.unlinkedLive();
-        List<PastSessionView> past = available.unlinkedPast();
+        List<LiveSessionView> live = available.unlinked().live();
+        List<PastSessionView> past = available.unlinked().past();
         if (live.isEmpty() && past.isEmpty()) {
             return Stream.empty();
         }
@@ -210,7 +208,7 @@ final class SessionRows {
 
     /** Whether {@code key} is an unlinked past session the fold hides, as a selected live session is once it dies idle long enough. */
     private boolean isFolded(RowKey key) {
-        return sessions.unlinkedPast().stream()
+        return sessions.unlinked().past().stream()
                 .skip(PAST_SHOWN)
                 .map(session -> new PastSessionRow(session, Optional.empty()))
                 .anyMatch(row -> row.key().equals(key));

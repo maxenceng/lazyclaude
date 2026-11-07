@@ -66,6 +66,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.RefusedRemovalVie
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RemovedWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResizePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumePastPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
@@ -1798,9 +1799,9 @@ public final class Shell extends ToolkitApp {
         return sessions.selected()
                 .map(row -> switch (row) {
                     case LiveSessionRow live ->
-                        new DetailElement(width -> SessionText.facts(live.session(), ages.startedAgo(live.session())), Optional.empty(), mainViewScroll);
+                        new DetailElement(width -> SessionText.facts(live.session(), ages.ageSince(SessionAgePayload.startOf(live.session()))), Optional.empty(), mainViewScroll);
                     case PastSessionRow past ->
-                        new DetailElement(width -> SessionText.card(past.session(), ages.lastActiveAgo(past.session())), Optional.empty(), mainViewScroll);
+                        new DetailElement(width -> SessionText.card(past.session(), ages.ageSince(SessionAgePayload.lastActivityOf(past.session()))), Optional.empty(), mainViewScroll);
                     case OlderSessionsRow _ -> column();
                     case SectionHeaderRow _ -> column();
                     case NoSessionRow _ -> column();
