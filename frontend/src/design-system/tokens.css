@@ -54,6 +54,7 @@
   --selected: #d9d6cf;
   --cursor-ground: var(--selected);
   --cursor-ink: var(--text-on-light);
+  --cursor-border: var(--selected);
   --cursor-edge: none;
   --card: #232427;
   --card-edge: #2f3034;

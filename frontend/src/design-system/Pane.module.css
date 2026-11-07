@@ -1,6 +1,7 @@
 .pane {
   --cursor-ground: var(--card);
   --cursor-ink: var(--text);
+  --cursor-border: var(--dim);
   --cursor-edge: inset var(--focus-edge) 0 0 var(--dim);
   display: flex;
   flex-direction: column;
@@ -27,6 +28,7 @@
 .focused {
   --cursor-ground: var(--selected);
   --cursor-ink: var(--text-on-light);
+  --cursor-border: var(--selected);
   --cursor-edge: none;
   box-shadow: inset 0 var(--focus-edge) 0 var(--focus);
 }

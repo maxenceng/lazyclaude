@@ -162,7 +162,7 @@ export const TicketPane = ({ board, selection, focused, onLink, onHide, children
     <Pane
       title={t('ticket.title')}
       focused={focused}
-      action={onHide === undefined ? undefined : { kind: PaneActionKind.Close, label: t('ticket.hide'), onClick: onHide }}
+      action={onHide === undefined ? undefined : { kind: PaneActionKind.Hide, label: t('ticket.hide'), onClick: onHide }}
     >
       {ticket === undefined ? <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} onLink={onLink} />}
       {children}

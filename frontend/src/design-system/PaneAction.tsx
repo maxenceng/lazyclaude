@@ -1,9 +1,10 @@
 import type { MouseEvent } from 'react';
 import styles from './PaneAction.module.css';
 
-/** What a pane's action does, which picks its icon: close what the pane shows, fold a pane to its strip, or unfold it. */
+/** What a pane's action does, which picks its icon: close what the pane shows, hide the pane, fold a pane to its strip, or unfold it. */
 export enum PaneActionKind {
   Close = 'close',
+  Hide = 'hide',
   Minimise = 'minimise',
   Restore = 'restore',
 }
@@ -15,8 +16,11 @@ export interface PaneActionProps {
   onClick: () => void;
 }
 
+const CROSS = 'M2 2 L10 10 M10 2 L2 10';
+
 const PATH: Readonly<Record<PaneActionKind, string>> = {
-  [PaneActionKind.Close]: 'M2 2 L10 10 M10 2 L2 10',
+  [PaneActionKind.Close]: CROSS,
+  [PaneActionKind.Hide]: CROSS,
   [PaneActionKind.Minimise]: 'M2 4 L6 8 L10 4',
   [PaneActionKind.Restore]: 'M2 8 L6 4 L10 8',
 };

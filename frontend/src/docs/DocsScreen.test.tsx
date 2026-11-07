@@ -150,6 +150,7 @@ describe('the document in the main view', () => {
     expect(controller.shown().kind).toBe('missing');
     expect(screen.getByRole('heading', { name: 'gone.md' })).toBeInTheDocument();
     expect(screen.getByText('No document at this path in the docs tree.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close document' }), 'a missing document closes like a found one').toBeInTheDocument();
   });
 
   it('opens a link outside the tree and an http link through the opener', async () => {

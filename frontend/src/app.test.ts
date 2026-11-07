@@ -145,6 +145,12 @@ const docsApp = async () => {
   return app;
 };
 
+const hostedApp = async () => {
+  const app = await docsApp();
+  app.hosting.dock.set(new Dock().opened('h1'));
+  return app;
+};
+
 describe('the app and a shown document', () => {
   it('closes a shown document on escape, leaving focus on the Docs panel, and goes to the Board on a second escape', async () => {
     const app = await docsApp();
@@ -152,6 +158,14 @@ describe('the app and a shown document', () => {
     app.press(Action.Back);
     expect(app.layout.get().showsDocument(), 'the first escape closes the document').toBe(false);
     expect(app.layout.get().focus).toBe(Focus.Docs);
+    app.press(Action.Back);
+    expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+
+  it('goes to the Board on the first escape while the main view, and so the document, is hidden', async () => {
+    const app = await hostedApp();
+    app.focusOn(Focus.Docs);
+    app.press(Action.ToggleMainView);
     app.press(Action.Back);
     expect(app.layout.get().focus).toBe(Focus.Board);
   });
@@ -178,53 +192,56 @@ describe('the app and a shown document', () => {
   });
 });
 
-const hostedApp = async () => {
-  const app = await docsApp();
-  app.hosting.dock.set(new Dock().opened('h1'));
-  return app;
-};
-
 describe('the app and a minimised dock', () => {
   it('minimises on M from a panel and restores on a second M', async () => {
     const app = await hostedApp();
-    app.press(Action.MinimiseDock);
+    app.press(Action.ToggleDockMinimised);
     expect(app.layout.get().dockMinimised).toBe(true);
-    app.press(Action.MinimiseDock);
+    app.press(Action.ToggleDockMinimised);
     expect(app.layout.get().dockMinimised).toBe(false);
   });
 
   it('leaves M to the session while a hosted session\'s pane has focus', async () => {
     const app = await hostedApp();
     app.focusOn(Focus.Dock);
-    app.press(Action.MinimiseDock);
+    app.press(Action.ToggleDockMinimised);
     expect(app.layout.get().dockMinimised).toBe(false);
   });
 
   it('does nothing on M with no hosted session', async () => {
     const app = await docsApp();
-    app.press(Action.MinimiseDock);
+    app.press(Action.ToggleDockMinimised);
     expect(app.layout.get().dockMinimised).toBe(false);
   });
 
-  it('restores the dock before the focus-down chord, and before w, focuses it', async () => {
+  it('restores the dock before the focus-down chord focuses it', async () => {
     const app = await hostedApp();
     app.focusOn(Focus.Sessions);
-    app.press(Action.MinimiseDock);
+    app.press(Action.ToggleDockMinimised);
     app.press(Action.FocusDown);
     expect(app.layout.get().focus).toBe(Focus.Dock);
     expect(app.layout.get().dockMinimised).toBe(false);
   });
 
-  it('restores the dock on w', async () => {
+  it('restores the dock on w and focuses it', async () => {
     const app = await hostedApp();
-    app.press(Action.MinimiseDock);
+    app.focusOn(Focus.Sessions);
+    app.press(Action.ToggleDockMinimised);
     app.press(Action.NextWaiting);
     expect(app.layout.get().dockMinimised).toBe(false);
+    expect(app.layout.get().focus).toBe(Focus.Dock);
+  });
+
+  it('leaves focus where it is on w with no hosted session', async () => {
+    const app = await docsApp();
+    app.focusOn(Focus.Sessions);
+    app.press(Action.NextWaiting);
+    expect(app.layout.get().focus).toBe(Focus.Sessions);
   });
 
   it('restores a minimised dock when a session opens', async () => {
     const app = await hostedApp();
-    app.press(Action.MinimiseDock);
+    app.press(Action.ToggleDockMinimised);
     app.hosting.dock.set(app.hosting.dock.get().opened('h2'));
     app.focusOn(Focus.Dock);
     expect(app.layout.get().dockMinimised).toBe(false);
@@ -232,7 +249,7 @@ describe('the app and a minimised dock', () => {
 
   it('leaves the no-dock layout when the last session exits, the next session\'s dock opening unfolded', async () => {
     const app = await hostedApp();
-    app.press(Action.MinimiseDock);
+    app.press(Action.ToggleDockMinimised);
     app.hosting.dock.set(new Dock());
     expect(app.layout.get().dockMinimised).toBe(false);
     app.hosting.dock.set(new Dock().opened('h2'));
@@ -248,11 +265,11 @@ describe('the app and a minimised dock', () => {
 
   it('keeps m and M exclusive, the last pressed winning', async () => {
     const app = await hostedApp();
-    app.press(Action.MinimiseDock);
+    app.press(Action.ToggleDockMinimised);
     app.press(Action.ToggleMainView);
     expect(app.layout.get().dockMinimised).toBe(false);
     expect(app.layout.get().mainHidden).toBe(true);
-    app.press(Action.MinimiseDock);
+    app.press(Action.ToggleDockMinimised);
     expect(app.layout.get().mainHidden).toBe(false);
     expect(app.layout.get().dockMinimised).toBe(true);
   });

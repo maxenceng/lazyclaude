@@ -47,6 +47,11 @@ export class Layout {
     return this.documentShown;
   }
 
+  /** A document is on screen, which `esc` on the Docs panel closes first: shown, and the main view not hidden. */
+  showsDocumentInView(): boolean {
+    return this.documentShown && !this.mainHidden;
+  }
+
   /** The main view goes back to the selected ticket; focus stays where it is. */
   closeDocument(): Layout {
     return this.with({ documentShown: false });
@@ -90,6 +95,11 @@ export class Layout {
     const hidden = !this.mainHidden;
     const hiding = this.with({ zoomed: false, mainHidden: hidden, dockMinimised: hidden ? false : this.dockMinimised });
     return hidden && isMainView(this.focus) ? hiding.focusOn(Focus.Dock) : hiding;
+  }
+
+  /** The ticket's `×`: the main view hides as `m` hides it; hidden already, it stays hidden. */
+  hideMainView(): Layout {
+    return this.mainHidden ? this : this.toggleMainView();
   }
 
   /** `M` or the dock's button: the dock folds to its strip, showing a hidden main view and moving focus off the dock to `mainFocus`; folded already, it unfolds. */

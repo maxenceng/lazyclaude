@@ -24,8 +24,9 @@
 .selected,
 .selected:hover {
   background: var(--cursor-ground);
-  border-color: var(--cursor-ground);
+  border-color: var(--cursor-border);
   color: var(--cursor-ink);
+  box-shadow: var(--cursor-edge);
 }
 
 .done {

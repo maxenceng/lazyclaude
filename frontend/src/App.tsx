@@ -82,10 +82,11 @@ export const App = ({ app, packaged }: Props) => {
   const hasDock = dock.tabs.length > 0;
   const dockKey = layout.mainHidden ? 'keyBar.showTicket' : layout.dockMinimised ? 'keyBar.restoreDock' : 'keyBar.minimiseDock';
   const dockKeys = hasDock ? [t(dockKey)] : [];
-  const tabKeys = [t('keyBar.tabs'), ...dockKeys];
+  const windowTabKeys = [t('keyBar.tabs')];
+  const tabKeys = [...windowTabKeys, ...dockKeys];
   const keyBar = {
     [Focus.Board]: <BoardKeyBar extra={tabKeys} />,
-    [Focus.Docs]: <DocsKeyBar documentShown={layout.showsDocument()} extra={tabKeys} />,
+    [Focus.Docs]: <DocsKeyBar documentShown={layout.showsDocumentInView()} extra={tabKeys} />,
     [Focus.Sessions]: <SessionsKeyBar picking={false} extra={tabKeys} />,
     [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
     [Focus.Comments]: <ReviewKeyBar panel={ReviewFocus.Comments} />,
@@ -118,7 +119,7 @@ export const App = ({ app, packaged }: Props) => {
   const tabScreen =
     tab === WindowTab.Board
       ? {
-          bar: <BoardTabKeyBar extra={tabKeys} />,
+          bar: <BoardTabKeyBar extra={windowTabKeys} />,
           pane: (
             <BoardColumns
               board={app.board.store}
@@ -145,7 +146,7 @@ export const App = ({ app, packaged }: Props) => {
           ) : null,
         }
       : {
-          bar: <PullRequestsKeyBar extra={tabKeys} />,
+          bar: <PullRequestsKeyBar extra={windowTabKeys} />,
           pane: (
             <PullRequestsPane
               state={pullRequests}
@@ -220,14 +221,14 @@ export const App = ({ app, packaged }: Props) => {
     tabbed !== undefined ? (
       <DockStrip hosting={app.hosting} sessions={sessions} onSelect={(id) => app.openDockTab(id)} />
     ) : layout.arrangement(hasDock) === Arrangement.Minimised ? (
-      <DockStrip hosting={app.hosting} sessions={sessions} onSelect={(id) => app.openDockTab(id)} onRestore={() => app.minimiseDock()} />
+      <DockStrip hosting={app.hosting} sessions={sessions} onSelect={(id) => app.focusDockTab(id)} onRestore={() => app.toggleDockMinimised()} />
     ) : (
       <DockScreen
         hosting={app.hosting}
         sessions={sessions}
         focused={layout.focus === Focus.Dock}
         onFocus={() => app.focusOn(Focus.Dock)}
-        onMinimise={() => app.minimiseDock()}
+        onMinimise={() => app.toggleDockMinimised()}
       />
     );
 

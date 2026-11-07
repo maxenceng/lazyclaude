@@ -4,11 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { AppModel } from './app';
 import { boardFixture, ticketFixture } from './board/fixtures';
-import { Focus } from './layout';
+import { Focus, WindowTab } from './layout';
 import { Exited, Ready } from './protocol';
 import { bytesOfText, toBase64 } from './protocol';
 import { folderFixture, readFixture, treeFixture } from './docs/fixtures';
 import { hostedFixture, pastFixture, sessionFixture, sessionsFixture } from './session/fixtures';
+import { Dock } from './session/dock';
 import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './session/recordings';
 import { fakeClient } from './test/fakeClient';
 import { testPlatform } from './testPlatform';
@@ -294,6 +295,56 @@ describe('the dock minimised', () => {
     expect(ready.app.layout.get().dockMinimised).toBe(false);
   });
 
+  it('restores on a click on a tab that was not selected, with that tab selected', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    act(() => ready.app.focusOn(Focus.Board));
+    await ready.user.keyboard('N');
+    await newSessionAnswered(ready.client, { kind: 'unlinkedStart' });
+    await act(async () => {
+      ready.client.answer('session/startUnlinked', { kind: 'startedHost', id: 'h2' });
+      await Promise.resolve();
+    });
+    await settle();
+    act(() => ready.app.focusOn(Focus.Board));
+    await ready.user.keyboard('M');
+    const [first] = within(dockTabs()).getAllByRole('tab');
+    expect(first).toHaveAttribute('aria-selected', 'false');
+    await ready.user.click(first!);
+    expect(within(dockTabs()).getAllByRole('tab')[0]).toHaveAttribute('aria-selected', 'true');
+    expect(ready.app.layout.get().focus).toBe(Focus.Dock);
+  });
+
+  it('restores a minimised dock when a new session starts', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    act(() => ready.app.focusOn(Focus.Board));
+    await ready.user.keyboard('M');
+    await ready.user.keyboard('N');
+    await newSessionAnswered(ready.client, { kind: 'unlinkedStart' });
+    await act(async () => {
+      ready.client.answer('session/startUnlinked', { kind: 'startedHost', id: 'h2' });
+      await Promise.resolve();
+    });
+    await settle();
+    expect(ready.app.layout.get().dockMinimised).toBe(false);
+    expect(ready.app.layout.get().focus).toBe(Focus.Dock);
+  });
+
+  it('offers no dock key on the Board and Pull requests tabs, where M and m do nothing', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    act(() => ready.app.chooseTab(WindowTab.Board));
+    expect(keyBar()).not.toHaveTextContent('M minimise');
+    act(() => ready.app.chooseTab(WindowTab.PullRequests));
+    expect(keyBar()).not.toHaveTextContent('M minimise');
+    act(() => ready.app.chooseTab(WindowTab.Base));
+    act(() => ready.app.focusOn(Focus.Board));
+    await ready.user.keyboard('M');
+    act(() => ready.app.chooseTab(WindowTab.Board));
+    expect(keyBar()).not.toHaveTextContent('M restore');
+  });
+
   it('keeps every key bar within 80 columns', async () => {
     const ready = await readyApp();
     docsRead(ready);
@@ -308,6 +359,15 @@ describe('the dock minimised', () => {
     act(() => ready.app.hideMainView());
     [Focus.Board, Focus.Docs, Focus.Dock].forEach((focus) => {
       act(() => ready.app.focusOn(focus));
+      widths.push(keyBarWidth());
+    });
+    act(() => ready.app.toggleDockMinimised());
+    [Focus.Board, Focus.Docs, Focus.Sessions].forEach((focus) => {
+      act(() => ready.app.focusOn(focus));
+      widths.push(keyBarWidth());
+    });
+    [WindowTab.Board, WindowTab.PullRequests].forEach((tab) => {
+      act(() => ready.app.chooseTab(tab));
       widths.push(keyBarWidth());
     });
     expect(Math.max(...widths)).toBeLessThanOrEqual(KEY_BAR_COLUMNS);
@@ -696,6 +756,27 @@ const reviewOpened = async (answers: { pending?: unknown; threads?: unknown; dif
 };
 
 describe('the Review screen', () => {
+  it('minimises the dock on M, focus staying on the diff, and keeps the review open when a strip tab restores it', async () => {
+    const ready = await reviewOpened();
+    act(() => ready.app.hosting.dock.set(new Dock().opened('h1')));
+    act(() => ready.app.focusOn(Focus.Diff));
+    await ready.user.keyboard('M');
+    expect(ready.app.layout.get().dockMinimised).toBe(true);
+    expect(ready.app.layout.get().focus).toBe(Focus.Diff);
+    await ready.user.click(within(dockTabs()).getByRole('tab'));
+    expect(ready.app.review.isOpen(), 'a click on the minimised strip restores the dock, it does not leave the review').toBe(true);
+    expect(screen.getByRole('region', { name: 'Files' })).toBeInTheDocument();
+    expect(ready.app.layout.get().focus).toBe(Focus.Dock);
+  });
+
+  it('moves a focused dock\'s focus to the diff when M minimises it in a review', async () => {
+    const ready = await reviewOpened();
+    act(() => ready.app.hosting.dock.set(new Dock().opened('h1')));
+    act(() => ready.app.focusOn(Focus.Dock));
+    act(() => ready.app.toggleDockMinimised());
+    expect(ready.app.layout.get().focus).toBe(Focus.Diff);
+  });
+
   it('opens on p for a ticket whose branch heads an open pull request, with Files, Comments and Review beside the diff', async () => {
     await reviewOpened();
     expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument();

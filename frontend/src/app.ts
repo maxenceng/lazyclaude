@@ -107,9 +107,15 @@ export class AppModel {
     this.focusOn(Focus.Dock);
   }
 
-  /** The dock's minimise button: the dock folds to its strip, or unfolds. */
-  minimiseDock(): void {
-    this.keys.minimiseDock();
+  /** A click on a session's tab in the minimised dock strip: the dock unfolds with that session's pane focused, on whatever the window shows. */
+  focusDockTab(id: string): void {
+    this.hosting.select(id);
+    this.focusOn(Focus.Dock);
+  }
+
+  /** The dock's minimise or restore button: the dock folds to its strip, or unfolds. */
+  toggleDockMinimised(): void {
+    this.keys.toggleDockMinimised();
   }
 
   /** The close button of a shown document: the main view goes back to the selected ticket, focus staying where it was. */
@@ -119,10 +125,7 @@ export class AppModel {
 
   /** The ticket's close button: the main view hides and the dock takes the column, as `m` does; `m` shows it again. */
   hideMainView(): void {
-    const current = this.layout.get();
-    if (!current.mainHidden) {
-      this.layout.set(current.toggleMainView());
-    }
+    this.layout.set(this.layout.get().hideMainView());
   }
 
   /** Retry on the Pull requests tab: reads the open pull requests again. */

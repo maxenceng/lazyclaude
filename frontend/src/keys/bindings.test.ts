@@ -28,7 +28,7 @@ describe('the keys the TUI binds', () => {
     ['n', Action.NewTicketSession],
     ['N', Action.NewSession],
     ['m', Action.ToggleMainView],
-    ['M', Action.MinimiseDock],
+    ['M', Action.ToggleDockMinimised],
     ['z', Action.Zoom],
     ['w', Action.NextWaiting],
     ['Escape', Action.Back],
