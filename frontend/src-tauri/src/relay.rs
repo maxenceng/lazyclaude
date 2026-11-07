@@ -275,6 +275,7 @@ impl Relay {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
+    use std::io::Cursor;
     use std::path::Path;
     use std::sync::mpsc::{self, Receiver};
     use std::time::{Duration, Instant};
@@ -308,11 +309,26 @@ mod tests {
         (on_message, receiver)
     }
 
-    fn lines(receiver: &Receiver<RelayMessage>) -> Vec<String> {
-        match receiver.recv_timeout(WAIT).expect("a message from the relay") {
+    fn reading() -> (Relay, Receiver<RelayMessage>) {
+        let relay = Relay::new(Sidecar {
+            program: "unspawned".into(),
+            args: Vec::new(),
+            directory: std::env::temp_dir(),
+        });
+        let (on_message, receiver) = recorder();
+        relay.lock().channel = Some(on_message);
+        (relay, receiver)
+    }
+
+    fn lines_of(message: RelayMessage) -> Vec<String> {
+        match message {
             RelayMessage::Lines { lines } => lines,
             RelayMessage::Exited(exit) => panic!("the stand-in exited: {:?} {:?}", exit.code, exit.stderr),
         }
+    }
+
+    fn lines(receiver: &Receiver<RelayMessage>) -> Vec<String> {
+        lines_of(receiver.recv_timeout(WAIT).expect("a message from the relay"))
     }
 
     fn marker(name: &str) -> PathBuf {
@@ -333,15 +349,26 @@ mod tests {
     }
 
     #[test]
-    fn lines_written_together_reach_the_page_in_one_message_as_they_were_written() {
-        let script = format!("printf '%s\\n%s\\nthird\\n' '{READY}' '{CHANGED}'; read rest");
-        let relay = stand_in(&script, &marker("batch"));
-        let (on_message, receiver) = recorder();
+    fn lines_read_together_reach_the_page_in_one_message_as_they_were_written() {
+        let (relay, receiver) = reading();
+        let stdout = format!("{READY}\n{CHANGED}\nthird\n");
 
-        relay.attach(on_message);
+        relay.read_stdout(Cursor::new(stdout), 0);
 
-        assert_eq!(lines(&receiver), vec![READY, CHANGED, "third"]);
-        relay.close();
+        let messages: Vec<_> = receiver.try_iter().map(lines_of).collect();
+        assert_eq!(messages, vec![vec![READY, CHANGED, "third"]]);
+    }
+
+    #[test]
+    fn a_line_cut_across_two_reads_reaches_the_page_once_whole_in_the_second_message() {
+        let (relay, receiver) = reading();
+        let stdout = format!("{READY}\n{CHANGED}\nthird\n");
+        let (before, after) = stdout.split_at(READY.len() + "\n".len() + CHANGED.len() / 2);
+
+        relay.read_stdout(Cursor::new(before.to_owned()).chain(Cursor::new(after.to_owned())), 0);
+
+        let messages: Vec<_> = receiver.try_iter().map(lines_of).collect();
+        assert_eq!(messages, vec![vec![READY], vec![CHANGED, "third"]]);
     }
 
     #[test]
