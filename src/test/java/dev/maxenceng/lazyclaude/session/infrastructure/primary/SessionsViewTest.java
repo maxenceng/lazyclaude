@@ -164,7 +164,7 @@ class SessionsViewTest {
         SessionsView view = SessionsView.from(
                 availableSessionsHosting(List.of(), List.of(openLive(liveSession()))));
 
-        assertThat(view.hosted()).containsExactly(liveHostedSessionView(sessionView(), true));
+        assertThat(view.hosted()).containsExactly(liveHostedSessionView(sessionView()));
         assertThat(view.live()).containsExactly(sessionView());
     }
 

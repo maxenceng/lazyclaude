@@ -9,13 +9,15 @@ interface Props {
   project: string;
   warning?: { text: string; count: number };
   notice?: string;
+  /** The window's own actions at the right end, after the project. */
+  actions?: ReactNode;
 }
 
 /**
  * The window tabs at the left of the andon board across the top: a lamp tile per live session, folded to marker and count when narrow; then the window's
- * notice and the backend's warning, each when there is one, before the project.
+ * notice and the backend's warning, each when there is one, before the project and the window's own actions.
  */
-export const StatusLine = ({ tabs, tiles, counts, project, warning, notice }: Props) => {
+export const StatusLine = ({ tabs, tiles, counts, project, warning, notice, actions }: Props) => {
   const { t } = useTranslation('designSystem');
   return (
     <header className={styles.line}>
@@ -37,6 +39,7 @@ export const StatusLine = ({ tabs, tiles, counts, project, warning, notice }: Pr
         </div>
       )}
       <div className={styles.project}>{project}</div>
+      {actions}
     </header>
   );
 };

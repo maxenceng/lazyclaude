@@ -42,8 +42,8 @@ final class SessionText {
     private static final String PAST_GLYPH = "○";
     private static final String INTERRUPTED_GLYPH = "↺";
     private static final String PANE_LABEL = "pane";
-    private static final String QUIT_PROMPT_ONE = "1 hosted session is busy or waiting — quit? y/n";
-    private static final String QUIT_PROMPT_MANY = "%d hosted sessions are busy or waiting — quit? y/n";
+    private static final String QUIT_PROMPT_ONE = "1 hosted session would end — quit? y/n";
+    private static final String QUIT_PROMPT_MANY = "%d hosted sessions would end — quit? y/n";
     private static final String NO_SESSION_LABEL = "no session";
     private static final String NEW_SESSION_FORMAT = "n new: /ticket %s";
     private static final String STARTING_GLYPH = UNKNOWN_GLYPH;
@@ -119,8 +119,8 @@ final class SessionText {
         return PANE_LABEL;
     }
 
-    static String quitPrompt(long busyOrWaiting) {
-        return busyOrWaiting == 1 ? QUIT_PROMPT_ONE : QUIT_PROMPT_MANY.formatted(busyOrWaiting);
+    static String quitPrompt(long hosted) {
+        return hosted == 1 ? QUIT_PROMPT_ONE : QUIT_PROMPT_MANY.formatted(hosted);
     }
 
     static String newSessionLabel(NewSessionRow row) {

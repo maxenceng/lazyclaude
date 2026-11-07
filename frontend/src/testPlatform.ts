@@ -40,13 +40,15 @@ class SetFocus implements FocusSource {
   }
 }
 
-/** The webview's parts for a test: a real xterm.js without a renderer, the session storage, a clipboard in memory and a window whose focus the test sets. */
+/** The webview's parts for a test: a real xterm.js without a renderer, the session storage, a clipboard in memory, a window whose focus the test sets and whose closes it counts. */
 export class TestPlatform implements Platform {
   readonly memory = new StorageModeMemory(sessionStorage);
   readonly fits: Array<{ fit: () => void }> = [];
   readonly clipboard = new MemoryClipboard();
   readonly opener = new RecordingOpener();
   readonly focus: SetFocus;
+  closes = 0;
+  closeRefusal: string | undefined = undefined;
 
   constructor(focused: boolean) {
     this.focus = new SetFocus(focused);
@@ -64,6 +66,11 @@ export class TestPlatform implements Platform {
     const fit = { fit: () => {} };
     this.fits.push(fit);
     return { terminal: new Terminal(), fit };
+  }
+
+  closeWindow(): Promise<void> {
+    this.closes += 1;
+    return this.closeRefusal === undefined ? Promise.resolve() : Promise.reject(new Error(this.closeRefusal));
   }
 
   setFocused(focused: boolean): void {

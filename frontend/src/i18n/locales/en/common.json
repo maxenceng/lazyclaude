@@ -28,5 +28,15 @@
     "minimiseDock": "M minimise",
     "restoreDock": "M restore",
     "showTicket": "m ticket"
+  },
+  "quit": {
+    "title": "Quit lazyclaude?",
+    "hosted_one": "{{count}} hosted session is open, and quitting ends it.",
+    "hosted_other": "{{count}} hosted sessions are open, and quitting ends them.",
+    "hint": "y quit · esc stay",
+    "yes": "Quit",
+    "no": "Stay",
+    "button": "Quit lazyclaude",
+    "refused": "the window did not close ({{reason}})"
   }
 }

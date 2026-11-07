@@ -53,8 +53,8 @@ words mean.
 | Protocol | The JSON-RPC 2.0 messages, one per line, that a frontend and its sidecar exchange: one method per `*Query`/`*Command` operation, inputs it takes and never answers (`pty/input`, `pty/resize`, `session/repaint`), `*/changed`, `review/mergedChanged`, `pty/output` and `session/exited` notifications, `ready` first (ADR 0050, ADR 0074). An *input* is that kind of call; what a hosted `claude` is sent is its pty's bytes. | `sidecar` |
 | Desktop frontend | The Tauri window, React over xterm.js, that drives a sidecar: the Board, the hosted session pane, Docs and Review, the TUI's screens and keys with the mouse. Not the *desktop notification*, which either frontend may fire. | `frontend/` |
 | Relay | The desktop frontend's Rust half: it spawns the sidecar, carries its lines both ways in batches and keeps `ready` for a reloaded page. It knows none of the protocol's methods. | `frontend/src-tauri/` |
-| Bundle | The desktop frontend as installed, a deb or an AppImage: the relay with the runtime, the jar and pty4j's natives beside it, built by `make bundle` (ADR 0059). Not `make package`'s jar. | `frontend/` (expected) |
-| Runtime | The jlink image of Temurin 25 the bundle starts the sidecar on. | `frontend/` (expected) |
+| Bundle | The desktop frontend as installed, a deb or an AppImage: the relay with the runtime, the jar and pty4j's and JNA's natives beside it under `/usr/lib/lazyclaude/`, built by `make bundle` (ADR 0059). Not `make package`'s jar. A release build of the relay starts the sidecar from it; a debug build, or `LAZYCLAUDE_SIDECAR`, uses the system `java`. | `scripts/bundle.sh`, `frontend/src-tauri/` |
+| Runtime | The jlink image of a pinned Temurin 25 the bundle starts the sidecar on, linked by `make bundle` with the modules `scripts/bundle.sh` lists. Not the system JDK the build and the TUI run on. | `scripts/bundle.sh` |
 
 ## board
 
@@ -95,7 +95,7 @@ words mean.
 | Unlinked session | A session attributed to no ticket. Started from lazyclaude, it runs in the project root. Listed only when no ticket is selected: a selected ticket's sessions are the ones linked to it. | `session` |
 | Marker | What a live session asks of you, in the board gutter and on the status line: `!` waiting for permission, `?` waiting for input, `•` your turn; the strongest is `!` > `?` > `•`. Busy, unknown and past are not markers. | `session` |
 | Starting | A hosted session with no registry record yet, or only one an earlier process of its pid left: just spawned, or still on Claude Code's trust dialog. No marker, never notified. | `session` |
-| Unread | A hosted session whose registry record is there and cannot be used, or reports a status lazyclaude does not know: whether it is busy or waiting is unknown. It shows as `Unknown`, and it counts as busy, so `q` asks first. | `session` |
+| Unread | A hosted session whose registry record is there and cannot be used, or reports a status lazyclaude does not know: what it is doing is unknown. It shows as `Unknown`. Like every hosted session, it makes `q` ask first (ADR 0098). | `session` |
 | Busy | The session is working; nothing is asked of you. The registry's `busy` and `shell` both show as busy. | `session` |
 | Your turn | The session finished and waits for your next prompt, without blocking on anything. Shown, never notified. | `session` |
 | Ticket worktree | The one worktree `../<repo>.worktrees/<ticket branch>` all of a ticket's sessions run in. Created before its first session, recreated if gone. Removed only on the user's yes, once the ticket is `done` and the worktree has no uncommitted work, no commit beyond the merged pull request, and no live session (its *Worktree state*). Removal is `git worktree remove` only; the local ticket branch stays. | `shared` (its path), `session` (creates and removes it) |

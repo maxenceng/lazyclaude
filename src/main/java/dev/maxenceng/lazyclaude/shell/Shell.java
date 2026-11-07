@@ -1111,12 +1111,12 @@ public final class Shell extends ToolkitApp {
     }
 
     private boolean requestQuit() {
-        long busy = sessions.busyOrWaitingHosted();
-        if (busy == 0) {
+        long hosted = sessions.hostedCount();
+        if (hosted == 0) {
             quitRequested = true;
             quit();
         } else {
-            quitPrompt = Optional.of(busy);
+            quitPrompt = Optional.of(hosted);
         }
         return true;
     }

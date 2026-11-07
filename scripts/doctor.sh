@@ -53,6 +53,42 @@ for tool in claude gh uv node pnpm cargo; do
 done
 
 echo
+echo "Bundle (make bundle, make bundle-smoke; not needed by make verify)"
+
+for tool in curl sha256sum tar python3; do
+	if command -v "${tool}" >/dev/null 2>&1; then
+		report "${tool}" "found"
+	else
+		report "${tool}" "not installed — make bundle needs it to fetch and check the Temurin, or to read the pom's version"
+	fi
+done
+
+if command -v xvfb-run >/dev/null 2>&1; then
+	report "xvfb-run" "found"
+else
+	report "xvfb-run" "not installed — make bundle-smoke fails its relay check; sudo apt install xvfb or sudo pacman -S xorg-server-xvfb"
+fi
+
+if command -v dpkg-deb >/dev/null 2>&1 || { command -v ar >/dev/null 2>&1 && command -v bsdtar >/dev/null 2>&1; }; then
+	report "deb" "can be unpacked (dpkg-deb, or ar and bsdtar)"
+else
+	report "deb" "cannot be unpacked — install dpkg, or ar and bsdtar, for make bundle-smoke"
+fi
+
+# libfuse2 is only needed to run an AppImage; the smoke test extracts it instead.
+if [[ -n "$(ldconfig -p 2>/dev/null | grep 'libfuse.so.2')" ]]; then
+	report "fuse2" "libfuse.so.2 found"
+else
+	report "fuse2" "libfuse.so.2 not found — an AppImage will not start without it (sudo apt install libfuse2)"
+fi
+
+if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists webkit2gtk-4.1 gtk+-3.0; then
+	report "tauri" "webkit2gtk-4.1 and gtk+-3.0 development files found"
+else
+	report "tauri" "webkit2gtk-4.1 or gtk+-3.0 development files not found — see the Tauri Linux prerequisites"
+fi
+
+echo
 echo "Project"
 
 # The brief in CLAUDE.md is the only thing telling an agent what it is building. Left

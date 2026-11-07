@@ -99,3 +99,4 @@
 - 0095 [The desktop dock minimises to its strip, and `m` and `M` exclude each other](0095-the-desktop-dock-minimises-to-its-strip-and-m-and-m-exclude-each-other.md) — Accepted.
 - 0096 [A selected ticket's sessions are only its own, and the desktop shows no session age](0096-a-selected-tickets-sessions-are-only-its-own-and-the-desktop-shows-no-session-age.md) — Accepted.
 - 0097 [A desktop popup without a scrim is modal to the mouse, and a capture answers with its board](0097-a-desktop-popup-without-a-scrim-is-modal-to-the-mouse-and-a-capture-answers-with-its-board.md) — Accepted.
+- 0098 [`q` asks before quitting whenever a session is hosted, in either frontend](0098-q-asks-before-quitting-whenever-a-session-is-hosted-in-either-frontend.md) — Accepted.

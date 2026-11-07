@@ -269,12 +269,22 @@ class ShellHostingTest {
     }
 
     @Test
-    void shouldQuitAtOnceWhenNoHostedSessionIsBusyOrWaiting() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new YourTurn()), startingTabNumbered(2)), hosting, emulating, screens);
+    void shouldQuitAtOnceWhenNoSessionIsHosted() {
+        Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
 
         shell.press(key('q'));
 
         assertThat(shell.quitRequested()).isTrue();
+    }
+
+    @Test
+    void shouldAskBeforeQuittingEvenWhenTheHostedSessionIsOnYourTurn() {
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new YourTurn())), hosting, emulating, screens);
+
+        shell.press(key('q'));
+
+        assertThat(shell.quitRequested()).as("quitting ends an idle hosted session as surely as a busy one").isFalse();
+        assertThat(Screen.of(shell).statusLine()).contains("1 hosted session would end — quit? y/n");
     }
 
     @Test
@@ -284,16 +294,16 @@ class ShellHostingTest {
         shell.press(key('q'));
 
         assertThat(shell.quitRequested()).isFalse();
-        assertThat(Screen.of(shell).statusLine()).contains("1 hosted session is busy or waiting — quit? y/n");
+        assertThat(Screen.of(shell).statusLine()).contains("1 hosted session would end — quit? y/n");
     }
 
     @Test
-    void shouldCountTheBusyOrWaitingSessionsInThePrompt() {
-        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy()), hostedTab(2, "two", new Busy())), hosting, emulating, screens);
+    void shouldCountEveryHostedSessionInThePrompt() {
+        Shell shell = shellHosting(sessionsViewWithTabs(hostedTab(1, "one", new Busy()), startingTabNumbered(2)), hosting, emulating, screens);
 
         shell.press(key('q'));
 
-        assertThat(Screen.of(shell).statusLine()).contains("2 hosted sessions are busy or waiting — quit? y/n");
+        assertThat(Screen.of(shell).statusLine()).contains("2 hosted sessions would end — quit? y/n");
     }
 
     @Test
@@ -305,7 +315,7 @@ class ShellHostingTest {
 
         assertThat(Screen.of(shell).statusLine())
                 .as("a warning drawn over the question would hide what the next key answers")
-                .contains("1 hosted session is busy or waiting — quit? y/n");
+                .contains("1 hosted session would end — quit? y/n");
     }
 
     @Test

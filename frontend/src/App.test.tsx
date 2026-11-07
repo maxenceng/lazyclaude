@@ -459,6 +459,26 @@ describe('starting a session from the board', () => {
     });
   });
 
+  it('closes the verb picker when another ticket is selected, so it never offers the first ticket\'s verbs on the second', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('j');
+    await ready.user.keyboard('n');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'START' });
+    expect(screen.getByRole('button', { name: /start$/ })).toBeInTheDocument();
+    await ready.user.click(screen.getByRole('button', { name: /PROJ-1/ }));
+    expect(screen.queryByRole('button', { name: /start$/ })).toBeNull();
+    expect(ready.app.sessions.isPicking()).toBe(false);
+  });
+
+  it('drops a verb choice answered after another ticket was selected', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('j');
+    await ready.user.keyboard('n');
+    await ready.user.keyboard('k');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'START' });
+    expect(ready.app.sessions.isPicking()).toBe(false);
+  });
+
   it('scrolls the preselected verb into view when the picker opens below a long ticket', async () => {
     const scrolled = vi.spyOn(Element.prototype, 'scrollIntoView');
     const ready = await readyApp();
@@ -1050,5 +1070,73 @@ describe('capturing a draft ticket', () => {
     expect(started.app.board.selection.selected.get()).toBeUndefined();
     await started.user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
+  });
+});
+
+describe('quitting the window', () => {
+  it('closes the window at once on q while no session is hosted', async () => {
+    const { platform, user } = await readyApp();
+    await user.keyboard('q');
+    expect(platform.closes).toBe(1);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('asks before closing while a session is hosted, even one idle at its prompt, and stays on esc', async () => {
+    const { client, platform, user } = await readyApp();
+    act(() => client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1')] }));
+    await user.keyboard('q');
+    expect(within(screen.getByRole('dialog', { name: 'Quit lazyclaude?' })).getByText('1 hosted session is open, and quitting ends it.')).toBeInTheDocument();
+    expect(platform.closes).toBe(0);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(platform.closes).toBe(0);
+  });
+
+  it('closes the window once y answers the question', async () => {
+    const { client, platform, user } = await readyApp();
+    act(() => client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1'), hostedFixture('h2')] }));
+    await user.keyboard('q');
+    expect(screen.getByText('2 hosted sessions are open, and quitting ends them.')).toBeInTheDocument();
+    await user.keyboard('y');
+    expect(platform.closes).toBe(1);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('answers the question with its buttons as with its keys', async () => {
+    const { client, platform, user } = await readyApp();
+    act(() => client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1')] }));
+    await user.keyboard('q');
+    await user.click(screen.getByRole('button', { name: 'Stay' }));
+    expect(platform.closes).toBe(0);
+    await user.keyboard('q');
+    await user.click(screen.getByRole('button', { name: 'Quit' }));
+    expect(platform.closes).toBe(1);
+  });
+
+  it('quits on ctrl+c outside a pane as on q', async () => {
+    const { platform, user } = await readyApp();
+    await user.keyboard('{Control>}c{/Control}');
+    expect(platform.closes).toBe(1);
+  });
+
+  it('quits from the status line button as q does', async () => {
+    const { platform, user } = await readyApp();
+    await user.click(screen.getByRole('button', { name: 'Quit lazyclaude' }));
+    expect(platform.closes).toBe(1);
+  });
+
+  it('shows a window that refused to close as a notice', async () => {
+    const { platform, user } = await readyApp();
+    platform.closeRefusal = 'not allowed';
+    await user.keyboard('q');
+    await settle();
+    expect(screen.getByText(/the window did not close \(not allowed\)/)).toBeInTheDocument();
+  });
+
+  it('types q into the capture popup rather than quitting', async () => {
+    const { platform, user } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('q');
+    expect(platform.closes).toBe(0);
   });
 });
