@@ -34,6 +34,7 @@ Use `make`, never `mvn` directly — the Makefile selects the Java 25 toolchain.
 - `make adr-index` — rewrite `docs/adr/README.md` after adding or superseding an ADR
 - `make frontend` — the desktop frontend's checks: regenerate the protocol types and fail on a diff, then
   `tsc`, ESLint, Vitest, `cargo clippy` and `cargo test`
+- `make bundle` / `make bundle-smoke` — build the desktop frontend's deb and AppImage into `target/bundle/out`, then smoke-test them (ADR 0059); CI's `bundle` job runs both, `make verify` does not
 - `make verify` — everything CI runs, in CI's order; `make ci` is its first step
 - `make verify-report` — the same run, into a log, printing the exit code and the totals
 - `make pr-checks` — wait for CI on this branch's PR and exit on its verdict

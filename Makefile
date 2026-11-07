@@ -20,11 +20,17 @@ endif
 endif
 JAVA := $(if $(JAVA_HOME),$(JAVA_HOME)/bin/java,java)
 
+# Moving the pinned Temurin means moving the version, the tag and the checksum together (ADR 0059).
+# The checksum is the .sha256.txt Adoptium publishes beside the archive.
+TEMURIN_VERSION := 25.0.5+8
+TEMURIN_TAG := 25.0.5%2B8
+TEMURIN_SHA256 := 68982529869257d0ee6b824ec5aa270ff8b118bb438670da0b97ebdab178d7fb
+
 .DEFAULT_GOAL := help
 
 .PHONY: help doctor build test contract test-one arch fmt lint dup config-check adr-check adr-index protocol-schema frontend
 .PHONY: docs docs-serve ticket-check guard-fixtures guard-harness no-skipped-tests test-comment-check var-check
-.PHONY: package run ci verify verify-report pr-checks clean
+.PHONY: package bundle bundle-smoke run ci verify verify-report pr-checks clean
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -96,6 +102,12 @@ docs-serve: ## Serve the docs on localhost with reload
 
 package: ## Build the runnable jar into target/lazyclaude.jar
 	$(MVN) -q package -DskipTests
+
+bundle: package ## Build the desktop frontend's deb and AppImage into target/bundle/out; not part of verify
+	TEMURIN_VERSION=$(TEMURIN_VERSION) TEMURIN_TAG=$(TEMURIN_TAG) TEMURIN_SHA256=$(TEMURIN_SHA256) bash scripts/bundle.sh
+
+bundle-smoke: ## Smoke-test the built deb and AppImage: ready, a hosted session, a clean exit, the relay under xvfb-run
+	@bash scripts/bundle-smoke.sh
 
 protocol-schema: package ## Write docs/protocol/protocol.schema.json from the sidecar's Views and Payloads
 	@$(JAVA) -jar $(JAR) --protocol-schema > target/protocol.schema.json
