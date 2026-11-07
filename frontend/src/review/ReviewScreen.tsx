@@ -129,16 +129,25 @@ const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow
       );
     }
     case RowKind.Thread:
-      return <ThreadAnnotation thread={row.thread} />;
+      return <ThreadAnnotation thread={row.thread} review={review} />;
     case RowKind.Pending:
       return <PendingAnnotation comment={row.comment} />;
   }
 };
 
-const ThreadAnnotation = ({ thread }: { thread: ReviewReviewThreadView }) => {
+const ThreadAnnotation = ({ thread, review }: { thread: ReviewReviewThreadView; review: OpenReview }) => {
   const { t } = useTranslation('review');
   const placed = thread.position.kind === 'placedThread' ? thread.position : undefined;
-  return <Annotation kind={CommentKind.Thread} heading={placed === undefined ? '' : t('annotation.lines', { lines: linesOf(placed) })} comments={thread.comments} dim={thread.resolved} />;
+  const lines = placed === undefined ? '' : t('annotation.lines', { lines: linesOf(placed) });
+  return (
+    <Annotation
+      kind={CommentKind.Thread}
+      heading={lines}
+      comments={thread.comments}
+      dim={thread.resolved}
+      reply={{ text: t('annotation.replyAction'), label: t('annotation.replyLabel', { lines }), onReply: () => review.replyTo(thread) }}
+    />
+  );
 };
 
 const PendingAnnotation = ({ comment }: { comment: ReviewPendingCommentView }) => {

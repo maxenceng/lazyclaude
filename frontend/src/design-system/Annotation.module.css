@@ -38,3 +38,23 @@
 .reply {
   padding-left: var(--space-4);
 }
+
+.replyAction {
+  display: block;
+  margin-top: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  cursor: pointer;
+}
+
+.replyAction:hover {
+  color: var(--text);
+}
+
+.replyAction:focus-visible {
+  outline: var(--focus-edge) solid var(--focus);
+  outline-offset: 2px;
+}

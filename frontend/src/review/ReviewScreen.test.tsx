@@ -105,6 +105,40 @@ describe('the diff of a review', () => {
     expect(articles[1]).toHaveTextContent('you Rename this');
   });
 
+  it('ends a thread with a Reply, and a pending comment with none', async () => {
+    const harness = new Harness();
+    const thread = threadFixture({ id: 'T1' });
+    const comment = pendingCommentFixture({ body: 'Rename this' });
+    await harness.readAll({
+      diff,
+      threads: threadsFixture([thread]),
+      pending: openPending([comment]),
+      comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))], pending: [pendingInDiff(comment, onLine(0))] }),
+    });
+    renderDiff(harness);
+    const articles = screen.getAllByRole('article');
+    expect(within(articles[0]!).getByRole('button', { name: 'Reply to the thread on L1' })).toHaveTextContent('Reply');
+    expect(within(articles[1]!).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('opens the reply box on a click on Reply, resolved thread included, moving neither the cursor nor the focus', async () => {
+    const harness = new Harness();
+    const thread = threadFixture({ id: 'T1', resolved: true, open: false, comments: [{ author: 'ada', body: 'Why this?' }] });
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }), });
+    harness.review.moveLine(2);
+    const onFocus = vi.fn();
+    render(
+      <>
+        <DiffPane review={harness.review} focused={false} onFocus={onFocus} onRetry={() => {}} />
+        <ReviewDialogs review={harness.review} />
+      </>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Reply to the thread on L1' }));
+    expect(screen.getByRole('dialog', { name: 'Why this?' })).toBeInTheDocument();
+    expect(harness.review.cursor()).toBe(2);
+    expect(onFocus).not.toHaveBeenCalled();
+  });
+
   it('puts the cursor on a line pressed, focusing the diff', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
