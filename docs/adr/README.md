@@ -96,3 +96,4 @@
 - 0092 [`config.yml` sets the verbs each status offers, and `board` holds the rule](0092-config-yml-sets-the-verbs-each-status-offers-and-board-holds-the-rule.md) — Accepted.
 - 0093 [The desktop window chooses what it shows by window tab, keyed 1, 2 and 3](0093-the-desktop-window-chooses-what-it-shows-by-window-tab-and-keys-them-1-2-3.md) — Accepted.
 - 0094 [The desktop review goes to a file on one click, and writes a comment on a second](0094-the-desktop-review-goes-to-a-file-on-one-click-and-writes-a-comment-on-a-second.md) — Accepted.
+- 0095 [The desktop dock minimises to its strip, and `m` and `M` exclude each other](0095-the-desktop-dock-minimises-to-its-strip-and-m-and-m-exclude-each-other.md) — Accepted.
