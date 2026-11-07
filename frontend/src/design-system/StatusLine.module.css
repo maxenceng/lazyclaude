@@ -1,6 +1,6 @@
 .line {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto auto;
+  grid-template-columns: auto 1fr auto auto auto auto auto;
   align-items: center;
   gap: var(--space-5);
   padding: var(--space-3) var(--space-4);
@@ -52,6 +52,6 @@
   }
 
   .line {
-    grid-template-columns: auto auto auto auto 1fr;
+    grid-template-columns: auto auto auto auto auto 1fr;
   }
 }

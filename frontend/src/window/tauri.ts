@@ -12,6 +12,9 @@ export const tauriFocus: FocusSource = {
   onFocusChanged: (handler) => getCurrentWindow().onFocusChanged(({ payload }) => handler(payload)),
 };
 
+/** Closes the window, which ends the relay's sidecar and with it every hosted session (ADR 0048). */
+export const closeWindow = (): Promise<void> => getCurrentWindow().close();
+
 /** One beat of the page's heartbeat, for the window to hear (ADR 0083). */
 export const pageAlive = (): Promise<void> => invoke('page_alive');
 
