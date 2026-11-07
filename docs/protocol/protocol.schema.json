@@ -2217,9 +2217,6 @@
             "type" : "null"
           } ]
         },
-        "busyOrWaiting" : {
-          "type" : "boolean"
-        },
         "ticket" : {
           "anyOf" : [ {
             "type" : "string"
@@ -2228,7 +2225,7 @@
           } ]
         }
       },
-      "required" : [ "id", "pid", "live", "busyOrWaiting", "ticket" ],
+      "required" : [ "id", "pid", "live", "ticket" ],
       "additionalProperties" : false
     },
     "session.KeyInput" : {

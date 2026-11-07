@@ -18,7 +18,7 @@ import { Store } from './shared/store';
 import { NoticeStore } from './shared/noticeStore';
 import { WarningStore } from './shared/warningStore';
 import { WindowFocus } from './window/windowFocus';
-import { Quitting, busyOrWaitingOf } from './quitting';
+import { Quitting, hostedOf } from './quitting';
 
 /** One window: the contexts it composes, the layout over them, and the rule that loads them whenever the sidecar becomes ready. */
 export class AppModel {
@@ -77,7 +77,7 @@ export class AppModel {
     });
     this.tabs = new WindowTabs({ board: this.board, review: this.review, layout: this.layout });
     this.quitting = new Quitting({
-      busyOrWaiting: () => busyOrWaitingOf(this.sessionStore.sessions.get(), this.hosting.dock.get().tabs.length),
+      hosted: () => hostedOf(this.sessionStore.sessions.get(), this.hosting.dock.get().tabs.length),
       closeWindow: () => platform.closeWindow(),
       refused: (reason) => this.notices.raise(i18n.t('common:quit.refused', { reason })),
     });
@@ -90,6 +90,7 @@ export class AppModel {
     this.board.store.state.subscribe(() => this.tabs.pullRequestsChanged());
     this.review.pullRequests.state.subscribe(() => this.tabs.pullRequestsChanged());
     this.board.selection.selected.subscribe(() => this.notices.clear());
+    this.board.selection.selected.subscribe(() => this.sessions.followSelection());
   }
 
   reserved(): readonly Binding[] {

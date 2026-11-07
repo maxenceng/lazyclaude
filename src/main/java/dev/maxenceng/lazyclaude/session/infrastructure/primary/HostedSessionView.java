@@ -14,7 +14,6 @@ public record HostedSessionView(
         SessionId id,
         ProcessId pid,
         Optional<LiveSessionView> live,
-        boolean busyOrWaiting,
         Optional<LinkedTicketId> ticket) {
 
     static HostedSessionView from(AvailableSessions available, OpenHostedSession open) {
@@ -22,7 +21,6 @@ public record HostedSessionView(
                 .id(open.session().id())
                 .pid(open.session().pid())
                 .live(liveOf(available, open.phase()))
-                .busyOrWaiting(open.phase().isBusyOrWaiting())
                 .ticket(open.session().ticket())
                 .build();
     }
@@ -39,7 +37,6 @@ public record HostedSessionView(
         private SessionId id;
         private ProcessId pid;
         private Optional<LiveSessionView> live = Optional.empty();
-        private boolean busyOrWaiting;
         private Optional<LinkedTicketId> ticket = Optional.empty();
 
         private HostedSessionViewBuilder() {}
@@ -59,18 +56,13 @@ public record HostedSessionView(
             return this;
         }
 
-        public HostedSessionViewBuilder busyOrWaiting(boolean busyOrWaiting) {
-            this.busyOrWaiting = busyOrWaiting;
-            return this;
-        }
-
         public HostedSessionViewBuilder ticket(Optional<LinkedTicketId> ticket) {
             this.ticket = ticket;
             return this;
         }
 
         public HostedSessionView build() {
-            return new HostedSessionView(id, pid, live, busyOrWaiting, ticket);
+            return new HostedSessionView(id, pid, live, ticket);
         }
     }
 }

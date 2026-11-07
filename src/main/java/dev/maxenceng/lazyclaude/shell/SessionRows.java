@@ -85,9 +85,9 @@ final class SessionRows {
         return sessions.hosted();
     }
 
-    /** How many hosted sessions are busy or waiting on you, which quitting would cut off. */
-    long busyOrWaitingHosted() {
-        return sessions.hosted().stream().filter(HostedSessionView::busyOrWaiting).count();
+    /** How many sessions are hosted, every one of which quitting ends. */
+    long hostedCount() {
+        return sessions.hosted().size();
     }
 
     boolean isEmpty() {

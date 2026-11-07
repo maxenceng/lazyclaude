@@ -35,7 +35,6 @@ import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.SessionTitle;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.maxenceng.lazyclaude.session.published.Unknown;
-import dev.maxenceng.lazyclaude.session.published.WaitingForPermission;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
 
 public final class SessionsViewFixture {
@@ -63,7 +62,6 @@ public final class SessionsViewFixture {
                 .id(sessionId())
                 .pid(processId())
                 .live(Optional.empty())
-                .busyOrWaiting(false)
                 .build();
     }
 
@@ -72,17 +70,15 @@ public final class SessionsViewFixture {
                 .id(sessionId())
                 .pid(processId())
                 .live(Optional.empty())
-                .busyOrWaiting(false)
                 .ticket(Optional.of(linkedTicketId()))
                 .build();
     }
 
-    public static HostedSessionView liveHostedSessionView(LiveSessionView live, boolean busyOrWaiting) {
+    public static HostedSessionView liveHostedSessionView(LiveSessionView live) {
         return HostedSessionView.builder()
                 .id(sessionId())
                 .pid(live.pid())
                 .live(Optional.of(live))
-                .busyOrWaiting(busyOrWaiting)
                 .build();
     }
 
@@ -97,7 +93,6 @@ public final class SessionsViewFixture {
                 .id(hostedSessionIdOf(number))
                 .pid(live.pid())
                 .live(Optional.of(live))
-                .busyOrWaiting(state instanceof Busy || state instanceof WaitingForPermission)
                 .build();
     }
 
@@ -106,7 +101,6 @@ public final class SessionsViewFixture {
                 .id(hostedSessionIdOf(number))
                 .pid(new ProcessId(1000L + number))
                 .live(Optional.empty())
-                .busyOrWaiting(false)
                 .build();
     }
 

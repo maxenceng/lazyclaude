@@ -48,6 +48,6 @@ export const pastFixture = (overrides: { id?: string; title?: string; ticket?: s
   };
 };
 
-export const hostedFixture = (id: string, overrides: { ticket?: string; live?: SessionLiveSessionView; busyOrWaiting?: boolean } = {}): SessionHostedSessionView => {
-  return { id, pid: 1, live: overrides.live ?? null, busyOrWaiting: overrides.busyOrWaiting ?? false, ticket: overrides.ticket ?? null };
+export const hostedFixture = (id: string, overrides: { ticket?: string; live?: SessionLiveSessionView } = {}): SessionHostedSessionView => {
+  return { id, pid: 1, live: overrides.live ?? null, ticket: overrides.ticket ?? null };
 };

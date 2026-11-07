@@ -334,10 +334,9 @@ class SessionApplicationServiceTest {
         hostingTheRegisteredSession(service, hosts);
 
         assertThat(service.sessionsFor(project(), noTickets()).hosted())
-                .as("quitting must ask while nothing says whether a hosted claude is mid-work")
+                .as("a record that cannot be used still leaves the session hosted, unknown rather than dropped")
                 .singleElement()
-                .satisfies(open -> assertThat(open.phase()).isInstanceOf(UnreadPhase.class))
-                .satisfies(open -> assertThat(open.phase().isBusyOrWaiting()).isTrue());
+                .satisfies(open -> assertThat(open.phase()).isInstanceOf(UnreadPhase.class));
     }
 
     @Test

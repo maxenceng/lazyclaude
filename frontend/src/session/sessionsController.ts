@@ -53,7 +53,7 @@ export class SessionsController {
     }
   }
 
-  /** `n`: what starting a session from the ticket opens is `session`'s to say — the verb picker, or an unlinked session. */
+  /** `n`: what starting a session from the ticket opens is `session`'s to say — the verb picker, or an unlinked session; a choice answered after another ticket was selected is dropped. */
   async newSession(): Promise<void> {
     const ticket = this.deps.ticket();
     const project = this.deps.project();
@@ -63,7 +63,7 @@ export class SessionsController {
     const answer = await this.ask(() => this.deps.client.call('session/newSessionFor', { sessions: project, ticket: ticket.id, verbs: ticket.verbs, merged: MERGE_UNKNOWN }));
     if (answer?.kind === 'unlinkedStart') {
       await this.opened(this.hosting.startUnlinked(project.root));
-    } else if (answer?.kind === 'verbChoice') {
+    } else if (answer?.kind === 'verbChoice' && this.deps.ticket()?.id === ticket.id) {
       this.deps.onPicking();
       this.picker.set(VerbPicker.opening(ticket.id, ticket.branch, answer.verbs, answer.preselected));
     }
@@ -91,6 +91,14 @@ export class SessionsController {
 
   cancelPick(): void {
     this.picker.set(undefined);
+  }
+
+  /** The picker offers the verbs of the ticket it opened on, so selecting another ticket closes it. */
+  followSelection(): void {
+    const open = this.picker.get();
+    if (open !== undefined && open.ticket !== this.deps.ticket()?.id) {
+      this.cancelPick();
+    }
   }
 
   /** Starts the verb under the picker's cursor, or at `index`, and closes the picker. */

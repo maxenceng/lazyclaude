@@ -6,11 +6,6 @@ import java.util.Optional;
 public record StartingPhase() implements HostedPhase {
 
     @Override
-    public boolean isBusyOrWaiting() {
-        return false;
-    }
-
-    @Override
     public Optional<LiveSession> live() {
         return Optional.empty();
     }

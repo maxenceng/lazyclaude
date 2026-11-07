@@ -293,17 +293,17 @@ export const App = ({ app, packaged }: Props) => {
       />
       {review === undefined ? null : <ReviewDialogs review={review} />}
       <CapturePopup capture={app.board.capture} />
-      {quitAsked === undefined ? null : <QuitDialog busy={quitAsked} onAnswer={(yes) => app.quitting.answer(yes)} />}
+      {quitAsked === undefined ? null : <QuitDialog hosted={quitAsked} onAnswer={(yes) => app.quitting.answer(yes)} />}
     </>
   );
 };
 
-/** The question `q` asks while hosted sessions are busy or waiting, as the TUI's quit prompt does: y quits, anything else stays. */
-const QuitDialog = ({ busy, onAnswer }: { busy: number; onAnswer: (yes: boolean) => void }) => {
+/** The question `q` asks while sessions are hosted, as the TUI's quit prompt does: y quits, anything else stays. */
+const QuitDialog = ({ hosted, onAnswer }: { hosted: number; onAnswer: (yes: boolean) => void }) => {
   const { t } = useTranslation();
   return (
     <Dialog title={t('quit.title')} hint={t('quit.hint')} onDismiss={() => onAnswer(false)}>
-      <Text>{t('quit.busy', { count: busy })}</Text>
+      <Text>{t('quit.hosted', { count: hosted })}</Text>
       <Button onClick={() => onAnswer(true)}>{t('quit.yes')}</Button>
       <Button onClick={() => onAnswer(false)}>{t('quit.no')}</Button>
     </Dialog>

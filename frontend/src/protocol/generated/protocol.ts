@@ -497,7 +497,6 @@ export interface SessionHostedSessionView {
   id: string;
   pid: number;
   live: SessionLiveSessionView | null;
-  busyOrWaiting: boolean;
   ticket: string | null;
 }
 export interface SessionTicketSessionsView {

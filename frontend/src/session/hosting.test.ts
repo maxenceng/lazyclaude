@@ -15,7 +15,7 @@ const written = (term: Terminal) => new Promise<void>((done) => term.write('', d
 
 const hostedIn = (...ids: string[]): SessionSessionsView => ({
   ...sessionsFixture([]),
-  hosted: ids.map((id) => ({ id, pid: 1, live: sessionFixture({ id }), busyOrWaiting: false, ticket: null })),
+  hosted: ids.map((id) => ({ id, pid: 1, live: sessionFixture({ id }), ticket: null })),
 });
 
 const hosting = (overrides: Partial<HostingDeps> = {}) => {
