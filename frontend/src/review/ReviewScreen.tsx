@@ -199,13 +199,19 @@ export const FilesPane = ({ review, focused, onFocus }: ReviewProps) => {
   );
 };
 
-const whereOf = (path: string, position: ReviewReviewThreadView['position'], t: TFunction<'review'>, author?: string): string => {
+const whereOf = (path: string, position: ReviewReviewThreadView['position'], t: TFunction<'review'>): string => {
   const file = lastSegment(path);
   if (position.kind !== 'placedThread') {
     return t('comments.outdated', { file });
   }
   const lines = position.side === 'LEFT' ? `-${linesOf(position)}` : linesOf(position);
-  return author === undefined ? t('comments.placedWithoutAuthor', { file, lines }) : t('comments.placed', { file, lines, author });
+  return t('comments.placed', { file, lines });
+};
+
+const sideOf = (thread: ReviewReviewThreadView, t: TFunction<'review'>): string => {
+  const author = thread.comments.at(-1)?.author ?? '';
+  const replies = thread.comments.length - 1;
+  return replies > 0 ? t('comments.replies', { count: replies, author }) : author;
 };
 
 /** The panel of what has been said on the pull request: your pending comments first, then its threads. */
@@ -334,15 +340,17 @@ export const ReviewDialogs = ({ review }: { review: OpenReview }) => {
 const EntryRow = ({ entry, selected, onPress }: { entry: ReviewCommentInDiffView; selected: boolean; onPress: () => void }) => {
   const { t } = useTranslation('review');
   if (entry.kind === 'pendingInDiff') {
-    const { anchor } = entry.comment;
-    return <CommentRow kind={CommentKind.Pending} open={false} where={whereOf(anchor.path, anchor.position, t)} dim={false} selected={selected} onSelect={onPress} />;
+    const { anchor, body } = entry.comment;
+    return <CommentRow kind={CommentKind.Pending} open={false} where={whereOf(anchor.path, anchor.position, t)} side="" preview={firstLine(body)} dim={false} selected={selected} onSelect={onPress} />;
   }
   const { thread } = entry;
   return (
     <CommentRow
       kind={CommentKind.Thread}
       open={thread.open}
-      where={whereOf(thread.path, thread.position, t, thread.comments[0]?.author)}
+      where={whereOf(thread.path, thread.position, t)}
+      side={sideOf(thread, t)}
+      preview={firstLine(thread.comments[0]?.body ?? '')}
       dim={thread.resolved}
       selected={selected}
       onSelect={onPress}

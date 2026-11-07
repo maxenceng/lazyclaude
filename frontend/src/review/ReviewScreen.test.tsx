@@ -217,11 +217,31 @@ describe('the Files of a review', () => {
 });
 
 describe('the Comments of a review', () => {
-  it('lists the entries in the order review lists them, each with where it hangs', async () => {
+  it('lists the entries in the order review lists them, each with where it hangs, who spoke last on the right and its first comment under it', async () => {
     const harness = new Harness();
     await withThreads(harness);
     render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    expect(screen.getAllByRole('button').map((row) => row.textContent)).toEqual(['✎a.ts:2', '◆a.ts:1–2 ada', 'a.ts:-2 bob', 'b.ts  outdated']);
+    expect(screen.getAllByRole('button').map((row) => row.textContent)).toEqual(['✎a.ts:2Rename this', '◆a.ts:1–2adaWhy?', 'a.ts:-2bobGone', 'b.ts  outdatedcyOld']);
+  });
+
+  it('counts replies after the first comment, in the singular and the plural, beside who spoke last', async () => {
+    const harness = new Harness();
+    const one = threadFixture({ id: 'T1', comments: [{ author: 'ada', body: 'Why?' }, { author: 'bob', body: 'a' }] });
+    const two = threadFixture({ id: 'T2', comments: [{ author: 'ada', body: 'Why?' }, { author: 'bob', body: 'a' }, { author: 'eve', body: 'b' }] });
+    await harness.readAll({ diff, threads: threadsFixture([one, two]), comments: commentsFixture({ listed: [threadInDiff(one, onLine(0)), threadInDiff(two, onLine(0))] }) });
+    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
+    expect(screen.getByText('1 reply · bob')).toBeInTheDocument();
+    expect(screen.getByText('2 replies · eve')).toBeInTheDocument();
+    expect(screen.queryByText(/0 repl/)).not.toBeInTheDocument();
+  });
+
+  it('keeps only the first line of a multi-line first comment', async () => {
+    const harness = new Harness();
+    const long = threadFixture({ comments: [{ author: 'ada', body: 'First\nSecond' }] });
+    await harness.readAll({ diff, threads: threadsFixture([long]), comments: commentsFixture({ listed: [threadInDiff(long, onLine(0))] }) });
+    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
+    expect(screen.getByText('First')).toBeInTheDocument();
+    expect(screen.queryByText(/Second/)).not.toBeInTheDocument();
   });
 
   it('dims a resolved thread', async () => {
@@ -254,14 +274,34 @@ describe('the Comments of a review', () => {
     expect(screen.getByText('no threads')).toBeInTheDocument();
   });
 
-  it('selects an entry by a press, and goes to its line by a second', async () => {
+  it('selects an entry and goes to its line by one click, the diff unfocused or not', async () => {
+    const harness = new Harness();
+    await withThreads(harness);
+    render(<CommentsPane review={harness.review} focused={false} onFocus={() => {}} />);
+    await userEvent.click(screen.getAllByRole('button')[2]!);
+    expect(harness.review.selectedComment()).toBe(2);
+    expect(harness.review.cursor()).toBe(1);
+  });
+
+  it('opens a pending comment in the box by a second click on its row', async () => {
     const harness = new Harness();
     await withThreads(harness);
     render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    await userEvent.click(screen.getAllByRole('button')[2]!);
-    expect(harness.review.selectedComment()).toBe(2);
-    await userEvent.click(screen.getAllByRole('button')[2]!);
-    expect(harness.review.cursor()).toBe(1);
+    await userEvent.click(screen.getAllByRole('button')[1]!);
+    await userEvent.click(screen.getAllByRole('button')[0]!);
+    expect(harness.review.cursor()).toBe(2);
+    expect(harness.review.box()).toBeUndefined();
+    await userEvent.click(screen.getAllByRole('button')[0]!);
+    expect(harness.review.box()).toBeDefined();
+  });
+
+  it('selects an outdated thread and leaves the diff where it was', async () => {
+    const harness = new Harness();
+    await withThreads(harness);
+    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
+    await userEvent.click(screen.getAllByRole('button')[3]!);
+    expect(harness.review.selectedComment()).toBe(3);
+    expect(harness.review.cursor()).toBe(0);
   });
 });
 

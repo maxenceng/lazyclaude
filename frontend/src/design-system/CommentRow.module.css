@@ -1,7 +1,5 @@
 .row {
-  display: flex;
-  gap: var(--space-3);
-  align-items: baseline;
+  display: block;
   width: 100%;
   padding: var(--space-1) var(--space-4);
   border: 0;
@@ -45,8 +43,43 @@
   color: var(--cursor-ink);
 }
 
+.head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
 .where {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.side {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--dim);
+}
+
+.preview {
+  display: block;
+  padding-left: calc(var(--lamp-marker) + var(--space-3));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dim);
+}
+
+.selected .side,
+.selected .preview {
+  color: var(--cursor-ink);
+  opacity: 0.8;
+}
+
+.dim .side,
+.dim .preview {
+  opacity: 0.7;
 }
