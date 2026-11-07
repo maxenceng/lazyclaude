@@ -1,9 +1,11 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { Action } from './keys/bindings';
 
 const SRC = resolve(__dirname);
 const CONTEXTS = ['board', 'docs', 'review', 'session'];
+const UNHANDLED_ACTIONS: readonly string[] = ['Top', 'Bottom', 'RemoveWorktree'];
 const SHARED = ['protocol', 'design-system', 'i18n', 'shared', 'test'];
 const COMPOSITION = ['keys', 'connection', 'window'];
 
@@ -72,5 +74,14 @@ describe('the frontend architecture', () => {
   it('keeps contexts and shared folders from importing the composition side', () => {
     const offenders = imports.filter((entry) => [...CONTEXTS, ...SHARED].includes(entry.from) && COMPOSITION.includes(folderOf(entry.target)));
     expect(offenders.map((entry) => entry.file)).toEqual([]);
+  });
+
+  it('acts on every key the window binds, but the ones still waiting for a handler', () => {
+    const consumers = sourceFiles(SRC)
+      .filter((file) => !/\.test\.tsx?$/.test(file) && !file.endsWith(join('keys', 'bindings.ts')))
+      .map((file) => readFileSync(file, 'utf8'))
+      .join('\n');
+    const unhandled = Object.keys(Action).filter((name) => !new RegExp(`\\bAction\\.${name}\\b`).test(consumers));
+    expect(unhandled, 'a key the window binds and prevents, with nothing acting on it, does nothing when pressed').toEqual(UNHANDLED_ACTIONS);
   });
 });
