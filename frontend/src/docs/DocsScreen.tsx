@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Alert, Busy, Button, Detail, DocsTreeRow, Document, Pane, Text, Tone, Rows } from '../design-system';
+import { Alert, Busy, Button, Detail, DocsTreeRow, Document, Pane, PaneActionKind, Text, Tone, Rows } from '../design-system';
 import { useStore } from '../shared/useStore';
 import type { DocsController } from './docsController';
 import { type DocsState, DocsStateKind } from './docsState';
@@ -73,15 +73,19 @@ const Unread = ({ state, onRetry }: { state: DocsState; onRetry: () => void }) =
   }
 };
 
-/** The main view while the Docs panel owns it: the selected document, typeset, or why there is none. */
-export const DocumentPane = ({ docs, focused }: PaneProps) => {
+interface DocumentProps extends PaneProps {
+  onClose: () => void;
+}
+
+/** The main view while the Docs panel owns it: the selected document, typeset, or why there is none, with a button that closes it back to the ticket. */
+export const DocumentPane = ({ docs, focused, onClose }: DocumentProps) => {
   const { t } = useTranslation('docs');
   useStore(docs.store.state);
   const selection = useStore(docs.selection);
   useStore(docs.folded);
   const shown = docs.shown();
   return (
-    <Pane title={t('document.title')} focused={focused}>
+    <Pane title={t('document.title')} focused={focused} action={{ kind: PaneActionKind.Close, label: t('document.close'), onClick: onClose }}>
       <Shown shown={shown} docs={docs} target={{ fragment: selection.fragment, opened: selection.opened }} />
     </Pane>
   );

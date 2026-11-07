@@ -24,6 +24,8 @@
     "pullRequests": "Pull requests"
   },
   "keyBar": {
-    "tabs": "1/2/3 tabs"
+    "tabs": "1/2/3 tabs",
+    "minimiseDock": "M minimise",
+    "restoreDock": "M restore"
   }
 }

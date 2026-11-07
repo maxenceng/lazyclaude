@@ -27,7 +27,7 @@ const setup = () => {
   render(
     <>
       <DocsPane docs={controller} focused onFocus={onFocus} onRetry={onRetry} />
-      <DocumentPane docs={controller} focused={false} />
+      <DocumentPane docs={controller} focused={false} onClose={() => {}} />
     </>,
   );
   return { client, controller, opener, notices, noticeStore, loaded, onFocus, onRetry };

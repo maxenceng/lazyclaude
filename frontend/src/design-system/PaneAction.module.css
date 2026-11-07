@@ -1,0 +1,21 @@
+.action {
+  margin-left: auto;
+  align-self: center;
+  padding: 0 var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--dim);
+  font-size: var(--size-label);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.action:hover,
+.action:focus-visible {
+  color: var(--text);
+}
+
+.action:focus-visible {
+  outline: var(--focus-edge) solid var(--focus);
+  outline-offset: -2px;
+}

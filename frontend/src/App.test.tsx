@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { AppModel } from './app';
 import { boardFixture, ticketFixture } from './board/fixtures';
+import { Focus } from './layout';
 import { Exited, Ready } from './protocol';
 import { bytesOfText, toBase64 } from './protocol';
 import { folderFixture, readFixture, treeFixture } from './docs/fixtures';
@@ -190,6 +191,121 @@ describe('the Docs panel in the window', () => {
     await started.user.keyboard('{Escape}j');
     expect(screen.queryByText("Did not follow #notes: a ticket's own headings are not followed.")).toBeNull();
     expect(screen.getByText('⚠ 2 · docs: watching by polling')).toBeInTheDocument();
+  });
+});
+
+const pressInPane = (key: string, init: KeyboardEventInit = {}) => {
+  const textarea = screen.getByRole('group', { name: 'session terminal' }).querySelector('textarea')!;
+  const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true, ...init });
+  textarea.dispatchEvent(event);
+  return event;
+};
+
+const KEY_BAR_COLUMNS = 80;
+
+const keyBarWidth = () => {
+  const keys = Array.from(keyBar().children).map((key) => key.textContent);
+  return keys.join('').length + (keys.length - 1) * 3;
+};
+
+describe('a shown document and the Docs panel', () => {
+  it('carries a close button that gives the main view back to the ticket, focus staying on the Docs panel', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    await started.user.click(within(screen.getByRole('region', { name: 'Document' })).getByRole('button', { name: 'Close document' }));
+    expect(screen.getByRole('region', { name: 'Ticket' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Close document' })).not.toBeInTheDocument();
+    expect(started.app.layout.get().focus).toBe(Focus.Docs);
+  });
+
+  it('shows a document again when the cursor moves after it was closed', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    await started.user.click(screen.getByRole('button', { name: 'Close document' }));
+    await started.user.keyboard('j');
+    expect(screen.getByRole('region', { name: 'Document' })).toBeInTheDocument();
+  });
+
+  it('shows esc close on the key bar while a document is shown, and esc back to the Board once it is closed', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    expect(keyBar()).toHaveTextContent('esc close');
+    await started.user.keyboard('{Escape}');
+    expect(keyBar()).not.toHaveTextContent('esc close');
+    expect(started.app.layout.get().focus).toBe(Focus.Docs);
+  });
+});
+
+describe('the dock minimised', () => {
+  it('has no minimise button and ignores M while no session is hosted', async () => {
+    const ready = await readyApp();
+    expect(screen.queryByRole('button', { name: 'Minimise dock' })).not.toBeInTheDocument();
+    await ready.user.keyboard('M');
+    expect(ready.app.layout.get().dockMinimised).toBe(false);
+    expect(keyBar()).not.toHaveTextContent('M minimise');
+  });
+
+  it('folds to the strip of its tabs on its button, and a tab click restores it with that tab selected and its pane focused', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    await ready.user.click(screen.getByRole('button', { name: 'Minimise dock' }));
+    expect(screen.queryByRole('group', { name: 'session terminal' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'hosted sessions' })).toBeInTheDocument();
+    expect(ready.app.layout.get().focus, 'minimising the focused dock moves focus to the ticket\'s sessions').toBe(Focus.Sessions);
+    await ready.user.click(within(screen.getByRole('tablist', { name: 'hosted sessions' })).getByRole('tab'));
+    expect(screen.getByRole('group', { name: 'session terminal' })).toBeInTheDocument();
+    expect(ready.app.layout.get().focus).toBe(Focus.Dock);
+  });
+
+  it('folds on M from a panel and unfolds on its restore button, the key bar saying which', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    act(() => ready.app.focusOn(Focus.Board));
+    expect(keyBar()).toHaveTextContent('M minimise');
+    await ready.user.keyboard('M');
+    expect(screen.queryByRole('group', { name: 'session terminal' })).not.toBeInTheDocument();
+    expect(keyBar()).toHaveTextContent('M restore');
+    await ready.user.click(screen.getByRole('button', { name: 'Restore dock' }));
+    expect(screen.getByRole('group', { name: 'session terminal' })).toBeInTheDocument();
+  });
+
+  it('leaves M typed in a hosted session\'s pane to the session', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    const event = pressInPane('M');
+    expect(event.defaultPrevented).toBe(false);
+    expect(screen.getByRole('group', { name: 'session terminal' })).toBeInTheDocument();
+    expect(keyBar()).not.toHaveTextContent('M minimise');
+  });
+
+  it('leaves the no-dock layout when the last session exits, and opens the next dock unfolded', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    ready.app.focusOn(Focus.Board);
+    await ready.user.keyboard('M');
+    await act(async () => {
+      ready.client.push('session/exited', { session: 'h1', code: 0 });
+      await Promise.resolve();
+    });
+    expect(screen.queryByRole('tablist', { name: 'hosted sessions' })).not.toBeInTheDocument();
+    expect(ready.app.layout.get().dockMinimised).toBe(false);
+  });
+
+  it('keeps every key bar within 80 columns', async () => {
+    const ready = await readyApp();
+    docsRead(ready);
+    await startedSession(ready);
+    const widths: number[] = [];
+    [Focus.Board, Focus.Docs, Focus.Sessions, Focus.Dock].forEach((focus) => {
+      act(() => ready.app.focusOn(focus));
+      widths.push(keyBarWidth());
+    });
+    await ready.user.click(screen.getByRole('button', { name: 'README.md' }));
+    widths.push(keyBarWidth());
+    expect(Math.max(...widths)).toBeLessThanOrEqual(KEY_BAR_COLUMNS);
   });
 });
 
@@ -476,12 +592,6 @@ describe('the dock\'s layout', () => {
   });
 });
 
-const pressInPane = (key: string, init: KeyboardEventInit = {}) => {
-  const textarea = screen.getByRole('group', { name: 'session terminal' }).querySelector('textarea')!;
-  const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true, ...init });
-  textarea.dispatchEvent(event);
-  return event;
-};
 
 describe('a packaged build', () => {
   it('swallows F5 and Ctrl+R in a pane, where xterm.js sends them to claude', async () => {
