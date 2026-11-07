@@ -15,8 +15,9 @@ not how many replies it holds, who spoke last or what it is about.
 
 ## Decision
 
-- **One click on a row in Comments selects it and goes to its line**: the diff cursor moves to the first line of the
-  thread or pending comment and is scrolled into view, whether or not Comments had focus. A second click on the selected
+- **One click on a row in Comments selects it and goes to its line**: the diff cursor moves to the thread's line (its
+  last, where it is drawn, as `enter` goes) or the pending comment's, and the diff scrolls until the last comment under
+  that line is in view, whether or not Comments had focus or the cursor was already there. A second click on the selected
   row, in the focused Comments, is still `enter`: on a pending comment it opens the box to edit it.
 - **An outdated thread has no line, so one click selects it and leaves the diff where it was**, with no error. This is
   a deliberate limit, marked `deferred:` in the code; it closes when the sidecar places an outdated thread on the nearest

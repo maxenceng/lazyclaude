@@ -55,6 +55,7 @@ export class OpenReview {
   private line = 0;
   private fileSelected = 0;
   private commentSelected = 0;
+  private commentGoneTo = 0;
   private viewLines = 0;
   private diffReads = 0;
   private threadsReads = 0;
@@ -503,12 +504,18 @@ export class OpenReview {
     return this.entries()[this.commentSelected];
   }
 
-  /** To the line the selected entry shows under; nowhere for one on no line. */
+  /** To the line the selected entry shows under, its comments to be shown whole; nowhere for one on no line. */
   goToSelectedComment(): void {
     const line = this.selectedEntry()?.line;
     if (line?.kind === 'onDiffLine') {
+      this.commentGoneTo += 1;
       this.moveTo(line.index);
     }
+  }
+
+  /** How many times the cursor went to a comment: the diff shows the comments under the cursor's line each time it changes, the cursor moved or not. */
+  goneToComment(): number {
+    return this.commentGoneTo;
   }
 
   /** `enter` in Comments: goes to the entry's line and, on a pending comment, opens it in the box. */

@@ -77,9 +77,19 @@ const Body = ({ state, review, focused, onFocus, onRetry }: DiffProps & { state:
   }
 };
 
+/** The last comment set under a diff line's row, if it has any: the rows after it that hold an annotation. */
+const lastAnnotationUnder = (row: Element | null | undefined): Element | undefined => {
+  const next = row?.nextElementSibling;
+  if (next === null || next === undefined || next.querySelector('article') === null) {
+    return undefined;
+  }
+  return lastAnnotationUnder(next) ?? next;
+};
+
 const Lines = ({ review, focused, onFocus }: ReviewProps) => {
   const root = useRef<HTMLDivElement>(null);
   const cursor = review.cursor();
+  const goneToComment = review.goneToComment();
   useEffect(() => {
     const release = new DragRelease(review, () => root.current);
     return () => release.remove();
@@ -87,6 +97,11 @@ const Lines = ({ review, focused, onFocus }: ReviewProps) => {
   useEffect(() => {
     root.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [cursor]);
+  useEffect(() => {
+    if (goneToComment > 0) {
+      lastAnnotationUnder(root.current?.querySelector('[aria-current="true"]')?.closest('li'))?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [goneToComment]);
   useEffect(() => {
     const line = root.current?.querySelector('[data-line]')?.getBoundingClientRect().height ?? 0;
     const view = root.current?.parentElement?.clientHeight ?? 0;

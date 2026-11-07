@@ -329,6 +329,25 @@ describe('the Comments of a review', () => {
     expect(harness.review.box()).toBeDefined();
   });
 
+  it('shows the last comment under the line a click goes to, the cursor already on it or not', async () => {
+    const harness = new Harness();
+    const first = threadFixture({ id: 'T1', comments: [{ author: 'ada', body: 'Why?' }] });
+    const second = threadFixture({ id: 'T2', comments: [{ author: 'bob', body: 'And this?' }] });
+    await harness.readAll({
+      diff,
+      threads: threadsFixture([first, second]),
+      comments: commentsFixture({ underLines: [threadInDiff(first, onLine(0)), threadInDiff(second, onLine(0))], listed: [threadInDiff(first, onLine(0))] }),
+    });
+    const scrolled = vi.spyOn(Element.prototype, 'scrollIntoView');
+    render(<DiffPane review={harness.review} focused={false} onFocus={() => {}} onRetry={() => {}} />);
+    const comments = render(<CommentsPane review={harness.review} focused={false} onFocus={() => {}} />);
+    scrolled.mockClear();
+    await userEvent.click(within(comments.container).getAllByRole('button')[0]!);
+    expect(harness.review.cursor(), 'the cursor was already on the line, so only the comment counter moved').toBe(0);
+    expect(scrolled.mock.contexts.at(-1), 'the bottom of the last thread under the line, not the line').toHaveTextContent('bob And this?');
+    scrolled.mockRestore();
+  });
+
   it('selects an outdated thread and leaves the diff where it was', async () => {
     const harness = new Harness();
     await withThreads(harness);
