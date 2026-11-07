@@ -203,14 +203,21 @@ describe('the Board tab', () => {
     expect(screen.getByRole('heading', { name: 'Second' })).toBeInTheDocument();
   });
 
-  it('previews a done card without leaving the Board, by click or enter, as Base folds done away', async () => {
+  it('goes to a done card on Base, by click or enter, as Base lists it', async () => {
     const { user } = await started();
     await user.keyboard('2');
     await user.click(screen.getByRole('button', { name: /PROJ-4/ }));
     await user.click(screen.getByRole('button', { name: /PROJ-4/ }));
-    await user.keyboard('{Enter}');
-    expect(tab(/^Board/)).toHaveAttribute('aria-selected', 'true');
+    expect(tab(/^Base/)).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('heading', { name: 'Fourth' })).toBeInTheDocument();
+  });
+
+  it('goes to the selected done card on Base with enter', async () => {
+    const { user } = await started();
+    await user.keyboard('2');
+    await user.click(screen.getByRole('button', { name: /PROJ-4/ }));
+    await user.keyboard('{Enter}');
+    expect(tab(/^Base/)).toHaveAttribute('aria-selected', 'true');
   });
 });
 

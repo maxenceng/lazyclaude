@@ -24,7 +24,7 @@ import type { BoardBoardView, BoardTicketView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import { type BoardState, BoardStateKind, UnavailableCause } from './boardState';
 import type { BoardStore } from './boardStore';
-import { columnsOf, cursorTicketInColumns, goesToBase, isFolded, orderedGroups, selectedIn, selectedInColumns } from './rows';
+import { columnsOf, cursorTicketInColumns, orderedGroups, shownTickets, selectedIn, selectedInColumns } from './rows';
 import type { Selection } from './selection';
 
 interface ViewProps {
@@ -117,7 +117,7 @@ export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onPres
                       title={ticket.title}
                       meta={metaOf(ticket)}
                       selected={ticket.id === cursor}
-                      done={!goesToBase(ticket)}
+                      done={ticket.status === 'DONE'}
                       lamp={markerOf(ticket.id)}
                       pullRequest={pullRequestOf(ticket)}
                       onSelect={() => onPress(ticket, cursor)}
@@ -221,7 +221,7 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
         <div key={group.status}>
           <StatusHeading status={t(`status.${group.status}`)} count={group.tickets.length} />
           <Rows>
-            {(isFolded(group.status) ? [] : group.tickets).map((ticket) => (
+            {shownTickets(group).map((ticket) => (
               <TicketRow
                 key={ticket.id}
                 id={ticket.id}

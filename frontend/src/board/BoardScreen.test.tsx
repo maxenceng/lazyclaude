@@ -64,21 +64,22 @@ describe('the Board', () => {
     expect(screen.getByText('no .lazyclaude here')).toBeInTheDocument();
   });
 
-  it('lists the unfolded tickets under their statuses, in-progress first', async () => {
+  it('lists the tickets under their statuses, in-progress first and done last', async () => {
     const { client, loaded } = setup();
     await answer(client, loaded, tickets);
     const rows = screen.getAllByRole('button').map((row) => row.textContent);
-    expect(rows).toEqual(['PROJ-1Shows the Board', 'PROJ-2Runs a session']);
+    expect(rows).toEqual(['PROJ-1Shows the Board', 'PROJ-2Runs a session', 'PROJ-3Already shipped']);
     expect(within(screen.getByRole('region', { name: 'Board' })).getByText('in progress')).toBeInTheDocument();
   });
 
-  it('folds the finished status to its heading and count', async () => {
+  it('lists the ten latest closed done tickets under a heading that counts all of them', async () => {
     const { client, loaded } = setup();
-    await answer(client, loaded, tickets);
+    const done = Array.from({ length: 11 }, (_, at) => ticketFixture({ id: `PROJ-${String(at + 10)}`, title: `Closed ${String(at)}`, status: 'DONE' }));
+    await answer(client, loaded, boardFixture(done));
     const board = within(screen.getByRole('region', { name: 'Board' }));
-    expect(board.getByText('done')).toBeInTheDocument();
-    expect(board.queryByText('Already shipped')).not.toBeInTheDocument();
-    expect(board.getByText('done').parentElement).toHaveTextContent('done1');
+    expect(board.getByText('done').parentElement).toHaveTextContent('done11');
+    expect(board.getByText('Closed 9')).toBeInTheDocument();
+    expect(board.queryByText('Closed 10')).not.toBeInTheDocument();
   });
 
   it('shows the heading and a zero count of a status without tickets', async () => {

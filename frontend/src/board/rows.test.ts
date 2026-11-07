@@ -3,13 +3,12 @@ import { boardFixture, ticketFixture } from './fixtures';
 import {
   columnsOf,
   cursorTicketInColumns,
-  goesToBase,
   inProgressCount,
-  isFolded,
   moveAcross,
   moveInColumn,
   moveSelection,
   orderedGroups,
+  shownTickets,
   selectedIn,
   selectedInColumns,
   ticketIds,
@@ -33,17 +32,22 @@ describe('the board rows', () => {
     expect(orderedGroups(withEmpty).map((group) => group.status)).toContain('DRAFT');
   });
 
-  it('folds the finished status by default and no other', () => {
-    expect(orderedGroups(view).map((group) => [group.status, isFolded(group.status)])).toEqual([
-      ['IN_PROGRESS', false],
-      ['IN_REVIEW', false],
-      ['TODO', false],
-      ['DONE', true],
-    ]);
+  it('lists the ids of the tickets shown, live groups first and the done ones last', () => {
+    expect(ticketIds(view)).toEqual(['PROJ-3', 'PROJ-4', 'PROJ-2', 'PROJ-5', 'PROJ-1']);
   });
 
-  it('lists the ids of the tickets shown, which leaves out the folded ones', () => {
-    expect(ticketIds(view)).toEqual(['PROJ-3', 'PROJ-4', 'PROJ-2', 'PROJ-5']);
+  it('lists only the ten latest closed done tickets, in the board order, while the group keeps them all', () => {
+    const done = Array.from({ length: 11 }, (_, at) => ticketFixture({ id: `PROJ-${String(at + 10)}`, status: 'DONE' }));
+    const group = orderedGroups(boardFixture(done)).find((candidate) => candidate.status === 'DONE') ?? { status: 'DONE' as const, tickets: [] };
+    expect(shownTickets(group).map((ticket) => ticket.id)).toEqual(done.slice(0, 10).map((ticket) => ticket.id));
+    expect(group.tickets).toHaveLength(11);
+    expect(ticketIds(boardFixture(done))).not.toContain('PROJ-20');
+  });
+
+  it('moves the cursor from the last live row into done and stops on the last done row', () => {
+    expect(moveSelection(view, 'PROJ-5', 1)).toBe('PROJ-1');
+    expect(moveSelection(view, 'PROJ-1', 1)).toBe('PROJ-1');
+    expect(moveSelection(view, 'PROJ-1', -1)).toBe('PROJ-5');
   });
 
   it('starts the selection on the first ticket shown, the one that heads the board', () => {
@@ -66,7 +70,7 @@ describe('the board rows', () => {
 
   it('stays on the first and last tickets at the ends', () => {
     expect(moveSelection(view, 'PROJ-3', -1)).toBe('PROJ-3');
-    expect(moveSelection(view, 'PROJ-5', 1)).toBe('PROJ-5');
+    expect(moveSelection(view, 'PROJ-1', 1)).toBe('PROJ-1');
   });
 
   it('selects nothing on a board without tickets', () => {
@@ -90,15 +94,10 @@ describe('the board rows', () => {
     expect(column?.total).toBe(12);
   });
 
-  it('keeps the cursor on a done card the Board tab shows, which the rows of Base fold away', () => {
+  it('keeps the cursor on a done card, which Base lists as well', () => {
     expect(selectedInColumns(view, 'PROJ-1')).toBe('PROJ-1');
-    expect(selectedIn(view, 'PROJ-1')).toBe('PROJ-3');
+    expect(selectedIn(view, 'PROJ-1')).toBe('PROJ-1');
     expect(cursorTicketInColumns(view, 'PROJ-1')?.id).toBe('PROJ-1');
-  });
-
-  it('goes to Base only from a ticket Base shows, a done one being previewed in place', () => {
-    expect(goesToBase(ticketFixture({ status: 'TODO' }))).toBe(true);
-    expect(goesToBase(ticketFixture({ status: 'DONE' }))).toBe(false);
   });
 
   it('moves down and up inside one column and stops at its ends', () => {

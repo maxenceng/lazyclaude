@@ -35,14 +35,14 @@ const settle = () => act(async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 });
 
-const readyApp = async (packaged = false) => {
+const readyApp = async (packaged = false, shown = board) => {
   const client = fakeClient(new Ready());
   const platform = testPlatform();
   const app = new AppModel(client, platform);
   app.start();
   render(<App app={app} packaged={packaged} />);
   await act(async () => {
-    client.answer('board/watch', board);
+    client.answer('board/watch', shown);
     client.answer('session/configuration', configuration);
     client.answer('warning/watch', { kind: 'noWarning' });
     await Promise.resolve();
@@ -457,6 +457,19 @@ describe('starting a session from the board', () => {
       verb: 'REVIEW',
       size: { width: 80, height: 24 },
     });
+  });
+
+  it('offers done on n over a done ticket, which Base lists and the cursor reaches', async () => {
+    const finished = boardFixture([
+      ticketFixture({ id: 'PROJ-1', title: 'First', status: 'IN_PROGRESS', branch: 'proj-1-first' }),
+      ticketFixture({ id: 'PROJ-3', title: 'Shipped', status: 'DONE', branch: 'proj-3-shipped', verbs: ['DONE'] }),
+    ]);
+    const ready = await readyApp(false, finished);
+    await ready.user.keyboard('j');
+    await ready.user.keyboard('n');
+    expect(ready.client.calls.find((call) => call.method === 'session/newSessionFor')?.params).toMatchObject({ ticket: 'PROJ-3', verbs: ['DONE'] });
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['DONE'], preselected: 'DONE' });
+    expect(screen.getByRole('button', { name: /done/ })).toHaveAttribute('aria-current', 'true');
   });
 
   it('closes the verb picker when another ticket is selected, so it never offers the first ticket\'s verbs on the second', async () => {
