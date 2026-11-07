@@ -1,4 +1,5 @@
 import { BoardController } from './board/boardController';
+import { i18n } from './i18n/i18n';
 import { DocsController } from './docs/docsController';
 import type { Action, KeyPress } from './keys/bindings';
 import type { Binding } from './keys/chords';
@@ -17,6 +18,7 @@ import { Store } from './shared/store';
 import { NoticeStore } from './shared/noticeStore';
 import { WarningStore } from './shared/warningStore';
 import { WindowFocus } from './window/windowFocus';
+import { Quitting, busyOrWaitingOf } from './quitting';
 
 /** One window: the contexts it composes, the layout over them, and the rule that loads them whenever the sidecar becomes ready. */
 export class AppModel {
@@ -32,6 +34,7 @@ export class AppModel {
   readonly layout: Store<Layout> = new Store(new Layout());
   readonly windowFocus: WindowFocus;
   readonly tabs: WindowTabs;
+  readonly quitting: Quitting;
   private readonly keys: KeyRouter;
   private readonly watching: WatchingReporter;
   private watched = false;
@@ -73,7 +76,12 @@ export class AppModel {
       onPicking: () => this.layout.set(this.layout.get().leaveZoom()),
     });
     this.tabs = new WindowTabs({ board: this.board, review: this.review, layout: this.layout });
-    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review, this.tabs);
+    this.quitting = new Quitting({
+      busyOrWaiting: () => busyOrWaitingOf(this.sessionStore.sessions.get(), this.hosting.dock.get().tabs.length),
+      closeWindow: () => platform.closeWindow(),
+      refused: (reason) => this.notices.raise(i18n.t('common:quit.refused', { reason })),
+    });
+    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review, this.tabs, this.quitting);
     this.hosting.dock.subscribe(() => this.dockChanged());
     this.layout.subscribe(() => this.tellWatching());
     this.hosting.dock.subscribe(() => this.tellWatching());
@@ -91,6 +99,11 @@ export class AppModel {
   /** Whether a popup is open that takes every key and click, so nothing behind it answers either. */
   isModal(): boolean {
     return this.keys.isModal();
+  }
+
+  /** The status line's Quit button: what `q` does. */
+  quit(): void {
+    this.quitting.request();
   }
 
   /** The capture popup's button, in the Board pane's title: the Board takes focus and `c` is done there. */

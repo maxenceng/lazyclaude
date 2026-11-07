@@ -115,6 +115,7 @@ pub fn run() {
             relay_send,
             page_alive
         ])
+        // deferred: the window's close button ends busy hosted sessions without the question q asks — close it when the relay can ask the page before a close goes through.
         .on_window_event(|window, event| {
             if matches!(
                 event,

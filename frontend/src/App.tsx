@@ -9,7 +9,7 @@ import { inProgressCount } from './board/rows';
 import { ConnectionScreen } from './connection/ConnectionScreen';
 import { DocsKeyBar } from './docs/DocsKeyBar';
 import { DocsPane, DocumentPane } from './docs/DocsScreen';
-import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Lamp, LampSize, Pane, StatusLine, Text, Tone, WindowTabBar } from './design-system';
+import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Dialog, Lamp, LampSize, Pane, PaneAction, PaneActionKind, StatusLine, Text, Tone, WindowTabBar } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { ModalClicks } from './keys/modalClicks';
@@ -71,6 +71,7 @@ export const App = ({ app, packaged }: Props) => {
   const previewShown = useStore(app.tabs.previewShown);
   const pullRequests = useStore(app.review.pullRequests.state);
   const capturing = useStore(app.board.capture.state).isOpen();
+  const quitAsked = useStore(app.quitting.asking);
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
@@ -279,6 +280,7 @@ export const App = ({ app, packaged }: Props) => {
             project={project}
             warning={warning}
             notice={notice}
+            actions={<PaneAction kind={PaneActionKind.Close} label={t('quit.button')} onClick={() => app.quit()} />}
           />
         }
         keyBar={capturing ? <CaptureKeyBar /> : picker === undefined ? (tabbed === undefined ? keyBar : tabScreen.bar) : <SessionsKeyBar picking />}
@@ -291,6 +293,19 @@ export const App = ({ app, packaged }: Props) => {
       />
       {review === undefined ? null : <ReviewDialogs review={review} />}
       <CapturePopup capture={app.board.capture} />
+      {quitAsked === undefined ? null : <QuitDialog busy={quitAsked} onAnswer={(yes) => app.quitting.answer(yes)} />}
     </>
+  );
+};
+
+/** The question `q` asks while hosted sessions are busy or waiting, as the TUI's quit prompt does: y quits, anything else stays. */
+const QuitDialog = ({ busy, onAnswer }: { busy: number; onAnswer: (yes: boolean) => void }) => {
+  const { t } = useTranslation();
+  return (
+    <Dialog title={t('quit.title')} hint={t('quit.hint')} onDismiss={() => onAnswer(false)}>
+      <Text>{t('quit.busy', { count: busy })}</Text>
+      <Button onClick={() => onAnswer(true)}>{t('quit.yes')}</Button>
+      <Button onClick={() => onAnswer(false)}>{t('quit.no')}</Button>
+    </Dialog>
   );
 };

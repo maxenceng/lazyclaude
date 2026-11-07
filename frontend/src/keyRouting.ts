@@ -7,6 +7,7 @@ import { Focus, type Layout, WindowTab } from './layout';
 import type { WindowTabs } from './windowTabs';
 import type { SessionsController } from './session/sessionsController';
 import type { Store } from './shared/store';
+import type { Quitting } from './quitting';
 
 /** The keys a pane takes while it has focus and claude has the keyboard: only these move out of it. */
 const FOCUS_KEYS: readonly Action[] = [
@@ -25,7 +26,7 @@ const TABS: ReadonlyMap<Action, WindowTab> = new Map([
   [Action.ShowPullRequests, WindowTab.PullRequests],
 ]);
 
-/** Where a key goes: to the verb picker while it is open, to the focused pane's own handling, or to the layout. */
+/** Where a key goes: to the quit question or a popup while one is open, to the verb picker, to the focused pane's own handling, or to the layout; `q` quits outside them all. */
 export class KeyRouter {
   constructor(
     private readonly board: BoardController,
@@ -34,6 +35,7 @@ export class KeyRouter {
     private readonly layout: Store<Layout>,
     private readonly review: ReviewController,
     private readonly tabs: WindowTabs,
+    private readonly quitting: Quitting,
   ) {
     layout.subscribe(() => {
       const focus = layout.get().focus;
@@ -47,13 +49,15 @@ export class KeyRouter {
 
   /** Whether a popup holds the keys and the mouse alone (ADR 0051): the one answer both the keys here and the window's clicks read. */
   isModal(): boolean {
-    return this.board.capture.state.get().isOpen();
+    return this.quitting.isAsking() || this.board.capture.state.get().isOpen();
   }
 
   /** A key the window-level handler took: whatever the focused pane does with it. */
   press(action: Action): void {
     const current = this.review.current.get();
-    if (this.isModal()) {
+    if (this.quitting.isAsking()) {
+      this.quitting.answer(action === Action.Yes);
+    } else if (this.isModal()) {
       this.pressInCapture(action);
     } else if (this.sessions.isPicking()) {
       this.pressInPicker(action);
@@ -61,6 +65,8 @@ export class KeyRouter {
       if (FOCUS_KEYS.includes(action)) {
         this.pressInPane(action);
       }
+    } else if (action === Action.Quit && (current === undefined || (!current.submitPrompt() && current.box() === undefined))) {
+      this.quitting.request();
     } else if (current !== undefined) {
       this.pressInReview(current, action);
     } else {

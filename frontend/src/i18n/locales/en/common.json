@@ -28,5 +28,15 @@
     "minimiseDock": "M minimise",
     "restoreDock": "M restore",
     "showTicket": "m ticket"
+  },
+  "quit": {
+    "title": "Quit lazyclaude?",
+    "busy_one": "{{count}} hosted session is busy or waiting, and quitting ends it.",
+    "busy_other": "{{count}} hosted sessions are busy or waiting, and quitting ends them.",
+    "hint": "y quit · esc stay",
+    "yes": "Quit",
+    "no": "Stay",
+    "button": "Quit lazyclaude",
+    "refused": "the window did not close ({{reason}})"
   }
 }

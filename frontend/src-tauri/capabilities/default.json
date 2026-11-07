@@ -1,10 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The main window may call the relay's commands, listen to window events, read and write the clipboard as text, and open a link in the system browser. Opening a path is granted at launch, under the project only.",
+  "description": "The main window may call the relay's commands, listen to window events, close itself for q, read and write the clipboard as text, and open a link in the system browser. Opening a path is granted at launch, under the project only.",
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:window:allow-close",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     { "identifier": "opener:allow-open-url", "allow": [{ "url": "http://**" }, { "url": "https://**" }] }
