@@ -42,4 +42,11 @@ class StatusTest {
                 .containsExactly(
                         List.of("refine"), List.of("start"), List.of("review", "design"), List.of("respond", "done"), List.of("done"));
     }
+
+    @Test
+    void shouldOfferByDefaultOnlyVerbsTheGateAllowsUnderEachStatus() {
+        assertThat(List.of(Status.values()))
+                .as("the default lists and Verb.mayBeOfferedIn are two sources; a default the gate refuses would never pass config.yml")
+                .allSatisfy(status -> assertThat(status.verbs()).allMatch(verb -> verb.mayBeOfferedIn(status)));
+    }
 }

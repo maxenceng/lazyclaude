@@ -24,7 +24,7 @@ import type { BoardBoardView, BoardTicketView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import { type BoardState, BoardStateKind, UnavailableCause } from './boardState';
 import type { BoardStore } from './boardStore';
-import { columnsOf, cursorTicketInColumns, orderedGroups, shownTickets, selectedIn, selectedInColumns } from './rows';
+import { columnsOf, cursorTicketInColumns, isDone, orderedGroups, shownTickets, selectedIn, selectedInColumns } from './rows';
 import type { Selection } from './selection';
 
 interface ViewProps {
@@ -117,7 +117,7 @@ export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onPres
                       title={ticket.title}
                       meta={metaOf(ticket)}
                       selected={ticket.id === cursor}
-                      done={ticket.status === 'DONE'}
+                      done={isDone(ticket.status)}
                       lamp={markerOf(ticket.id)}
                       pullRequest={pullRequestOf(ticket)}
                       onSelect={() => onPress(ticket, cursor)}
@@ -227,7 +227,7 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
                 id={ticket.id}
                 title={ticket.title}
                 selected={ticket.id === cursor}
-                done={group.status === 'DONE'}
+                done={isDone(group.status)}
                 lamp={markerOf(ticket.id)}
                 onSelect={() => onPress(ticket.id)}
               />

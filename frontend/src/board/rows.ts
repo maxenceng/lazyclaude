@@ -12,12 +12,15 @@ export const orderedGroups = (view: BoardBoardView): Group[] => {
   return [...view.groups].sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
 };
 
+/** Whether a status is the finished one, which Base and the Board tab list last, quieter, and only its latest closed. */
+export const isDone = (status: BoardStatus): boolean => status === 'DONE';
+
 /** How many done tickets Base and the Board tab show: the latest closed, as the board orders them; the heading's count stays the whole of it. */
 const DONE_SHOWN = 10;
 
 /** The tickets of a group as Base and the Board tab list them: every live ticket, and of the done ones the latest closed. */
 export const shownTickets = (group: Group): BoardTicketView[] => {
-  return group.status === 'DONE' ? group.tickets.slice(0, DONE_SHOWN) : group.tickets;
+  return isDone(group.status) ? group.tickets.slice(0, DONE_SHOWN) : group.tickets;
 };
 
 /** The ids of the tickets on show, in order: the live groups first, the shown done ones last. */
