@@ -110,7 +110,7 @@ mod tests {
     }
 
     #[test]
-    fn an_unresolved_resource_directory_is_a_command_that_names_why() {
+    fn an_unresolved_resource_directory_is_a_sidecar_that_exits_with_why() {
         let sidecar = sidecar(
             None,
             Path::new("/here"),
@@ -118,6 +118,9 @@ mod tests {
             Err("no resources".into()),
             PathBuf::from("/work/p"),
         );
-        assert!(sidecar.describe().contains("no resources"));
+        assert_eq!(
+            sidecar.describe(),
+            "resource directory unavailable: no resources"
+        );
     }
 }

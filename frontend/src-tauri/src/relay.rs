@@ -30,26 +30,26 @@ pub struct Exit {
 /// Where the page's messages go: the attached page's `Channel` in the window, a recorder in a test.
 pub type OnMessage = Arc<dyn Fn(RelayMessage) + Send + Sync>;
 
-/// The process the relay runs: `java -jar <jar> --sidecar` in the project directory, a stand-in in a test.
+/// The process the relay runs in the project directory: the sidecar on the system java or on the bundled runtime, a stand-in in a test.
+/// A sidecar that cannot be named carries why instead, and the relay reports that as the exit without running anything.
 #[derive(Clone)]
 pub struct Sidecar {
-    program: OsString,
-    args: Vec<OsString>,
+    start: Start,
     directory: PathBuf,
+}
+
+#[derive(Clone)]
+enum Start {
+    Run {
+        program: OsString,
+        args: Vec<OsString>,
+    },
+    Refused(String),
 }
 
 impl Sidecar {
     pub fn java(jar: PathBuf, project: PathBuf) -> Self {
-        Self {
-            program: "java".into(),
-            args: vec![
-                "--enable-native-access=ALL-UNNAMED".into(),
-                "-jar".into(),
-                jar.into_os_string(),
-                "--sidecar".into(),
-            ],
-            directory: project,
-        }
+        Self::on("java".into(), Vec::new(), jar, project)
     }
 
     /// The runtime a bundle carries under its resource directory, told where the natives are since nothing is unpacked at run time.
@@ -60,39 +60,64 @@ impl Sidecar {
             flag.push(&natives);
             flag
         };
-        Self {
-            program: resources.join("runtime/bin/java").into_os_string(),
-            args: vec![
+        Self::on(
+            resources.join("runtime/bin/java").into_os_string(),
+            vec![
                 flag("pty4j.preferred.native.folder"),
                 flag("jna.boot.library.path"),
                 "-Djna.nounpack=true".into(),
-                "--enable-native-access=ALL-UNNAMED".into(),
-                "-jar".into(),
-                resources.join("lazyclaude.jar").into_os_string(),
-                "--sidecar".into(),
             ],
-            directory: project,
-        }
+            resources.join("lazyclaude.jar"),
+            project,
+        )
     }
 
-    /// A command that cannot start, so the failure to find the bundle shows as the spawn failure with `reason` in it.
+    /// A sidecar that cannot start, whose exit is `reason` alone.
     pub fn unavailable(reason: &str, project: PathBuf) -> Self {
         Self {
-            program: reason.into(),
-            args: Vec::new(),
+            start: Start::Refused(reason.to_owned()),
             directory: project,
         }
     }
 
-    fn command(&self) -> Command {
-        let mut command = Command::new(&self.program);
-        command.args(&self.args).current_dir(&self.directory);
-        command
+    /// The one way the jar is started, whichever java runs it.
+    fn on(java: OsString, jvm_flags: Vec<OsString>, jar: PathBuf, project: PathBuf) -> Self {
+        let mut args = jvm_flags;
+        args.extend([
+            "--enable-native-access=ALL-UNNAMED".into(),
+            "-jar".into(),
+            jar.into_os_string(),
+            "--sidecar".into(),
+        ]);
+        Self::run(java, args, project)
+    }
+
+    fn run(program: OsString, args: Vec<OsString>, directory: PathBuf) -> Self {
+        Self {
+            start: Start::Run { program, args },
+            directory,
+        }
+    }
+
+    fn command(&self) -> Result<Command, String> {
+        match &self.start {
+            Start::Run { program, args } => {
+                let mut command = Command::new(program);
+                command.args(args).current_dir(&self.directory);
+                Ok(command)
+            }
+            Start::Refused(reason) => Err(reason.clone()),
+        }
     }
 
     pub(crate) fn describe(&self) -> String {
-        let args: Vec<_> = self.args.iter().map(|arg| arg.to_string_lossy()).collect();
-        format!("{} {}", self.program.to_string_lossy(), args.join(" "))
+        match &self.start {
+            Start::Run { program, args } => {
+                let args: Vec<_> = args.iter().map(|arg| arg.to_string_lossy()).collect();
+                format!("{} {}", program.to_string_lossy(), args.join(" "))
+            }
+            Start::Refused(reason) => reason.clone(),
+        }
     }
 }
 
@@ -210,9 +235,14 @@ impl Relay {
             running.stderr = Tail::new(STDERR_LINES);
             running.generation
         };
-        let spawned = self
-            .sidecar
-            .command()
+        let mut command = match self.sidecar.command() {
+            Ok(command) => command,
+            Err(reason) => {
+                self.finish(generation, None, Some(reason));
+                return;
+            }
+        };
+        let spawned = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -317,16 +347,16 @@ mod tests {
     const CHANGED: &str = r#"{"jsonrpc":"2.0","method":"board/changed","params":{}}"#;
 
     fn stand_in(script: &str, marker: &Path) -> Relay {
-        Relay::new(Sidecar {
-            program: "sh".into(),
-            args: vec![
+        Relay::new(Sidecar::run(
+            "sh".into(),
+            vec![
                 "-c".into(),
                 script.into(),
                 "stand-in".into(),
                 marker.as_os_str().to_owned(),
             ],
-            directory: std::env::temp_dir(),
-        })
+            std::env::temp_dir(),
+        ))
     }
 
     fn recorder() -> (OnMessage, Receiver<RelayMessage>) {
@@ -342,11 +372,11 @@ mod tests {
     }
 
     fn unspawned() -> (Relay, Receiver<RelayMessage>) {
-        let relay = Relay::new(Sidecar {
-            program: "unspawned".into(),
-            args: Vec::new(),
-            directory: std::env::temp_dir(),
-        });
+        let relay = Relay::new(Sidecar::run(
+            "unspawned".into(),
+            Vec::new(),
+            std::env::temp_dir(),
+        ));
         let (on_message, receiver) = recorder();
         relay.lock().channel = Some(on_message);
         (relay, receiver)
@@ -355,16 +385,23 @@ mod tests {
     fn lines_of(message: RelayMessage) -> Vec<String> {
         match message {
             RelayMessage::Lines { lines } => lines,
-            RelayMessage::Exited(exit) => panic!("the sidecar exited: {:?} {:?}", exit.code, exit.stderr),
+            RelayMessage::Exited(exit) => {
+                panic!("the sidecar exited: {:?} {:?}", exit.code, exit.stderr)
+            }
         }
     }
 
     fn lines(receiver: &Receiver<RelayMessage>) -> Vec<String> {
-        lines_of(receiver.recv_timeout(WAIT).expect("a message from the relay"))
+        lines_of(
+            receiver
+                .recv_timeout(WAIT)
+                .expect("a message from the relay"),
+        )
     }
 
     fn marker(name: &str) -> PathBuf {
-        let path = std::env::temp_dir().join(format!("lazyclaude-relay-{name}-{}", std::process::id()));
+        let path =
+            std::env::temp_dir().join(format!("lazyclaude-relay-{name}-{}", std::process::id()));
         let _ = std::fs::remove_file(&path);
         path
     }
@@ -397,7 +434,10 @@ mod tests {
         let stdout = format!("{READY}\n{CHANGED}\nthird\n");
         let (before, after) = stdout.split_at(READY.len() + "\n".len() + CHANGED.len() / 2);
 
-        relay.read_stdout(Cursor::new(before.to_owned()).chain(Cursor::new(after.to_owned())), 0);
+        relay.read_stdout(
+            Cursor::new(before.to_owned()).chain(Cursor::new(after.to_owned())),
+            0,
+        );
 
         let messages: Vec<_> = receiver.try_iter().map(lines_of).collect();
         assert_eq!(messages, vec![vec![READY], vec![CHANGED, "third"]]);
@@ -405,7 +445,9 @@ mod tests {
 
     #[test]
     fn a_line_sent_reaches_the_sidecar_stdin_whole() {
-        let script = format!("printf '%s\\n' '{READY}'; read line; printf 'echo:%s\\n' \"$line\"; read rest");
+        let script = format!(
+            "printf '%s\\n' '{READY}'; read line; printf 'echo:%s\\n' \"$line\"; read rest"
+        );
         let relay = stand_in(&script, &marker("send"));
         let (on_message, receiver) = recorder();
         relay.attach(on_message);
@@ -438,14 +480,20 @@ mod tests {
     #[test]
     fn closing_the_relay_closes_the_sidecar_stdin() {
         let closed = marker("close");
-        let relay = stand_in(&format!("printf '%s\\n' '{READY}'; cat >/dev/null; touch \"$1\""), &closed);
+        let relay = stand_in(
+            &format!("printf '%s\\n' '{READY}'; cat >/dev/null; touch \"$1\""),
+            &closed,
+        );
         let (on_message, receiver) = recorder();
         relay.attach(on_message);
         assert_eq!(lines(&receiver), vec![READY]);
 
         relay.close();
 
-        assert!(appears(&closed), "the stand-in saw end of file on stdin and ran on to its marker");
+        assert!(
+            appears(&closed),
+            "the stand-in saw end of file on stdin and ran on to its marker"
+        );
         let _ = std::fs::remove_file(&closed);
     }
 
@@ -456,10 +504,38 @@ mod tests {
 
         relay.attach(on_message);
 
-        match receiver.recv_timeout(WAIT).expect("a message from the relay") {
+        match receiver
+            .recv_timeout(WAIT)
+            .expect("a message from the relay")
+        {
             RelayMessage::Exited(exit) => {
                 assert_eq!(exit.code, Some(3));
                 assert_eq!(exit.stderr, vec!["out of memory"]);
+            }
+            RelayMessage::Lines { lines } => panic!("unexpected lines {lines:?}"),
+        }
+    }
+
+    #[test]
+    fn an_unavailable_sidecar_exits_with_its_reason_alone_and_runs_nothing() {
+        let relay = Relay::new(Sidecar::unavailable(
+            "resource directory unavailable: no resources",
+            std::env::temp_dir(),
+        ));
+        let (on_message, receiver) = recorder();
+
+        relay.attach(on_message);
+
+        match receiver
+            .recv_timeout(WAIT)
+            .expect("a message from the relay")
+        {
+            RelayMessage::Exited(exit) => {
+                assert_eq!(exit.code, None);
+                assert_eq!(
+                    exit.stderr,
+                    vec!["resource directory unavailable: no resources"]
+                );
             }
             RelayMessage::Lines { lines } => panic!("unexpected lines {lines:?}"),
         }
