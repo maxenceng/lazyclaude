@@ -4,6 +4,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.Transcri
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.append;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.assistantLine;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.beyondEpochMillis;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.commandLine;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.cwd;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.everyLoggedSession;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.factsOf;
@@ -310,6 +311,47 @@ class TranscriptRepositoryTest {
         assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
                 .singleElement()
                 .satisfies(session -> assertThat(session.title()).isEqualTo(new FirstPrompt("The real prompt")));
+    }
+
+    @Test
+    void shouldTitleASessionOpenedBySlashCommandByTheCommandAsTyped() throws IOException {
+        writeTranscript(
+                projects,
+                folder(),
+                sessionId(),
+                commandLine(cwd(), started(), "main", "/ticket", "start 12"));
+
+        assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
+                .singleElement()
+                .satisfies(session -> assertThat(session)
+                        .as("the command markup Claude Code writes is not what was typed")
+                        .extracting(TranscriptFacts::title, TranscriptFacts::opening)
+                        .containsExactly(new FirstPrompt("/ticket start 12"), new FirstPrompt("/ticket start 12")));
+    }
+
+    @Test
+    void shouldTitleASessionOpenedBySlashCommandWithoutArgumentsByItsNameAlone() throws IOException {
+        writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "main", "/clear", ""));
+
+        assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
+                .singleElement()
+                .satisfies(session -> assertThat(session.title()).isEqualTo(new FirstPrompt("/clear")));
+    }
+
+    @Test
+    void shouldTitleASessionOpenedBySlashCommandByItsAiTitleOnceItHasOne() throws IOException {
+        writeTranscript(
+                projects,
+                folder(),
+                sessionId(),
+                commandLine(cwd(), started(), "main", "/ddd-workflow:ticket", "start 12"),
+                aiTitleLine("Start ticket 12"));
+
+        assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
+                .singleElement()
+                .satisfies(session -> assertThat(session)
+                        .extracting(TranscriptFacts::title, TranscriptFacts::opening)
+                        .containsExactly(new AiTitle("Start ticket 12"), new FirstPrompt("/ddd-workflow:ticket start 12")));
     }
 
     @Test
