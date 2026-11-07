@@ -31,3 +31,5 @@ ticket could not even be selected there. The Board tab listed the ten latest clo
 - Base's Board panel grows by up to ten rows under done; the live groups still head it, so nothing under way is pushed down.
 - The TUI's done column stays folded: a done ticket is reached there only by unfolding it, as before.
 - A done ticket older than the ten is in neither tab; its `done` step is run from a session started some other way.
+- A `done` launch on a done ticket whose worktree is gone recreates it first, as every ticket session does: from the kept
+  ticket branch, or on a fresh branch off `main` if that branch was deleted. The removal question then offers it back.
