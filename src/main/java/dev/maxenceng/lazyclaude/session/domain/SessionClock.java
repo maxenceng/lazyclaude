@@ -3,9 +3,9 @@ package dev.maxenceng.lazyclaude.session.domain;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
-import dev.maxenceng.lazyclaude.session.published.SessionAge;
 
 /** Now, as the composition root's clock says it, so no rule reads the system time on its own. */
 public record SessionClock(Clock clock) {
@@ -14,17 +14,10 @@ public record SessionClock(Clock clock) {
         Assert.notNull("clock", clock);
     }
 
-    /** This clock stopped at the instant it is asked, so every age of one read is measured from the same now. */
-    public SessionClock frozen() {
-        return new SessionClock(Clock.fixed(clock.instant(), clock.getZone()));
-    }
-
-    public SessionAge ageOf(StartedAt startedAt) {
-        return new SessionAge(Duration.between(startedAt.value(), clock.instant()));
-    }
-
-    public SessionAge ageOf(LastActivity lastActivity) {
-        return new SessionAge(Duration.between(lastActivity.value(), clock.instant()));
+    /** How long ago {@code local}, a time in this clock's zone, was: time elapsed, so an age spanning a clock change keeps its length. */
+    public SessionAge ageSince(LocalDateTime local) {
+        // deferred: a local time in the hour a clock change repeats is read at its earlier offset — close it when a view carries an instant.
+        return new SessionAge(Duration.between(local.atZone(clock.getZone()), ZonedDateTime.now(clock)));
     }
 
     public LocalDateTime localTimeOf(StartedAt startedAt) {

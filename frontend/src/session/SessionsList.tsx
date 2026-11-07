@@ -28,10 +28,10 @@ const labelled = (row: SessionRow, t: TFunction<'session'>): { label: string; de
     case SessionRowKind.Hosted:
       return { label: row.name ?? t('row.starting'), detail: t('row.hosted') };
     case SessionRowKind.Live:
-      return { label: row.name, detail: row.age };
+      return { label: row.name, detail: '' };
     case SessionRowKind.Past:
     case SessionRowKind.Unlinked:
-      return { label: titleOf(row.session) ?? t('row.untitled', { id: row.session.id }), detail: row.session.age };
+      return { label: titleOf(row.session) ?? t('row.untitled', { id: row.session.id }), detail: '' };
     case SessionRowKind.New:
       return { label: t('row.new'), detail: '' };
   }

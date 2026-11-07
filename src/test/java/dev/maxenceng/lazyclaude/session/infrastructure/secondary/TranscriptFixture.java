@@ -108,6 +108,10 @@ public final class TranscriptFixture {
                                 .formatted(command, args)));
     }
 
+    public static String mentionedMarkup() {
+        return "Why does the transcript store <command-name>/ticket</command-name>?";
+    }
+
     public static String skillLine(String cwd, String timestamp, String branch, String skill, String args) {
         return "{\"type\":\"assistant\",\"timestamp\":\"%s\",\"cwd\":\"%s\",\"gitBranch\":\"%s\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Skill\",\"input\":{\"skill\":%s,\"args\":%s}}]}}\n"
                 .formatted(timestamp, cwd, branch, quoted(skill), quoted(args));

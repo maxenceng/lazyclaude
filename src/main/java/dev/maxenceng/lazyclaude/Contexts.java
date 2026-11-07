@@ -33,6 +33,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorCom
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulatorQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedEmulators;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
@@ -52,6 +53,7 @@ public record Contexts(
         TicketCaptureCommand capturing,
         DocsQuery docs,
         SessionQuery sessions,
+        SessionAgeQuery ages,
         HostedSessionCommand hosting,
         HostedEmulatorCommand emulating,
         HostedEmulatorQuery emulators,
@@ -83,6 +85,7 @@ public record Contexts(
                 new TicketCaptureCommand(new TicketCaptureApplicationService(new TicketCaptureRepository(), new TicketTemplateRepository())),
                 new DocsQuery(new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(), warnings)),
                 new SessionQuery(sessions),
+                new SessionAgeQuery(sessions),
                 new HostedSessionCommand(sessions),
                 new HostedEmulatorCommand(sessions, emulators),
                 new HostedEmulatorQuery(emulators),

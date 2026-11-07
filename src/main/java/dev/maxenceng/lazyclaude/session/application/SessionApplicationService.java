@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.application;
 
 import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -22,6 +23,7 @@ import dev.maxenceng.lazyclaude.session.domain.NewSession;
 import dev.maxenceng.lazyclaude.session.domain.PastSessionPort;
 import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
 import dev.maxenceng.lazyclaude.session.domain.PtyListener;
+import dev.maxenceng.lazyclaude.session.domain.SessionAge;
 import dev.maxenceng.lazyclaude.session.domain.SessionExitListener;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
@@ -79,6 +81,11 @@ public final class SessionApplicationService {
         this.notifying = new DesktopNotificationManager(notifications, warnings);
         this.desktopNotifications = desktopNotifications;
         this.manager = new SessionManager(sessions, pastSessions, launchLog, watch, transcriptWatch, warnings, clock);
+    }
+
+    /** How long ago {@code local}, a time in the clock's zone, was. */
+    public SessionAge ageSince(LocalDateTime local) {
+        return manager.ageSince(local);
     }
 
     public AvailableSessions sessionsFor(Project project, KnownTickets tickets) {

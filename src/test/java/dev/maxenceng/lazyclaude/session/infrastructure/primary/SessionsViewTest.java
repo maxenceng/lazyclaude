@@ -113,8 +113,35 @@ class SessionsViewTest {
                 List.of(unlinkedLive, linkedSessionView(sessionIdOf(2), new YourTurn(), ticketLink("1", "review"))),
                 List.of(linkedPastSessionView(2, ticketLink("1", "start")), unlinkedPast));
 
-        assertThat(view.unlinkedLive()).containsExactly(unlinkedLive);
-        assertThat(view.unlinkedPast()).containsExactly(unlinkedPast);
+        assertThat(view.unlinked()).isEqualTo(UnlinkedSessionsView.builder().live(List.of(unlinkedLive)).past(List.of(unlinkedPast)).build());
+    }
+
+    @Test
+    void shouldListUnderATicketOnlyTheSessionsLinkedToItAndTheTabsStartedForIt() {
+        LiveSessionView linkedLive = linkedSessionView(sessionIdOf(2), new YourTurn(), ticketLink("1", "review"));
+        PastSessionView linkedPast = linkedPastSessionView(2, ticketLink("1", "start"));
+        HostedSessionView startedFor = startingTicketHostedSessionView();
+        SessionsView view = SessionsView.builder()
+                .live(List.of(linkedSessionView(sessionIdOf(1), new YourTurn()), linkedLive))
+                .past(List.of(linkedPastSessionView(1), linkedPast, linkedPastSessionView(3, ticketLink("2", "start"))))
+                .hosted(List.of(startingHostedSessionView(), startedFor))
+                .build();
+
+        assertThat(view.sessionsOf(linkedTicketId("1")))
+                .as("a session or tab linked to no ticket, and another ticket's, are not this ticket's")
+                .isEqualTo(TicketSessionsView.builder()
+                        .ticket(linkedTicketId("1"))
+                        .live(List.of(linkedLive))
+                        .past(List.of(linkedPast))
+                        .hosted(List.of(startedFor))
+                        .build());
+    }
+
+    @Test
+    void shouldListNoSessionUnderATicketNoSessionIsLinkedTo() {
+        SessionsView view = sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new YourTurn())), List.of(linkedPastSessionView(1)));
+
+        assertThat(view.sessionsOf(linkedTicketId("9"))).isEqualTo(TicketSessionsView.builder().ticket(linkedTicketId("9")).build());
     }
 
     @Test

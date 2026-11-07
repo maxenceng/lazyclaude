@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -74,6 +75,11 @@ public final class SessionManager {
         this.transcriptWatch = transcriptWatch;
         this.warnings = warnings;
         this.clock = new SessionClock(clock);
+    }
+
+    /** How long ago {@code local}, a time in the clock's zone, was. */
+    public SessionAge ageSince(LocalDateTime local) {
+        return clock.ageSince(local);
     }
 
     /** Reads the records of the {@code open} hosted sessions again; the past ones come from what the cache already holds. */
@@ -150,7 +156,7 @@ public final class SessionManager {
                         .flatMap(entry -> pastSessionOf(entry, transcripts, tickets).stream())
                         .sorted(INTERRUPTED_THEN_MOST_RECENTLY_ACTIVE_FIRST)
                         .toList())
-                .clock(clock.frozen())
+                .clock(clock)
                 .build();
     }
 

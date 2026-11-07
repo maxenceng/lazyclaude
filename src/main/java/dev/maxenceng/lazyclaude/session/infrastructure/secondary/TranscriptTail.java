@@ -35,6 +35,9 @@ final class TranscriptTail {
     private static final Pattern TICKET_SKILL = Pattern.compile("(?:.+:)?ticket");
     private static final Pattern TICKET_COMMAND = Pattern.compile("<command-name>/(?:[^:<]+:)?ticket</command-name>");
     private static final Pattern COMMAND_ARGS = Pattern.compile("<command-args>(.*?)</command-args>", Pattern.DOTALL);
+    private static final Pattern COMMAND_MARKUP = Pattern.compile("\\s*<command-(?:message|name)>");
+    private static final Pattern COMMAND_NAME = Pattern.compile("<command-name>(.*?)</command-name>", Pattern.DOTALL);
+    private static final String COMMAND_AS_TYPED = "%s %s";
     private static final String CONTENT = "content";
     private static final String TEXT = "text";
 
@@ -73,7 +76,7 @@ final class TranscriptTail {
         }
         instantOf(entry.timestamp()).ifPresent(this::seen);
         if (firstPrompt == null && USER.equals(entry.type()) && !Boolean.TRUE.equals(entry.isMeta())) {
-            firstPrompt = promptOf(entry.message()).orElse(null);
+            firstPrompt = promptOf(entry.message()).map(TranscriptTail::asTyped).orElse(null);
         }
         ticketRunOf(entry).ifPresent(this::ran);
     }
@@ -152,6 +155,20 @@ final class TranscriptTail {
                 .filter(text -> text != null && text.isString())
                 .flatMap(text -> nonBlank(text.asString()).stream())
                 .findFirst();
+    }
+
+    /**
+     * A slash command as Claude Code records it, a prompt opening on the markup around its name and args, back to what was
+     * typed; any other prompt as it is, one that only mentions the markup included.
+     */
+    private static String asTyped(String prompt) {
+        Matcher name = COMMAND_NAME.matcher(prompt);
+        if (!COMMAND_MARKUP.matcher(prompt).lookingAt() || !name.find() || name.group(1).isBlank()) {
+            return prompt;
+        }
+        String command = name.group(1).strip();
+        Matcher args = COMMAND_ARGS.matcher(prompt);
+        return args.find() && !args.group(1).isBlank() ? COMMAND_AS_TYPED.formatted(command, args.group(1).strip()) : command;
     }
 
     private static Optional<String> nonBlank(String text) {

@@ -11,7 +11,6 @@ import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
-import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
@@ -24,7 +23,6 @@ public record LiveSessionView(
         SessionName name,
         Path directory,
         LocalDateTime startedAt,
-        SessionAge age,
         ClaudeVersion version,
         SessionState state,
         List<TicketLink> links) {
@@ -36,7 +34,6 @@ public record LiveSessionView(
                 .name(session.name())
                 .directory(session.directory().path())
                 .startedAt(available.startedLocally(session))
-                .age(available.ageOf(session))
                 .version(session.version())
                 .state(session.state())
                 .links(session.links())
@@ -53,11 +50,6 @@ public record LiveSessionView(
         return TicketLink.to(links, ticket);
     }
 
-    /** Whether the session is linked to no ticket. */
-    public boolean isUnlinked() {
-        return links.isEmpty();
-    }
-
     public static LiveSessionViewBuilder builder() {
         return new LiveSessionViewBuilder();
     }
@@ -68,7 +60,6 @@ public record LiveSessionView(
         private SessionName name;
         private Path directory;
         private LocalDateTime startedAt;
-        private SessionAge age;
         private ClaudeVersion version;
         private SessionState state;
         private List<TicketLink> links;
@@ -100,11 +91,6 @@ public record LiveSessionView(
             return this;
         }
 
-        public LiveSessionViewBuilder age(SessionAge age) {
-            this.age = age;
-            return this;
-        }
-
         public LiveSessionViewBuilder version(ClaudeVersion version) {
             this.version = version;
             return this;
@@ -121,7 +107,7 @@ public record LiveSessionView(
         }
 
         public LiveSessionView build() {
-            return new LiveSessionView(id, pid, name, directory, startedAt, age, version, state, links);
+            return new LiveSessionView(id, pid, name, directory, startedAt, version, state, links);
         }
     }
 }

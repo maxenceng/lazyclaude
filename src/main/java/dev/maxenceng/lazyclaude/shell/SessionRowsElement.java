@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQuery;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 import dev.tamboui.layout.Constraint;
@@ -27,13 +29,15 @@ final class SessionRowsElement implements Element {
     private static final int VERB_GAP = 2;
 
     private final List<SessionRow> sessions;
+    private final SessionAgeQuery ages;
     private final int selected;
     private final boolean highlighted;
     private final Consumer<RowsDrawn> drawn;
 
     /** {@code drawn} is told which rows were drawn where, for the mouse to resolve a click against. */
-    SessionRowsElement(List<SessionRow> sessions, int selected, boolean highlighted, Consumer<RowsDrawn> drawn) {
+    SessionRowsElement(List<SessionRow> sessions, SessionAgeQuery ages, int selected, boolean highlighted, Consumer<RowsDrawn> drawn) {
         this.sessions = sessions;
+        this.ages = ages;
         this.selected = selected;
         this.highlighted = highlighted;
         this.drawn = drawn;
@@ -53,7 +57,7 @@ final class SessionRowsElement implements Element {
                 .forEach(row -> draw(frame, area, row, sessions.get(first + row), first + row == selected && highlighted, verbWidth));
     }
 
-    private static void draw(Frame frame, Rect area, int row, SessionRow session, boolean reversed, int verbWidth) {
+    private void draw(Frame frame, Rect area, int row, SessionRow session, boolean reversed, int verbWidth) {
         Style plain = reversed ? Style.EMPTY.reversed() : Style.EMPTY;
         int y = area.y() + row;
         switch (session) {
@@ -66,7 +70,7 @@ final class SessionRowsElement implements Element {
             case PastSessionRow past -> {
                 Style title = SessionText.titleIsStandIn(past.session()) ? plain.dim() : plain;
                 line(frame, area, y, SessionText.pastGlyph(past.session()), plain.dim(),
-                        middle(past.link(), SessionText.title(past.session()), plain, title, verbWidth), past.session().age().label(), plain);
+                        middle(past.link(), SessionText.title(past.session()), plain, title, verbWidth), ages.ageSince(SessionAgePayload.lastActivityOf(past.session())).label(), plain);
             }
             case OlderSessionsRow older ->
                 line(frame, area, y, SessionText.olderGlyph(), plain.dim(),

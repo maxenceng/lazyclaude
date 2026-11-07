@@ -10,7 +10,6 @@ import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 import dev.maxenceng.lazyclaude.session.published.MergeState;
-import dev.maxenceng.lazyclaude.session.published.SessionAge;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
@@ -18,7 +17,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
 /**
  * The sessions of one project: the hosted ones in tab order, each starting, live or unknown, then the past ones, with the clock their
- * ages are read from. That a session is one or the other, never both, is the manager's.
+ * local times are read in. That a session is one or the other, never both, is the manager's.
  */
 public record AvailableSessions(List<PastSession> past, List<OpenHostedSession> hosted, SessionClock clock) {
 
@@ -71,16 +70,8 @@ public record AvailableSessions(List<PastSession> past, List<OpenHostedSession> 
         return past.stream().anyMatch(candidate -> candidate.id().equals(session) && !candidate.links().isEmpty());
     }
 
-    public SessionAge ageOf(LiveSession session) {
-        return clock.ageOf(session.startedAt());
-    }
-
     public LocalDateTime startedLocally(LiveSession session) {
         return clock.localTimeOf(session.startedAt());
-    }
-
-    public SessionAge ageOf(PastSession session) {
-        return clock.ageOf(session.lastActivity());
     }
 
     public LocalDateTime lastActiveLocally(PastSession session) {

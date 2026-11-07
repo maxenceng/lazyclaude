@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude;
 
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.defaultConfigurationView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQueryFixture.sessionAgeQuery;
 import static org.mockito.Mockito.mock;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
@@ -36,7 +37,7 @@ public final class ContextsFixture {
                 board,
                 mock(TicketCaptureCommand.class),
                 docs,
-                sessions,
+                sessions, sessionAgeQuery(),
                 mock(HostedSessionCommand.class),
                 mock(HostedEmulatorCommand.class),
                 emulators,
@@ -112,7 +113,7 @@ public final class ContextsFixture {
                 board,
                 mock(TicketCaptureCommand.class),
                 docs,
-                sessions,
+                sessions, sessionAgeQuery(),
                 hosting,
                 mock(HostedEmulatorCommand.class),
                 mock(HostedEmulatorQuery.class),

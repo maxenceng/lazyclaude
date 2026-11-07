@@ -4,12 +4,14 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.Transcri
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.append;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.assistantLine;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.beyondEpochMillis;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.commandLine;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.cwd;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.everyLoggedSession;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.factsOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.folder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.lastActivityOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.later;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.mentionedMarkup;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.metaLine;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.modifiedAt;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.TranscriptFixture.notJsonLine;
@@ -310,6 +312,58 @@ class TranscriptRepositoryTest {
         assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
                 .singleElement()
                 .satisfies(session -> assertThat(session.title()).isEqualTo(new FirstPrompt("The real prompt")));
+    }
+
+    @Test
+    void shouldTitleASessionOpenedBySlashCommandByTheCommandAsTyped() throws IOException {
+        writeTranscript(
+                projects,
+                folder(),
+                sessionId(),
+                commandLine(cwd(), started(), "main", "/ticket", "start 12"));
+
+        assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
+                .singleElement()
+                .satisfies(session -> assertThat(session)
+                        .as("the command markup Claude Code writes is not what was typed")
+                        .extracting(TranscriptFacts::title, TranscriptFacts::opening)
+                        .containsExactly(new FirstPrompt("/ticket start 12"), new FirstPrompt("/ticket start 12")));
+    }
+
+    @Test
+    void shouldKeepAPromptThatOnlyMentionsCommandMarkupAsItIs() throws IOException {
+        writeTranscript(projects, folder(), sessionId(), userLine(cwd(), started(), mentionedMarkup()));
+
+        assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
+                .singleElement()
+                .satisfies(session -> assertThat(session.title())
+                        .as("only a prompt opening on the markup is a slash command")
+                        .isEqualTo(new FirstPrompt(mentionedMarkup())));
+    }
+
+    @Test
+    void shouldTitleASessionOpenedBySlashCommandWithoutArgumentsByItsNameAlone() throws IOException {
+        writeTranscript(projects, folder(), sessionId(), commandLine(cwd(), started(), "main", "/clear", ""));
+
+        assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
+                .singleElement()
+                .satisfies(session -> assertThat(session.title()).isEqualTo(new FirstPrompt("/clear")));
+    }
+
+    @Test
+    void shouldTitleASessionOpenedBySlashCommandByItsAiTitleOnceItHasOne() throws IOException {
+        writeTranscript(
+                projects,
+                folder(),
+                sessionId(),
+                commandLine(cwd(), started(), "main", "/ddd-workflow:ticket", "start 12"),
+                aiTitleLine("Start ticket 12"));
+
+        assertThat(readOf(scanned(projects, cacheFile, unwritable, unlistable)))
+                .singleElement()
+                .satisfies(session -> assertThat(session)
+                        .extracting(TranscriptFacts::title, TranscriptFacts::opening)
+                        .containsExactly(new AiTitle("Start ticket 12"), new FirstPrompt("/ddd-workflow:ticket start 12")));
     }
 
     @Test

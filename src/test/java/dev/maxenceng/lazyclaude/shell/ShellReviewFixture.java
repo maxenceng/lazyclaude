@@ -25,6 +25,7 @@ import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDi
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.pendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.secondPendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQueryFixture.sessionAgeQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
@@ -110,7 +111,7 @@ final class ShellReviewFixture {
                 ShellFixture.blankEmulators(),
                 mock(WatchedSessionCommand.class),
                 mock(TicketWorktreeCommand.class),
-                blankScreens(),
+                blankScreens(), sessionAgeQuery(),
                 mock(BoardQuery.class),
                 mock(DocsQuery.class),
                 reviews,
