@@ -2,7 +2,8 @@
 # Smoke-tests a bundle's own runtime, jar and natives with a stub `claude`, then the relay under
 # Xvfb (ADR 0059). With no arguments it tests the deb and the AppImage that `make bundle` built:
 # the deb installed when BUNDLE_SMOKE_INSTALLED=1 says it was just installed, else unpacked; the AppImage extracted.
-# With `<label> <resource-dir> <relay>` it tests that one bundle root, which is how a broken copy is tried.
+# With `<label> <resource-dir> <relay> [<launcher>]` it tests that one bundle root, which is how a broken copy is tried;
+# the launcher is what starts the relay, the AppImage's AppRun, which moves into usr/ so WebKit finds its helpers.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -127,7 +128,7 @@ sidecar_checks() {
 }
 
 relay_check() {
-	local label="$1" res="$2" relay="$3" work="$4"
+	local label="$1" res="$2" relay="$3" work="$4" launcher="$5"
 	if ! command -v xvfb-run >/dev/null 2>&1; then
 		fail "${label}: the relay spawns the sidecar under xvfb-run (xvfb-run is not installed: sudo apt-get install xvfb, or sudo pacman -S xorg-server-xvfb)"
 		return
@@ -136,7 +137,7 @@ relay_check() {
 	mkdir -p "${project}"
 	git init -q "${project}"
 	# Never the real display: Wayland is unset and xvfb-run brings its own X server.
-	setsid env -u WAYLAND_DISPLAY -u DISPLAY -u LAZYCLAUDE_SIDECAR HOME="${work}/home" timeout 60 xvfb-run -a "${relay}" "${project}" > "${work}/relay.out" 2>&1 &
+	setsid env -u WAYLAND_DISPLAY -u DISPLAY -u LAZYCLAUDE_SIDECAR HOME="${work}/home" timeout 60 xvfb-run -a "${launcher}" "${project}" > "${work}/relay.out" 2>&1 &
 	local group=$!
 	pids+=("${group}")
 
@@ -174,7 +175,7 @@ relay_check() {
 }
 
 smoke() {
-	local label="$1" res="$2" relay="$3"
+	local label="$1" res="$2" relay="$3" launcher="${4:-$3}"
 	echo "${label}: ${res}"
 	for part in runtime/bin/java lazyclaude.jar natives/linux/x86-64/libpty.so natives/libjnidispatch.so; do
 		[[ -e "${res}/${part}" ]] || { fail "${label}: ${res}/${part} is missing from the bundle"; return; }
@@ -183,7 +184,7 @@ smoke() {
 	local work="${scratch}/${label}"
 	mkdir -p "${work}"
 	sidecar_checks "${label}" "${res}" "${work}"
-	relay_check "${label}" "${res}" "${relay}" "${work}"
+	relay_check "${label}" "${res}" "${relay}" "${work}" "${launcher}"
 }
 
 extract_deb() {
@@ -195,8 +196,8 @@ extract_deb() {
 	fi
 }
 
-if [[ $# -eq 3 ]]; then
-	smoke "$1" "$2" "$3"
+if [[ $# -eq 3 || $# -eq 4 ]]; then
+	smoke "$@"
 elif [[ $# -eq 0 ]]; then
 	deb=("${OUT}"/*.deb)
 	appimage=("${OUT}"/*.AppImage)
@@ -213,9 +214,10 @@ elif [[ $# -eq 0 ]]; then
 
 	mkdir -p "${scratch}/appimage-root"
 	(cd "${scratch}/appimage-root" && "${appimage[0]}" --appimage-extract >/dev/null) || fail "appimage: --appimage-extract"
-	smoke appimage "${scratch}/appimage-root/squashfs-root/usr/lib/lazyclaude" "${scratch}/appimage-root/squashfs-root/usr/bin/lazyclaude"
+	extracted="${scratch}/appimage-root/squashfs-root"
+	smoke appimage "${extracted}/usr/lib/lazyclaude" "${extracted}/usr/bin/lazyclaude" "${extracted}/AppRun"
 else
-	echo "usage: bundle-smoke.sh [<label> <resource-dir> <relay>]" >&2
+	echo "usage: bundle-smoke.sh [<label> <resource-dir> <relay> [<launcher>]]" >&2
 	exit 2
 fi
 
