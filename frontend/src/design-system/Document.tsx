@@ -7,7 +7,7 @@ interface Props {
   target: Target;
 }
 
-/** A document filling the main view: its markdown, set in from the pane's edges and centred once the pane outgrows its reading column. */
+/** A document filling the main view: its markdown, set in from the pane's edges, its reading column widening with the pane. */
 export const Document = ({ source, onLink, target }: Props) => {
   return (
     <div className={styles.pane}>

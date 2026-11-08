@@ -59,7 +59,9 @@
 .markdown code {
   font: var(--reading-code-em) / 1.5 var(--font-mono);
   background: var(--pane-sunk);
-  padding: 0 var(--space-1);
+  padding: 0 0.2em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .markdown pre {
@@ -71,6 +73,7 @@
 }
 
 .markdown pre code {
+  font: inherit;
   background: none;
   padding: 0;
 }
@@ -127,6 +130,10 @@
   font-weight: 600;
   white-space: nowrap;
   border-bottom-color: var(--dim);
+}
+
+.markdown td code {
+  white-space: nowrap;
 }
 
 .markdown td:first-child {

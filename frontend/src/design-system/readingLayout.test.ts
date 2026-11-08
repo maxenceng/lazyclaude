@@ -6,11 +6,11 @@ const detail = stylesheet('Detail.module.css');
 const document = stylesheet('Document.module.css');
 
 describe('the markdown column', () => {
-  it('is set in the reading size, so the measure is 80 characters of that type', () => {
+  it('is set in the reading size, so the measure counts characters of that type', () => {
     expect(ruleOf(markdown, '.markdown')).toContain('font-size: var(--reading-size)');
   });
 
-  it('is centred by tracks that split a wide pane evenly and leave a narrow one no offset', () => {
+  it('starts at the pane edge and fills it up to the measure, so a wide pane keeps no left gutter', () => {
     expect(ruleOf(markdown, '.markdown')).toContain('grid-template-columns: var(--reading-columns)');
     expect(ruleOf(markdown, '.markdown > *')).toContain('grid-column: column-start / column-end');
   });
