@@ -7,10 +7,10 @@ interface Props {
   target: Target;
 }
 
-/** A document filling the main view: its markdown, set in from the pane's edges. */
+/** A document filling the main view: its markdown, set in from the pane's edges and centred once the pane outgrows its reading column. */
 export const Document = ({ source, onLink, target }: Props) => {
   return (
-    <div className={styles.document}>
+    <div className={styles.pane}>
       <Markdown source={source} onLink={onLink} target={target} />
     </div>
   );

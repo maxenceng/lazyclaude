@@ -1,10 +1,20 @@
 .markdown {
+  display: grid;
+  grid-template-columns: var(--reading-columns);
+  font-size: var(--reading-size);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
-.markdown > :is(p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6) {
-  max-width: 80ch;
+.markdown > * {
+  grid-column: column-start / column-end;
+}
+
+.markdown > :is(pre, .tableScroll) {
+  grid-column: column-start / full-end;
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .markdown > * + * {
@@ -24,11 +34,11 @@
 }
 
 .markdown h1 {
-  font-size: var(--size-title);
+  font-size: var(--reading-title-em);
 }
 
 .markdown h2 {
-  font-size: var(--size-base);
+  font-size: 1em;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -37,7 +47,7 @@
 .markdown h4,
 .markdown h5,
 .markdown h6 {
-  font-size: var(--size-base);
+  font-size: 1em;
 }
 
 .markdown a {
@@ -46,17 +56,14 @@
   cursor: pointer;
 }
 
-.markdown code,
-.markdown pre {
-  font: var(--size-body) / 1.5 var(--font-mono);
-}
-
 .markdown code {
+  font: var(--reading-code-em) / 1.5 var(--font-mono);
   background: var(--pane-sunk);
   padding: 0 var(--space-1);
 }
 
 .markdown pre {
+  font: var(--reading-code-em) / 1.5 var(--font-mono);
   background: var(--pane-sunk);
   padding: var(--space-3);
   overflow-x: auto;
@@ -116,7 +123,7 @@
 
 .markdown th {
   color: var(--dim);
-  font-size: var(--size-label);
+  font-size: var(--reading-label-em);
   font-weight: 600;
   white-space: nowrap;
   border-bottom-color: var(--dim);

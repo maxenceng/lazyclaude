@@ -73,6 +73,18 @@
   --size-lamp: 24px;
   --size-title: 28px;
 
+  --reading-min: 15px;
+  --reading-max: 18px;
+  --reading-half-pane: 720px;
+  --reading-full-pane: 1800px;
+  --reading-rate: 0.002778;
+  --reading-size: clamp(var(--reading-min), calc(var(--reading-min) + (100cqi - var(--reading-half-pane)) * var(--reading-rate)), var(--reading-max));
+  --reading-measure: 80ch;
+  --reading-columns: [full-start] minmax(0, 1fr) [column-start] minmax(0, var(--reading-measure)) [column-end] minmax(0, 1fr) [full-end];
+  --reading-title-em: 1.8667em;
+  --reading-code-em: 0.9333em;
+  --reading-label-em: 0.8667em;
+
   --space-1: 3px;
   --space-2: 6px;
   --space-3: 10px;
