@@ -103,3 +103,4 @@
 - 0099 [The desktop Comments row goes to its line on one click, and a thread is replied to from under its line](0099-the-desktop-comments-row-goes-to-its-line-on-one-click-and-a-thread-is-replied-to-from-its-line.md) — Accepted.
 - 0100 [A done ticket offers `done`, and the desktop's Base lists the ten latest closed](0100-a-done-ticket-offers-done-and-base-lists-the-ten-latest-closed.md) — Accepted.
 - 0101 [Markdown type and measure scale with the pane, by container queries](0101-markdown-type-and-measure-scale-with-the-pane-by-container-queries.md) — Accepted.
+- 0102 [The bundle job caches the Temurin download and tauri's AppImage tools, keyed on their pins](0102-the-bundle-job-caches-the-temurin-download-and-tauris-appimage-tools-keyed-on-their-pins.md) — Accepted.

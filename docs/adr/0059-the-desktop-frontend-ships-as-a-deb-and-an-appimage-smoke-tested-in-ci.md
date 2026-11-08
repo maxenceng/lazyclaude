@@ -64,6 +64,8 @@ it comes. Neither has a real `claude` and a display at once.
 - A bundle is never built by `make verify`, so a change that breaks only packaging shows first in the pull request's
   `bundle` job.
 - Moving the pinned Temurin is an edit to the version and the checksum together.
+- The `bundle` job caches the Temurin archive and tauri's AppImage tools under their pins, so a GitHub outage fails
+  only a cold run ([ADR 0102](0102-the-bundle-job-caches-the-temurin-download-and-tauris-appimage-tools-keyed-on-their-pins.md)).
 - A real `claude` is never run against a bundle in CI. A Claude Code upgrade that breaks only the packaged frontend
   shows in use, not in the build.
 - An Arch user other than this one would install the AppImage as well. A pacman package is not built.
