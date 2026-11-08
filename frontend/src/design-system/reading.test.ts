@@ -25,7 +25,8 @@ describe('the reading column', () => {
 });
 
 describe('the reading type scale', () => {
-  it('starts at the 15px of a half tile', () => {
+  it('holds at a floor of 15px up to a 720px pane', () => {
+    expect(token('reading-floor-pane')).toBe('720px');
     expect(token('reading-min')).toBe('15px');
   });
 
@@ -35,14 +36,15 @@ describe('the reading type scale', () => {
 
   it('grows with the width of the pane, held between the floor and the ceiling', () => {
     expect(token('reading-size')).toBe(
-      'clamp(var(--reading-min), calc(var(--reading-min) + (100cqi - var(--reading-half-pane)) * var(--reading-rate)), var(--reading-max))',
+      'clamp(var(--reading-min), calc(var(--reading-min) + (100cqi - var(--reading-floor-pane)) * var(--reading-rate)), var(--reading-max))',
     );
   });
 
-  it('reaches the ceiling at a full-screen pane', () => {
-    const half = parseFloat(token('reading-half-pane'));
-    const full = parseFloat(token('reading-full-pane'));
+  it('reaches the ceiling at a 3000px pane', () => {
+    const floor = parseFloat(token('reading-floor-pane'));
+    const ceiling = parseFloat(token('reading-ceiling-pane'));
     const rate = parseFloat(token('reading-rate'));
-    expect(15 + (full - half) * rate).toBeCloseTo(18, 1);
+    expect(ceiling).toBe(3000);
+    expect(parseFloat(token('reading-min')) + (ceiling - floor) * rate).toBeCloseTo(parseFloat(token('reading-max')), 1);
   });
 });

@@ -71,14 +71,13 @@
   --size-base: 15px;
   --size-terminal: 13px;
   --size-lamp: 24px;
-  --size-title: 28px;
 
   --reading-min: 15px;
   --reading-max: 18px;
-  --reading-half-pane: 720px;
-  --reading-full-pane: 3000px;
+  --reading-floor-pane: 720px;
+  --reading-ceiling-pane: 3000px;
   --reading-rate: 0.001316;
-  --reading-size: clamp(var(--reading-min), calc(var(--reading-min) + (100cqi - var(--reading-half-pane)) * var(--reading-rate)), var(--reading-max));
+  --reading-size: clamp(var(--reading-min), calc(var(--reading-min) + (100cqi - var(--reading-floor-pane)) * var(--reading-rate)), var(--reading-max));
   --reading-measure: clamp(110ch, 70cqi, 200ch);
   --reading-columns: [full-start column-start] minmax(0, var(--reading-measure)) [column-end] minmax(0, 1fr) [full-end];
   --reading-title-em: 1.8667em;

@@ -11,7 +11,7 @@ interface Props {
 /** What is selected: its facts in a row, its title, its text typeset as markdown. Facts and title sit on the column the text is set in, and the body may break out of it. */
 export const Detail = ({ facts, title, body, onLink }: Props) => {
   return (
-    <div className={styles.pane}>
+    <div className={styles.frame}>
       <article className={styles.detail}>
         <div className={styles.facts}>
           {facts.map((fact) => (

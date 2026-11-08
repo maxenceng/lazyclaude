@@ -1,4 +1,4 @@
-.pane {
+.frame {
   container-type: inline-size;
   padding: var(--space-3) 26px var(--space-5);
 }

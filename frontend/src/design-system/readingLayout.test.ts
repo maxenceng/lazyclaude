@@ -36,8 +36,8 @@ describe('the markdown column', () => {
 
 describe('the frame of a main view', () => {
   it.each([
-    ['a ticket detail', detail, '.pane'],
-    ['a document', document, '.pane'],
+    ['a ticket detail', detail, '.frame'],
+    ['a document', document, '.frame'],
   ])('measures %s against the pane, not its own box', (_name, sheet, selector) => {
     expect(ruleOf(sheet, selector)).toContain('container-type: inline-size');
   });
