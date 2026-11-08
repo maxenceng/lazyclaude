@@ -141,8 +141,48 @@ jobs:
           libjavascriptcoregtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev libssl-dev
           libfuse2 xvfb
 
+      # Keyed on exactly the pins they hold, with no restore-keys, so a bumped pin never reuses the old files.
+      - name: Read the Temurin pin and the locked tauri CLI version
+        id: bundle-pins
+        run: |
+          temurin="$(grep -oP '^TEMURIN_SHA256 := \K[0-9a-f]{64}$' Makefile)"
+          tauri="$(grep -m1 -oP "^  '@tauri-apps/cli@\K[0-9][^']*(?=':$)" frontend/pnpm-lock.yaml)"
+          echo "temurin=${temurin:?no TEMURIN_SHA256 in the Makefile}" >> "$GITHUB_OUTPUT"
+          echo "tauri=${tauri:?no @tauri-apps/cli in frontend/pnpm-lock.yaml}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the Temurin download
+        id: temurin-cache
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: target/bundle/download
+          key: temurin-${{ runner.os }}-${{ steps.bundle-pins.outputs.temurin }}
+
+      - name: Restore tauri's AppImage tools
+        id: tauri-cache
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: ~/.cache/tauri
+          key: tauri-tools-${{ runner.os }}-${{ steps.bundle-pins.outputs.tauri }}
+
       - name: Build the deb and the AppImage
+        id: bundle
         run: make bundle
+
+      # bundle.sh keeps the archive only once its SHA-256 matched, so it is saved even when the build failed after it.
+      - name: Save the Temurin download
+        if: always() && steps.temurin-cache.outputs.cache-hit != 'true' && hashFiles('target/bundle/download/*.tar.gz') != ''
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: target/bundle/download
+          key: ${{ steps.temurin-cache.outputs.cache-primary-key }}
+
+      # Saved only after a whole bundle, so a tool half-fetched by a failed build is never frozen under its key.
+      - name: Save tauri's AppImage tools
+        if: steps.bundle.outcome == 'success' && steps.tauri-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: ~/.cache/tauri
+          key: ${{ steps.tauri-cache.outputs.cache-primary-key }}
 
       - name: Install the deb
         run: sudo apt-get install -y ./target/bundle/out/*.deb
