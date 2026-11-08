@@ -8,6 +8,8 @@ const CONTEXTS = ['board', 'docs', 'review', 'session'];
 const UNHANDLED_ACTIONS: readonly string[] = ['Top', 'Bottom', 'RemoveWorktree'];
 const SHARED = ['protocol', 'design-system', 'i18n', 'shared', 'test'];
 const COMPOSITION = ['keys', 'connection', 'window'];
+const TEST_FILE = /\.test\.tsx?$/;
+const MARKDOWN_FRAMES = [join('design-system', 'Detail.tsx'), join('design-system', 'Document.tsx')];
 
 const sourceFiles = (directory: string): string[] => {
   return readdirSync(directory).flatMap((name) => {
@@ -58,6 +60,18 @@ describe('the frontend architecture', () => {
 
   it('keeps the design system free of contexts, the protocol and everything else but its copy', () => {
     const offenders = imports.filter((entry) => entry.from === 'design-system' && !['design-system', 'i18n'].includes(folderOf(entry.target)));
+    expect(offenders.map((entry) => entry.file)).toEqual([]);
+  });
+
+  it('lets only a test read a stylesheet from disk, so node:fs stays out of the bundle', () => {
+    const offenders = imports.filter((entry) => entry.target === join('design-system', 'stylesheet') && !TEST_FILE.test(entry.file));
+    expect(offenders.map((entry) => entry.file)).toEqual([]);
+  });
+
+  it('reaches Markdown only through Detail and Document, whose frame its type and measure are scaled against', () => {
+    const offenders = imports.filter(
+      (entry) => entry.target === join('design-system', 'Markdown') && !TEST_FILE.test(entry.file) && !MARKDOWN_FRAMES.includes(entry.file),
+    );
     expect(offenders.map((entry) => entry.file)).toEqual([]);
   });
 
