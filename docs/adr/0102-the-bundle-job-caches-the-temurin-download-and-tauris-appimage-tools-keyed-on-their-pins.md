@@ -23,6 +23,8 @@ the branch caused neither; `curl --retry 3` did not outlast the outage.
 - **No `restore-keys`.** A bumped pin misses the cache and downloads afresh; an older pin's files are never restored
   under the new one. Rejected: a prefix fallback like the pnpm and cargo caches, which suits a store that tolerates
   extra entries, not a pinned binary.
+- **A cache, not a longer retry.** Rejected: a longer `curl` retry in `bundle.sh`, which reaches only Temurin; tauri
+  fetches its AppImage tools itself, and no flag of ours reaches those downloads.
 - **Restore and save are separate steps** (`actions/cache/restore` and `actions/cache/save`), and the saves run right
   after `make bundle`, so a failing install or smoke test still leaves both caches filled. Rejected: the combined
   `actions/cache`, whose post-job save is skipped when any step fails. A save whose key was restored is skipped; one
@@ -33,7 +35,11 @@ the branch caused neither; `curl --retry 3` did not outlast the outage.
 
 ## Consequences
 
-- A cold run, on a new pin or after GitHub evicts an unused cache (seven days), still downloads both and can still fail
-  on a 504. Accepted: it is one run per pin bump or idle week, and a rerun of the job is the remedy.
+- A cold run still downloads both and can still fail on a 504. A pull request reads only its own entries and
+  `main`'s, so a pin bump runs cold twice, on its pull request and on the push to `main`; an entry is also lost after
+  seven idle days or under the repository's cache size limit. Accepted: a rerun of the job is the remedy.
+- A cache entry is never overwritten, so a restored archive that fails the checksum is downloaded again on every run
+  until its entry is deleted by hand. Only an archive whose checksum matched is ever saved, so this needs a corrupted
+  store, not a bad download.
 - The tauri key follows the CLI version, not the bundler crate in `Cargo.lock`. If tauri ever moves the AppImage tools'
   choice out of the CLI, the key must follow it.
