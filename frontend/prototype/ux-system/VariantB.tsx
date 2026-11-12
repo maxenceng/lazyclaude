@@ -78,7 +78,7 @@ const liveKeys = (focus: Pane, documentShown: boolean, picking = false): string[
 
 export const VariantB = (props: VariantProps) => <FramedWindow {...props} chosen={false} />;
 
-export type Layout = 'd' | 'e' | 'f' | 'g';
+export type Layout = 'd' | 'e' | 'f' | 'g' | 'h';
 
 export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: VariantProps & { chosen: boolean; layout?: Layout }) => {
   const [menu, setMenu] = useState(false);
@@ -88,7 +88,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: Var
     if (focus === 'board' || focus === 'docs') setLeftTab(focus);
   }, [focus]);
   useEffect(() => {
-    if (layout !== 'f') return undefined;
+    if (layout !== 'f' && layout !== 'h') return undefined;
     const onKey = (event: KeyboardEvent) => {
       if (event.code === 'KeyO') setLeftTab((t) => (t === 'board' ? 'docs' : 'board'));
     };
@@ -101,7 +101,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: Var
   const pickerRef = useRef<HTMLDivElement>(null);
   const picks = chosen && !documentShown;
   const baseKeys = chosen ? liveKeys(focus, documentShown, picks && picking) : KEYS[focus];
-  const keys = layout === 'f' && leftFocused ? [...baseKeys.slice(0, -1), leftTab === 'board' ? 'o docs' : 'o board', ...baseKeys.slice(-1)] : baseKeys;
+  const keys = (layout === 'f' || layout === 'h') && leftFocused ? [...baseKeys.slice(0, -1), leftTab === 'board' ? 'o docs' : 'o board', ...baseKeys.slice(-1)] : baseKeys;
 
   useEffect(() => {
     if (!picks) return undefined;
@@ -203,7 +203,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: Var
           {notes}
         </div>
       </article>
-    ) : layout === 'g' ? (
+    ) : layout === 'g' || layout === 'h' ? (
       <article className="vb-reading vg-centre">
         <header className="vg-head">
           {heading}
@@ -351,7 +351,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: Var
       </nav>
 
       <main className="vb-grid">
-        {layout === 'f' ? (
+        {layout === 'f' || layout === 'h' ? (
           <Frame
             pane={leftFocused ? focus : leftTab}
             focus={focus}

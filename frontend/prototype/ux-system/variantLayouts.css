@@ -105,12 +105,14 @@
 }
 .vl-e .vb-reading,
 .vl-f .vb-reading,
-.vl-g .vb-reading {
+.vl-g .vb-reading,
+.vl-h .vb-reading {
   max-width: none;
 }
 .vl-e .vb-main .vb-reading > *,
 .vl-f .vb-main .vb-reading > *,
-.vl-g .vb-main .vb-reading > * {
+.vl-g .vb-main .vb-reading > *,
+.vl-h .vb-main .vb-reading > * {
   max-width: none !important;
 }
 
@@ -153,7 +155,8 @@
 }
 
 /* F: Board or Docs at the left column's full height, switched by tabs in its title row */
-.vl-f .vb-grid {
+.vl-f .vb-grid,
+.vl-h .vb-grid {
   grid-template-columns: minmax(400px, 32%) 1fr;
   grid-template-rows: 62fr 38fr;
   grid-template-areas: 'left main' 'left dock';
@@ -263,6 +266,10 @@
   gap: 8px 32px;
 }
 .vg-prose {
+  max-width: 100ch !important;
+  margin: 0 auto;
+}
+.vd .vb-main .vb-reading > .vg-prose {
   max-width: 100ch !important;
   margin: 0 auto;
 }

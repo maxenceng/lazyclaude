@@ -8,7 +8,7 @@ import { VariantA } from './VariantA';
 import { VariantB } from './VariantB';
 import { VariantC } from './VariantC';
 import { VariantD } from './VariantD';
-import { VariantE, VariantF, VariantG } from './VariantLayouts';
+import { VariantE, VariantF, VariantG, VariantH } from './VariantLayouts';
 
 export interface VariantProps {
   focus: Pane;
@@ -23,9 +23,10 @@ const VARIANTS = [
   { key: 'E', name: 'Wider, two-line rows', Component: VariantE },
   { key: 'F', name: 'Board and Docs as tabs', Component: VariantF },
   { key: 'G', name: 'Docs in a rail', Component: VariantG },
+  { key: 'H', name: 'Chosen layout', Component: VariantH },
 ];
 
-const DEFAULT = VARIANTS.findIndex((v) => v.key === 'E');
+const DEFAULT = VARIANTS.findIndex((v) => v.key === 'H');
 
 const initial = () => {
   const wanted = new URLSearchParams(location.search).get('variant');
@@ -38,7 +39,7 @@ const DIGIT_PANE: Record<string, Pane> = { Digit1: 'board', Digit2: 'docs', Digi
 const Prototype = () => {
   const [index, setIndex] = useState(initial);
   const [focus, setFocus] = useState<Pane>(() => PANES.find((p) => p === new URLSearchParams(location.search).get('focus')) ?? 'board');
-  const [documentShown, setDocumentShown] = useState(false);
+  const [documentShown, setDocumentShown] = useState(() => new URLSearchParams(location.search).get('doc') === 'open');
   const variant = VARIANTS[index] ?? VARIANTS[DEFAULT]!;
 
   useEffect(() => {
