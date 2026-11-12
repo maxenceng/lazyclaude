@@ -116,7 +116,10 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
   const [picking, setPicking] = useState(() => new URLSearchParams(location.search).get('picker') === 'open');
   const [verb, setVerb] = useState(0);
   const pickerRef = useRef<HTMLDivElement>(null);
-  const picks = chosen && !documentShown;
+  const empty = chosen && layout === 'h' && new URLSearchParams(location.search).get('board') === 'empty';
+  const groups = empty ? GROUPS.map((g) => ({ ...g, count: 0, rows: [] })) : GROUPS;
+  const boardColumns = empty ? BOARD_COLUMNS.map((c) => ({ ...c, count: 0, cards: [] })) : BOARD_COLUMNS;
+  const picks = chosen && !documentShown && !empty;
   const baseKeys = chosen ? liveKeys(focus, documentShown, picks && picking) : KEYS[focus];
   const boardKeys = [
     'h/j/k/l move',
@@ -126,7 +129,10 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
     ...(boardLayout === 'k' ? [previewOpen ? 'space fold preview' : 'space show preview'] : []),
     '1/2/3 tabs',
   ];
-  const keys = boardTab ? boardKeys : (layout === 'f' || layout === 'h') && leftFocused ? [...baseKeys.slice(0, -1), leftTab === 'board' ? 'o docs' : 'o board', ...baseKeys.slice(-1)] : baseKeys;
+  const emptyDrops = new Set(['j/k move', 'h/j/k/l move', 'enter go to ticket', 'enter attach', 'n new session']);
+  const docsKeys = focus === 'docs' && !boardTab;
+  const liveOnly = (list: string[]) => (empty && !docsKeys ? list.filter((k) => !emptyDrops.has(k)) : list);
+  const keys = boardTab ? liveOnly(boardKeys) : liveOnly( (layout === 'f' || layout === 'h') && leftFocused ? [...baseKeys.slice(0, -1), leftTab === 'board' ? 'o docs' : 'o board', ...baseKeys.slice(-1)] : baseKeys);
 
   useEffect(() => {
     if (!picks) return undefined;
@@ -310,7 +316,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
   };
   const columns = (
     <div className={`bt-columns bt-columns-${boardLayout}`}>
-      {BOARD_COLUMNS.map((column) =>
+      {boardColumns.map((column) =>
         boardLayout === 'k' && column.count === 0 ? (
           <div key={column.status} className="bt-strip" style={{ ['--g' as string]: column.colour }} title={`${column.status}: none`}>
             <span>{column.status}</span>
@@ -320,7 +326,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
           <section key={column.status} className={`bt-column ${column.status === 'Done' ? 'bt-column-done' : ''}`} style={{ ['--g' as string]: column.colour }}>
             <header className="bt-column-head">
               <span>{column.status}</span>
-              <span>{column.status === 'Done' ? `10 of ${column.count}` : column.count}</span>
+              <span>{column.status === 'Done' && column.count > 0 ? `10 of ${column.count}` : column.count}</span>
             </header>
             <div className="bt-cards">{column.cards.length === 0 ? <p className="bt-empty">none</p> : column.cards.map((c) => card(c, column))}</div>
           </section>
@@ -344,8 +350,8 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
         {columns}
       </Frame>
       {boardLayout === 'i' && (
-        <Frame pane="ticket" focus={focus} title="Ticket" className="bt-side" sub={<span className="vb-sub">#{TICKET.id}</span>}>
-          {preview}
+        <Frame pane="ticket" focus={focus} title="Ticket" className="bt-side" sub={empty ? undefined : <span className="vb-sub">#{TICKET.id}</span>}>
+          {empty ? <p className="vl-none">No ticket selected.</p> : preview}
         </Frame>
       )}
       {boardLayout === 'j' && previewOpen && (
@@ -374,7 +380,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
 
   const boardRows = (
     <>
-          {GROUPS.map((group) => (
+          {groups.map((group) => (
             <div key={group.status} className="vb-group" style={{ ['--g' as string]: group.colour }}>
               <div className={`vb-group-head ${layout === 'e' && group.status === 'Done' ? 've-fold' : ''}`} data-row onClick={() => group.status === 'Done' && setDoneOpen((o) => !o)}>
                 <span>
@@ -446,7 +452,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
           <button className={`vb-tab ${boardTab ? 'vb-tab-on' : ''}`} onClick={() => onBoardTab?.(true)}>
             Board
             <span className="vb-badge vb-badge-blue" title="Tickets in progress">
-              1 <small>in progress</small>
+              {empty ? 0 : 1} <small>in progress</small>
             </span>
           </button>
           <button className="vb-tab">
@@ -487,7 +493,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
             sub={
               <span className="vf-tabs">
                 <button className={`vf-tab ${leftTab === 'board' ? 'vf-tab-on' : ''}`} onClick={() => setLeftTab('board')} title="Board (o)">
-                  Board <small>110</small>
+                  Board <small>{empty ? 0 : 110}</small>
                 </button>
                 <button className={`vf-tab ${leftTab === 'docs' ? 'vf-tab-on' : ''}`} onClick={() => setLeftTab('docs')} title="Docs (o)">
                   Docs <small>117</small>
@@ -548,7 +554,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
             title="Ticket"
             className="vb-main"
             sub={
-              <span className="vb-sub">
+              empty ? undefined : <span className="vb-sub">
                 <span className="vb-pill vb-pill-todo">todo</span>
                 <span className="vb-pill">session</span>
                 <span className="vb-pill vb-type-fix">fix</span>
@@ -556,7 +562,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
             }
             actions={<Icon glyph="hide" label="Hide the main view (m)" />}
             footer={
-              chosen ? (
+              chosen && !empty ? (
                 <div className="vd-new-wrap" ref={pickerRef}>
                   {picking && (
                     <div className="vd-picker" role="listbox" aria-label="start with">
@@ -586,7 +592,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
               ) : undefined
             }
           >
-            {ticketArticle}
+            {empty ? <p className="vl-none">No ticket selected.</p> : ticketArticle}
           </Frame>
         )}
 
