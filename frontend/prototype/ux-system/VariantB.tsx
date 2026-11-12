@@ -2,6 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { BOARD_COLUMNS, COUNTS, DOCK_TABS, DOCS, FACTS, GROUPS, type BoardCard, type BoardColumn, KEYS, NOTES, LAMP_WORD, PROJECT, SELECTED_DOC, SELECTED_TICKET, TERMINAL, TICKET, TILES, type Pane } from './data';
 import { DOC_PARAGRAPHS, Inline } from './Inline';
+import { ReviewArea, reviewKeys, type ReviewLayout } from './Review';
 import type { VariantProps } from './main';
 import './variantB.css';
 
@@ -17,7 +18,7 @@ const PATHS: Record<Glyph, string> = {
   zoom: 'M2 5 V2 H5 M9 2 H12 V5 M12 9 V12 H9 M5 12 H2 V9',
 };
 
-const Icon = ({ glyph, label }: { glyph: Glyph; label: string }) => (
+export const Icon = ({ glyph, label }: { glyph: Glyph; label: string }) => (
   <button className="vb-icon" title={label} aria-label={label}>
     <svg viewBox="0 0 14 14" aria-hidden="true">
       <path d={PATHS[glyph]} />
@@ -45,7 +46,7 @@ const useWholeRows = (enabled: boolean) => {
   return ref;
 };
 
-const Frame = ({ pane, focus, title, sub, actions, children, className, wholeRows = false, footer }: { pane: Pane; focus: Pane; title: string; sub?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; wholeRows?: boolean; footer?: ReactNode }) => {
+export const Frame = ({ pane, focus, title, sub, actions, children, className, wholeRows = false, footer }: { pane: Pane; focus: Pane; title: string; sub?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; wholeRows?: boolean; footer?: ReactNode }) => {
   const ref = useWholeRows(wholeRows);
   return (
     <section className={`vb-pane ${pane === focus ? 'vb-focused' : ''} ${className ?? ''}`}>
@@ -85,7 +86,7 @@ const TYPE_GLYPH: Record<string, string> = { fix: '✕', feature: '◆', chore: 
 
 export type BoardLayout = 'i' | 'j' | 'k';
 
-export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', boardTab = false, onBoardTab, boardLayout = 'i' }: VariantProps & { chosen: boolean; layout?: Layout; boardLayout?: BoardLayout }) => {
+export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', boardTab = false, onBoardTab, boardLayout = 'i', prView = 'off', onPrView, reviewLayout }: VariantProps & { chosen: boolean; layout?: Layout; boardLayout?: BoardLayout; reviewLayout?: ReviewLayout }) => {
   const [previewOpen, setPreviewOpen] = useState(() => boardLayout !== 'j' || new URLSearchParams(location.search).get('preview') === 'open');
   useEffect(() => {
     if (!boardTab || boardLayout === 'i') return undefined;
@@ -132,7 +133,8 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
   const emptyDrops = new Set(['j/k move', 'h/j/k/l move', 'enter go to ticket', 'enter attach', 'n new session']);
   const docsKeys = focus === 'docs' && !boardTab;
   const liveOnly = (list: string[]) => (empty && !docsKeys ? list.filter((k) => !emptyDrops.has(k)) : list);
-  const keys = boardTab ? liveOnly(boardKeys) : liveOnly( (layout === 'f' || layout === 'h') && leftFocused ? [...baseKeys.slice(0, -1), leftTab === 'board' ? 'o docs' : 'o board', ...baseKeys.slice(-1)] : baseKeys);
+  const prsEmpty = new URLSearchParams(location.search).get('prs') === 'empty';
+  const keys = prView !== 'off' ? reviewKeys(reviewLayout ?? 'r1', prView, focus, prsEmpty, leftTab === 'board' ? 'files' : 'threads') : boardTab ? liveOnly(boardKeys) : liveOnly( (layout === 'f' || layout === 'h') && leftFocused ? [...baseKeys.slice(0, -1), leftTab === 'board' ? 'o docs' : 'o board', ...baseKeys.slice(-1)] : baseKeys);
 
   useEffect(() => {
     if (!picks) return undefined;
@@ -446,19 +448,25 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
           )}
         </div>
         <div className="vb-tabs">
-          <button className={`vb-tab ${boardTab ? '' : 'vb-tab-on'}`} onClick={() => onBoardTab?.(false)}>
+          <button
+            className={`vb-tab ${boardTab || prView !== 'off' ? '' : 'vb-tab-on'}`}
+            onClick={() => {
+              onBoardTab?.(false);
+              onPrView?.('off');
+            }}
+          >
             Base
           </button>
-          <button className={`vb-tab ${boardTab ? 'vb-tab-on' : ''}`} onClick={() => onBoardTab?.(true)}>
+          <button className={`vb-tab ${boardTab && prView === 'off' ? 'vb-tab-on' : ''}`} onClick={() => onBoardTab?.(true)}>
             Board
             <span className="vb-badge vb-badge-blue" title="Tickets in progress">
               {empty ? 0 : 1} <small>in progress</small>
             </span>
           </button>
-          <button className="vb-tab">
+          <button className={`vb-tab ${prView !== 'off' ? 'vb-tab-on' : ''}`} onClick={() => onPrView?.('list')}>
             Pull requests
             <span className="vb-badge" title="Open pull requests">
-              0 <small>open</small>
+              {reviewLayout !== undefined && !prsEmpty ? 3 : 0} <small>open</small>{reviewLayout !== undefined && !prsEmpty && <span className="rv-ci rv-ci-failed"> ✕</span>}
             </span>
           </button>
         </div>
@@ -479,7 +487,9 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
         </div>
       </nav>
 
-      {boardTab ? (
+      {prView !== 'off' ? (
+        <ReviewArea variant={reviewLayout ?? 'r1'} view={prView} focus={focus} empty={prsEmpty} leftTab={leftTab === 'board' ? 'files' : 'threads'} onOpen={() => onPrView?.('review')} />
+      ) : boardTab ? (
         boardTabMain
       ) : (
       <main className="vb-grid">

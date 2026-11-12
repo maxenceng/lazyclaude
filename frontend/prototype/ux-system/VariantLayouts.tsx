@@ -12,3 +12,7 @@ export const VariantH = (props: VariantProps) => <FramedWindow {...props} chosen
 export const VariantI = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" boardLayout="i" />;
 export const VariantJ = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" boardLayout="j" />;
 export const VariantK = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" boardLayout="k" />;
+export const VariantR0 = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" reviewLayout="r0" />;
+export const VariantR1 = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" reviewLayout="r1" />;
+export const VariantR2 = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" reviewLayout="r2" />;
+export const VariantR3 = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" reviewLayout="r3" />;
