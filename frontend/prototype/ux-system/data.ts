@@ -155,3 +155,19 @@ export const PROJECT = '~/projects/lazyclaude';
 /** Turns `code` spans into <code>; prototype-only, no markdown parser. */
 export const spans = (text: string): (string | { code: string })[] =>
   text.split('`').map((part, index) => (index % 2 === 1 ? { code: part } : part));
+
+export const NOTES = [
+  'Found by the jlink research (`docs/research/jlink-sidecar-bundle.md`): `deleteOnExit` cannot remove a non-empty directory, and 26 were found in `/tmp`.',
+  'Suggested fix: ship the natives pre-extracted and point pty4j at them (`-Dpty4j.preferred.native.folder`, `-Djna.boot.library.path`, `-Djna.nounpack=true`).',
+  'Migrated from SESSION-15, created 2026-10-27.',
+];
+
+export const FACTS: [string, string][] = [
+  ['status', 'todo'],
+  ['type', 'fix'],
+  ['context', 'session'],
+  ['branch', '145-pty4j-tmpdir'],
+  ['worktree', '.worktrees/145'],
+  ['pull request', 'none yet'],
+  ['links', 'jlink-sidecar-bundle.md · ADR 0059'],
+];

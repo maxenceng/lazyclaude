@@ -1,0 +1,268 @@
+/* PROTOTYPE: E, F and G, the Base tab's layout on D's system. Not shipped. */
+
+/* shared: the waiting state on a Board row, the sessions list with its attach control, the facts */
+.vl-wait {
+  flex: none;
+  font: 600 11px var(--font-read);
+  padding: 1px 7px;
+  border-radius: 9px;
+}
+.vl-sessions {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.vl-sessions h3 {
+  margin-top: 4px !important;
+}
+.vl-session {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto auto;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--card-edge);
+  border-radius: 5px;
+  background: var(--card);
+  color: var(--dim);
+}
+.vl-state {
+  justify-self: start;
+  font: 600 11px var(--font-read);
+  padding: 2px 8px;
+  border-radius: 9px;
+}
+.vl-session-name {
+  font: 400 14px var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vl-session small {
+  color: var(--dim);
+}
+.vl-attach {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dim);
+}
+.vl-attach kbd {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  color: inherit;
+}
+.vl-waiting {
+  color: var(--text);
+  padding: 14px 16px;
+}
+.vl-waiting .vl-session-name {
+  font-size: 15px;
+}
+.vl-w-turn {
+  border-color: var(--lamp-turn);
+  background: var(--lamp-turn-tile);
+}
+.vl-w-input {
+  border-color: var(--lamp-input);
+  background: color-mix(in srgb, var(--lamp-input) 14%, var(--card));
+}
+.vl-w-permission {
+  border-color: var(--lamp-permission);
+  background: color-mix(in srgb, var(--lamp-permission) 14%, var(--card));
+}
+.vl-waiting .vl-attach {
+  color: var(--text);
+}
+.vb-focused .vl-cursor {
+  outline: 2px solid var(--selected);
+  outline-offset: 1px;
+}
+.vl-session:hover .vl-attach {
+  color: var(--text);
+}
+.vl-facts {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.vl-facts dt {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.vl-facts dd {
+  margin: 0;
+  font: 400 13px var(--font-mono);
+  color: var(--text);
+}
+.vl-e .vb-reading,
+.vl-f .vb-reading,
+.vl-g .vb-reading {
+  max-width: none;
+}
+.vl-e .vb-main .vb-reading > *,
+.vl-f .vb-main .vb-reading > *,
+.vl-g .vb-main .vb-reading > * {
+  max-width: none !important;
+}
+
+/* E: wider left column, two-line Board rows, Done folded so Docs gets the height; prose + facts rail */
+.vl-e .vb-grid {
+  grid-template-columns: minmax(420px, 37%) 1fr;
+  grid-template-rows: 64fr 4fr 32fr;
+  grid-template-areas: 'board main' 'docs main' 'docs dock';
+}
+.vl-e .vb-board .vb-row {
+  align-items: flex-start;
+}
+.vl-e .vb-board .vb-row-title {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.ve-fold {
+  cursor: pointer;
+}
+.ve-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  column-gap: 40px;
+  align-items: start;
+}
+.ve-wide {
+  grid-column: 1 / -1;
+}
+.ve-prose {
+  max-width: 100ch !important;
+}
+.ve-rail {
+  position: sticky;
+  top: 0;
+  padding: 14px 16px;
+  margin-top: 18px;
+  border-left: 1px solid var(--seam);
+}
+
+/* F: Board or Docs at the left column's full height, switched by tabs in its title row */
+.vl-f .vb-grid {
+  grid-template-columns: minmax(400px, 32%) 1fr;
+  grid-template-rows: 62fr 38fr;
+  grid-template-areas: 'left main' 'left dock';
+}
+.vf-left {
+  grid-area: left;
+}
+.vf-left .vb-title h2 {
+  display: none;
+}
+.vf-left .vb-title {
+  padding-left: 6px;
+}
+.vf-tabs {
+  display: flex;
+  gap: 2px;
+  font: 600 13px var(--font-read);
+}
+.vf-tab {
+  all: unset;
+  cursor: pointer;
+  padding: 5px 12px;
+  border-radius: 4px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: inherit;
+  opacity: 0.6;
+}
+.vf-tab small {
+  margin-left: 4px;
+  letter-spacing: 0;
+}
+.vf-tab-on {
+  opacity: 1;
+  background: rgb(127 127 127 / 0.2);
+}
+.vf-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 48px;
+}
+
+/* G: Docs folded to a rail at the far left, unfolding over the Board on focus; header and facts across the width */
+.vl-g .vb-grid {
+  grid-template-columns: 52px minmax(400px, 34%) 1fr;
+  grid-template-rows: 62fr 38fr;
+  grid-template-areas: 'rail board main' 'rail board dock';
+}
+.vg-rail {
+  grid-area: rail;
+  position: relative;
+  min-height: 0;
+}
+.vg-strip {
+  all: unset;
+  cursor: pointer;
+  box-sizing: border-box;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 14px;
+  background: var(--b-pane);
+  border: 1px solid var(--seam);
+  border-radius: 6px;
+  color: var(--dim);
+}
+.vg-strip svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  fill: none;
+}
+.vg-strip span {
+  writing-mode: vertical-rl;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.vg-open .vg-strip {
+  color: var(--d-lit-ink);
+  background: var(--d-lit);
+}
+.vg-docs {
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  bottom: 0;
+  left: calc(100% + 8px);
+  width: 440px;
+  box-shadow: 12px 0 32px rgb(0 0 0 / 0.55);
+}
+.vg-head {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--seam);
+}
+.vg-head .vl-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+}
+.vg-prose {
+  max-width: 100ch !important;
+  margin: 0 auto;
+}

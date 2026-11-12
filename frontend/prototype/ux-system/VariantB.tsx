@@ -1,6 +1,6 @@
 // PROTOTYPE: variant B, "Framed panes". Gutters between opaque panes, the focused one framed and lifted, icon actions in a fixed slot, quit in a window menu. Not shipped.
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { COUNTS, DOCK_TABS, DOCS, GROUPS, KEYS, LAMP_WORD, PROJECT, SELECTED_DOC, SELECTED_TICKET, TERMINAL, TICKET, TILES, type Pane } from './data';
+import { COUNTS, DOCK_TABS, DOCS, FACTS, GROUPS, KEYS, NOTES, LAMP_WORD, PROJECT, SELECTED_DOC, SELECTED_TICKET, TERMINAL, TICKET, TILES, type Pane } from './data';
 import { DOC_PARAGRAPHS, Inline } from './Inline';
 import type { VariantProps } from './main';
 import './variantB.css';
@@ -78,13 +78,30 @@ const liveKeys = (focus: Pane, documentShown: boolean, picking = false): string[
 
 export const VariantB = (props: VariantProps) => <FramedWindow {...props} chosen={false} />;
 
-export const FramedWindow = ({ focus, documentShown, chosen }: VariantProps & { chosen: boolean }) => {
+export type Layout = 'd' | 'e' | 'f' | 'g';
+
+export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: VariantProps & { chosen: boolean; layout?: Layout }) => {
   const [menu, setMenu] = useState(false);
+  const [leftTab, setLeftTab] = useState<'board' | 'docs'>('board');
+  const [doneOpen, setDoneOpen] = useState(false);
+  useEffect(() => {
+    if (focus === 'board' || focus === 'docs') setLeftTab(focus);
+  }, [focus]);
+  useEffect(() => {
+    if (layout !== 'f') return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.code === 'KeyO') setLeftTab((t) => (t === 'board' ? 'docs' : 'board'));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [layout]);
+  const leftFocused = focus === 'board' || focus === 'docs';
   const [picking, setPicking] = useState(() => new URLSearchParams(location.search).get('picker') === 'open');
   const [verb, setVerb] = useState(0);
   const pickerRef = useRef<HTMLDivElement>(null);
   const picks = chosen && !documentShown;
-  const keys = chosen ? liveKeys(focus, documentShown, picks && picking) : KEYS[focus];
+  const baseKeys = chosen ? liveKeys(focus, documentShown, picks && picking) : KEYS[focus];
+  const keys = layout === 'f' && leftFocused ? [...baseKeys.slice(0, -1), leftTab === 'board' ? 'o docs' : 'o board', ...baseKeys.slice(-1)] : baseKeys;
 
   useEffect(() => {
     if (!picks) return undefined;
@@ -106,8 +123,178 @@ export const FramedWindow = ({ focus, documentShown, chosen }: VariantProps & { 
       window.removeEventListener('mousedown', onDown);
     };
   }, [picks, picking]);
+  const sessionsList = (
+    <div className="vl-sessions">
+      <h3>Sessions</h3>
+      {TICKET.sessions.map((s, index) => {
+        const waiting = s.lamp !== 'off';
+        return (
+          <button key={s.name} className={`vl-session ${waiting ? `vl-waiting vl-w-${s.lamp}` : ''} ${index === 0 ? 'vl-cursor' : ''}`} title={waiting ? 'Attach (enter)' : 'Resume (enter)'}>
+            <span className={`vl-state vb-t-${s.lamp}`}>{LAMP_WORD[s.lamp] === 'off' ? s.state : LAMP_WORD[s.lamp]}</span>
+            <span className="vl-session-name">{s.name}</span>
+            <small>{s.age}</small>
+            <span className="vl-attach">
+              {waiting ? 'attach' : 'resume'} <kbd>enter</kbd>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+  const criteria = (
+    <section>
+      <h3>Acceptance criteria</h3>
+      <ul>
+        {TICKET.criteria.map((c) => (
+          <li key={c}>
+            <Inline text={c} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+  const notes = (
+    <section>
+      <h3>Notes</h3>
+      {NOTES.map((n) => (
+        <p key={n}>
+          <Inline text={n} />
+        </p>
+      ))}
+    </section>
+  );
+  const facts = (
+    <dl className="vl-facts">
+      {FACTS.map(([k, v]) => (
+        <div key={k}>
+          <dt>{k}</dt>
+          <dd>{v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+  const heading = (
+    <>
+      <p className="vb-kicker">#{TICKET.id}</p>
+      <h1>
+        <Inline text={TICKET.title} />
+      </h1>
+    </>
+  );
+  const ticketArticle =
+    layout === 'e' ? (
+      <article className="vb-reading ve-split">
+        <div className="ve-wide">
+          {heading}
+          {sessionsList}
+        </div>
+        <div className="ve-prose">
+          {criteria}
+          {notes}
+        </div>
+        <aside className="ve-rail">{facts}</aside>
+      </article>
+    ) : layout === 'f' ? (
+      <article className="vb-reading vf-wide">
+        {heading}
+        {sessionsList}
+        <div className="vf-cols">
+          {criteria}
+          {notes}
+        </div>
+      </article>
+    ) : layout === 'g' ? (
+      <article className="vb-reading vg-centre">
+        <header className="vg-head">
+          {heading}
+          {facts}
+        </header>
+        {sessionsList}
+        <div className="vg-prose">
+          {criteria}
+          {notes}
+        </div>
+      </article>
+    ) : (
+            <article className="vb-reading">
+              <p className="vb-kicker">#{TICKET.id}</p>
+              <h1>
+                <Inline text={TICKET.title} />
+              </h1>
+              <div className={`vb-sessions-list ${chosen ? 'vd-sessions-full' : ''}`}>
+                {TICKET.sessions.map((s) => (
+                  <div key={s.name} className={`vb-session vb-s-${s.lamp}`}>
+                    <i className={`vb-dot vb-t-${s.lamp}`} />
+                    <span>{s.name}</span>
+                    <small>
+                      {s.state} · {s.age}
+                    </small>
+                  </div>
+                ))}
+                {!chosen && (
+                  <div className="vb-session vb-session-new">
+                    <svg viewBox="0 0 14 14" aria-hidden="true">
+                      <path d={PATHS.add} />
+                    </svg>
+                    new session
+                  </div>
+                )}
+              </div>
+              <h3>Acceptance criteria</h3>
+              <ul>
+                {TICKET.criteria.map((c) => (
+                  <li key={c}>
+                    <Inline text={c} />
+                  </li>
+                ))}
+              </ul>
+            </article>
+    );
+
+  const boardRows = (
+    <>
+          {GROUPS.map((group) => (
+            <div key={group.status} className="vb-group" style={{ ['--g' as string]: group.colour }}>
+              <div className={`vb-group-head ${layout === 'e' && group.status === 'Done' ? 've-fold' : ''}`} data-row onClick={() => group.status === 'Done' && setDoneOpen((o) => !o)}>
+                <span>
+                  {layout === 'e' && group.status === 'Done' ? (doneOpen ? '▾ ' : '▸ ') : ''}
+                  {group.status}
+                </span>
+                <span>{group.count}</span>
+              </div>
+              {(layout !== 'e' || group.status !== 'Done' || doneOpen ? group.rows : []).map((row) => (
+                <div key={row.id} data-row className={`vb-row ${row.id === SELECTED_TICKET ? 'vb-selected' : ''} ${group.status === 'Done' ? 'vb-done' : ''}`}>
+                  <span className="vb-id">{row.id}</span>
+                  <span className="vb-row-title">
+                    <Inline text={row.title} />
+                  </span>
+                  <span className={`vb-type vb-type-${row.type}`}>{row.type}</span>
+                  {row.lamp !== undefined &&
+                (layout === 'd' || !chosen ? (
+                  <i className={`vb-dot vb-t-${row.lamp}`} />
+                ) : (
+                  <span className={`vl-wait vb-t-${row.lamp}`}>{LAMP_WORD[row.lamp]}</span>
+                ))}
+                </div>
+              ))}
+            </div>
+          ))}
+    </>
+  );
+  const docsRows = (
+    <>
+          {DOCS.map((doc, index) => (
+            <div key={index} data-row className={`vb-row ${index === SELECTED_DOC ? 'vb-selected' : ''}`} style={{ paddingLeft: `${12 + doc.depth * 16}px` }}>
+              {doc.folder !== undefined && <span className="vb-fold">{doc.folder.open ? '▾' : '▸'}</span>}
+              <span className="vb-row-title">{doc.name}</span>
+              {doc.folder !== undefined && <span className="vb-id">{doc.folder.count}</span>}
+            </div>
+          ))}
+    </>
+  );
+
   return (
-    <div className={`vb ${chosen ? 'vd' : ''}`}>
+    <div className={`vb ${chosen ? `vd vl-${layout}` : ''}`}>
       <nav className="vb-status">
         <div className="vb-menu-wrap">
           <button className="vb-menu" onClick={() => setMenu((m) => !m)} aria-label="Window menu">
@@ -164,35 +351,58 @@ export const FramedWindow = ({ focus, documentShown, chosen }: VariantProps & { 
       </nav>
 
       <main className="vb-grid">
-        <Frame pane="board" focus={focus} title="Board" className="vb-board" wholeRows={chosen} actions={<Icon glyph="add" label="New draft ticket (n)" />}>
-          {GROUPS.map((group) => (
-            <div key={group.status} className="vb-group" style={{ ['--g' as string]: group.colour }}>
-              <div className="vb-group-head" data-row>
-                <span>{group.status}</span>
-                <span>{group.count}</span>
-              </div>
-              {group.rows.map((row) => (
-                <div key={row.id} data-row className={`vb-row ${row.id === SELECTED_TICKET ? 'vb-selected' : ''} ${group.status === 'Done' ? 'vb-done' : ''}`}>
-                  <span className="vb-id">{row.id}</span>
-                  <span className="vb-row-title">
-                    <Inline text={row.title} />
-                  </span>
-                  <span className={`vb-type vb-type-${row.type}`}>{row.type}</span>
-                  {row.lamp !== undefined && <i className={`vb-dot vb-t-${row.lamp}`} />}
-                </div>
-              ))}
+        {layout === 'f' ? (
+          <Frame
+            pane={leftFocused ? focus : leftTab}
+            focus={focus}
+            title=""
+            className="vf-left"
+            wholeRows
+            sub={
+              <span className="vf-tabs">
+                <button className={`vf-tab ${leftTab === 'board' ? 'vf-tab-on' : ''}`} onClick={() => setLeftTab('board')} title="Board (o)">
+                  Board <small>110</small>
+                </button>
+                <button className={`vf-tab ${leftTab === 'docs' ? 'vf-tab-on' : ''}`} onClick={() => setLeftTab('docs')} title="Docs (o)">
+                  Docs <small>117</small>
+                </button>
+              </span>
+            }
+            actions={leftTab === 'board' ? <Icon glyph="add" label="New draft ticket (n)" /> : undefined}
+          >
+            {leftTab === 'board' ? boardRows : docsRows}
+          </Frame>
+        ) : layout === 'g' ? (
+          <>
+            <Frame pane="board" focus={focus} title="Board" className="vb-board vg-board" wholeRows actions={<Icon glyph="add" label="New draft ticket (n)" />}>
+              {boardRows}
+            </Frame>
+            <div className={`vg-rail ${focus === 'docs' ? 'vg-open' : ''}`}>
+              <button className="vg-strip" title="Docs (2)" aria-label="Docs (2)">
+                <svg viewBox="0 0 14 14" aria-hidden="true">
+                  <path d="M3 1.5 H8.5 L11 4 V12.5 H3 Z M8.5 1.5 V4 H11 M5 7 H9 M5 9.5 H9" />
+                </svg>
+                <span>Docs</span>
+                <small>117</small>
+              </button>
+              {focus === 'docs' && (
+                <Frame pane="docs" focus={focus} title="Docs" className="vg-docs" wholeRows>
+                  {docsRows}
+                </Frame>
+              )}
             </div>
-          ))}
+          </>
+        ) : (
+          <>
+        <Frame pane="board" focus={focus} title="Board" className="vb-board" wholeRows={chosen} actions={<Icon glyph="add" label="New draft ticket (n)" />}>
+          {boardRows}
         </Frame>
         <Frame pane="docs" focus={focus} title="Docs" className="vb-docs" wholeRows={chosen}>
-          {DOCS.map((doc, index) => (
-            <div key={index} data-row className={`vb-row ${index === SELECTED_DOC ? 'vb-selected' : ''}`} style={{ paddingLeft: `${12 + doc.depth * 16}px` }}>
-              {doc.folder !== undefined && <span className="vb-fold">{doc.folder.open ? '▾' : '▸'}</span>}
-              <span className="vb-row-title">{doc.name}</span>
-              {doc.folder !== undefined && <span className="vb-id">{doc.folder.count}</span>}
-            </div>
-          ))}
+          {docsRows}
         </Frame>
+          </>
+
+        )}
 
         {documentShown ? (
           <Frame pane="ticket" focus={focus} title="Document" className="vb-main" sub={<span className="vb-sub">research / embedding-claude-on-a-pty.md</span>} actions={<Icon glyph="close" label="Close document (esc)" />}>
@@ -250,39 +460,7 @@ export const FramedWindow = ({ focus, documentShown, chosen }: VariantProps & { 
               ) : undefined
             }
           >
-            <article className="vb-reading">
-              <p className="vb-kicker">#{TICKET.id}</p>
-              <h1>
-                <Inline text={TICKET.title} />
-              </h1>
-              <div className={`vb-sessions-list ${chosen ? 'vd-sessions-full' : ''}`}>
-                {TICKET.sessions.map((s) => (
-                  <div key={s.name} className={`vb-session vb-s-${s.lamp}`}>
-                    <i className={`vb-dot vb-t-${s.lamp}`} />
-                    <span>{s.name}</span>
-                    <small>
-                      {s.state} · {s.age}
-                    </small>
-                  </div>
-                ))}
-                {!chosen && (
-                  <div className="vb-session vb-session-new">
-                    <svg viewBox="0 0 14 14" aria-hidden="true">
-                      <path d={PATHS.add} />
-                    </svg>
-                    new session
-                  </div>
-                )}
-              </div>
-              <h3>Acceptance criteria</h3>
-              <ul>
-                {TICKET.criteria.map((c) => (
-                  <li key={c}>
-                    <Inline text={c} />
-                  </li>
-                ))}
-              </ul>
-            </article>
+            {ticketArticle}
           </Frame>
         )}
 

@@ -8,6 +8,7 @@ import { VariantA } from './VariantA';
 import { VariantB } from './VariantB';
 import { VariantC } from './VariantC';
 import { VariantD } from './VariantD';
+import { VariantE, VariantF, VariantG } from './VariantLayouts';
 
 export interface VariantProps {
   focus: Pane;
@@ -19,9 +20,12 @@ const VARIANTS = [
   { key: 'B', name: 'Framed panes', Component: VariantB },
   { key: 'C', name: 'Terminal boxes', Component: VariantC },
   { key: 'D', name: 'Chosen', Component: VariantD },
+  { key: 'E', name: 'Wider, two-line rows', Component: VariantE },
+  { key: 'F', name: 'Board and Docs as tabs', Component: VariantF },
+  { key: 'G', name: 'Docs in a rail', Component: VariantG },
 ];
 
-const DEFAULT = VARIANTS.length - 1;
+const DEFAULT = VARIANTS.findIndex((v) => v.key === 'E');
 
 const initial = () => {
   const wanted = new URLSearchParams(location.search).get('variant');
