@@ -3,8 +3,12 @@ import type { VariantProps } from './main';
 import { FramedWindow } from './VariantB';
 import './variantD.css';
 import './variantLayouts.css';
+import './variantBoardTab.css';
 
 export const VariantE = (props: VariantProps) => <FramedWindow {...props} chosen layout="e" />;
 export const VariantF = (props: VariantProps) => <FramedWindow {...props} chosen layout="f" />;
 export const VariantG = (props: VariantProps) => <FramedWindow {...props} chosen layout="g" />;
 export const VariantH = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" />;
+export const VariantI = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" boardLayout="i" />;
+export const VariantJ = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" boardLayout="j" />;
+export const VariantK = (props: VariantProps) => <FramedWindow {...props} chosen layout="h" boardLayout="k" />;

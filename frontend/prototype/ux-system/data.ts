@@ -171,3 +171,67 @@ export const FACTS: [string, string][] = [
   ['pull request', 'none yet'],
   ['links', 'jlink-sidecar-bundle.md · ADR 0059'],
 ];
+
+export interface BoardCard {
+  id: number;
+  title: string;
+  type: string;
+  lamp?: Lamp;
+  sessions: number;
+  pr?: 'merged' | 'open';
+}
+
+export interface BoardColumn {
+  status: string;
+  colour: string;
+  count: number;
+  cards: BoardCard[];
+}
+
+/** The Board tab's columns, from the running window: Done shows its ten latest, as the real app does. */
+export const BOARD_COLUMNS: BoardColumn[] = [
+  {
+    status: 'Draft',
+    colour: 'var(--dim)',
+    count: 8,
+    cards: [
+      { id: 169, title: 'A pending comment is anchored against the diff before it is written', type: 'feature', sessions: 0 },
+      { id: 173, title: "The sidecar carries each live session's marker", type: 'feature', sessions: 0 },
+      { id: 179, title: 'The desktop frontend draws a mermaid diagram in a document', type: 'feature', sessions: 0 },
+      { id: 184, title: "A Configuration button edits config.yml: the TUI's options, the plugin's name and the verbs per status", type: 'feature', sessions: 0 },
+      { id: 185, title: 'The panes resize by dragging the seams between them', type: 'feature', sessions: 0 },
+      { id: 200, title: 'Improve UX globally', type: 'feature', sessions: 1 },
+      { id: 206, title: 'g, G and d act in the desktop window, or are no longer bound there', type: 'feature', sessions: 0 },
+      { id: 213, title: 'External links do not work. They do not open the browser.', type: 'fix', sessions: 0 },
+    ],
+  },
+  {
+    status: 'Todo',
+    colour: 'var(--ansi-yellow)',
+    count: 3,
+    cards: [
+      { id: 145, title: 'pty4j leaves a `/tmp/pty4j-linux-x86-64-*` directory behind on every run', type: 'fix', lamp: 'turn', sessions: 2 },
+      { id: 146, title: "A pty spawned with `setInitialColumns(100)`/`setInitialRows(30)` reports `stty size` as `0 0`", type: 'fix', sessions: 0 },
+      { id: 188, title: 'A click on a status line lamp or count goes to its session', type: 'feature', lamp: 'input', sessions: 1 },
+    ],
+  },
+  { status: 'In progress', colour: 'var(--ansi-blue)', count: 0, cards: [] },
+  { status: 'In review', colour: 'var(--ansi-magenta)', count: 0, cards: [] },
+  {
+    status: 'Done',
+    colour: 'var(--ansi-green)',
+    count: 99,
+    cards: [
+      { id: 211, title: "The bundle job caches the Temurin JDK and AppRun downloads so a GitHub 504 does not fail it", type: 'chore', sessions: 1 },
+      { id: 189, title: 'Markdown stays readable on a large screen', type: 'feature', sessions: 2 },
+      { id: 203, title: 'See done tickets in the Base tab, like in the Board tab, to be able to trigger the done step', type: 'feature', sessions: 2 },
+      { id: 197, title: 'Design a better thread part on the pull request tab: see comments more clearly, answer existing ones, and move to a comment in one click', type: 'feature', sessions: 3 },
+      { id: 83, title: 'The desktop frontend ships as a deb and an AppImage', type: 'feature', sessions: 4 },
+      { id: 82, title: 'The desktop frontend captures a draft ticket', type: 'feature', sessions: 2 },
+      { id: 193, title: "The desktop relay's test of lines written together fails about 6 times in 10 on main", type: 'fix', sessions: 1 },
+      { id: 195, title: "Command markup bleeds into session titles, and old sessions pollute an in-progress ticket's sessions", type: 'fix', sessions: 2 },
+      { id: 186, title: 'A shown document closes, and the dock minimises to its tabs', type: 'feature', sessions: 2 },
+      { id: 187, title: 'Tabs switch the window between the base view, the Issues board and the pull requests', type: 'feature', sessions: 2 },
+    ],
+  },
+];

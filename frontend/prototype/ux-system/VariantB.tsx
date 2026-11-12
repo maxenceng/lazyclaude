@@ -1,6 +1,6 @@
 // PROTOTYPE: variant B, "Framed panes". Gutters between opaque panes, the focused one framed and lifted, icon actions in a fixed slot, quit in a window menu. Not shipped.
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { COUNTS, DOCK_TABS, DOCS, FACTS, GROUPS, KEYS, NOTES, LAMP_WORD, PROJECT, SELECTED_DOC, SELECTED_TICKET, TERMINAL, TICKET, TILES, type Pane } from './data';
+import { BOARD_COLUMNS, COUNTS, DOCK_TABS, DOCS, FACTS, GROUPS, type BoardCard, type BoardColumn, KEYS, NOTES, LAMP_WORD, PROJECT, SELECTED_DOC, SELECTED_TICKET, TERMINAL, TICKET, TILES, type Pane } from './data';
 import { DOC_PARAGRAPHS, Inline } from './Inline';
 import type { VariantProps } from './main';
 import './variantB.css';
@@ -80,7 +80,24 @@ export const VariantB = (props: VariantProps) => <FramedWindow {...props} chosen
 
 export type Layout = 'd' | 'e' | 'f' | 'g' | 'h';
 
-export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: VariantProps & { chosen: boolean; layout?: Layout }) => {
+const TYPE_COLOUR: Record<string, string> = { fix: 'var(--ci-failed)', feature: 'var(--ansi-blue)', chore: 'var(--ansi-cyan)' };
+const TYPE_GLYPH: Record<string, string> = { fix: '✕', feature: '◆', chore: '○' };
+
+export type BoardLayout = 'i' | 'j' | 'k';
+
+export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', boardTab = false, onBoardTab, boardLayout = 'i' }: VariantProps & { chosen: boolean; layout?: Layout; boardLayout?: BoardLayout }) => {
+  const [previewOpen, setPreviewOpen] = useState(() => boardLayout !== 'j' || new URLSearchParams(location.search).get('preview') === 'open');
+  useEffect(() => {
+    if (!boardTab || boardLayout === 'i') return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.code === 'Space') {
+        event.preventDefault();
+        setPreviewOpen((o) => !o);
+      } else if (event.code === 'Escape' && boardLayout === 'j') setPreviewOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [boardTab, boardLayout]);
   const [menu, setMenu] = useState(false);
   const [leftTab, setLeftTab] = useState<'board' | 'docs'>('board');
   const [doneOpen, setDoneOpen] = useState(false);
@@ -101,7 +118,15 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: Var
   const pickerRef = useRef<HTMLDivElement>(null);
   const picks = chosen && !documentShown;
   const baseKeys = chosen ? liveKeys(focus, documentShown, picks && picking) : KEYS[focus];
-  const keys = (layout === 'f' || layout === 'h') && leftFocused ? [...baseKeys.slice(0, -1), leftTab === 'board' ? 'o docs' : 'o board', ...baseKeys.slice(-1)] : baseKeys;
+  const boardKeys = [
+    'h/j/k/l move',
+    'enter go to ticket',
+    'n new draft',
+    ...(boardLayout === 'j' ? [previewOpen ? 'esc close preview' : 'space preview'] : []),
+    ...(boardLayout === 'k' ? [previewOpen ? 'space fold preview' : 'space show preview'] : []),
+    '1/2/3 tabs',
+  ];
+  const keys = boardTab ? boardKeys : (layout === 'f' || layout === 'h') && leftFocused ? [...baseKeys.slice(0, -1), leftTab === 'board' ? 'o docs' : 'o board', ...baseKeys.slice(-1)] : baseKeys;
 
   useEffect(() => {
     if (!picks) return undefined;
@@ -251,6 +276,102 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: Var
             </article>
     );
 
+  const card = (c: BoardCard, column: BoardColumn) => {
+    const selected = c.id === SELECTED_TICKET;
+    const classes = ['bt-card', selected ? 'bt-selected' : '', column.status === 'Draft' ? 'bt-draft' : '', column.status === 'Done' ? 'bt-done' : '', c.lamp !== undefined ? `bt-waiting bt-w-${c.lamp}` : ''].join(' ');
+    const style = { ['--type' as string]: TYPE_COLOUR[c.type] };
+    const wait = c.lamp !== undefined && <span className={`vl-wait vb-t-${c.lamp}`}>{LAMP_WORD[c.lamp]}</span>;
+    if (boardLayout === 'k') {
+      return (
+        <div key={c.id} data-row className={classes} style={style} onClick={() => setPreviewOpen(true)}>
+          <span className="bt-glyph">{TYPE_GLYPH[c.type]}</span>
+          <span className="bt-id">{c.id}</span>
+          <span className="bt-title">
+            <Inline text={c.title} />
+          </span>
+          {wait}
+        </div>
+      );
+    }
+    return (
+      <div key={c.id} data-row className={classes} style={style} onClick={() => setPreviewOpen(true)}>
+        <span className="bt-title">
+          <Inline text={c.title} />
+        </span>
+        <span className="bt-meta">
+          <span className="bt-id">{c.id}</span>
+          <span className="bt-type">{c.type}</span>
+          {boardLayout === 'j' && <span className="bt-sessions">{c.sessions === 0 ? 'no session' : `${c.sessions} session${c.sessions === 1 ? '' : 's'}`}</span>}
+          <span className="bt-spring" />
+          {wait}
+        </span>
+      </div>
+    );
+  };
+  const columns = (
+    <div className={`bt-columns bt-columns-${boardLayout}`}>
+      {BOARD_COLUMNS.map((column) =>
+        boardLayout === 'k' && column.count === 0 ? (
+          <div key={column.status} className="bt-strip" style={{ ['--g' as string]: column.colour }} title={`${column.status}: none`}>
+            <span>{column.status}</span>
+            <b>0</b>
+          </div>
+        ) : (
+          <section key={column.status} className={`bt-column ${column.status === 'Done' ? 'bt-column-done' : ''}`} style={{ ['--g' as string]: column.colour }}>
+            <header className="bt-column-head">
+              <span>{column.status}</span>
+              <span>{column.status === 'Done' ? `10 of ${column.count}` : column.count}</span>
+            </header>
+            <div className="bt-cards">{column.cards.length === 0 ? <p className="bt-empty">none</p> : column.cards.map((c) => card(c, column))}</div>
+          </section>
+        ),
+      )}
+    </div>
+  );
+  const preview = (
+    <article className="vb-reading vg-centre bt-preview-body">
+      <header className="vg-head">
+        {heading}
+        {facts}
+      </header>
+      {sessionsList}
+      <div className="vg-prose">{criteria}</div>
+    </article>
+  );
+  const boardTabMain = (
+    <main className={`bt-main bt-main-${boardLayout}`}>
+      <Frame pane="board" focus={focus} title="Board" className="bt-board" wholeRows actions={<Icon glyph="add" label="New draft ticket (n)" />}>
+        {columns}
+      </Frame>
+      {boardLayout === 'i' && (
+        <Frame pane="ticket" focus={focus} title="Ticket" className="bt-side" sub={<span className="vb-sub">#{TICKET.id}</span>}>
+          {preview}
+        </Frame>
+      )}
+      {boardLayout === 'j' && previewOpen && (
+        <div className="bt-drawer">
+          <Frame pane="ticket" focus={focus} title="Ticket" sub={<span className="vb-sub">#{TICKET.id}</span>} actions={<Icon glyph="close" label="Close the preview (esc)" />}>
+            {preview}
+          </Frame>
+        </div>
+      )}
+      {boardLayout === 'k' && (
+        <section className={`bt-bottom ${previewOpen ? '' : 'bt-folded'} ${focus === 'ticket' ? 'vb-focused' : ''} vb-pane`}>
+          <header className="vb-title" onClick={() => setPreviewOpen((o) => !o)}>
+            <h2>Ticket</h2>
+            <span className="vb-sub">
+              #{TICKET.id} · <Inline text={TICKET.title} />
+            </span>
+            <span className="vb-slot">
+              <Icon glyph={previewOpen ? 'minimise' : 'restore'} label={previewOpen ? 'Fold the preview (space)' : 'Show the preview (space)'} />
+            </span>
+          </header>
+          {previewOpen && <div className="vb-body">{preview}</div>}
+        </section>
+      )}
+    </main>
+  );
+
   const boardRows = (
     <>
           {GROUPS.map((group) => (
@@ -319,8 +440,10 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: Var
           )}
         </div>
         <div className="vb-tabs">
-          <button className="vb-tab vb-tab-on">Base</button>
-          <button className="vb-tab">
+          <button className={`vb-tab ${boardTab ? '' : 'vb-tab-on'}`} onClick={() => onBoardTab?.(false)}>
+            Base
+          </button>
+          <button className={`vb-tab ${boardTab ? 'vb-tab-on' : ''}`} onClick={() => onBoardTab?.(true)}>
             Board
             <span className="vb-badge vb-badge-blue" title="Tickets in progress">
               1 <small>in progress</small>
@@ -350,6 +473,9 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: Var
         </div>
       </nav>
 
+      {boardTab ? (
+        boardTabMain
+      ) : (
       <main className="vb-grid">
         {layout === 'f' || layout === 'h' ? (
           <Frame
@@ -496,6 +622,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd' }: Var
           </pre>
         </Frame>
       </main>
+      )}
 
       <footer className="vb-keybar">
         {keys.map((k) => {

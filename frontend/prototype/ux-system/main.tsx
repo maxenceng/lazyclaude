@@ -8,11 +8,13 @@ import { VariantA } from './VariantA';
 import { VariantB } from './VariantB';
 import { VariantC } from './VariantC';
 import { VariantD } from './VariantD';
-import { VariantE, VariantF, VariantG, VariantH } from './VariantLayouts';
+import { VariantE, VariantF, VariantG, VariantH, VariantI, VariantJ, VariantK } from './VariantLayouts';
 
 export interface VariantProps {
   focus: Pane;
   documentShown: boolean;
+  boardTab?: boolean;
+  onBoardTab?: (on: boolean) => void;
 }
 
 const VARIANTS = [
@@ -24,9 +26,14 @@ const VARIANTS = [
   { key: 'F', name: 'Board and Docs as tabs', Component: VariantF },
   { key: 'G', name: 'Docs in a rail', Component: VariantG },
   { key: 'H', name: 'Chosen layout', Component: VariantH },
+  { key: 'I', name: 'Board tab: side preview', Component: VariantI },
+  { key: 'J', name: 'Board tab: preview on demand', Component: VariantJ },
+  { key: 'K', name: 'Board tab: compact, folded', Component: VariantK },
 ];
 
-const DEFAULT = VARIANTS.findIndex((v) => v.key === 'H');
+const HAS_BOARD_TAB = new Set(['I', 'J', 'K']);
+
+const DEFAULT = VARIANTS.findIndex((v) => v.key === 'I');
 
 const initial = () => {
   const wanted = new URLSearchParams(location.search).get('variant');
@@ -40,6 +47,7 @@ const Prototype = () => {
   const [index, setIndex] = useState(initial);
   const [focus, setFocus] = useState<Pane>(() => PANES.find((p) => p === new URLSearchParams(location.search).get('focus')) ?? 'board');
   const [documentShown, setDocumentShown] = useState(() => new URLSearchParams(location.search).get('doc') === 'open');
+  const [boardTab, setBoardTab] = useState(() => new URLSearchParams(location.search).get('tab') !== 'base');
   const variant = VARIANTS[index] ?? VARIANTS[DEFAULT]!;
 
   useEffect(() => {
@@ -65,7 +73,7 @@ const Prototype = () => {
   const { Component } = variant;
   return (
     <>
-      <Component focus={focus} documentShown={documentShown} />
+      <Component focus={focus} documentShown={documentShown} boardTab={HAS_BOARD_TAB.has(variant.key) && boardTab} onBoardTab={setBoardTab} />
       <div className="proto-switcher">
         <button onClick={() => setIndex((i) => (i + VARIANTS.length - 1) % VARIANTS.length)}>←</button>
         <span className="proto-label">
@@ -82,6 +90,11 @@ const Prototype = () => {
         <button className={documentShown ? 'proto-on' : ''} onClick={() => setDocumentShown((d) => !d)}>
           doc shown
         </button>
+        {HAS_BOARD_TAB.has(variant.key) && (
+          <button className={boardTab ? 'proto-on' : ''} onClick={() => setBoardTab((b) => !b)}>
+            board tab
+          </button>
+        )}
         <span className="proto-hint">←/→ variant · Tab focus · d doc</span>
       </div>
     </>
