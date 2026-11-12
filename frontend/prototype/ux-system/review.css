@@ -881,3 +881,22 @@
   display: flex;
   gap: 4px;
 }
+.rv-table-r4 {
+  grid-template-columns: 120px 64px minmax(0, 1fr) 220px 190px 60px;
+}
+.rv-table-r4 .rv-count-words {
+  color: var(--card-dim);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.rv-table-r4 .rv-head,
+.rv-table-r4 .rv-age,
+.rv-table-r4 .rv-trow .rv-title small {
+  color: var(--card-dim);
+}
+.rv-table-r4 .rv-ci-none {
+  color: var(--card-dim);
+}
+.rv-table-r4 .rv-stripe-none > :first-child {
+  border-left-color: var(--seam);
+}

@@ -76,12 +76,7 @@ const PrList = ({ variant, focus, empty, onOpen }: Props) => {
     </div>
   );
   const body =
-    variant === 'r4' ? (
-      <>
-        {list.length === 0 && <p className="rv-none">No open pull requests.</p>}
-        {groups}
-      </>
-    ) : list.length === 0 ? (
+    list.length === 0 ? (
       <p className="rv-none">No open pull requests.</p>
     ) : variant === 'r0' ? (
       <div className="rv-list0">
@@ -99,7 +94,7 @@ const PrList = ({ variant, focus, empty, onOpen }: Props) => {
     ) : variant === 'r2' ? (
       groups
     ) : (
-      <div className={`rv-table rv-table-${variant}`}>
+      <div className={`rv-table rv-table-${variant} ${variant === 'r4' ? 'rv-table-r3' : ''}`}>
         <div className="rv-thead">
           <span>CI</span>
           <span>ticket</span>
@@ -117,7 +112,14 @@ const PrList = ({ variant, focus, empty, onOpen }: Props) => {
               <small>#{pr.number}</small>
             </span>
             <span className="rv-head">{pr.head}</span>
-            <span className="rv-count">{pr.comments === 0 ? '—' : `💬 ${pr.comments}`}</span>
+            {variant === 'r4' ? (
+              <span className="rv-count rv-count-words">
+                {pr.comments === 0 ? 'no comments' : `${pr.comments} comment${pr.comments === 1 ? '' : 's'}`}
+                {pr.number === 217 && <span className="rv-badge rv-badge-pending">{`${PENDING_REVIEW.count} pending`}</span>}
+              </span>
+            ) : (
+              <span className="rv-count">{pr.comments === 0 ? '—' : `💬 ${pr.comments}`}</span>
+            )}
             <span className="rv-age">{pr.age}</span>
           </div>
         ))}
