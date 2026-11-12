@@ -1,0 +1,274 @@
+/* PROTOTYPE: variant C, "Terminal boxes". lazygit-like boxes, mono, dense; the focused box's border is coloured. Not shipped. */
+.vc {
+  --c-ground: #111213;
+  --c-line: #3a3b3f;
+  --c-focus: var(--ansi-green);
+  --c-off-ink: #a3a49f;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 34px 1fr 26px;
+  background: var(--c-ground);
+  color: var(--text);
+  font: 400 13px/1.45 var(--font-mono);
+}
+.vc b {
+  font-weight: 600;
+}
+.vc-dimmed {
+  color: var(--dim);
+}
+.vc-spring {
+  flex: 1;
+}
+
+.vc-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  white-space: pre;
+}
+.vc-tab {
+  color: var(--dim);
+}
+.vc-tab-on {
+  color: var(--c-ground);
+  background: var(--c-focus);
+  padding: 0 6px;
+  font-weight: 600;
+}
+.vc-sep {
+  color: var(--c-line);
+}
+.vc-count {
+  white-space: pre;
+}
+.vc-zero {
+  color: var(--dim);
+}
+.vc-ink-permission {
+  color: var(--lamp-permission);
+}
+.vc-ink-input {
+  color: var(--lamp-input);
+}
+.vc-ink-turn {
+  color: var(--lamp-turn);
+}
+.vc-ink-off {
+  color: var(--lamp-off-ink);
+}
+.vc-tile {
+  display: grid;
+  grid-template-rows: 14px 11px;
+  width: 92px;
+  padding: 2px 6px;
+  line-height: 14px;
+}
+.vc-tile small {
+  font-size: 10px;
+  line-height: 11px;
+}
+.vc-bg-turn {
+  background: var(--lamp-turn);
+  color: var(--lamp-turn-ink);
+}
+.vc-bg-input {
+  background: var(--lamp-input);
+  color: var(--lamp-input-ink);
+}
+.vc-bg-permission {
+  background: var(--lamp-permission);
+  color: var(--lamp-permission-ink);
+}
+.vc-bg-off {
+  background: var(--lamp-off);
+  color: var(--c-off-ink);
+}
+
+.vc-grid {
+  display: grid;
+  grid-template-columns: minmax(380px, 32%) 1fr;
+  grid-template-rows: 3fr 2fr;
+  grid-template-areas: 'board main' 'docs dock';
+  gap: 16px 8px;
+  padding: 10px 8px 12px;
+  min-height: 0;
+}
+.vc-board {
+  grid-area: board;
+}
+.vc-docs {
+  grid-area: docs;
+}
+.vc-main {
+  grid-area: main;
+}
+.vc-dock {
+  grid-area: dock;
+}
+.vc-box {
+  position: relative;
+  border: 1px solid var(--c-line);
+  border-radius: 4px;
+  min-height: 0;
+  padding: 10px 0 12px;
+  color: color-mix(in srgb, var(--text) 75%, var(--c-ground));
+}
+.vc-box.vc-focused {
+  border-color: var(--c-focus);
+  color: var(--text);
+}
+.vc-legend,
+.vc-hints {
+  position: absolute;
+  left: 10px;
+  padding: 0 4px;
+  background: var(--c-ground);
+  white-space: pre;
+  line-height: 1;
+}
+.vc-legend {
+  top: -7px;
+  max-width: calc(100% - 20px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vc-focused .vc-legend {
+  color: var(--c-focus);
+  font-weight: 600;
+}
+.vc-n {
+  color: var(--dim);
+}
+.vc-focused .vc-n {
+  color: var(--c-focus);
+}
+.vc-hints {
+  bottom: -7px;
+  right: 10px;
+  left: auto;
+  display: flex;
+  gap: 8px;
+}
+.vc-hint {
+  all: unset;
+  cursor: pointer;
+  color: var(--dim);
+}
+.vc-hint b {
+  color: var(--text);
+}
+.vc-hint:hover {
+  color: var(--text);
+}
+.vc-body {
+  height: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.vc-group {
+  padding: 4px 8px 0;
+  font-size: 12px;
+  white-space: pre;
+}
+.vc-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 8px;
+  white-space: pre;
+}
+.vc-mark {
+  width: 1ch;
+  color: var(--c-focus);
+}
+.vc-id {
+  color: var(--dim);
+}
+.vc-row-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vc-done {
+  color: var(--dim-done);
+}
+.vc-selected {
+  font-weight: 600;
+  color: var(--text);
+}
+.vc-focused .vc-selected {
+  background: var(--c-focus);
+  color: var(--c-ground);
+}
+.vc-focused .vc-selected .vc-id,
+.vc-focused .vc-selected .vc-mark,
+.vc-focused .vc-selected .vc-dimmed,
+.vc-focused .vc-selected [class^='vc-ink-'] {
+  color: var(--c-ground);
+}
+
+.vc-reading {
+  padding: 8px 16px;
+  max-width: 120ch;
+  font: 400 15px/1.55 var(--font-read);
+  overflow: hidden;
+  height: 100%;
+}
+.vc-reading h1 {
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 600;
+  margin: 4px 0 12px;
+}
+.vc-reading .vc-row {
+  font: 400 13px/1.6 var(--font-mono);
+  padding: 0 4px;
+}
+.vc-h {
+  font: 600 12px var(--font-mono);
+  color: var(--dim);
+  margin: 14px 0 4px;
+}
+.vc-h::before {
+  content: '── ';
+}
+.vc-reading ul {
+  padding-left: 18px;
+}
+.vc-reading li,
+.vc-reading p {
+  margin-bottom: 6px;
+}
+.vc-reading code {
+  font: 400 0.88em var(--font-mono);
+  color: var(--ansi-bright-cyan);
+}
+.vc-docktab {
+  color: var(--dim);
+  font-weight: 400;
+}
+.vc-docktab-on {
+  color: var(--text);
+  text-decoration: underline;
+}
+.vc-terminal {
+  margin: 0;
+  padding: 2px 12px;
+  color: var(--ansi-white);
+  font: inherit;
+}
+
+.vc-keybar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 0 12px;
+  color: var(--dim);
+  font-size: 12px;
+  white-space: pre;
+}
+.vc-keybar b {
+  color: var(--c-focus);
+}

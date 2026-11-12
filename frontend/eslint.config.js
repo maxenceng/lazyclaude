@@ -54,7 +54,7 @@ const NAMED_VALUE_SETS = [
 ];
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'src-tauri', 'src/protocol/generated'] },
+  { ignores: ['dist', 'node_modules', 'src-tauri', 'src/protocol/generated', 'prototype'] },
   ...tseslint.configs.strictTypeChecked,
   jsxA11y.flatConfigs.recommended,
   reactHooks.configs.flat.recommended,

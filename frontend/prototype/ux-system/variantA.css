@@ -1,0 +1,383 @@
+/* PROTOTYPE: variant A, "Lit title". Opaque grounds, unfocused panes recede, the focused title row is lit. Not shipped. */
+.va {
+  --a-ground: #121314;
+  --a-pane: #1a1b1d;
+  --a-rest: #9a978f;
+  --a-lit: #e6e2d8;
+  --a-lit-ink: #121314;
+  --a-off-ink: #a3a49f;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--a-ground);
+  color: var(--text);
+  font: 400 14px/1.4 var(--font-read);
+}
+.va kbd {
+  font: 400 11px var(--font-mono);
+  padding: 0 4px;
+  margin-right: 5px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+/* status line: tabs | session tiles | lamp counts | project ‖ quit */
+.va-status {
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+  padding: 0 0 0 12px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--seam);
+  height: 52px;
+}
+.va-tabs {
+  display: flex;
+  gap: 2px;
+  align-items: stretch;
+}
+.va-tab {
+  all: unset;
+  cursor: pointer;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--a-rest);
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+.va-tab-on {
+  color: var(--a-lit);
+  border-bottom-color: var(--a-lit);
+}
+.va-tab-finding {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--dim);
+}
+.va-tiles {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.va-tile {
+  width: 92px;
+  height: 40px;
+  display: grid;
+  grid-template-rows: 22px 14px;
+  align-content: center;
+  padding: 0 10px;
+  border-radius: 3px;
+}
+.va-tile-number {
+  font: 600 17px/22px var(--font-mono);
+}
+.va-tile-note {
+  font-size: 11px;
+  line-height: 14px;
+}
+.va-tile.va-lamp-turn {
+  background: var(--lamp-turn);
+  color: var(--lamp-turn-ink);
+}
+.va-tile.va-lamp-input {
+  background: var(--lamp-input);
+  color: var(--lamp-input-ink);
+}
+.va-tile.va-lamp-permission {
+  background: var(--lamp-permission);
+  color: var(--lamp-permission-ink);
+}
+.va-tile.va-lamp-off {
+  background: var(--lamp-off);
+  color: var(--a-off-ink);
+}
+.va-counts {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-left: auto;
+  font-size: 12px;
+}
+.va-count {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.va-count i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.va-count-zero {
+  color: var(--dim);
+}
+.va-count-permission i {
+  background: var(--lamp-permission);
+}
+.va-count-input i {
+  background: var(--lamp-input);
+}
+.va-count-turn i {
+  background: var(--lamp-turn);
+}
+.va-project {
+  align-self: center;
+  font: 400 12px var(--font-mono);
+  color: var(--dim);
+}
+.va-quit {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-left: 1px solid var(--seam);
+  color: var(--a-rest);
+  font-weight: 600;
+}
+.va-quit:hover {
+  background: var(--lamp-permission);
+  color: var(--lamp-permission-ink);
+}
+
+/* grid */
+.va-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 30%) 1fr;
+  gap: 1px;
+  background: var(--seam);
+  min-height: 0;
+}
+.va-left,
+.va-right {
+  display: grid;
+  gap: 1px;
+  min-height: 0;
+}
+.va-left {
+  grid-template-rows: 3fr 2fr;
+}
+.va-right {
+  grid-template-rows: 1fr 300px;
+}
+.va-pane {
+  display: grid;
+  grid-template-rows: 32px 1fr;
+  background: var(--a-pane);
+  min-height: 0;
+  color: var(--a-rest);
+}
+.va-pane.va-focused {
+  color: var(--text);
+}
+.va-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--seam);
+}
+.va-title h2 {
+  font: 400 14px var(--font-stencil);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.va-title-count {
+  font: 400 12px var(--font-mono);
+  opacity: 0.8;
+}
+.va-focused .va-title {
+  background: var(--a-lit);
+  color: var(--a-lit-ink);
+  border-bottom-color: var(--a-lit);
+}
+.va-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: 8px;
+  flex: 1;
+}
+.va-action {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px 2px 4px;
+  border-radius: 2px;
+}
+.va-action:hover {
+  background: rgb(127 127 127 / 0.2);
+}
+.va-body {
+  overflow: auto;
+  scrollbar-width: thin;
+  min-height: 0;
+}
+
+/* rows */
+.va-group-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.va-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px;
+  margin: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.va-row-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.va-id {
+  font: 400 12px var(--font-mono);
+  color: var(--dim);
+  min-width: 28px;
+}
+.va-done {
+  color: var(--dim-done);
+}
+.va-selected {
+  border-color: var(--a-rest);
+}
+.va-focused .va-selected {
+  background: var(--selected);
+  color: var(--text-on-light);
+  border-color: var(--selected);
+}
+.va-focused .va-selected .va-id {
+  color: var(--text-on-light);
+}
+.va-fold {
+  width: 10px;
+  color: var(--dim);
+}
+.va-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.va-dot.va-lamp-turn {
+  background: var(--lamp-turn);
+}
+.va-dot.va-lamp-input {
+  background: var(--lamp-input);
+}
+.va-dot.va-lamp-off {
+  background: var(--lamp-off-ink);
+}
+.va-dot.va-lamp-permission {
+  background: var(--lamp-permission);
+}
+
+/* reading */
+.va-reading {
+  padding: 18px 28px;
+  max-width: 110ch;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.va-reading h1 {
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 600;
+  margin: 8px 0 18px;
+}
+.va-reading h3 {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 18px 0 6px;
+}
+.va-reading p,
+.va-reading li {
+  margin-bottom: 8px;
+}
+.va-reading ul {
+  padding-left: 18px;
+}
+.va-reading code {
+  font: 400 0.9em var(--font-mono);
+  background: var(--pane-sunk);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+.va-chips {
+  display: flex;
+  gap: 6px;
+}
+.va-chip {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border: 1px solid var(--seam);
+  border-radius: 2px;
+}
+.va-chip-status {
+  border-color: var(--ansi-yellow);
+  color: var(--ansi-yellow);
+}
+.va-session {
+  margin: 0;
+  padding-left: 8px;
+}
+.va-new {
+  color: var(--dim);
+}
+
+/* dock */
+.va-docktabs {
+  display: flex;
+  gap: 4px;
+  margin-right: 8px;
+}
+.va-docktab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 400 12px var(--font-mono);
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+.va-docktab-on {
+  outline: 1px solid currentColor;
+}
+.va-terminal {
+  margin: 0;
+  padding: 10px 14px;
+  height: 100%;
+  background: var(--terminal-ground);
+  color: var(--ansi-white);
+  font: 400 13px/1.35 var(--font-mono);
+}
+
+.va-keybar {
+  display: flex;
+  gap: 18px;
+  padding: 6px 12px;
+  background: var(--bar);
+  border-top: 1px solid var(--seam);
+  font-size: 12px;
+  color: var(--a-rest);
+}

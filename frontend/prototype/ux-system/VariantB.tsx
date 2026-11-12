@@ -1,0 +1,227 @@
+// PROTOTYPE: variant B, "Framed panes". Gutters between opaque panes, the focused one framed and lifted, icon actions in a fixed slot, quit in a window menu. Not shipped.
+import { useState, type ReactNode } from 'react';
+import { COUNTS, DOCK_TABS, DOCS, GROUPS, KEYS, LAMP_WORD, PROJECT, SELECTED_DOC, SELECTED_TICKET, TERMINAL, TICKET, TILES, type Pane } from './data';
+import { DOC_PARAGRAPHS, Inline } from './Inline';
+import type { VariantProps } from './main';
+import './variantB.css';
+
+type Glyph = 'close' | 'hide' | 'minimise' | 'restore' | 'add' | 'zoom';
+
+/** Each action its own shape: close is the only cross; hide slides the main view away; minimise folds down to a line. */
+const PATHS: Record<Glyph, string> = {
+  close: 'M3 3 L11 11 M11 3 L3 11',
+  hide: 'M2 2 H12 V12 H2 Z M8 2 V12 M5.5 5.5 L3.5 7 L5.5 8.5',
+  minimise: 'M2 11 H12',
+  restore: 'M2 3 H12 V12 H2 Z M2 5.5 H12',
+  add: 'M7 2 V12 M2 7 H12',
+  zoom: 'M2 5 V2 H5 M9 2 H12 V5 M12 9 V12 H9 M5 12 H2 V9',
+};
+
+const Icon = ({ glyph, label }: { glyph: Glyph; label: string }) => (
+  <button className="vb-icon" title={label} aria-label={label}>
+    <svg viewBox="0 0 14 14" aria-hidden="true">
+      <path d={PATHS[glyph]} />
+    </svg>
+  </button>
+);
+
+const Frame = ({ pane, focus, title, sub, actions, children, className }: { pane: Pane; focus: Pane; title: string; sub?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) => (
+  <section className={`vb-pane ${pane === focus ? 'vb-focused' : ''} ${className ?? ''}`}>
+    <header className="vb-title">
+      <h2>{title}</h2>
+      {sub}
+      <span className="vb-slot">{actions}</span>
+    </header>
+    <div className="vb-body">{children}</div>
+  </section>
+);
+
+export const VariantB = ({ focus, documentShown }: VariantProps) => {
+  const [menu, setMenu] = useState(false);
+  return (
+    <div className="vb">
+      <nav className="vb-status">
+        <div className="vb-menu-wrap">
+          <button className="vb-menu" onClick={() => setMenu((m) => !m)} aria-label="Window menu">
+            <span className="vb-brand">lazyclaude</span>
+            <svg viewBox="0 0 10 10" aria-hidden="true">
+              <path d="M2 4 L5 7 L8 4" />
+            </svg>
+          </button>
+          {menu && (
+            <div className="vb-menu-list">
+              <div>
+                Settings… <kbd>,</kbd>
+              </div>
+              <div>
+                Help <kbd>?</kbd>
+              </div>
+              <hr />
+              <div className="vb-menu-quit">
+                Quit lazyclaude <kbd>q</kbd>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="vb-tabs">
+          <button className="vb-tab vb-tab-on">Base</button>
+          <button className="vb-tab">
+            Board
+            <span className="vb-badge vb-badge-blue" title="Tickets in progress">
+              1 <small>in progress</small>
+            </span>
+          </button>
+          <button className="vb-tab">
+            Pull requests
+            <span className="vb-badge" title="Open pull requests">
+              0 <small>open</small>
+            </span>
+          </button>
+        </div>
+        <span className="vb-project">{PROJECT}</span>
+        <div className="vb-sessions">
+          {COUNTS.map((c) => (
+            <span key={c.lamp} className={`vb-count vb-c-${c.lamp} ${c.count === 0 ? 'vb-zero' : ''}`} title={c.word}>
+              {c.count} <small>{c.word}</small>
+            </span>
+          ))}
+          <span className="vb-divider" />
+          {TILES.map((tile) => (
+            <div key={tile.ticket} className={`vb-tile vb-t-${tile.lamp}`}>
+              <b>{tile.ticket}</b>
+              <small>{tile.note ?? LAMP_WORD[tile.lamp]}</small>
+            </div>
+          ))}
+        </div>
+      </nav>
+
+      <main className="vb-grid">
+        <Frame pane="board" focus={focus} title="Board" className="vb-board" actions={<Icon glyph="add" label="New draft ticket (n)" />}>
+          {GROUPS.map((group) => (
+            <div key={group.status} className="vb-group" style={{ ['--g' as string]: group.colour }}>
+              <div className="vb-group-head">
+                <span>{group.status}</span>
+                <span>{group.count}</span>
+              </div>
+              {group.rows.map((row) => (
+                <div key={row.id} className={`vb-row ${row.id === SELECTED_TICKET ? 'vb-selected' : ''} ${group.status === 'Done' ? 'vb-done' : ''}`}>
+                  <span className="vb-id">{row.id}</span>
+                  <span className="vb-row-title">
+                    <Inline text={row.title} />
+                  </span>
+                  <span className={`vb-type vb-type-${row.type}`}>{row.type}</span>
+                  {row.lamp !== undefined && <i className={`vb-dot vb-t-${row.lamp}`} />}
+                </div>
+              ))}
+            </div>
+          ))}
+        </Frame>
+        <Frame pane="docs" focus={focus} title="Docs" className="vb-docs">
+          {DOCS.map((doc, index) => (
+            <div key={index} className={`vb-row ${index === SELECTED_DOC ? 'vb-selected' : ''}`} style={{ paddingLeft: `${12 + doc.depth * 16}px` }}>
+              {doc.folder !== undefined && <span className="vb-fold">{doc.folder.open ? '▾' : '▸'}</span>}
+              <span className="vb-row-title">{doc.name}</span>
+              {doc.folder !== undefined && <span className="vb-id">{doc.folder.count}</span>}
+            </div>
+          ))}
+        </Frame>
+
+        {documentShown ? (
+          <Frame pane="ticket" focus={focus} title="Document" className="vb-main" sub={<span className="vb-sub">research / embedding-claude-on-a-pty.md</span>} actions={<Icon glyph="close" label="Close document (esc)" />}>
+            <article className="vb-reading">
+              <h1>Embedding Claude on a pty</h1>
+              {DOC_PARAGRAPHS.map((p) => (
+                <p key={p}>
+                  <Inline text={p} />
+                </p>
+              ))}
+            </article>
+          </Frame>
+        ) : (
+          <Frame
+            pane="ticket"
+            focus={focus}
+            title="Ticket"
+            className="vb-main"
+            sub={
+              <span className="vb-sub">
+                <span className="vb-pill vb-pill-todo">todo</span>
+                <span className="vb-pill">session</span>
+                <span className="vb-pill vb-type-fix">fix</span>
+              </span>
+            }
+            actions={<Icon glyph="hide" label="Hide the main view (m)" />}
+          >
+            <article className="vb-reading">
+              <p className="vb-kicker">#{TICKET.id}</p>
+              <h1>
+                <Inline text={TICKET.title} />
+              </h1>
+              <div className="vb-sessions-list">
+                {TICKET.sessions.map((s) => (
+                  <div key={s.name} className={`vb-session vb-s-${s.lamp}`}>
+                    <i className={`vb-dot vb-t-${s.lamp}`} />
+                    <span>{s.name}</span>
+                    <small>
+                      {s.state} · {s.age}
+                    </small>
+                  </div>
+                ))}
+                <div className="vb-session vb-session-new">
+                  <svg viewBox="0 0 14 14" aria-hidden="true">
+                    <path d={PATHS.add} />
+                  </svg>
+                  new session
+                </div>
+              </div>
+              <h3>Acceptance criteria</h3>
+              <ul>
+                {TICKET.criteria.map((c) => (
+                  <li key={c}>
+                    <Inline text={c} />
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </Frame>
+        )}
+
+        <Frame
+          pane="dock"
+          focus={focus}
+          title="Sessions"
+          className="vb-dock"
+          sub={
+            <span className="vb-docktabs">
+              {DOCK_TABS.map((tab, i) => (
+                <span key={tab.ticket} className={`vb-docktab ${i === 0 ? 'vb-docktab-on' : ''}`}>
+                  <i className={`vb-dot vb-t-${tab.lamp}`} />
+                  {tab.label}
+                </span>
+              ))}
+            </span>
+          }
+          actions={
+            <>
+              <Icon glyph="zoom" label="Zoom the dock (alt+z)" />
+              <Icon glyph="minimise" label="Fold the dock to its tabs (M)" />
+            </>
+          }
+        >
+          <pre className="vb-terminal">{TERMINAL.join('\n')}</pre>
+        </Frame>
+      </main>
+
+      <footer className="vb-keybar">
+        {KEYS[focus].map((k) => {
+          const [key, ...rest] = k.split(' ');
+          return (
+            <span key={k}>
+              <kbd>{key}</kbd> {rest.join(' ')}
+            </span>
+          );
+        })}
+      </footer>
+    </div>
+  );
+};
