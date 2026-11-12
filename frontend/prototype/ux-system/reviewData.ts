@@ -31,13 +31,15 @@ export interface ChangedFile {
   removed: number;
   threads: number;
   pending: number;
+  /** Threads whose line is gone from the diff: R4 shows them at the top of the file. */
+  outdated?: number;
 }
 
 const JAVA = 'src/main/java/dev/maxenceng/lazyclaude/session/infrastructure/secondary/';
 
 export const FILES: ChangedFile[] = [
   { path: `${JAVA}PtyNativeFolder.java`, change: 'A', added: 64, removed: 0, threads: 1, pending: 1 },
-  { path: `${JAVA}Pty4jHost.java`, change: 'M', added: 9, removed: 4, threads: 0, pending: 0 },
+  { path: `${JAVA}Pty4jHost.java`, change: 'M', added: 9, removed: 4, threads: 0, pending: 0, outdated: 1 },
   { path: 'src/main/java/dev/maxenceng/lazyclaude/Contexts.java', change: 'M', added: 3, removed: 1, threads: 0, pending: 0 },
   { path: 'src/test/java/dev/maxenceng/lazyclaude/session/infrastructure/secondary/PtyNativeFolderTest.java', change: 'A', added: 88, removed: 0, threads: 0, pending: 0 },
   { path: 'docs/adr/0101-pty4j-natives-live-in-the-cache-not-in-tmp.md', change: 'A', added: 31, removed: 0, threads: 0, pending: 0 },
@@ -56,6 +58,8 @@ export interface Thread {
   line: number;
   resolved: boolean;
   pending: boolean;
+  /** Written on a line the diff no longer has. */
+  outdated?: boolean;
   comments: Comment[];
 }
 
@@ -87,6 +91,21 @@ export const THREADS: Thread[] = [
     resolved: false,
     pending: true,
     comments: [{ author: 'you', body: 'The warning should name the directory it tried, not only the reason: "pty4j natives stay in /tmp: ~/.cache/lazyclaude/pty4j is read-only".', age: 'now' }],
+  },
+];
+
+export const OUTDATED_THREADS: Thread[] = [
+  {
+    id: 'o1',
+    file: 1,
+    line: 97,
+    resolved: false,
+    pending: false,
+    outdated: true,
+    comments: [
+      { author: 'maxenceng', body: '`setDirectory` gets the project root here, not the ticket worktree. On purpose?', age: '1d' },
+      { author: 'claude', body: 'No: fixed in the next commit, the spawn request now carries the worktree.', age: '22h' },
+    ],
   },
 ];
 

@@ -2,7 +2,7 @@
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import type { Pane } from './data';
 import { Inline } from './Inline';
-import { CI_GLYPH, CI_WORD, CURSOR_LINE, DIFF, FILES, PENDING_REVIEW, PULL_REQUESTS, THREADS, fileDir, fileName, threadById, type DiffRow, type Thread } from './reviewData';
+import { CI_GLYPH, CI_WORD, CURSOR_LINE, DIFF, FILES, OUTDATED_THREADS, PENDING_REVIEW, PULL_REQUESTS, THREADS, fileDir, fileName, threadById, type DiffRow, type Thread } from './reviewData';
 import { Frame, Icon } from './VariantB';
 import './review.css';
 
@@ -200,7 +200,7 @@ const FileList = ({ selected, tree, words = false }: { selected: number; tree: b
         )}
         {words ? (
           <span className="rv-badges">
-            {f.threads > 0 && <span className="rv-badge">{`${f.threads} thread${f.threads === 1 ? '' : 's'}`}</span>}
+            {f.threads + (f.outdated ?? 0) > 0 && <span className="rv-badge">{`${f.threads + (f.outdated ?? 0)} thread${f.threads + (f.outdated ?? 0) === 1 ? '' : 's'}`}</span>}
             {f.pending > 0 && <span className="rv-badge rv-badge-pending">{`${f.pending} pending`}</span>}
           </span>
         ) : (
@@ -216,7 +216,7 @@ const FileList = ({ selected, tree, words = false }: { selected: number; tree: b
 
 const ThreadCard = ({ thread, compact, current }: { thread: Thread; compact: boolean; current?: boolean }) => {
   const file = FILES[thread.file]!;
-  const where = `${fileName(file.path)}:${thread.line}`;
+  const where = thread.outdated ? fileName(file.path) : `${fileName(file.path)}:${thread.line}`;
   if (thread.resolved && compact) {
     return (
       <div className="rv-thread rv-resolved">
@@ -230,7 +230,7 @@ const ThreadCard = ({ thread, compact, current }: { thread: Thread; compact: boo
     <div className={`rv-thread ${thread.pending ? 'rv-pending' : ''} ${thread.resolved ? 'rv-resolved-open' : ''} ${current ? 'rv-current' : ''}`}>
       <div className="rv-thread-head">
         <span className="rv-where">{where}</span>
-        {thread.pending ? <span className="rv-tag rv-tag-pending">pending · not submitted</span> : thread.resolved ? <span className="rv-tag rv-tag-ok">✓ resolved</span> : <span className="rv-tag">open · {thread.comments.length} comments</span>}
+        {thread.outdated ? <span className="rv-tag rv-tag-outdated">outdated · was line {thread.line}</span> : thread.pending ? <span className="rv-tag rv-tag-pending">pending · not submitted</span> : thread.resolved ? <span className="rv-tag rv-tag-ok">✓ resolved</span> : <span className="rv-tag">open · {thread.comments.length} comments</span>}
       </div>
       {thread.comments.map((c, i) => (
         <div key={i} className="rv-comment">
@@ -284,6 +284,8 @@ interface DiffOptions {
   gutters: 'two' | 'one';
   threads: 'inline0' | 'inline' | 'marker' | 'margin';
   stickyFiles: boolean;
+  /** Threads with no line in the diff, shown once under their file's header. */
+  outdated?: boolean;
 }
 
 const lineClass = (row: Extract<DiffRow, { kind: 'line' }>) => `rv-line rv-${row.sign === '+' ? 'add' : row.sign === '-' ? 'del' : 'ctx'} ${row.new === CURSOR_LINE && row.sign === '+' ? 'rv-cursor' : ''}`;
@@ -310,6 +312,10 @@ const useStackedNotes = (enabled: boolean) => {
 
 const Diff = ({ o, currentThread }: { o: DiffOptions; currentThread?: string }) => {
   const ref = useStackedNotes(o.threads === 'margin');
+  useLayoutEffect(() => {
+    const file = new URLSearchParams(location.search).get('file');
+    if (file !== null) ref.current?.querySelector(`[data-file="${file}"]`)?.scrollIntoView({ block: 'start' });
+  }, [ref]);
   let file = -1;
   return (
     <div ref={ref} className={`rv-diff ${o.wrap ? 'rv-wrap' : 'rv-nowrap'} rv-g-${o.gutters} rv-t-${o.threads}`}>
@@ -317,8 +323,10 @@ const Diff = ({ o, currentThread }: { o: DiffOptions; currentThread?: string }) 
         if (row.kind === 'file') {
           file = row.file;
           const f = FILES[row.file]!;
+          const lineless = o.outdated ? OUTDATED_THREADS.filter((t) => t.file === row.file) : [];
           return (
-            <div key={i} className={`rv-filehead ${o.stickyFiles ? 'rv-sticky' : ''}`}>
+            <Fragment key={i}>
+            <div data-file={row.file} className={`rv-filehead ${o.stickyFiles ? 'rv-sticky' : ''}`}>
               <span className={`rv-change rv-change-${f.change}`}>{f.change}</span>
               <span className="rv-fpath">
                 {fileDir(f.path)}
@@ -328,6 +336,12 @@ const Diff = ({ o, currentThread }: { o: DiffOptions; currentThread?: string }) 
                 <b className="rv-plus">+{f.added}</b> <b className="rv-minus">−{f.removed}</b>
               </span>
             </div>
+            {lineless.map((t) => (
+              <div key={t.id} className="rv-inline rv-inline-outdated">
+                <ThreadCard thread={t} compact />
+              </div>
+            ))}
+            </Fragment>
           );
         }
         if (row.kind === 'hunk') {
@@ -438,7 +452,7 @@ const ReviewView = ({ variant, focus, leftTab }: Props) => {
           <FileList selected={0} tree words={variant === 'r4'} />
         </Frame>
         <Frame pane="ticket" focus={focus} title="Review" sub={reviewTitle} className="rv-a-diff" actions={<Icon glyph="close" label="Close the review (esc)" />}>
-          <Diff o={{ wrap: true, gutters: 'one', threads: 'inline', stickyFiles: true }} />
+          <Diff o={{ wrap: true, gutters: 'one', threads: 'inline', stickyFiles: true, outdated: variant === 'r4' }} />
         </Frame>
         <DockStrip />
       </main>

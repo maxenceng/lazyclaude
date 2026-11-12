@@ -900,3 +900,18 @@
 .rv-table-r4 .rv-stripe-none > :first-child {
   border-left-color: var(--seam);
 }
+.rv-r4 .rv-inline-outdated {
+  padding-top: 0;
+}
+.rv-r4 .rv-inline-outdated .rv-thread {
+  margin-top: 0;
+  border-left-color: var(--card-dim);
+}
+.rv-r4 .rv-inline-outdated .rv-thread::before {
+  display: none;
+}
+.rv-tag-outdated {
+  background: transparent;
+  border: 1px solid var(--card-dim);
+  color: var(--text);
+}
