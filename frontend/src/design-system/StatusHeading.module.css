@@ -13,3 +13,23 @@
 .count {
   font-variant-numeric: tabular-nums;
 }
+
+.heading[data-status='in-progress'] {
+  color: var(--status-in-progress);
+}
+
+.heading[data-status='in-review'] {
+  color: var(--status-in-review);
+}
+
+.heading[data-status='todo'] {
+  color: var(--status-todo);
+}
+
+.heading[data-status='draft'] {
+  color: var(--status-draft);
+}
+
+.heading[data-status='done'] {
+  color: var(--status-done);
+}

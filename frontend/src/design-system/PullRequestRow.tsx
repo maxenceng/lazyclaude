@@ -13,7 +13,7 @@ interface Props {
 /** One open pull request: its CI glyph, its number, its title and its head branch dimmed. The selected row is a light bar; a press on it opens its review. */
 export const PullRequestRow = ({ ci, number, title, head, selected, onSelect }: Props) => {
   return (
-    <li>
+    <li data-row="">
       <button type="button" className={selected ? `${styles.row} ${styles.selected}` : styles.row} aria-current={selected ? 'true' : undefined} onClick={onSelect}>
         <CiGlyph ci={ci} onLight={selected} />
         <span className={styles.number}>#{number}</span>

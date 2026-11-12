@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SessionConfigurationView } from '../protocol';
-import { bindingsOf } from './chords';
+import { Binding, bindingsOf, CharacterKey, Modifiers, NamedKey } from './chords';
 import { Action, actionOf, type WindowKeyPress } from './bindings';
 
 const press = (key: string, held: Partial<WindowKeyPress> = {}): WindowKeyPress => ({
@@ -68,5 +68,12 @@ describe('the reserved chords from the configuration', () => {
 
   it('takes no alt chord before the configuration has arrived', () => {
     expect(actionOf(press('h', { altKey: true }), [])).toBeUndefined();
+  });
+});
+
+describe('a reserved chord\'s name', () => {
+  it('spells its modifiers in order before its key, as a button names it', () => {
+    expect(new Binding(Action.Zoom, new Modifiers(true, true, false), new CharacterKey('z')).label()).toBe('ctrl+alt+z');
+    expect(new Binding(Action.FocusUp, new Modifiers(false, true, true), new NamedKey('ArrowUp')).label()).toBe('alt+shift+arrowup');
   });
 });

@@ -5,7 +5,6 @@
   width: 100%;
   padding: var(--space-1) var(--space-4);
   border: 0;
-  background: transparent;
   text-align: left;
   font-size: var(--size-body);
   white-space: nowrap;
@@ -13,8 +12,17 @@
   cursor: default;
 }
 
+.row[data-lamp='turn'] {
+  --row-ground: var(--lamp-turn-tile);
+  --row-dim: var(--lamp-turn-tile-dim);
+}
+
+.row {
+  background: var(--row-ground, transparent);
+}
+
 .selected {
-  background: var(--cursor-ground);
+  background: var(--cursor-ground, var(--row-ground, transparent));
   color: var(--cursor-ink);
   box-shadow: var(--cursor-edge);
 }
@@ -33,7 +41,7 @@
 
 .detail {
   flex: none;
-  color: var(--dim);
+  color: var(--row-dim, var(--dim));
   font-variant-numeric: tabular-nums;
 }
 

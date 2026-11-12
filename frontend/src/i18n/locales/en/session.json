@@ -7,6 +7,7 @@
     "hosted": "hosted",
     "live": "hosted in another window",
     "new": "new session",
+    "newKey": "n",
     "starting": "starting",
     "untitled": "session {{id}}"
   },
@@ -30,7 +31,10 @@
     "terminal": "session terminal",
     "starting": "starting",
     "minimise": "Minimise dock",
-    "restore": "Restore dock"
+    "minimiseKey": "M",
+    "restore": "Restore dock",
+    "zoom": "Zoom dock",
+    "unzoom": "Leave zoom"
   },
   "keyBar": {
     "move": "j/k move",

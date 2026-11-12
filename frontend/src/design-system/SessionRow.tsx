@@ -22,8 +22,8 @@ export const SessionRow = ({ label, detail, selected, lamp, onSelect }: Props) =
     }
   }, [selected]);
   return (
-    <li>
-      <button ref={row} type="button" className={selected ? `${styles.row} ${styles.selected}` : styles.row} aria-current={selected ? 'true' : undefined} onClick={onSelect}>
+    <li data-row="">
+      <button ref={row} type="button" className={selected ? `${styles.row} ${styles.selected}` : styles.row} aria-current={selected ? 'true' : undefined} data-lamp={lamp} onClick={onSelect}>
         {lamp === undefined ? <span className={styles.noLamp} /> : <Lamp colour={lamp} size={LampSize.Marker} />}
         <span className={styles.label}>{label}</span>
         <span className={styles.detail}>{detail}</span>

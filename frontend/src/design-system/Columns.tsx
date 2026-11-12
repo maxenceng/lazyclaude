@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useWholeRows } from './wholeRows';
 import styles from './Columns.module.css';
 
 interface ColumnsProps {
@@ -31,8 +32,9 @@ interface ColumnProps {
 
 /** One column: a status's heading over its rows. */
 export const Column = ({ label, children }: ColumnProps) => {
+  const column = useWholeRows<HTMLDivElement>();
   return (
-    <div role="group" aria-label={label} className={styles.column}>
+    <div ref={column} role="group" aria-label={label} className={styles.column}>
       {children}
     </div>
   );

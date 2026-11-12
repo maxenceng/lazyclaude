@@ -15,6 +15,10 @@ export class CharacterKey {
   matches(key: string): boolean {
     return key.toLowerCase() === this.character;
   }
+
+  label(): string {
+    return this.character;
+  }
 }
 
 /** A key with a name, as `KeyboardEvent.key` spells it. */
@@ -25,6 +29,10 @@ export class NamedKey {
 
   matches(key: string): boolean {
     return key === this.name;
+  }
+
+  label(): string {
+    return this.name.toLowerCase();
   }
 }
 
@@ -38,6 +46,11 @@ export class Modifiers {
     readonly shift: boolean,
   ) {}
 
+  /** The modifiers as a chord's name spells them, each followed by `+`: `ctrl+alt+`. */
+  label(): string {
+    return `${this.ctrl ? 'ctrl+' : ''}${this.alt ? 'alt+' : ''}${this.shift ? 'shift+' : ''}`;
+  }
+
   heldIn(press: KeyPress): boolean {
     return !press.metaKey && press.ctrlKey === this.ctrl && press.altKey === this.alt && press.shiftKey === this.shift;
   }
@@ -50,6 +63,11 @@ export class Binding {
     readonly modifiers: Modifiers,
     readonly key: ChordKey,
   ) {}
+
+  /** The chord as a person types it, `alt+z`, for a button that names its key. */
+  label(): string {
+    return `${this.modifiers.label()}${this.key.label()}`;
+  }
 
   /** Pressed when the key and the modifier set are exactly its own. */
   matches(press: KeyPress): boolean {

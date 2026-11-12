@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
@@ -72,7 +72,7 @@ const tab = (name: RegExp | string) => screen.getByRole('tab', { name });
 describe('the window tabs', () => {
   it('begin the status line with Base, Board and Pull requests, and open on Base', async () => {
     await started();
-    expect(screen.getAllByRole('tab').map((each) => each.textContent)).toEqual(['Base', 'Board1', 'Pull requests4✗']);
+    expect(screen.getAllByRole('tab').map((each) => each.textContent)).toEqual(['Base', 'Board1 in progress', 'Pull requests4 open✗']);
     expect(tab('Base')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Ticket' })).toBeInTheDocument();
@@ -81,9 +81,15 @@ describe('the window tabs', () => {
   it('carry no finding on Base, the in-progress count on Board, and the open count and worst result on Pull requests', async () => {
     await started();
     expect(within(tab('Base')).queryByText(/\d/)).not.toBeInTheDocument();
-    expect(within(tab(/^Board/)).getByText('1')).toBeInTheDocument();
-    expect(within(tab(/^Pull requests/)).getByText('4')).toBeInTheDocument();
+    expect(tab(/^Board/)).toHaveTextContent('1 in progress');
+    expect(tab(/^Pull requests/)).toHaveTextContent('4 open');
     expect(within(tab(/^Pull requests/)).getByRole('img', { name: 'checks failed' })).toBeInTheDocument();
+  });
+
+  it('name what their count counts, a zero included', async () => {
+    await started({ kind: 'openPullRequests', pullRequests: [] });
+    expect(tab(/^Pull requests/)).toHaveTextContent('0 open');
+    expect(within(tab(/^Pull requests/)).getByText('open').nextElementSibling, 'no empty check slot widens the badge').toBeNull();
   });
 
   it('show a pending result on the tab when none failed', async () => {
@@ -233,6 +239,19 @@ describe('the Pull requests tab', () => {
     const { user } = await started({ kind: 'openPullRequests', pullRequests: [] });
     await user.keyboard('3');
     expect(screen.getByText('No open pull requests.')).toBeInTheDocument();
+  });
+
+  it('offers no move or review key while no pull request is open, and the keys come back with one', async () => {
+    const empty = await started({ kind: 'openPullRequests', pullRequests: [] });
+    await empty.user.keyboard('3');
+    expect(screen.getByRole('contentinfo')).not.toHaveTextContent('j/k move');
+    expect(screen.getByRole('contentinfo')).not.toHaveTextContent('enter review');
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('1/2/3 tabs');
+    cleanup();
+    const open = await started();
+    await open.user.keyboard('3');
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('j/k move');
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('enter review');
   });
 
   it('says it is checking while review/watch has not answered', async () => {

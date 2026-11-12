@@ -10,17 +10,18 @@
 }
 
 .tile {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  display: grid;
+  grid-template-rows: var(--lamp-number-row) var(--lamp-words-row);
+  align-content: center;
   width: var(--lamp-tile-width);
   height: var(--lamp-tile-height);
-  padding: 0 var(--space-3);
+  padding: 3px var(--space-3);
+  border-radius: var(--card-radius);
   flex: none;
 }
 
 .number {
-  font: var(--size-lamp) / 1 var(--font-stencil);
+  font: 600 var(--size-lamp) / var(--lamp-number-row) var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -28,9 +29,9 @@
 
 .meaning {
   font-style: normal;
-  font-size: var(--size-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: var(--size-small);
+  line-height: var(--lamp-words-row);
+  opacity: 0.85;
 }
 
 .permission {
@@ -43,14 +44,9 @@
   color: var(--lamp-input-ink);
 }
 
-.turn.marker {
+.turn {
   background: var(--lamp-turn);
   color: var(--lamp-turn-ink);
-}
-
-.turn.tile {
-  background: var(--lamp-turn-tile);
-  color: var(--lamp-turn);
 }
 
 .off {
@@ -60,4 +56,5 @@
 
 .marker.off {
   background: transparent;
+  color: var(--ended-dot);
 }

@@ -1,23 +1,28 @@
 .tabs {
   display: flex;
-  gap: 1px;
+  gap: var(--space-1);
+  padding: 3px;
+  border-radius: var(--card-radius);
+  background: var(--pane);
   white-space: nowrap;
 }
 
 .tab {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-3);
   align-items: center;
-  padding: var(--space-1) var(--space-3);
+  padding: 5px var(--space-4);
   border: 0;
+  border-radius: var(--pane-radius);
   background: transparent;
   color: var(--dim);
   font-size: var(--size-label);
+  font-weight: 600;
   cursor: default;
 }
 
 .selected {
-  background: var(--terminal-ground);
+  background: var(--pane-lift);
   color: var(--text);
 }
 
@@ -25,5 +30,19 @@
   display: inline-flex;
   gap: var(--space-1);
   align-items: center;
+  padding: 1px var(--space-3);
+  border-radius: 9px;
+  background: var(--seam);
+  color: var(--text);
+  font-size: var(--size-small);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.finding small {
+  font-weight: 400;
+}
+
+.finding[data-status='in-progress'] {
+  background: color-mix(in srgb, var(--status-in-progress) 30%, transparent);
 }

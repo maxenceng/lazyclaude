@@ -14,7 +14,7 @@ interface Props {
 export const DocsTreeRow = ({ name, depth, selected, onSelect, folder }: Props) => {
   const classes = [styles.row, selected ? styles.selected : '', folder === undefined ? '' : styles.folder].join(' ');
   return (
-    <li>
+    <li data-row="">
       <button
         type="button"
         className={classes}

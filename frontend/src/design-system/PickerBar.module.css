@@ -1,0 +1,59 @@
+.wrap {
+  position: relative;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-top: 1px solid var(--seam);
+  background: var(--pane);
+  color: var(--text);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bar:hover {
+  background: var(--pane-lift);
+}
+
+.selected {
+  background: var(--cursor-ground, var(--pane));
+  color: var(--cursor-ink);
+  box-shadow: var(--cursor-edge);
+}
+
+.icon {
+  width: var(--pane-action-icon);
+  height: var(--pane-action-icon);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.label {
+  flex: 1;
+}
+
+.key {
+  font: 400 var(--size-small) var(--font-mono);
+}
+
+.popup {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  z-index: 5;
+  max-height: 60vh;
+  overflow: auto;
+  padding: var(--space-2) 0;
+  background: var(--pane-lift);
+  border-top: 1px solid var(--card-edge);
+  box-shadow: var(--popup-shadow-up);
+}

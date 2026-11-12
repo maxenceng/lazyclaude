@@ -6,10 +6,11 @@ import { BoardKeyBar, BoardTabKeyBar, CaptureKeyBar } from './board/BoardKeyBar'
 import { CapturePopup } from './board/CapturePopup';
 import { BoardColumns, BoardPane, BoardPreview, TicketPane } from './board/BoardScreen';
 import { inProgressCount } from './board/rows';
+import { statusColourOf } from './board/statusColours';
 import { ConnectionScreen } from './connection/ConnectionScreen';
-import { DocsKeyBar } from './docs/DocsKeyBar';
+import { DocsKeyBar, DocumentKeyBar } from './docs/DocsKeyBar';
 import { DocsPane, DocumentPane } from './docs/DocsScreen';
-import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Dialog, Lamp, LampSize, Pane, PaneAction, PaneActionKind, StatusLine, Text, Tone, WindowTabBar } from './design-system';
+import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Dialog, Lamp, LampSize, Pane, StatusLine, Text, Tone, WindowMenu, WindowTabBar } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { ModalClicks } from './keys/modalClicks';
@@ -23,7 +24,7 @@ import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKe
 import { DockScreen, DockStrip } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
-import { SessionsList } from './session/SessionsList';
+import { NewSessionBar, SessionsList } from './session/SessionsList';
 import { useStore } from './shared/useStore';
 
 const TAB_OF: ReadonlyMap<string, WindowTab> = new Map<string, WindowTab>(Object.values(WindowTab).map((tab) => [tab, tab]));
@@ -95,6 +96,7 @@ export const App = ({ app, packaged }: Props) => {
   const keyBar = {
     [Focus.Board]: <BoardKeyBar extra={tabKeys} />,
     [Focus.Docs]: <DocsKeyBar documentShown={layout.showsDocumentInView()} extra={tabKeys} />,
+    [Focus.Document]: <DocumentKeyBar extra={tabKeys} />,
     [Focus.Sessions]: <SessionsKeyBar picking={false} extra={tabKeys} />,
     [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
     [Focus.Comments]: <ReviewKeyBar panel={ReviewFocus.Comments} />,
@@ -154,7 +156,7 @@ export const App = ({ app, packaged }: Props) => {
           ) : null,
         }
       : {
-          bar: <PullRequestsKeyBar extra={windowTabKeys} />,
+          bar: <PullRequestsKeyBar listed={pullRequestList.length > 0} extra={windowTabKeys} />,
           pane: (
             <PullRequestsPane
               state={pullRequests}
@@ -202,7 +204,12 @@ export const App = ({ app, packaged }: Props) => {
             />
           ),
           main: layout.showsDocument() ? (
-            <DocumentPane docs={app.docs} focused={false} onClose={() => app.closeDocument()} />
+            <DocumentPane
+              docs={app.docs}
+              focused={layout.focus === Focus.Document}
+              onFocus={() => app.focusOn(Focus.Document)}
+              onClose={() => app.closeDocument()}
+            />
           ) : (
             <TicketPane
               board={app.board.store}
@@ -210,15 +217,24 @@ export const App = ({ app, packaged }: Props) => {
               focused={layout.focus === Focus.Sessions}
               onLink={(href) => app.docs.followFromTicket(href)}
               onHide={hasDock ? () => app.hideMainView() : undefined}
+              onFocus={() => app.focusOn(Focus.Sessions)}
+              foot={
+                <NewSessionBar
+                  rows={app.sessions.rows()}
+                  cursor={cursor}
+                  picker={picker}
+                  onPress={(index) => app.pressRow(index)}
+                  onPickVerb={(index) => void app.sessions.pick(index)}
+                  onDismiss={() => app.sessions.cancelPick()}
+                />
+              }
             >
               <SessionsList
                 rows={app.sessions.rows()}
                 cursor={cursor}
-                focused={layout.focus === Focus.Sessions}
                 picker={picker}
                 failure={failure}
                 onPress={(index) => app.pressRow(index)}
-                onPickVerb={(index) => void app.sessions.pick(index)}
               />
             </TicketPane>
           ),
@@ -237,7 +253,10 @@ export const App = ({ app, packaged }: Props) => {
         sessions={sessions}
         focused={layout.focus === Focus.Dock}
         onFocus={() => app.focusOn(Focus.Dock)}
+        zoomed={layout.zoomed}
+        zoomKey={app.zoomKey()}
         onMinimise={() => app.toggleDockMinimised()}
+        onZoom={() => app.toggleZoom()}
       />
     );
 
@@ -246,6 +265,7 @@ export const App = ({ app, packaged }: Props) => {
       <AppFrame
         statusLine={
           <StatusLine
+            menu={<WindowMenu name={t('app.name')} items={[{ label: t('quit.button'), shortcut: t('quit.key'), onSelect: () => app.quit() }]} />}
             tabs={
               <WindowTabBar
                 tabs={[
@@ -253,7 +273,13 @@ export const App = ({ app, packaged }: Props) => {
                   {
                     id: WindowTab.Board,
                     label: t('tabs.board'),
-                    finding: populatedBoard === undefined ? undefined : <span>{inProgressCount(populatedBoard)}</span>,
+                    finding:
+                      populatedBoard === undefined ? undefined : (
+                        <>
+                          <b>{inProgressCount(populatedBoard)}</b> <small>{t('tabs.inProgress')}</small>
+                        </>
+                      ),
+                    findingColour: statusColourOf('IN_PROGRESS'),
                   },
                   {
                     id: WindowTab.PullRequests,
@@ -261,8 +287,8 @@ export const App = ({ app, packaged }: Props) => {
                     finding:
                       pullRequests.kind === 'openPullRequests' ? (
                         <>
-                          <span>{pullRequests.pullRequests.length}</span>
-                          <CiGlyph ci={ciOf(worstResult(pullRequests.pullRequests))} />
+                          <b>{pullRequests.pullRequests.length}</b> <small>{t('tabs.open')}</small>
+                          {worstResult(pullRequests.pullRequests) === undefined ? null : <CiGlyph ci={ciOf(worstResult(pullRequests.pullRequests))} />}
                         </>
                       ) : undefined,
                   },
@@ -280,7 +306,6 @@ export const App = ({ app, packaged }: Props) => {
             project={project}
             warning={warning}
             notice={notice}
-            actions={<PaneAction kind={PaneActionKind.Close} label={t('quit.button')} onClick={() => app.quit()} />}
           />
         }
         keyBar={capturing ? <CaptureKeyBar /> : picker === undefined ? (tabbed === undefined ? keyBar : tabScreen.bar) : <SessionsKeyBar picking />}
