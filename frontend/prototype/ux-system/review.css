@@ -915,3 +915,10 @@
   border: 1px solid var(--card-dim);
   color: var(--text);
 }
+.rv-r4 .rv-submit kbd {
+  font: 600 12px var(--font-mono);
+  background: var(--lamp-turn-ink);
+  color: var(--lamp-turn-chip-ink, #e6f4ea);
+  border-color: var(--lamp-turn-ink);
+  opacity: 1;
+}
