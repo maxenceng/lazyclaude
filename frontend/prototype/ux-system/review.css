@@ -12,6 +12,9 @@
 .rv-ci-pending {
   color: var(--ci-pending);
 }
+.rv-ci-none {
+  color: var(--dim);
+}
 .rv-none {
   padding: 16px 20px;
   color: var(--dim);
@@ -145,7 +148,7 @@
 }
 .rv-groups {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   padding: 14px;
 }
@@ -683,4 +686,10 @@
 }
 .rv-open {
   justify-self: start;
+}
+
+.rv-group-none {
+  color: var(--dim);
+  font-size: 13px;
+  padding: 4px 2px;
 }

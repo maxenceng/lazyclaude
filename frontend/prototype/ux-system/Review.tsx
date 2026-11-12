@@ -6,7 +6,7 @@ import { CI_GLYPH, CI_WORD, CURSOR_LINE, DIFF, FILES, PENDING_REVIEW, PULL_REQUE
 import { Frame, Icon } from './VariantB';
 import './review.css';
 
-export type ReviewLayout = 'r0' | 'r1' | 'r2' | 'r3';
+export type ReviewLayout = 'r0' | 'r1' | 'r2' | 'r3' | 'r4';
 export type PrView = 'off' | 'list' | 'review';
 
 interface Props {
@@ -44,8 +44,44 @@ const ciBadge = (ci: keyof typeof CI_WORD, withWord: boolean) => (
 
 const PrList = ({ variant, focus, empty, onOpen }: Props) => {
   const list = empty ? [] : PULL_REQUESTS;
+  const groups = (
+    <div className="rv-groups">
+      {(['failed', 'pending', 'passed', 'none'] as const).map((ci) => {
+        const inGroup = list.filter((p) => p.ci === ci);
+        return (
+          <section key={ci}>
+            <h3 className={`rv-ci-${ci}`}>
+              {CI_GLYPH[ci]} {ci === 'none' ? 'no checks' : CI_WORD[ci]} <span>{inGroup.length}</span>
+            </h3>
+            {inGroup.length === 0 && <p className="rv-group-none">none</p>}
+            {inGroup.map((pr) => (
+              <div key={pr.number} className={`rv-card2 ${pr.number === 217 ? 'rv-sel' : ''}`} onClick={onOpen}>
+                <div className="rv-card2-top">
+                  <span className="rv-ticket">{pr.ticket}</span>
+                  <span className="rv-title">
+                    <Inline text={pr.title} />
+                  </span>
+                </div>
+                <div className="rv-meta">
+                  <span className="rv-num">#{pr.number}</span>
+                  <span className="rv-head">{pr.head}</span>
+                  <span>{pr.comments === 0 ? 'no comments' : `${pr.comments} comment${pr.comments === 1 ? '' : 's'}`}</span>
+                  <span>{pr.age}</span>
+                </div>
+              </div>
+            ))}
+          </section>
+        );
+      })}
+    </div>
+  );
   const body =
-    list.length === 0 ? (
+    variant === 'r4' ? (
+      <>
+        {list.length === 0 && <p className="rv-none">No open pull requests.</p>}
+        {groups}
+      </>
+    ) : list.length === 0 ? (
       <p className="rv-none">No open pull requests.</p>
     ) : variant === 'r0' ? (
       <div className="rv-list0">
@@ -61,33 +97,7 @@ const PrList = ({ variant, focus, empty, onOpen }: Props) => {
         ))}
       </div>
     ) : variant === 'r2' ? (
-      <div className="rv-groups">
-        {(['failed', 'pending', 'passed'] as const).map((ci) => (
-          <section key={ci}>
-            <h3 className={`rv-ci-${ci}`}>
-              {CI_GLYPH[ci]} {CI_WORD[ci]} <span>{list.filter((p) => p.ci === ci).length}</span>
-            </h3>
-            {list
-              .filter((p) => p.ci === ci)
-              .map((pr) => (
-                <div key={pr.number} className={`rv-card2 ${pr.number === 217 ? 'rv-sel' : ''}`} onClick={onOpen}>
-                  <div className="rv-card2-top">
-                    <span className="rv-ticket">{pr.ticket}</span>
-                    <span className="rv-title">
-                      <Inline text={pr.title} />
-                    </span>
-                  </div>
-                  <div className="rv-meta">
-                    <span className="rv-num">#{pr.number}</span>
-                    <span className="rv-head">{pr.head}</span>
-                    <span>{pr.comments === 0 ? 'no comments' : `${pr.comments} comment${pr.comments === 1 ? '' : 's'}`}</span>
-                    <span>{pr.age}</span>
-                  </div>
-                </div>
-              ))}
-          </section>
-        ))}
-      </div>
+      groups
     ) : (
       <div className={`rv-table rv-table-${variant}`}>
         <div className="rv-thead">
@@ -410,7 +420,7 @@ const ReviewView = ({ variant, focus, leftTab }: Props) => {
       </main>
     );
   }
-  if (variant === 'r1') {
+  if (variant === 'r1' || variant === 'r4') {
     return (
       <main className="rv-review rv-r1">
         <Frame pane="board" focus={focus} title="Files" sub={<span className="vb-sub">6 · +196 −5</span>} className="rv-a-files" footer={<PendingBar wide={false} />}>

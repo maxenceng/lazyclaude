@@ -9,7 +9,7 @@ import { VariantA } from './VariantA';
 import { VariantB } from './VariantB';
 import { VariantC } from './VariantC';
 import { VariantD } from './VariantD';
-import { VariantE, VariantF, VariantG, VariantH, VariantI, VariantJ, VariantK, VariantR0, VariantR1, VariantR2, VariantR3 } from './VariantLayouts';
+import { VariantE, VariantF, VariantG, VariantH, VariantI, VariantJ, VariantK, VariantR0, VariantR1, VariantR2, VariantR3, VariantR4 } from './VariantLayouts';
 
 export interface VariantProps {
   focus: Pane;
@@ -36,13 +36,14 @@ const VARIANTS = [
   { key: 'R1', name: 'Review: files rail, inline threads', Component: VariantR1 },
   { key: 'R2', name: 'Review: files | diff | threads', Component: VariantR2 },
   { key: 'R3', name: 'Review: tabs, margin notes', Component: VariantR3 },
+  { key: 'R4', name: 'Review: chosen', Component: VariantR4 },
 ];
 
-const HAS_PR_TAB = new Set(['R0', 'R1', 'R2', 'R3']);
+const HAS_PR_TAB = new Set(['R0', 'R1', 'R2', 'R3', 'R4']);
 
 const HAS_BOARD_TAB = new Set(['I', 'J', 'K']);
 
-const DEFAULT = VARIANTS.findIndex((v) => v.key === 'R1');
+const DEFAULT = VARIANTS.findIndex((v) => v.key === 'R4');
 
 const initial = () => {
   const wanted = new URLSearchParams(location.search).get('variant');

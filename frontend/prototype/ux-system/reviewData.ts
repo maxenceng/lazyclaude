@@ -1,6 +1,6 @@
 // PROTOTYPE: fake pull requests and a fake review, since none is open; realistic for ticket 145's fix. Not shipped.
 
-export type Ci = 'failed' | 'passed' | 'pending';
+export type Ci = 'failed' | 'passed' | 'pending' | 'none';
 
 export interface PullRequest {
   number: number;
@@ -16,10 +16,11 @@ export const PULL_REQUESTS: PullRequest[] = [
   { number: 217, ticket: 145, title: 'pty4j leaves a `/tmp/pty4j-linux-x86-64-*` directory behind on every run', head: '145-pty4j-tmpdir', ci: 'failed', comments: 3, age: '2h' },
   { number: 219, ticket: 146, title: 'A pty spawned with `setInitialColumns(100)` reports `stty size` as `0 0`', head: '146-pty-initial-size', ci: 'pending', comments: 1, age: '20m' },
   { number: 218, ticket: 188, title: 'A click on a status line lamp or count goes to its session', head: '188-lamp-click', ci: 'passed', comments: 0, age: '1d' },
+  { number: 220, ticket: 213, title: 'External links do not work. They do not open the browser.', head: '213-external-links', ci: 'none', comments: 0, age: '5m' },
 ];
 
-export const CI_WORD: Record<Ci, string> = { failed: 'failing', passed: 'passing', pending: 'running' };
-export const CI_GLYPH: Record<Ci, string> = { failed: '✕', passed: '✓', pending: '●' };
+export const CI_WORD: Record<Ci, string> = { failed: 'failing', passed: 'passing', pending: 'running', none: 'no checks' };
+export const CI_GLYPH: Record<Ci, string> = { failed: '✕', passed: '✓', pending: '●', none: '–' };
 
 export type Change = 'A' | 'M' | 'D' | 'R';
 

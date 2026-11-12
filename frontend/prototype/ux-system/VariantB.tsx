@@ -466,7 +466,7 @@ export const FramedWindow = ({ focus, documentShown, chosen, layout = 'd', board
           <button className={`vb-tab ${prView !== 'off' ? 'vb-tab-on' : ''}`} onClick={() => onPrView?.('list')}>
             Pull requests
             <span className="vb-badge" title="Open pull requests">
-              {reviewLayout !== undefined && !prsEmpty ? 3 : 0} <small>open</small>{reviewLayout !== undefined && !prsEmpty && <span className="rv-ci rv-ci-failed"> ✕</span>}
+              {reviewLayout !== undefined && !prsEmpty ? 4 : 0} <small>open</small>{reviewLayout !== undefined && !prsEmpty && <span className="rv-ci rv-ci-failed"> ✕</span>}
             </span>
           </button>
         </div>
