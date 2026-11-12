@@ -7,6 +7,7 @@ import './switcher.css';
 import { VariantA } from './VariantA';
 import { VariantB } from './VariantB';
 import { VariantC } from './VariantC';
+import { VariantD } from './VariantD';
 
 export interface VariantProps {
   focus: Pane;
@@ -17,20 +18,24 @@ const VARIANTS = [
   { key: 'A', name: 'Lit title', Component: VariantA },
   { key: 'B', name: 'Framed panes', Component: VariantB },
   { key: 'C', name: 'Terminal boxes', Component: VariantC },
+  { key: 'D', name: 'Chosen', Component: VariantD },
 ];
+
+const DEFAULT = VARIANTS.length - 1;
 
 const initial = () => {
   const wanted = new URLSearchParams(location.search).get('variant');
-  return Math.max(0, VARIANTS.findIndex((v) => v.key === wanted));
+  const found = VARIANTS.findIndex((v) => v.key === wanted);
+  return found === -1 ? DEFAULT : found;
 };
 
 const DIGIT_PANE: Record<string, Pane> = { Digit1: 'board', Digit2: 'docs', Digit3: 'ticket', Digit4: 'dock' };
 
 const Prototype = () => {
   const [index, setIndex] = useState(initial);
-  const [focus, setFocus] = useState<Pane>('board');
+  const [focus, setFocus] = useState<Pane>(() => PANES.find((p) => p === new URLSearchParams(location.search).get('focus')) ?? 'board');
   const [documentShown, setDocumentShown] = useState(false);
-  const variant = VARIANTS[index] ?? VARIANTS[0]!;
+  const variant = VARIANTS[index] ?? VARIANTS[DEFAULT]!;
 
   useEffect(() => {
     const url = new URL(location.href);

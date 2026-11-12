@@ -1,0 +1,63 @@
+/* PROTOTYPE: variant D, "Chosen". Overrides on B: A's lit title replaces B's blue frame; selection solid only where focused. Not shipped. */
+.vd {
+  --d-lit: #e6e2d8;
+  --d-lit-ink: #121314;
+}
+.vd .vb-pane,
+.vd .vb-pane.vb-focused {
+  background: var(--b-pane);
+  border-color: var(--seam);
+  box-shadow: none;
+}
+.vd .vb-pane {
+  color: color-mix(in srgb, var(--text) 68%, var(--b-pane));
+}
+.vd .vb-pane.vb-focused {
+  color: var(--text);
+}
+.vd .vb-focused .vb-title {
+  background: var(--d-lit);
+  color: var(--d-lit-ink);
+  border-bottom-color: var(--d-lit);
+}
+.vd .vb-focused .vb-title h2,
+.vd .vb-focused .vb-title .vb-sub,
+.vd .vb-focused .vb-title .vb-docktab,
+.vd .vb-focused .vb-title .vb-pill {
+  color: var(--d-lit-ink);
+}
+.vd .vb-focused .vb-title .vb-pill {
+  background: rgb(18 19 20 / 0.12);
+}
+.vd .vb-focused .vb-title .vb-docktab-on {
+  background: rgb(18 19 20 / 0.14);
+}
+.vd .vb-focused .vb-icon:hover {
+  background: rgb(18 19 20 / 0.14);
+}
+
+/* selection: outlined in every pane, solid only in the focused one */
+.vd .vb-selected {
+  background: transparent;
+  border-left-color: transparent;
+  outline: 1px solid color-mix(in srgb, var(--text) 45%, var(--b-pane));
+  outline-offset: -1px;
+}
+.vd .vb-focused .vb-selected {
+  background: var(--selected);
+  color: var(--text-on-light);
+  outline-color: var(--selected);
+  border-left-color: transparent;
+}
+.vd .vb-focused .vb-selected .vb-id,
+.vd .vb-focused .vb-selected .vb-type {
+  color: var(--text-on-light);
+}
+
+/* whole rows only: the body clips, the hook hides any row it would cut */
+.vd .vb-body.vb-whole {
+  overflow: hidden;
+}
+.vd .vb-terminal {
+  white-space: pre;
+}

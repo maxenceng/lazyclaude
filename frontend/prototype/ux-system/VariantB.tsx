@@ -1,5 +1,5 @@
 // PROTOTYPE: variant B, "Framed panes". Gutters between opaque panes, the focused one framed and lifted, icon actions in a fixed slot, quit in a window menu. Not shipped.
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { COUNTS, DOCK_TABS, DOCS, GROUPS, KEYS, LAMP_WORD, PROJECT, SELECTED_DOC, SELECTED_TICKET, TERMINAL, TICKET, TILES, type Pane } from './data';
 import { DOC_PARAGRAPHS, Inline } from './Inline';
 import type { VariantProps } from './main';
@@ -25,21 +25,56 @@ const Icon = ({ glyph, label }: { glyph: Glyph; label: string }) => (
   </button>
 );
 
-const Frame = ({ pane, focus, title, sub, actions, children, className }: { pane: Pane; focus: Pane; title: string; sub?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) => (
-  <section className={`vb-pane ${pane === focus ? 'vb-focused' : ''} ${className ?? ''}`}>
-    <header className="vb-title">
-      <h2>{title}</h2>
-      {sub}
-      <span className="vb-slot">{actions}</span>
-    </header>
-    <div className="vb-body">{children}</div>
-  </section>
-);
+/** Hides every [data-row] whose bottom falls past the body's: whole rows only, never a half-cut last one. */
+const useWholeRows = (enabled: boolean) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const body = ref.current;
+    if (!enabled || body === null) return undefined;
+    const apply = () => {
+      const limit = body.getBoundingClientRect().bottom + 0.5;
+      body.querySelectorAll<HTMLElement>('[data-row]').forEach((row) => {
+        row.style.visibility = row.getBoundingClientRect().bottom > limit ? 'hidden' : '';
+      });
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(body);
+    return () => observer.disconnect();
+  }, [enabled]);
+  return ref;
+};
 
-export const VariantB = ({ focus, documentShown }: VariantProps) => {
-  const [menu, setMenu] = useState(false);
+const Frame = ({ pane, focus, title, sub, actions, children, className, wholeRows = false }: { pane: Pane; focus: Pane; title: string; sub?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; wholeRows?: boolean }) => {
+  const ref = useWholeRows(wholeRows);
   return (
-    <div className="vb">
+    <section className={`vb-pane ${pane === focus ? 'vb-focused' : ''} ${className ?? ''}`}>
+      <header className="vb-title">
+        <h2>{title}</h2>
+        {sub}
+        <span className="vb-slot">{actions}</span>
+      </header>
+      <div className={`vb-body ${wholeRows ? 'vb-whole' : ''}`} ref={ref}>
+        {children}
+      </div>
+    </section>
+  );
+};
+
+/** Only keys that act on what the pane shows now. */
+const liveKeys = (focus: Pane, documentShown: boolean): string[] => {
+  if (focus === 'docs') return ['j/k move', 'enter open or fold', ...(documentShown ? ['esc close document'] : []), '1/2/3 tabs'];
+  if (focus === 'ticket') return documentShown ? ['j/k scroll', 'esc close document', '1/2/3 tabs'] : ['j/k move', 'enter attach', 'n new session', 'm hide', '1/2/3 tabs'];
+  return KEYS[focus];
+};
+
+export const VariantB = (props: VariantProps) => <FramedWindow {...props} chosen={false} />;
+
+export const FramedWindow = ({ focus, documentShown, chosen }: VariantProps & { chosen: boolean }) => {
+  const [menu, setMenu] = useState(false);
+  const keys = chosen ? liveKeys(focus, documentShown) : KEYS[focus];
+  return (
+    <div className={`vb ${chosen ? 'vd' : ''}`}>
       <nav className="vb-status">
         <div className="vb-menu-wrap">
           <button className="vb-menu" onClick={() => setMenu((m) => !m)} aria-label="Window menu">
@@ -96,15 +131,15 @@ export const VariantB = ({ focus, documentShown }: VariantProps) => {
       </nav>
 
       <main className="vb-grid">
-        <Frame pane="board" focus={focus} title="Board" className="vb-board" actions={<Icon glyph="add" label="New draft ticket (n)" />}>
+        <Frame pane="board" focus={focus} title="Board" className="vb-board" wholeRows={chosen} actions={<Icon glyph="add" label="New draft ticket (n)" />}>
           {GROUPS.map((group) => (
             <div key={group.status} className="vb-group" style={{ ['--g' as string]: group.colour }}>
-              <div className="vb-group-head">
+              <div className="vb-group-head" data-row>
                 <span>{group.status}</span>
                 <span>{group.count}</span>
               </div>
               {group.rows.map((row) => (
-                <div key={row.id} className={`vb-row ${row.id === SELECTED_TICKET ? 'vb-selected' : ''} ${group.status === 'Done' ? 'vb-done' : ''}`}>
+                <div key={row.id} data-row className={`vb-row ${row.id === SELECTED_TICKET ? 'vb-selected' : ''} ${group.status === 'Done' ? 'vb-done' : ''}`}>
                   <span className="vb-id">{row.id}</span>
                   <span className="vb-row-title">
                     <Inline text={row.title} />
@@ -116,9 +151,9 @@ export const VariantB = ({ focus, documentShown }: VariantProps) => {
             </div>
           ))}
         </Frame>
-        <Frame pane="docs" focus={focus} title="Docs" className="vb-docs">
+        <Frame pane="docs" focus={focus} title="Docs" className="vb-docs" wholeRows={chosen}>
           {DOCS.map((doc, index) => (
-            <div key={index} className={`vb-row ${index === SELECTED_DOC ? 'vb-selected' : ''}`} style={{ paddingLeft: `${12 + doc.depth * 16}px` }}>
+            <div key={index} data-row className={`vb-row ${index === SELECTED_DOC ? 'vb-selected' : ''}`} style={{ paddingLeft: `${12 + doc.depth * 16}px` }}>
               {doc.folder !== undefined && <span className="vb-fold">{doc.folder.open ? '▾' : '▸'}</span>}
               <span className="vb-row-title">{doc.name}</span>
               {doc.folder !== undefined && <span className="vb-id">{doc.folder.count}</span>}
@@ -191,6 +226,7 @@ export const VariantB = ({ focus, documentShown }: VariantProps) => {
           focus={focus}
           title="Sessions"
           className="vb-dock"
+          wholeRows={chosen}
           sub={
             <span className="vb-docktabs">
               {DOCK_TABS.map((tab, i) => (
@@ -208,12 +244,18 @@ export const VariantB = ({ focus, documentShown }: VariantProps) => {
             </>
           }
         >
-          <pre className="vb-terminal">{TERMINAL.join('\n')}</pre>
+          <pre className="vb-terminal">
+            {TERMINAL.map((line, i) => (
+              <div key={i} data-row>
+                {line === '' ? '\u00a0' : line}
+              </div>
+            ))}
+          </pre>
         </Frame>
       </main>
 
       <footer className="vb-keybar">
-        {KEYS[focus].map((k) => {
+        {keys.map((k) => {
           const [key, ...rest] = k.split(' ');
           return (
             <span key={k}>
