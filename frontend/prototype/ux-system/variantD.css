@@ -61,3 +61,99 @@
 .vd .vb-terminal {
   white-space: pre;
 }
+
+/* new session: pinned at the bottom of the ticket pane, full width; its picker grows upward over the body */
+.vd .vb-main {
+  position: relative;
+  grid-template-rows: 38px 1fr auto;
+}
+.vd .vd-sessions-full {
+  max-width: none;
+}
+.vd-new-wrap {
+  position: relative;
+}
+.vd-new {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--seam);
+  color: var(--text);
+  font-weight: 600;
+}
+.vd-new:hover,
+.vd-new-open {
+  background: var(--b-lift);
+}
+.vd-new svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+}
+.vd-new kbd {
+  margin-left: auto;
+}
+.vd-picker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  z-index: 5;
+  background: var(--b-lift);
+  border-top: 1px solid var(--card-edge);
+  box-shadow: 0 -12px 28px rgb(0 0 0 / 0.45);
+  padding: 6px 0;
+}
+.vd-picker-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 16px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.vd-picker-head small {
+  letter-spacing: 0;
+  text-transform: none;
+  font: 400 12px var(--font-mono);
+}
+.vd-verb {
+  display: grid;
+  grid-template-columns: 90px auto 1fr;
+  gap: 16px;
+  align-items: baseline;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.vd-verb code {
+  font: 400 13px var(--font-mono);
+  color: var(--dim);
+}
+.vd-verb small {
+  justify-self: end;
+  color: var(--dim);
+}
+.vd-verb-on {
+  background: var(--selected);
+  color: var(--text-on-light);
+}
+.vd-verb-on code,
+.vd-verb-on small {
+  color: var(--text-on-light);
+}
+.vd .vb-main .vb-reading {
+  max-width: none;
+}
+.vd .vb-main .vb-reading > :not(.vd-sessions-full) {
+  max-width: 110ch;
+}

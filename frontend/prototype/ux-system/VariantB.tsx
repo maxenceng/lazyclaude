@@ -1,5 +1,5 @@
 // PROTOTYPE: variant B, "Framed panes". Gutters between opaque panes, the focused one framed and lifted, icon actions in a fixed slot, quit in a window menu. Not shipped.
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { COUNTS, DOCK_TABS, DOCS, GROUPS, KEYS, LAMP_WORD, PROJECT, SELECTED_DOC, SELECTED_TICKET, TERMINAL, TICKET, TILES, type Pane } from './data';
 import { DOC_PARAGRAPHS, Inline } from './Inline';
 import type { VariantProps } from './main';
@@ -45,7 +45,7 @@ const useWholeRows = (enabled: boolean) => {
   return ref;
 };
 
-const Frame = ({ pane, focus, title, sub, actions, children, className, wholeRows = false }: { pane: Pane; focus: Pane; title: string; sub?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; wholeRows?: boolean }) => {
+const Frame = ({ pane, focus, title, sub, actions, children, className, wholeRows = false, footer }: { pane: Pane; focus: Pane; title: string; sub?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; wholeRows?: boolean; footer?: ReactNode }) => {
   const ref = useWholeRows(wholeRows);
   return (
     <section className={`vb-pane ${pane === focus ? 'vb-focused' : ''} ${className ?? ''}`}>
@@ -57,12 +57,20 @@ const Frame = ({ pane, focus, title, sub, actions, children, className, wholeRow
       <div className={`vb-body ${wholeRows ? 'vb-whole' : ''}`} ref={ref}>
         {children}
       </div>
+      {footer}
     </section>
   );
 };
 
+/** The verbs a todo ticket's status offers, as `/ticket` accepts them; the first is the one `session` preselects. */
+const VERBS = [
+  { verb: 'start', note: 'branch, worktree and the first criterion' },
+  { verb: 'design', note: 'the ticket branch touches frontend/**' },
+];
+
 /** Only keys that act on what the pane shows now. */
-const liveKeys = (focus: Pane, documentShown: boolean): string[] => {
+const liveKeys = (focus: Pane, documentShown: boolean, picking = false): string[] => {
+  if (picking) return ['j/k move', 'enter start', 'esc cancel'];
   if (focus === 'docs') return ['j/k move', 'enter open or fold', ...(documentShown ? ['esc close document'] : []), '1/2/3 tabs'];
   if (focus === 'ticket') return documentShown ? ['j/k scroll', 'esc close document', '1/2/3 tabs'] : ['j/k move', 'enter attach', 'n new session', 'm hide', '1/2/3 tabs'];
   return KEYS[focus];
@@ -72,7 +80,32 @@ export const VariantB = (props: VariantProps) => <FramedWindow {...props} chosen
 
 export const FramedWindow = ({ focus, documentShown, chosen }: VariantProps & { chosen: boolean }) => {
   const [menu, setMenu] = useState(false);
-  const keys = chosen ? liveKeys(focus, documentShown) : KEYS[focus];
+  const [picking, setPicking] = useState(() => new URLSearchParams(location.search).get('picker') === 'open');
+  const [verb, setVerb] = useState(0);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const picks = chosen && !documentShown;
+  const keys = chosen ? liveKeys(focus, documentShown, picks && picking) : KEYS[focus];
+
+  useEffect(() => {
+    if (!picks) return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.code === 'KeyN') {
+        setPicking((open) => !open);
+        setVerb(0);
+      } else if (picking && (event.code === 'KeyJ' || event.code === 'ArrowDown')) setVerb((v) => Math.min(VERBS.length - 1, v + 1));
+      else if (picking && (event.code === 'KeyK' || event.code === 'ArrowUp')) setVerb((v) => Math.max(0, v - 1));
+      else if (picking && (event.code === 'Enter' || event.code === 'Escape')) setPicking(false);
+    };
+    const onDown = (event: MouseEvent) => {
+      if (picking && pickerRef.current !== null && !pickerRef.current.contains(event.target as Node)) setPicking(false);
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onDown);
+    };
+  }, [picks, picking]);
   return (
     <div className={`vb ${chosen ? 'vd' : ''}`}>
       <nav className="vb-status">
@@ -186,13 +219,43 @@ export const FramedWindow = ({ focus, documentShown, chosen }: VariantProps & { 
               </span>
             }
             actions={<Icon glyph="hide" label="Hide the main view (m)" />}
+            footer={
+              chosen ? (
+                <div className="vd-new-wrap" ref={pickerRef}>
+                  {picking && (
+                    <div className="vd-picker" role="listbox" aria-label="start with">
+                      <div className="vd-picker-head">
+                        <span>start with</span>
+                        <small>
+                          #{TICKET.id} · todo · worktree 145-pty4j-tmpdir
+                        </small>
+                      </div>
+                      {VERBS.map((v, i) => (
+                        <div key={v.verb} role="option" aria-selected={i === verb} className={`vd-verb ${i === verb ? 'vd-verb-on' : ''}`} onMouseEnter={() => setVerb(i)} onClick={() => setPicking(false)}>
+                          <b>{v.verb}</b>
+                          <code>/ddd-workflow:ticket {v.verb} {TICKET.id}</code>
+                          <small>{v.note}</small>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button className={`vd-new ${picking ? 'vd-new-open' : ''}`} onClick={() => setPicking((open) => !open)} title="New session (n)">
+                    <svg viewBox="0 0 14 14" aria-hidden="true">
+                      <path d={PATHS.add} />
+                    </svg>
+                    new session
+                    <kbd>n</kbd>
+                  </button>
+                </div>
+              ) : undefined
+            }
           >
             <article className="vb-reading">
               <p className="vb-kicker">#{TICKET.id}</p>
               <h1>
                 <Inline text={TICKET.title} />
               </h1>
-              <div className="vb-sessions-list">
+              <div className={`vb-sessions-list ${chosen ? 'vd-sessions-full' : ''}`}>
                 {TICKET.sessions.map((s) => (
                   <div key={s.name} className={`vb-session vb-s-${s.lamp}`}>
                     <i className={`vb-dot vb-t-${s.lamp}`} />
@@ -202,12 +265,14 @@ export const FramedWindow = ({ focus, documentShown, chosen }: VariantProps & { 
                     </small>
                   </div>
                 ))}
-                <div className="vb-session vb-session-new">
-                  <svg viewBox="0 0 14 14" aria-hidden="true">
-                    <path d={PATHS.add} />
-                  </svg>
-                  new session
-                </div>
+                {!chosen && (
+                  <div className="vb-session vb-session-new">
+                    <svg viewBox="0 0 14 14" aria-hidden="true">
+                      <path d={PATHS.add} />
+                    </svg>
+                    new session
+                  </div>
+                )}
               </div>
               <h3>Acceptance criteria</h3>
               <ul>
