@@ -125,7 +125,7 @@ const PrList = ({ variant, focus, empty, onOpen }: Props) => {
     );
   const first = list[0];
   return (
-    <main className={`rv-listmain ${variant === 'r3' ? 'rv-listmain-side' : ''}`}>
+    <main className={`rv-listmain rv-list-${variant} ${variant === 'r3' ? 'rv-listmain-side' : ''}`}>
       <Frame pane="board" focus={focus === 'ticket' && variant !== 'r3' ? 'board' : focus} title="Pull requests" sub={list.length === 0 ? undefined : <span className="vb-sub">{list.length} open</span>}>
         {body}
       </Frame>
@@ -180,7 +180,7 @@ const PrList = ({ variant, focus, empty, onOpen }: Props) => {
 
 const CHANGE_WORD = { A: 'added', M: 'modified', D: 'deleted', R: 'renamed' };
 
-const FileList = ({ selected, tree }: { selected: number; tree: boolean }) => (
+const FileList = ({ selected, tree, words = false }: { selected: number; tree: boolean; words?: boolean }) => (
   <div className="rv-files">
     {FILES.map((f, i) => (
       <div key={f.path} className={`rv-file ${i === selected ? 'rv-sel' : ''}`} title={f.path}>
@@ -196,8 +196,17 @@ const FileList = ({ selected, tree }: { selected: number; tree: boolean }) => (
             <b className="rv-plus">+{f.added}</b> <b className="rv-minus">−{f.removed}</b>
           </span>
         )}
-        {f.threads > 0 && <span className="rv-tcount">💬{f.threads}</span>}
-        {f.pending > 0 && <span className="rv-pcount">✎{f.pending}</span>}
+        {words ? (
+          <span className="rv-badges">
+            {f.threads > 0 && <span className="rv-badge">{`${f.threads} thread${f.threads === 1 ? '' : 's'}`}</span>}
+            {f.pending > 0 && <span className="rv-badge rv-badge-pending">{`${f.pending} pending`}</span>}
+          </span>
+        ) : (
+          <>
+            {f.threads > 0 && <span className="rv-tcount">💬{f.threads}</span>}
+            {f.pending > 0 && <span className="rv-pcount">✎{f.pending}</span>}
+          </>
+        )}
       </div>
     ))}
   </div>
@@ -424,7 +433,7 @@ const ReviewView = ({ variant, focus, leftTab }: Props) => {
     return (
       <main className={`rv-review rv-r1 ${variant === 'r4' ? 'rv-r4' : ''}`}>
         <Frame pane="board" focus={focus} title="Files" sub={<span className="vb-sub">6 · +196 −5</span>} className="rv-a-files" footer={<PendingBar wide={false} />}>
-          <FileList selected={0} tree />
+          <FileList selected={0} tree words={variant === 'r4'} />
         </Frame>
         <Frame pane="ticket" focus={focus} title="Review" sub={reviewTitle} className="rv-a-diff" actions={<Icon glyph="close" label="Close the review (esc)" />}>
           <Diff o={{ wrap: true, gutters: 'one', threads: 'inline', stickyFiles: true }} />

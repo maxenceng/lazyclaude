@@ -745,3 +745,139 @@
 .rv-r4 .rv-cursor.rv-has-thread {
   box-shadow: inset 3px 0 0 var(--focus);
 }
+
+/* R4 readability: sizes up, every ink at 4.5:1 or more on its ground, no emoji */
+.rv-r4 {
+  --r4-gutter: #a19e96;
+  --r4-red: var(--ansi-bright-red);
+}
+.rv-r4 .rv-diff {
+  font-size: 14px;
+  line-height: 1.55;
+}
+.rv-r4 .rv-n {
+  color: var(--r4-gutter);
+}
+.rv-r4 .rv-del .rv-sign,
+.rv-r4 .rv-n s,
+.rv-r4 .rv-minus,
+.rv-list-r4 .rv-minus {
+  color: var(--r4-red);
+}
+.rv-r4 .rv-hunk {
+  font-size: 13px;
+}
+.rv-r4 .rv-hunk-ctx {
+  color: var(--card-dim);
+}
+.rv-r4 .rv-fpath {
+  font-size: 13px;
+}
+.rv-r4 .rv-fname small,
+.rv-r4 .rv-delta {
+  font-size: 12px;
+}
+.rv-r4 .rv-inline .rv-thread {
+  font-size: 15px;
+  line-height: 1.55;
+  padding: 16px 22px 14px;
+}
+.rv-r4 .rv-thread-head {
+  margin-bottom: 4px;
+}
+.rv-r4 .rv-where {
+  font-size: 13px;
+}
+.rv-r4 .rv-tag {
+  font-size: 12px;
+  padding: 2px 9px;
+}
+.rv-r4 .rv-comment {
+  padding: 12px 0;
+}
+.rv-r4 .rv-comment b {
+  font-size: 14px;
+}
+.rv-r4 .rv-comment small {
+  font-size: 12px;
+  color: var(--card-dim);
+}
+.rv-r4 .rv-comment p {
+  color: var(--text);
+  margin-top: 4px;
+}
+.rv-r4 .rv-thread-actions {
+  font-size: 13px;
+  color: var(--card-dim);
+  margin-top: 10px;
+}
+.rv-r4 kbd {
+  opacity: 1;
+}
+.rv-r4 .rv-reply-box {
+  color: var(--dim);
+  font-size: 14px;
+}
+.rv-badge {
+  font: 600 12px var(--font-read);
+  padding: 1px 7px;
+  border-radius: 9px;
+  border: 1px solid var(--card-edge);
+  color: var(--text);
+  white-space: nowrap;
+}
+.rv-badge-pending {
+  border-color: var(--lamp-input);
+  color: var(--lamp-input);
+}
+.vb-focused .rv-sel .rv-badge {
+  color: var(--text-on-light);
+  border-color: currentColor;
+}
+.rv-list-r4 .rv-meta {
+  font-size: 13px;
+  color: var(--card-dim);
+}
+.rv-list-r4 .rv-card2 .rv-title {
+  font-size: 15px;
+}
+.rv-list-r4 .rv-head,
+.rv-list-r4 .rv-num {
+  font-size: 12px;
+  color: var(--card-dim);
+}
+.rv-list-r4 .rv-group-none {
+  color: var(--dim);
+}
+.rv-r4 .rv-cursor .rv-n {
+  color: var(--text);
+}
+.rv-r4 .vb-focused .rv-cursor .rv-n {
+  color: var(--focus);
+}
+.rv-r4 .rv-file {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  grid-template-areas: 'change name delta' 'change name badges';
+  column-gap: 8px;
+  row-gap: 2px;
+  padding: 6px 12px;
+}
+.rv-r4 .rv-change {
+  grid-area: change;
+  align-self: start;
+  margin-top: 2px;
+}
+.rv-r4 .rv-fname {
+  grid-area: name;
+}
+.rv-r4 .rv-file .rv-delta {
+  grid-area: delta;
+  justify-self: end;
+}
+.rv-r4 .rv-badges {
+  grid-area: badges;
+  justify-self: end;
+  display: flex;
+  gap: 4px;
+}
