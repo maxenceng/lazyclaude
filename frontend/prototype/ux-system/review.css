@@ -693,3 +693,55 @@
   font-size: 13px;
   padding: 4px 2px;
 }
+
+/* R4: threads across the diff's full width, hanging from a marked line; a quiet cursor; a neutral pending card */
+.rv-r4 .rv-inline {
+  padding: 0 0 8px;
+}
+.rv-r4 .rv-inline .rv-thread {
+  position: relative;
+  border-radius: 0;
+  border-left-width: 3px;
+  border-right: 0;
+  margin-top: 7px;
+  padding-left: 16px;
+}
+.rv-r4 .rv-inline .rv-thread::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 70px;
+  border: 7px solid transparent;
+  border-top: 0;
+  border-bottom-color: var(--card-edge);
+}
+.rv-r4 .rv-has-thread {
+  box-shadow: inset 3px 0 0 var(--ansi-blue);
+}
+.rv-r4 .rv-has-thread .rv-n {
+  color: var(--ansi-blue);
+  font-weight: 600;
+}
+.rv-r4 .rv-pending {
+  background: var(--card);
+  border-left-color: var(--lamp-input);
+}
+.rv-r4 .rv-has-thread:has(+ .rv-inline .rv-pending) {
+  box-shadow: inset 3px 0 0 var(--lamp-input);
+}
+.rv-r4 .rv-has-thread:has(+ .rv-inline .rv-pending) .rv-n {
+  color: var(--lamp-input);
+}
+.rv-r4 .rv-cursor,
+.rv-r4 .vb-focused .rv-cursor {
+  background: color-mix(in srgb, var(--text) 9%, var(--diff-added));
+  color: var(--text);
+  outline: 1px solid color-mix(in srgb, var(--focus) 70%, transparent);
+  outline-offset: -1px;
+}
+.rv-r4 .vb-focused .rv-cursor :is(.rv-n, .rv-sign) {
+  color: var(--focus);
+}
+.rv-r4 .rv-cursor.rv-has-thread {
+  box-shadow: inset 3px 0 0 var(--focus);
+}

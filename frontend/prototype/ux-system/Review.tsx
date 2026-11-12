@@ -422,7 +422,7 @@ const ReviewView = ({ variant, focus, leftTab }: Props) => {
   }
   if (variant === 'r1' || variant === 'r4') {
     return (
-      <main className="rv-review rv-r1">
+      <main className={`rv-review rv-r1 ${variant === 'r4' ? 'rv-r4' : ''}`}>
         <Frame pane="board" focus={focus} title="Files" sub={<span className="vb-sub">6 · +196 −5</span>} className="rv-a-files" footer={<PendingBar wide={false} />}>
           <FileList selected={0} tree />
         </Frame>
