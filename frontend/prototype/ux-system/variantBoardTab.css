@@ -252,3 +252,12 @@
 .bt-folded {
   grid-template-rows: 38px;
 }
+
+/* I: one card look in every column; only the type edge and the waiting tint tell cards apart */
+.bt-columns-i .bt-draft,
+.bt-columns-i .bt-done {
+  background: var(--card);
+  border: 1px solid var(--card-edge);
+  border-left: 3px solid var(--type);
+  color: var(--text);
+}
