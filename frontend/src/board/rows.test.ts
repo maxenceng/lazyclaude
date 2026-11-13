@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { boardFixture, ticketFixture } from './fixtures';
 import {
   columnsOf,
-  cursorTicketInColumns,
   inProgressCount,
   moveAcross,
   moveInColumn,
@@ -10,7 +9,6 @@ import {
   orderedGroups,
   shownTickets,
   selectedIn,
-  selectedInColumns,
   statusesInOrder,
   ticketIds,
   ticketTotal,
@@ -97,9 +95,7 @@ describe('the board rows', () => {
   });
 
   it('keeps the cursor on a done card, which Base lists as well', () => {
-    expect(selectedInColumns(view, 'PROJ-1')).toBe('PROJ-1');
     expect(selectedIn(view, 'PROJ-1')).toBe('PROJ-1');
-    expect(cursorTicketInColumns(view, 'PROJ-1')?.id).toBe('PROJ-1');
   });
 
   it('moves down and up inside one column and stops at its ends', () => {

@@ -10,3 +10,7 @@
 .surface :global(.xterm) {
   height: 100%;
 }
+
+.surface :global(.xterm-viewport) {
+  background-color: var(--terminal-ground);
+}

@@ -312,6 +312,7 @@ describe('the Board tab with no ticket under the cursor', () => {
     await user.keyboard('2');
     expect(screen.getByText('gh is not signed in')).toBeInTheDocument();
     expect(screen.getByRole('group', { name: /todo/i })).toHaveTextContent('todo0none');
+    expect(screen.getByRole('region', { name: 'Board' }).className, 'the reason stands above the columns, which take the height left rather than overflow').toContain('fill');
     expect(within(screen.getByRole('region', { name: 'Ticket' })).getByText('No ticket selected.')).toBeInTheDocument();
   });
 });

@@ -16,6 +16,7 @@ import {
   type PullRequestCells,
   Pane,
   PaneActionKind,
+  PaneLayout,
   StatusHeading,
   Text,
   Tone,
@@ -27,9 +28,9 @@ import {
 } from '../design-system';
 import type { BoardBoardView, BoardTicketView } from '../protocol';
 import { useStore } from '../shared/useStore';
-import { type BoardState, BoardStateKind, UnavailableCause } from './boardState';
+import { type BoardState, BoardStateKind, type EmptyBoard, type PopulatedBoard, type UnavailableBoard, UnavailableCause } from './boardState';
 import type { BoardStore } from './boardStore';
-import { columnsOf, isDone, orderedGroups, shownTickets, selectedIn, selectedInColumns, statusesInOrder } from './rows';
+import { columnsOf, isDone, orderedGroups, shownTickets, selectedIn, statusesInOrder } from './rows';
 import type { Selection } from './selection';
 import { statusColourOf } from './statusColours';
 import { PullRequestRead, type TicketPullRequest } from './ticketPullRequest';
@@ -109,8 +110,8 @@ const TYPE_COLOUR: ReadonlyMap<string, TypeColour> = new Map([
 const typeOf = (ticket: BoardTicketView): TicketTypeTag | undefined =>
   ticket.type.kind === 'typeName' ? { name: ticket.type.value, colour: TYPE_COLOUR.get(ticket.type.value) } : undefined;
 
-/** Whether the Board tab draws its columns: not while the board is read or has failed to be, which no column should read as none. */
-const showsColumns = (state: BoardState): boolean => state.kind === BoardStateKind.Populated || state.kind === BoardStateKind.Empty || state.kind === BoardStateKind.Unavailable;
+/** Whether the Board tab draws its columns: once the board is read, or known unavailable, the reason then standing above them (ADR 0105); not while it is read, nor after a fault, which offers a retry instead. */
+const showsColumns = (state: BoardState): state is PopulatedBoard | EmptyBoard | UnavailableBoard => state.kind === BoardStateKind.Populated || state.kind === BoardStateKind.Empty || state.kind === BoardStateKind.Unavailable;
 
 /** The Board tab: the Board as five equal status columns of cards, each at 0 and `none` while it holds nothing. A click on a card is handed up, which decides what it selects or opens. */
 export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onPress, onRetry, onCapture }: ColumnsProps) => {
@@ -118,12 +119,13 @@ export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onPres
   const state = useStore(board.state);
   const chosen = useStore(selection.selected);
   const populated = state.shown();
-  const cursor = populated === undefined ? undefined : selectedInColumns(populated, chosen);
+  const cursor = populated === undefined ? undefined : selectedIn(populated, chosen);
   const columns = populated === undefined ? statusesInOrder().map((status) => ({ status, tickets: [], total: 0 })) : columnsOf(populated);
   return (
     <Pane
       title={t('board.title')}
       focused
+      layout={PaneLayout.Fill}
       actions={onCapture === undefined ? [] : [{ kind: PaneActionKind.Add, label: t('board.capture'), shortcut: t('board.captureKey'), onClick: onCapture }]}
     >
       {showsColumns(state) ? (
@@ -240,13 +242,11 @@ const UNAVAILABLE = {
   [UnavailableCause.UnavailableBoard]: 'board.unavailableBoard',
 } as const satisfies Record<UnavailableCause, string>;
 
-const Unread = ({ state, onRetry }: { state: BoardState; onRetry: () => void }) => {
+const Unread = ({ state, onRetry }: { state: Exclude<BoardState, EmptyBoard>; onRetry: () => void }) => {
   const { t } = useTranslation('board');
   switch (state.kind) {
     case BoardStateKind.Loading:
       return <Busy>{t('board.loading')}</Busy>;
-    case BoardStateKind.Empty:
-      return <Text tone={Tone.Dim}>{t('board.empty')}</Text>;
     case BoardStateKind.Unavailable:
       return (
         <>

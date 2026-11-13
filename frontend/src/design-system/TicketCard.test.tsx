@@ -43,6 +43,12 @@ describe('a ticket card', () => {
     expect(screen.getByRole('button')).toHaveTextContent('A draftPROJ-1');
   });
 
+  it('keeps an untyped card\'s edge uncoloured when a waiting session tints it', () => {
+    render(<TicketCard id="PROJ-1" title="A draft" type={undefined} selected={false} lamp={LampColour.Input} onSelect={() => {}} />);
+    expect(screen.getByRole('button')).not.toHaveAttribute('data-type');
+    expect(ruleOf(card, '.card[data-lamp]:not([data-type])'), 'the lamp tint must not read as a type edge').toContain('border-left-color: var(--card-edge)');
+  });
+
   it('keeps a type outside the coloured ones written, with an edge of no colour of its own', () => {
     render(<TicketCard id="PROJ-1" title="A ticket" type={{ name: 'spike', colour: undefined }} selected={false} lamp={undefined} onSelect={() => {}} />);
     expect(screen.getByText('spike')).toBeInTheDocument();

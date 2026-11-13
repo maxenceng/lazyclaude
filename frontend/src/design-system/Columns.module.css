@@ -4,7 +4,8 @@
   grid-auto-columns: minmax(0, 1fr);
   gap: 1px;
   background: var(--seam);
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .column {

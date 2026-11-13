@@ -66,6 +66,9 @@
   border-left-color: var(--dim);
 }
 
+.card[data-lamp]:not([data-type]) {
+  border-left-color: var(--card-edge);
+}
 
 .title {
   display: -webkit-box;

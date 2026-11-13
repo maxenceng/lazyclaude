@@ -7,7 +7,7 @@ const PROJECT_DIRECTORY = '.';
 const stateOf = (view: BoardBoardLookupView): BoardState => {
   switch (view.kind) {
     case 'board':
-      return view.groups.every((group) => group.tickets.length === 0) && view.unreadable.length === 0 ? new EmptyBoard(view.root) : new PopulatedBoard(view);
+      return view.groups.every((group) => group.tickets.length === 0) ? new EmptyBoard(view.root) : new PopulatedBoard(view);
     case 'unavailableBoard':
       return new UnavailableBoard(UnavailableCause.UnavailableBoard, view.reason);
     case 'noProject':

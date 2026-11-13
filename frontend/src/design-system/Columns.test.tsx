@@ -11,6 +11,12 @@ describe('columns', () => {
     expect(ruleOf(sheet, '.columns'), 'a column that holds long text must not widen').not.toContain('overflow-x');
   });
 
+  it('take the height left under whatever stands above them, never more', () => {
+    expect(ruleOf(sheet, '.columns'), 'a full height under an alert would push the columns past the pane').not.toContain('height: 100%');
+    expect(ruleOf(sheet, '.columns')).toContain('flex: 1 1 auto');
+    expect(ruleOf(sheet, '.columns')).toContain('min-height: 0');
+  });
+
   it('say none in a column that holds nothing, and nothing in one that does', () => {
     render(
       <Columns>

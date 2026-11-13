@@ -1,5 +1,5 @@
 import type { BoardController } from './board/boardController';
-import { cursorTicketInColumns } from './board/rows';
+import { selectedIn } from './board/rows';
 import { Action } from './keys/bindings';
 import { Focus, type Layout, WindowTab } from './layout';
 import type { BoardTicketView, ReviewPullRequestView } from './protocol';
@@ -106,9 +106,9 @@ export class WindowTabs {
 
   private openCursorTicket(): void {
     const view = this.deps.board.shown();
-    const ticket = view === undefined ? undefined : cursorTicketInColumns(view, this.deps.board.selection.selected.get());
-    if (ticket !== undefined) {
-      this.openTicket(ticket.id);
+    const id = view === undefined ? undefined : selectedIn(view, this.deps.board.selection.selected.get());
+    if (id !== undefined) {
+      this.openTicket(id);
     }
   }
 
