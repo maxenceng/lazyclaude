@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { BoardKeyBar } from './BoardKeyBar';
+import { BoardKeyBar, BoardTabKeyBar } from './BoardKeyBar';
 
 describe('the Board\'s key bar', () => {
   it('lists the keys that move, open and start sessions while a ticket is under the cursor, with the new draft and what is handed to it', () => {
@@ -24,6 +24,24 @@ describe('the Board\'s key bar', () => {
 
   it('leaves the new draft off where there is no project to capture into', () => {
     render(<BoardKeyBar ticket={false} capture={false} extra={['1/2/3 tabs']} />);
+    expect(screen.getByRole('contentinfo')).not.toHaveTextContent('new draft');
+  });
+});
+
+describe('the Board tab\'s key bar', () => {
+  it('lists moving over the columns, going to the ticket and the new draft while a ticket is under the cursor', () => {
+    render(<BoardTabKeyBar ticket capture extra={['1/2/3 tabs']} />);
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('h/j/k/l moveenter go to ticketc new draft1/2/3 tabs');
+  });
+
+  it('keeps only the new draft and the window tabs when no ticket can be under the cursor', () => {
+    render(<BoardTabKeyBar ticket={false} capture extra={['1/2/3 tabs']} />);
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('c new draft1/2/3 tabs');
+    expect(screen.getByRole('contentinfo')).not.toHaveTextContent('move');
+  });
+
+  it('leaves the new draft off where there is no project to capture into', () => {
+    render(<BoardTabKeyBar ticket={false} capture={false} extra={['1/2/3 tabs']} />);
     expect(screen.getByRole('contentinfo')).not.toHaveTextContent('new draft');
   });
 });

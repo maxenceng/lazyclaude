@@ -16,8 +16,6 @@ interface Deps {
 /** Which tab the window shows, and the keys of the Board and Pull requests tabs. The window opens on Base, and remembers no tab. */
 export class WindowTabs {
   readonly selected: Store<WindowTab> = new Store<WindowTab>(WindowTab.Base);
-  /** Whether the Board tab shows its preview: a click on no ticket closes it, a card chosen by click or key opens it again. */
-  readonly previewShown: Store<boolean> = new Store<boolean>(true);
 
   constructor(private readonly deps: Deps) {}
 
@@ -50,17 +48,11 @@ export class WindowTabs {
 
   /** A click on a card of the Board tab: the card selected and previewed, or, already selected, gone to on Base. */
   pressTicket(ticket: BoardTicketView, cursor: string | undefined): void {
-    if (ticket.id === cursor && this.previewShown.get()) {
+    if (ticket.id === cursor) {
       this.openTicket(ticket.id);
     } else {
       this.deps.board.selection.select(ticket.id);
-      this.previewShown.set(true);
     }
-  }
-
-  /** A click on the Board tab where no card is: the preview closes and the columns take its height. */
-  closePreview(): void {
-    this.previewShown.set(false);
   }
 
   /** Enter, or a click on the card already selected, on the Board tab: back to Base with that ticket selected. */
@@ -90,10 +82,12 @@ export class WindowTabs {
   private pressOnBoard(action: Action): void {
     const view = this.deps.board.shown();
     const selection = this.deps.board.selection;
+    if (action === Action.Capture) {
+      return this.deps.board.capture.open();
+    }
     if (view === undefined) {
       return;
     }
-    this.previewShown.set(action === Action.Open ? this.previewShown.get() : true);
     switch (action) {
       case Action.MoveDown:
         return selection.moveInColumn(view, 1);

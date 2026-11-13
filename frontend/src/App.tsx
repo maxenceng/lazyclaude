@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { AppModel } from './app';
 import { BoardKeyBar, BoardTabKeyBar, CaptureKeyBar } from './board/BoardKeyBar';
 import { CapturePopup } from './board/CapturePopup';
-import { BoardColumns, BoardPane, BoardPreview, TicketPane } from './board/BoardScreen';
+import { BoardColumns, BoardPane, TicketPane } from './board/BoardScreen';
 import { inProgressCount, ticketTotal } from './board/rows';
 import { statusColourOf } from './board/statusColours';
 import { ConnectionScreen } from './connection/ConnectionScreen';
@@ -78,7 +78,6 @@ export const App = ({ app, packaged }: Props) => {
   const mouseReported = useStore(app.hosting.mouseReported);
   const review = useStore(app.review.current);
   const tab = useStore(app.tabs.selected);
-  const previewShown = useStore(app.tabs.previewShown);
   const pullRequests = useStore(app.review.pullRequests.state);
   const capturing = useStore(app.board.capture.state).isOpen();
   const quitAsked = useStore(app.quitting.asking);
@@ -149,7 +148,7 @@ export const App = ({ app, packaged }: Props) => {
   const tabScreen =
     tab === WindowTab.Board
       ? {
-          bar: <BoardTabKeyBar extra={windowTabKeys} />,
+          bar: <BoardTabKeyBar ticket={selectedTicket !== undefined} capture={app.board.root() !== undefined} extra={windowTabKeys} />,
           pane: (
             <BoardColumns
               board={app.board.store}
@@ -160,20 +159,35 @@ export const App = ({ app, packaged }: Props) => {
                 return pullRequest === undefined ? undefined : cellsOf(pullRequest);
               }}
               onPress={(ticket, cursor) => app.tabs.pressTicket(ticket, cursor)}
-              onBackground={() => app.tabs.closePreview()}
               onRetry={() => void app.load()}
+              onCapture={app.board.root() === undefined ? undefined : () => app.capture()}
             />
           ),
-          preview: previewShown ? (
-            <BoardPreview
+          preview: (
+            <TicketPane
               board={app.board.store}
               selection={app.board.selection}
+              focused={false}
+              pullRequest={selectedTicket === undefined ? NO_PULL_REQUEST : ticketPullRequestOf(pullRequests, app.review.ticketPullRequests.of(selectedTicket.branch))}
               onLink={(href) => {
                 app.chooseTab(WindowTab.Base);
                 app.docs.followFromTicket(href);
               }}
-            />
-          ) : null,
+            >
+              <SessionsList
+                rows={app.sessions.rows()}
+                cursor={cursor}
+                picker={picker}
+                onPress={(index) => {
+                  if (selectedTicket !== undefined) {
+                    app.tabs.openTicket(selectedTicket.id);
+                    app.pressRow(index);
+                  }
+                }}
+              />
+            </TicketPane>
+          ),
+          arrangement: Arrangement.TabPreview,
         }
       : {
           bar: <PullRequestsKeyBar listed={pullRequestList.length > 0} extra={windowTabKeys} />,
@@ -187,15 +201,16 @@ export const App = ({ app, packaged }: Props) => {
             />
           ),
           preview: null,
+          arrangement: Arrangement.Tab,
         };
   const tabbed =
     tab === WindowTab.Base || unready !== undefined || reviewing !== undefined
       ? undefined
       : {
           board: tabScreen.pane,
-          docs: tabScreen.preview,
-          main: null,
-          arrangement: Arrangement.Tab,
+          docs: null,
+          main: tabScreen.preview,
+          arrangement: tabScreen.arrangement,
         };
 
   const shown =

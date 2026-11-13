@@ -89,6 +89,24 @@ describe('the window tabs', () => {
     expect(layout.get().focus).toBe(Focus.Board);
   });
 
+  it('open the capture popup on c on the Board tab, with or without a ticket under the cursor', async () => {
+    const { tabs, board: boardController } = await setup();
+    tabs.choose(WindowTab.Board);
+    tabs.press(Action.Capture);
+    expect(boardController.capture.state.get().isOpen()).toBe(true);
+  });
+
+  it('select a ticket on a first click on its card and go to Base on a second', async () => {
+    const { tabs, board: boardController } = await setup();
+    const second = boardController.shown()?.groups.flatMap((group) => group.tickets).find((ticket) => ticket.id === 'PROJ-2');
+    tabs.choose(WindowTab.Board);
+    tabs.pressTicket(second!, boardController.selection.selected.get());
+    expect(boardController.selection.selected.get()).toBe('PROJ-2');
+    expect(tabs.selected.get()).toBe(WindowTab.Board);
+    tabs.pressTicket(second!, 'PROJ-2');
+    expect(tabs.selected.get()).toBe(WindowTab.Base);
+  });
+
   it('go to Base with a ticket selected when it is clicked', async () => {
     const { tabs, board: boardController } = await setup();
     tabs.choose(WindowTab.Board);

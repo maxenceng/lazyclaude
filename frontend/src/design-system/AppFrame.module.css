@@ -44,6 +44,14 @@
     'dock';
 }
 
+.tabPreview {
+  grid-template-columns: minmax(0, 64fr) minmax(420px, 36fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'board main'
+    'dock dock';
+}
+
 .left {
   grid-area: board;
   display: grid;

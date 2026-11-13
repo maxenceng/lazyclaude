@@ -5,7 +5,6 @@ import {
   Alert,
   Busy,
   Button,
-  Cards,
   Column,
   Columns,
   Detail,
@@ -25,13 +24,12 @@ import {
   TypeColour,
   TicketCard,
   TicketRow,
-  UnreadableRow,
 } from '../design-system';
 import type { BoardBoardView, BoardTicketView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import { type BoardState, BoardStateKind, UnavailableCause } from './boardState';
 import type { BoardStore } from './boardStore';
-import { columnsOf, cursorTicketInColumns, isDone, orderedGroups, shownTickets, selectedIn, selectedInColumns, statusesInOrder } from './rows';
+import { columnsOf, isDone, orderedGroups, shownTickets, selectedIn, selectedInColumns, statusesInOrder } from './rows';
 import type { Selection } from './selection';
 import { statusColourOf } from './statusColours';
 import { PullRequestRead, type TicketPullRequest } from './ticketPullRequest';
@@ -96,8 +94,9 @@ interface ColumnsProps extends ViewProps {
   markerOf: (ticket: string) => LampColour | undefined;
   pullRequestOf: (ticket: BoardTicketView) => PullRequestCells | undefined;
   onPress: (ticket: BoardTicketView, cursor: string | undefined) => void;
-  onBackground: () => void;
   onRetry: () => void;
+  /** Given while there is a project to capture into: the title's button opens the capture popup, as `c` does. */
+  onCapture?: () => void;
 }
 
 /** The types that carry a colour of their own; the `type:` labels are an open set, and any other is dim. */
@@ -110,63 +109,53 @@ const TYPE_COLOUR: ReadonlyMap<string, TypeColour> = new Map([
 const typeOf = (ticket: BoardTicketView): TicketTypeTag | undefined =>
   ticket.type.kind === 'typeName' ? { name: ticket.type.value, colour: TYPE_COLOUR.get(ticket.type.value) } : undefined;
 
-/** The Board tab: the Board as status columns of cards. A click on a card or on no card is handed up, which decides what it selects, opens or closes. */
-export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onPress, onBackground, onRetry }: ColumnsProps) => {
+/** Whether the Board tab draws its columns: not while the board is read or has failed to be, which no column should read as none. */
+const showsColumns = (state: BoardState): boolean => state.kind === BoardStateKind.Populated || state.kind === BoardStateKind.Empty || state.kind === BoardStateKind.Unavailable;
+
+/** The Board tab: the Board as five equal status columns of cards, each at 0 and `none` while it holds nothing. A click on a card is handed up, which decides what it selects or opens. */
+export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onPress, onRetry, onCapture }: ColumnsProps) => {
   const { t } = useTranslation('board');
   const state = useStore(board.state);
   const chosen = useStore(selection.selected);
   const populated = state.shown();
   const cursor = populated === undefined ? undefined : selectedInColumns(populated, chosen);
+  const columns = populated === undefined ? statusesInOrder().map((status) => ({ status, tickets: [], total: 0 })) : columnsOf(populated);
   return (
-    <Pane title={t('board.title')} focused>
-      {populated === undefined ? (
-        <Unread state={state} onRetry={onRetry} />
-      ) : (
+    <Pane
+      title={t('board.title')}
+      focused
+      actions={onCapture === undefined ? [] : [{ kind: PaneActionKind.Add, label: t('board.capture'), shortcut: t('board.captureKey'), onClick: onCapture }]}
+    >
+      {showsColumns(state) ? (
         <>
-          <Columns onBackground={onBackground}>
-            {columnsOf(populated).map((column) => (
-              <Column key={column.status} label={t(`status.${column.status}`)}>
-                <StatusHeading status={t(`status.${column.status}`)} count={column.total} colour={statusColourOf(column.status)} />
-                <Cards>
-                  {column.tickets.map((ticket) => (
-                    <TicketCard
-                      key={ticket.id}
-                      id={ticket.id}
-                      title={ticket.title}
-                      type={typeOf(ticket)}
-                      meta={ticket.otherLabels}
-                      selected={ticket.id === cursor}
-                      done={isDone(ticket.status)}
-                      lamp={markerOf(ticket.id)}
-                      pullRequest={pullRequestOf(ticket)}
-                      onSelect={() => onPress(ticket, cursor)}
-                    />
-                  ))}
-                </Cards>
+          {state.kind === BoardStateKind.Unavailable ? <Unread state={state} onRetry={onRetry} /> : null}
+          <Columns>
+            {columns.map((column) => (
+              <Column
+                key={column.status}
+                label={t(`status.${column.status}`)}
+                heading={<StatusHeading status={t(`status.${column.status}`)} count={column.total} colour={statusColourOf(column.status)} />}
+                empty={t('board.none')}
+              >
+                {column.tickets.map((ticket) => (
+                  <TicketCard
+                    key={ticket.id}
+                    id={ticket.id}
+                    title={ticket.title}
+                    type={typeOf(ticket)}
+                    selected={ticket.id === cursor}
+                    lamp={markerOf(ticket.id)}
+                    pullRequest={pullRequestOf(ticket)}
+                    onSelect={() => onPress(ticket, cursor)}
+                  />
+                ))}
               </Column>
             ))}
           </Columns>
-          <Unreadable view={populated} />
         </>
+      ) : (
+        <Unread state={state} onRetry={onRetry} />
       )}
-    </Pane>
-  );
-};
-
-interface PreviewProps extends ViewProps {
-  onLink: (href: string) => void;
-}
-
-/** The Board tab's preview: the ticket under its cursor, detailed as Base's main view details it. */
-export const BoardPreview = ({ board, selection, onLink }: PreviewProps) => {
-  const { t } = useTranslation('board');
-  const state = useStore(board.state);
-  const chosen = useStore(selection.selected);
-  const populated = state.shown();
-  const ticket = populated === undefined ? undefined : cursorTicketInColumns(populated, chosen);
-  return (
-    <Pane title={t('ticket.title')} focused={false}>
-      {ticket === undefined ? <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} onLink={onLink} />}
     </Pane>
   );
 };
@@ -182,8 +171,8 @@ interface TicketProps extends ViewProps {
   foot?: ReactNode;
   /** Above the ticket, whether or not one is under the cursor: what failed and can be retried. */
   alert?: ReactNode;
-  /** A click on the ticket, anywhere in its pane, hands it focus. */
-  onFocus: () => void;
+  /** A click on the ticket, anywhere in its pane, hands it focus; a preview has none to give. */
+  onFocus?: () => void;
   children?: ReactNode;
 }
 
@@ -306,7 +295,6 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
           </Rows>
         </div>
       ))}
-      <Unreadable view={view} />
     </>
   );
 };
@@ -321,29 +309,4 @@ const EmptyGroups = () => {
       ))}
     </>
   );
-};
-
-const Unreadable = ({ view }: { view: BoardBoardView }) => {
-  const { t } = useTranslation('board');
-  return view.unreadable.length === 0 ? null : (
-    <div>
-      <StatusHeading status={t('board.unreadable')} count={view.unreadable.length} />
-      <Rows>
-        {view.unreadable.map((ticket) => (
-          <UnreadableRow key={ticket.id} id={ticket.id} reason={ticket.reason} />
-        ))}
-      </Rows>
-    </div>
-  );
-};
-
-const TicketDetail = ({ ticket, onLink }: { ticket: BoardTicketView; onLink: (href: string) => void }) => {
-  const { t } = useTranslation('board');
-  const facts = [
-    ticket.id,
-    t(`status.${ticket.status}`),
-    ticket.context.kind === 'contextName' ? ticket.context.value : undefined,
-    ticket.type.kind === 'typeName' ? ticket.type.value : undefined,
-  ].filter((fact): fact is string => fact !== undefined);
-  return <Detail facts={facts} title={ticket.title} body={ticket.body.kind === 'body' ? ticket.body.value : undefined} onLink={onLink} />;
 };

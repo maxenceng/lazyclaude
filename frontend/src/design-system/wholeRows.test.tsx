@@ -78,7 +78,7 @@ describe('a scroller that shows whole rows', () => {
           <div data-row="" />
         </Pane>
         <Columns>
-          <Column label="todo">
+          <Column label="todo" empty="none">
             <div data-row="" />
             <div data-row="" />
             <div data-row="" />

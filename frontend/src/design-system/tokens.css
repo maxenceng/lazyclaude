@@ -56,7 +56,7 @@
   --status-draft: #b4b0a6;
   --status-done: #8db596;
   --type-feature: #8cc2c2;
-  --type-fix: #e0867c;
+  --type-fix: #e48b81;
   --type-chore: #d9a066;
 
   --ci-failed: #d9695f;
@@ -121,6 +121,7 @@
   --pane-action: 24px;
   --pane-action-icon: 12px;
   --card-radius: 3px;
+  --card-edge-width: 3px;
   --pill-radius: 9px;
   --hover-ground: color-mix(in srgb, currentColor 8%, transparent);
   --popup-shadow: 0 8px 28px rgb(0 0 0 / 0.5);

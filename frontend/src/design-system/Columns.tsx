@@ -1,41 +1,28 @@
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 import { useWholeRows } from './wholeRows';
 import styles from './Columns.module.css';
 
-interface ColumnsProps {
-  /** A click that lands on no button: a column's empty space or its heading. */
-  onBackground?: () => void;
-  children: ReactNode;
-}
-
-/** Columns side by side that share the width; they scroll sideways when a half tile cannot hold them. */
-export const Columns = ({ onBackground, children }: ColumnsProps) => {
-  return (
-    <div
-      className={styles.columns}
-      role="presentation"
-      onClick={(event) => {
-        if (onBackground !== undefined && !(event.target instanceof Element && event.target.closest('button') !== null)) {
-          onBackground();
-        }
-      }}
-    >
-      {children}
-    </div>
-  );
+/** Columns side by side that share the width equally, so a status keeps its place whatever it holds. */
+export const Columns = ({ children }: { children: ReactNode }) => {
+  return <div className={styles.columns}>{children}</div>;
 };
 
 interface ColumnProps {
   label: string;
-  children: ReactNode;
+  /** The column's heading, kept above whatever it holds. */
+  heading?: ReactNode;
+  /** What the column says while it holds nothing. */
+  empty: string;
+  children?: ReactNode;
 }
 
-/** One column: a status's heading over its rows. */
-export const Column = ({ label, children }: ColumnProps) => {
+/** One column: a heading over what it holds, or over a word saying it holds nothing. */
+export const Column = ({ label, heading, empty, children }: ColumnProps) => {
   const column = useWholeRows<HTMLDivElement>();
   return (
     <div ref={column} role="group" aria-label={label} className={styles.column}>
-      {children}
+      {heading}
+      {Children.count(children) === 0 ? <p className={styles.empty}>{empty}</p> : <ul className={styles.list}>{children}</ul>}
     </div>
   );
 };
