@@ -5,7 +5,7 @@ import { Markdown } from './Markdown';
 interface Props {
   facts: readonly string[];
   title: string;
-  /** Under the title, across the pane: where it stands. */
+  /** Under the title, across the pane: where it stands, ruled off from what follows. */
   summary?: ReactNode;
   /** Under the summary, across the pane: what is done with it, before its text. */
   lead?: ReactNode;
@@ -24,7 +24,7 @@ export const Detail = ({ facts, title, summary, lead, body, onLink }: Props) => 
           ))}
         </div>
         <h3 className={styles.title}>{title}</h3>
-        {summary === undefined ? null : <div className={styles.across}>{summary}</div>}
+        {summary === undefined ? null : <div className={`${styles.across} ${styles.summary}`}>{summary}</div>}
         {lead === undefined ? null : <div className={styles.across}>{lead}</div>}
         {body === undefined ? null : (
           <div className={styles.body}>

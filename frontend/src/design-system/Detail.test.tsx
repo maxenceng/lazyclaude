@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Detail } from './Detail';
+import { ruleOf, stylesheet } from './stylesheet';
 
 describe('the detail of what is selected', () => {
   it('typesets the body as markdown, the way a document is', () => {
@@ -29,5 +30,12 @@ describe('the detail of what is selected', () => {
     expect(text.indexOf('A ticket')).toBeLessThan(text.indexOf('where it stands'));
     expect(text.indexOf('where it stands')).toBeLessThan(text.indexOf('what to do'));
     expect(text.indexOf('what to do')).toBeLessThan(text.indexOf('The text.'));
+  });
+
+  it('rules the summary off from the lead under it', () => {
+    render(<Detail facts={[]} title="A ticket" summary={<p>where it stands</p>} lead={<p>what to do</p>} body={undefined} onLink={() => {}} />);
+    expect(screen.getByText('where it stands').parentElement?.className).toContain('summary');
+    expect(screen.getByText('what to do').parentElement?.className).not.toContain('summary');
+    expect(ruleOf(stylesheet('Detail.module.css'), '.summary')).toContain('border-bottom: 1px solid var(--seam)');
   });
 });

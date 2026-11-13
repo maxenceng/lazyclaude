@@ -68,13 +68,17 @@ describe('a session row', () => {
     expect(ruleOf(sheet, ".tall[data-lamp='permission']")).toContain('--tall-ink: var(--text)');
   });
 
+  it('stands apart from the next card by a gap', () => {
+    expect(ruleOf(sheet, '.tall')).toContain('margin: 0 0 var(--space-2)');
+  });
+
   it('names its session in the mono face', () => {
     expect(ruleOf(sheet, '.tall .label')).toContain('var(--font-mono)');
   });
 
   it('keeps its own ground when selected and outlines it, rather than filling it with the cursor', () => {
     expect(ruleOf(sheet, '.tall.selected')).toContain('background: var(--row-ground, var(--card))');
-    expect(ruleOf(sheet, '.tall.selected')).toContain('outline: var(--focus-edge) solid var(--cursor-border)');
+    expect(ruleOf(sheet, '.tall.selected')).toContain('outline: var(--cursor-outline, var(--focus-edge)) solid var(--cursor-border)');
     expect(ruleOf(sheet, '.tall.selected')).toContain('box-shadow: none');
   });
 

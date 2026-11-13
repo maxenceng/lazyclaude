@@ -37,6 +37,11 @@
   padding-bottom: var(--space-4);
 }
 
+.summary {
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid var(--seam);
+}
+
 .title {
   font-size: var(--reading-title-em);
   line-height: 1.18;

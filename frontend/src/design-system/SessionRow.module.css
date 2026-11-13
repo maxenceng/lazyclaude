@@ -78,7 +78,7 @@
   grid-template-columns: var(--session-state-column) minmax(0, 1fr) auto;
   gap: var(--space-4);
   align-items: center;
-  margin-block: var(--space-1);
+  margin: 0 0 var(--space-2);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--row-frame, var(--card-edge));
   border-radius: var(--pane-radius);
@@ -116,6 +116,6 @@
   background: var(--row-ground, var(--card));
   color: var(--tall-ink, var(--dim));
   box-shadow: none;
-  outline: var(--focus-edge) solid var(--cursor-border);
+  outline: var(--cursor-outline, var(--focus-edge)) solid var(--cursor-border);
   outline-offset: 1px;
 }
