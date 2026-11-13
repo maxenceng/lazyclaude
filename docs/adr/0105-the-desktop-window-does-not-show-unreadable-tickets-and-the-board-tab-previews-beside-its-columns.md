@@ -49,7 +49,8 @@ chosen.
 - **Each status heading is underlined in its own colour**, at half strength, as the prototype drew it.
 - **The preview reuses Base's ticket pane**, so its facts line leaves out branch and worktree as ADR 0104's does, though the
   prototype drew them. A click on one of its session rows goes to the ticket on Base and runs the row's action, the one the
-  row is labelled with.
+  row is labelled with. That lets a session start or attach from the Board tab, through Base's own row action and no new
+  launch path; the user chose it in review over a click that only goes to the ticket.
 - **`c` captures a draft on the Board tab too**, beside the title's `+`, so the key bar's new-draft key acts there; the
   prototype's `n` was not the bound chord.
 

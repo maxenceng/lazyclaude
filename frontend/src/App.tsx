@@ -178,12 +178,7 @@ export const App = ({ app, packaged }: Props) => {
                 rows={app.sessions.rows()}
                 cursor={cursor}
                 picker={picker}
-                onPress={(index) => {
-                  if (selectedTicket !== undefined) {
-                    app.tabs.openTicket(selectedTicket.id);
-                    app.pressRow(index);
-                  }
-                }}
+                onPress={(index) => app.tabs.pressSessionRow(index)}
               />
             </TicketPane>
           ),

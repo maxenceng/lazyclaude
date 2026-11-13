@@ -11,6 +11,8 @@ interface Deps {
   board: BoardController;
   review: ReviewController;
   layout: Store<Layout>;
+  /** Base's click on a row of the ticket's sessions: the cursor goes to it and it opens. */
+  pressRow: (index: number) => void;
 }
 
 /** Which tab the window shows, and the keys of the Board and Pull requests tabs. The window opens on Base, and remembers no tab. */
@@ -52,6 +54,15 @@ export class WindowTabs {
       this.openTicket(ticket.id);
     } else {
       this.deps.board.selection.select(ticket.id);
+    }
+  }
+
+  /** A click on a session row of the Board tab's preview: the cursor's ticket gone to on Base, then the row's action run as Base runs it. Nothing without a ticket under the cursor. */
+  pressSessionRow(index: number): void {
+    const id = this.cursorTicket();
+    if (id !== undefined) {
+      this.openTicket(id);
+      this.deps.pressRow(index);
     }
   }
 
@@ -105,13 +116,16 @@ export class WindowTabs {
   }
 
   private openCursorTicket(): void {
-    const view = this.deps.board.shown();
-    const id = view === undefined ? undefined : selectedIn(view, this.deps.board.selection.selected.get());
+    const id = this.cursorTicket();
     if (id !== undefined) {
       this.openTicket(id);
     }
   }
 
+  private cursorTicket(): string | undefined {
+    const view = this.deps.board.shown();
+    return view === undefined ? undefined : selectedIn(view, this.deps.board.selection.selected.get());
+  }
 
   private pressOnPullRequests(action: Action): void {
     const list = this.pullRequests();

@@ -36,7 +36,9 @@ const setup = async () => {
   });
   await watching;
   client.calls.length = 0;
-  return { client, layout, board: boardController, review, tabs: new WindowTabs({ board: boardController, review, layout }) };
+  const pressedRows: number[] = [];
+  const tabs = new WindowTabs({ board: boardController, review, layout, pressRow: (index) => pressedRows.push(index) });
+  return { client, layout, board: boardController, review, tabs, pressedRows };
 };
 
 describe('the window tabs', () => {
@@ -105,6 +107,16 @@ describe('the window tabs', () => {
     expect(tabs.selected.get()).toBe(WindowTab.Board);
     tabs.pressTicket(second!, 'PROJ-2');
     expect(tabs.selected.get()).toBe(WindowTab.Base);
+  });
+
+  it('go to the cursor ticket on Base and run the session row clicked in the Board tab preview', async () => {
+    const { tabs, board: boardController, pressedRows } = await setup();
+    tabs.choose(WindowTab.Board);
+    boardController.selection.select('PROJ-2');
+    tabs.pressSessionRow(1);
+    expect(tabs.selected.get(), 'the row acts from Base, where its session is drawn').toBe(WindowTab.Base);
+    expect(boardController.selection.selected.get()).toBe('PROJ-2');
+    expect(pressedRows).toEqual([1]);
   });
 
   it('go to Base with a ticket selected when it is clicked', async () => {
