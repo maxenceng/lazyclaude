@@ -8,18 +8,20 @@ export enum LampColour {
   Off = 'off',
 }
 
-const GLYPH: Record<LampColour, string> = { permission: '!', input: '?', turn: '•', off: '' };
+const GLYPH: Record<LampColour, string> = { permission: '!', input: '?', turn: '•', off: '○' };
 const MEANING = {
   permission: 'lamp.permission',
   input: 'lamp.input',
   turn: 'lamp.turn',
   off: 'lamp.off',
 } as const satisfies Record<LampColour, string>;
-const SHORT_MEANING = {
+/** What a lamp's state is called where there is room for a word or two: on a tile, and after a count. */
+export const SHORT_MEANING = {
   permission: 'lamp.shortPermission',
   input: 'lamp.shortInput',
   turn: 'lamp.shortTurn',
-} as const satisfies Record<Exclude<LampColour, LampColour.Off>, string>;
+  off: 'lamp.shortOff',
+} as const satisfies Record<LampColour, string>;
 
 /** A marker beside a ticket or a session, or a tile on the andon board. */
 export enum LampSize {
@@ -46,7 +48,7 @@ export const Lamp = ({ colour, size, number }: Props) => {
   return (
     <span className={`${styles.tile} ${styles[colour]}`} role="img" aria-label={t('lamp.tile', { number: number ?? t('lamp.noTicket'), meaning: t(MEANING[colour]) })}>
       <b className={styles.number}>{number ?? t('lamp.noNumber')}</b>
-      <i className={styles.meaning}>{colour === LampColour.Off ? null : t(SHORT_MEANING[colour])}</i>
+      <i className={styles.meaning}>{t(SHORT_MEANING[colour])}</i>
     </span>
   );
 };

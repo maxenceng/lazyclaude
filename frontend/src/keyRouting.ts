@@ -1,5 +1,6 @@
 import type { BoardController } from './board/boardController';
 import type { DocsController } from './docs/docsController';
+import { ScrollStep } from './docs/documentScroll';
 import type { ReviewController } from './review/reviewController';
 import type { OpenReview } from './review/openReview';
 import { Action } from './keys/bindings';
@@ -98,7 +99,7 @@ export class KeyRouter {
         this.sessions.hosting.selectNext();
         break;
       case Action.FocusUp:
-        this.change((current) => current.goUp(this.review.isOpen() ? Focus.Diff : Focus.Sessions));
+        this.change((current) => current.goUp(this.review.isOpen() ? Focus.Diff : current.mainViewFocus()));
         break;
       case Action.ToggleMainView:
         this.change((current) => current.toggleMainView());
@@ -116,6 +117,9 @@ export class KeyRouter {
 
   /** Opens the row under the sessions' cursor, or moves focus to the sessions of the ticket under the Board's. */
   open(): void {
+    if (this.focus() === Focus.Document) {
+      return;
+    }
     if (this.focus() === Focus.Docs) {
       this.docs.activate();
       this.change((current) => current.showDocument());
@@ -286,18 +290,22 @@ export class KeyRouter {
         return void this.sessions.newSession();
       case Action.NewSession:
         return void this.sessions.newUnlinked();
+      case Action.HalfPageDown:
+        return this.scrollDocument(ScrollStep.HalfPageDown);
+      case Action.HalfPageUp:
+        return this.scrollDocument(ScrollStep.HalfPageUp);
       case Action.Back:
         return this.change((current) => this.back(current));
       case Action.PanelLeft:
       case Action.FocusLeft:
-        return this.change((current) => current.focusOn(Focus.Board));
+        return this.change((current) => current.focusOn(current.focus === Focus.Document ? Focus.Docs : Focus.Board));
       case Action.PanelRight:
       case Action.FocusRight:
-        return this.change((current) => current.focusOn(Focus.Sessions));
+        return this.change((current) => this.right(current));
       case Action.FocusDown:
         return this.focusDown();
       case Action.FocusUp:
-        return this.change((current) => current.goUp(current.focus === Focus.Dock ? Focus.Sessions : Focus.Board));
+        return this.change((current) => current.goUp(current.focus === Focus.Dock ? current.mainViewFocus() : Focus.Board));
       case Action.Zoom:
         return this.change((current) => current.toggleZoom());
       case Action.ToggleMainView:
@@ -314,7 +322,7 @@ export class KeyRouter {
   /** `M` or the dock's button: the dock folds to its strip or unfolds, when there is a dock to fold. */
   toggleDockMinimised(): void {
     if (this.sessions.hosting.hasTabs()) {
-      this.change((current) => current.toggleDockMinimised(this.review.isOpen() ? Focus.Diff : Focus.Sessions));
+      this.change((current) => current.toggleDockMinimised(this.review.isOpen() ? Focus.Diff : current.mainViewFocus()));
     }
   }
 
@@ -328,7 +336,22 @@ export class KeyRouter {
     if (current.zoomed || current.focus === Focus.Board) {
       return current.leaveZoom();
     }
-    return current.focus === Focus.Docs && current.showsDocumentInView() ? current.closeDocument() : current.focusOn(Focus.Board);
+    return current.reading() ? current.closeDocument() : current.focusOn(Focus.Board);
+  }
+
+  /** `l` goes right: from the Docs panel to the document it shows, from the document nowhere, since nothing is right of it, else to the ticket. */
+  private right(current: Layout): Layout {
+    if (current.focus === Focus.Document) {
+      return current;
+    }
+    return current.focusOn(current.focus === Focus.Docs && current.showsDocumentInView() ? Focus.Document : Focus.Sessions);
+  }
+
+  /** `j`/`k` and `ctrl+d`/`ctrl+u` on the focused document scroll it; on any other pane `ctrl+d` and `ctrl+u` do nothing outside a review. */
+  private scrollDocument(step: ScrollStep): void {
+    if (this.focus() === Focus.Document) {
+      this.docs.scrollBy(step);
+    }
   }
 
   private focusDown(): void {
@@ -340,7 +363,9 @@ export class KeyRouter {
   }
 
   private move(delta: number): void {
-    if (this.focus() === Focus.Docs) {
+    if (this.focus() === Focus.Document) {
+      this.scrollDocument(delta > 0 ? ScrollStep.LineDown : ScrollStep.LineUp);
+    } else if (this.focus() === Focus.Docs) {
       this.docs.move(delta);
       this.change((current) => current.showDocument());
     } else if (this.focus() === Focus.Sessions) {

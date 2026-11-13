@@ -19,7 +19,7 @@ const setup = (markerOf: (ticket: string) => LampColour | undefined = () => unde
   render(
     <>
       <BoardPane board={board} selection={selection} focused markerOf={markerOf} onOpen={onOpen} onFocus={() => {}} onRetry={() => void board.load()} />
-      <TicketPane board={board} selection={selection} focused={false} onLink={onLink} />
+      <TicketPane board={board} selection={selection} focused={false} onLink={onLink} onFocus={() => {}} />
     </>,
   );
   return { client, board, selection, onOpen, onLink, loaded };

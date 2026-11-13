@@ -5,6 +5,7 @@ import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import { DocsSelection, type RowKey } from './docsSelection';
 import { DocsStore } from './docsStore';
+import { ScrollRequest, type ScrollStep } from './documentScroll';
 import { type DocumentLink, LinkKind, type LinkTarget, linkTarget } from './links';
 import type { LinkOpener } from './opener';
 import { type DocsRow, RowKind, documentIn, visibleRows } from './rows';
@@ -35,6 +36,8 @@ export class DocsController {
   readonly store: DocsStore;
   readonly selection: Store<DocsSelection> = new Store(DocsSelection.none());
   readonly folded: Store<ReadonlySet<string>> = new Store<ReadonlySet<string>>(new Set());
+  /** The last scroll the shown document was asked for; the pane that draws it does the scrolling. */
+  readonly scroll: Store<ScrollRequest> = new Store(ScrollRequest.none());
   private known: DocsRow[] = [];
 
   constructor(private readonly deps: DocsDeps) {
@@ -43,6 +46,11 @@ export class DocsController {
     this.folded.subscribe(() => {
       this.known = this.rows();
     });
+  }
+
+  /** Asks the shown document to scroll by `step`; the tree's cursor stays where it is. */
+  scrollBy(step: ScrollStep): void {
+    this.scroll.set(this.scroll.get().next(step));
   }
 
   load(): Promise<void> {

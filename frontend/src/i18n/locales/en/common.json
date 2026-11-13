@@ -1,5 +1,6 @@
 {
   "app": {
+    "name": "lazyclaude",
     "project": "lazyclaude",
     "boardTitle": "Board",
     "ticketTitle": "Ticket",
@@ -21,7 +22,9 @@
   "tabs": {
     "base": "Base",
     "board": "Board",
-    "pullRequests": "Pull requests"
+    "pullRequests": "Pull requests",
+    "inProgress": "in progress",
+    "open": "open"
   },
   "keyBar": {
     "tabs": "1/2/3 tabs",
@@ -37,6 +40,7 @@
     "yes": "Quit",
     "no": "Stay",
     "button": "Quit lazyclaude",
+    "key": "q",
     "refused": "the window did not close ({{reason}})"
   }
 }

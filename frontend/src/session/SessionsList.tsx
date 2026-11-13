@@ -1,19 +1,17 @@
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, SessionRow as Row, StatusHeading, Rows } from '../design-system';
+import { Alert, Button, PickerBar, SessionRow as Row, StatusHeading, Rows } from '../design-system';
 import type { SessionPastSessionView } from '../protocol';
 import { type SessionRow, SessionRowKind } from './sessionRows';
 import type { StartFailure } from './hosting';
 import type { VerbPicker } from './verbPicker';
 
-interface Props {
+interface ListProps {
   rows: readonly SessionRow[];
   cursor: number;
-  focused: boolean;
   picker: VerbPicker | undefined;
   failure: StartFailure | undefined;
   onPress: (index: number) => void;
-  onPickVerb: (index: number) => void;
 }
 
 const titleOf = (session: SessionPastSessionView): string | undefined => {
@@ -62,29 +60,19 @@ const RowList = ({ entries, cursor, onPress }: RowListProps) => {
   );
 };
 
-/** The sessions of the selected ticket, in the ticket's pane: the ones hosted here, the older ones to resume, and the row that starts one. */
-export const SessionsList = ({ rows, cursor, focused, picker, failure, onPress, onPickVerb }: Props) => {
+/** The sessions of the selected ticket, in the ticket's pane: the ones hosted here and the older ones to resume. The row that starts one is `NewSessionBar`'s. */
+export const SessionsList = ({ rows, cursor, picker, failure, onPress }: ListProps) => {
   const { t } = useTranslation('session');
   const listed: Listed[] = rows.map((row, index) => ({ row, index }));
-  const ticketRows = listed.filter(({ row }) => row.kind !== SessionRowKind.Unlinked);
+  const ticketRows = listed.filter(({ row }) => row.kind !== SessionRowKind.Unlinked && row.kind !== SessionRowKind.New);
   const olderRows = listed.filter(({ row }) => row.kind === SessionRowKind.Unlinked);
-  const selected = focused && picker === undefined ? cursor : undefined;
+  const selected = picker === undefined ? cursor : undefined;
   return (
     <>
       {failure === undefined ? null : (
         <Alert title={t('failure.title')} action={<Button onClick={() => void failure.retry()}>{t('failure.retry')}</Button>}>
           {failure.message}
         </Alert>
-      )}
-      {picker === undefined ? null : (
-        <div>
-          <StatusHeading status={t('picker.title')} count={picker.verbs.length} />
-          <Rows>
-            {picker.verbs.map((verb, index) => (
-              <Row key={verb} label={t(`verb.${verb}`)} detail="" selected={index === picker.cursorAt()} lamp={undefined} onSelect={() => onPickVerb(index)} />
-            ))}
-          </Rows>
-        </div>
       )}
       {ticketRows.length === 0 ? null : (
         <div>
@@ -99,5 +87,42 @@ export const SessionsList = ({ rows, cursor, focused, picker, failure, onPress, 
         </div>
       )}
     </>
+  );
+};
+
+interface BarProps {
+  rows: readonly SessionRow[];
+  cursor: number;
+  picker: VerbPicker | undefined;
+  onPress: (index: number) => void;
+  onPickVerb: (index: number) => void;
+  onDismiss: () => void;
+}
+
+/** The ticket's `new session` bar, pinned under its body; its picker of verbs grows upward from it. None while the ticket cannot start a session. */
+export const NewSessionBar = ({ rows, cursor, picker, onPress, onPickVerb, onDismiss }: BarProps) => {
+  const { t } = useTranslation('session');
+  const index = rows.findIndex((row) => row.kind === SessionRowKind.New);
+  return index === -1 ? null : (
+    <PickerBar
+      label={t('row.new')}
+      shortcut={t('row.newKey')}
+      popupLabel={t('picker.title')}
+      selected={index === cursor && picker === undefined}
+      open={picker !== undefined}
+      onPress={() => (picker === undefined ? onPress(index) : onDismiss())}
+      onDismiss={onDismiss}
+    >
+      {picker === undefined ? null : (
+        <>
+          <StatusHeading status={t('picker.title')} count={picker.verbs.length} />
+          <Rows>
+            {picker.verbs.map((verb, at) => (
+              <Row key={verb} label={t(`verb.${verb}`)} detail="" selected={at === picker.cursorAt()} lamp={undefined} onSelect={() => onPickVerb(at)} />
+            ))}
+          </Rows>
+        </>
+      )}
+    </PickerBar>
   );
 };

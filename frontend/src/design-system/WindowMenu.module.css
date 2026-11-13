@@ -1,0 +1,69 @@
+.wrap {
+  position: relative;
+}
+
+.button {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--card-radius);
+  background: transparent;
+  cursor: pointer;
+}
+
+.button:hover,
+.button[aria-expanded='true'] {
+  background: var(--pane);
+}
+
+.name {
+  font: 400 var(--size-body) var(--font-stencil);
+  letter-spacing: 0.04em;
+}
+
+.caret {
+  width: var(--pane-action-icon);
+  height: var(--pane-action-icon);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  min-width: 220px;
+  padding: var(--space-2);
+  background: var(--pane-lift);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--card-radius);
+  box-shadow: var(--popup-shadow);
+}
+
+.item {
+  display: flex;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--card-radius);
+  background: transparent;
+  color: var(--ci-failed);
+  text-align: left;
+  cursor: pointer;
+}
+
+.key {
+  margin-left: auto;
+  color: var(--dim);
+  font: 400 var(--size-small) var(--font-mono);
+}
+
+.item:hover {
+  background: var(--seam);
+}

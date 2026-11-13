@@ -1,25 +1,21 @@
 .line {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto auto auto auto;
+  display: flex;
   align-items: center;
   gap: var(--space-5);
-  padding: var(--space-3) var(--space-4);
+  min-width: 0;
+  padding: var(--space-2) var(--gutter);
   background: var(--bar);
   border-bottom: 1px solid var(--seam);
   font-size: var(--size-label);
 }
 
-.tiles {
-  display: flex;
-  gap: var(--space-2);
+.project {
+  color: var(--dim);
+  font: 400 var(--size-small) var(--font-mono);
+  white-space: nowrap;
   overflow: hidden;
-}
-
-.counts {
-  display: flex;
-  gap: var(--space-3);
-  align-items: center;
-  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .notice {
@@ -38,20 +34,34 @@
   max-width: 50vw;
 }
 
-.project {
-  color: var(--dim);
-  white-space: nowrap;
+.counts {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.divider {
+  flex: none;
+  width: 1px;
+  height: var(--lamp-tile-height);
+  background: var(--seam);
+}
+
+.tiles {
+  display: flex;
+  gap: var(--space-2);
   overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 40vw;
+}
+
+.divider:has(+ .tiles:empty) {
+  display: none;
 }
 
 @media (max-width: 760px) {
-  .tiles {
+  .tiles,
+  .divider {
     display: none;
-  }
-
-  .line {
-    grid-template-columns: auto auto auto auto auto 1fr;
   }
 }

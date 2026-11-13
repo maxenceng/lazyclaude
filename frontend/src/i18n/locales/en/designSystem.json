@@ -5,11 +5,12 @@
     "turn": "your turn",
     "off": "no session waits on you",
     "shortPermission": "permission",
-    "shortInput": "input",
-    "shortTurn": "turn",
+    "shortInput": "needs input",
+    "shortTurn": "your turn",
     "noTicket": "no ticket",
     "noNumber": "—",
-    "tile": "{{number}}: {{meaning}}"
+    "tile": "{{number}}: {{meaning}}",
+    "shortOff": "off"
   },
   "statusLine": {
     "tiles": "live sessions",
@@ -37,6 +38,13 @@
   },
   "windowTabs": {
     "label": "window tabs"
+  },
+  "windowMenu": {
+    "title": "Window menu",
+    "item": "{{action}} ({{key}})"
+  },
+  "paneAction": {
+    "label": "{{action}} ({{key}})"
   },
   "pullRequestMark": {
     "label": "draft or without checks"

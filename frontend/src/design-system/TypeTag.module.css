@@ -1,0 +1,17 @@
+.tag {
+  color: var(--dim);
+  font-size: var(--size-small);
+  flex: none;
+}
+
+.tag[data-type='feature'] {
+  color: var(--tag-ink, var(--type-feature));
+}
+
+.tag[data-type='fix'] {
+  color: var(--tag-ink, var(--type-fix));
+}
+
+.tag[data-type='chore'] {
+  color: var(--tag-ink, var(--type-chore));
+}

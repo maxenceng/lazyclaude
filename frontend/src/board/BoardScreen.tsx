@@ -16,6 +16,8 @@ import {
   Text,
   Tone,
   Rows,
+  type TicketTypeTag,
+  TypeColour,
   TicketCard,
   TicketRow,
   UnreadableRow,
@@ -26,6 +28,7 @@ import { type BoardState, BoardStateKind, UnavailableCause } from './boardState'
 import type { BoardStore } from './boardStore';
 import { columnsOf, cursorTicketInColumns, isDone, orderedGroups, shownTickets, selectedIn, selectedInColumns } from './rows';
 import type { Selection } from './selection';
+import { statusColourOf } from './statusColours';
 
 interface ViewProps {
   board: BoardStore;
@@ -59,7 +62,7 @@ export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus
     <Pane
       title={t('board.title')}
       focused={focused}
-      action={onCapture === undefined ? undefined : { kind: PaneActionKind.Add, label: t('board.capture'), onClick: onCapture }}
+      actions={onCapture === undefined ? [] : [{ kind: PaneActionKind.Add, label: t('board.capture'), shortcut: t('board.captureKey'), onClick: onCapture }]}
     >
       {populated === undefined ? (
         <Unread state={state} onRetry={onRetry} />
@@ -86,11 +89,15 @@ interface ColumnsProps extends ViewProps {
   onRetry: () => void;
 }
 
-/** The words a card's footer names after its number: its type, then its other labels. */
-const metaOf = (ticket: BoardTicketView): string[] => [
-  ...(ticket.type.kind === 'typeName' ? [ticket.type.value] : []),
-  ...ticket.otherLabels,
-];
+/** The types that carry a colour of their own; the `type:` labels are an open set, and any other is dim. */
+const TYPE_COLOUR: ReadonlyMap<string, TypeColour> = new Map([
+  ['feature', TypeColour.Feature],
+  ['fix', TypeColour.Fix],
+  ['chore', TypeColour.Chore],
+]);
+
+const typeOf = (ticket: BoardTicketView): TicketTypeTag | undefined =>
+  ticket.type.kind === 'typeName' ? { name: ticket.type.value, colour: TYPE_COLOUR.get(ticket.type.value) } : undefined;
 
 /** The Board tab: the Board as status columns of cards. A click on a card or on no card is handed up, which decides what it selects, opens or closes. */
 export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onPress, onBackground, onRetry }: ColumnsProps) => {
@@ -108,14 +115,15 @@ export const BoardColumns = ({ board, selection, markerOf, pullRequestOf, onPres
           <Columns onBackground={onBackground}>
             {columnsOf(populated).map((column) => (
               <Column key={column.status} label={t(`status.${column.status}`)}>
-                <StatusHeading status={t(`status.${column.status}`)} count={column.total} />
+                <StatusHeading status={t(`status.${column.status}`)} count={column.total} colour={statusColourOf(column.status)} />
                 <Cards>
                   {column.tickets.map((ticket) => (
                     <TicketCard
                       key={ticket.id}
                       id={ticket.id}
                       title={ticket.title}
-                      meta={metaOf(ticket)}
+                      type={typeOf(ticket)}
+                      meta={ticket.otherLabels}
                       selected={ticket.id === cursor}
                       done={isDone(ticket.status)}
                       lamp={markerOf(ticket.id)}
@@ -157,18 +165,24 @@ interface TicketProps extends ViewProps {
   onLink: (href: string) => void;
   /** Given while a dock is open: the ticket's button hides the main view so the dock takes the column. */
   onHide?: () => void;
+  /** Pinned under the ticket whatever its scroll. */
+  foot?: ReactNode;
+  /** A click on the ticket, anywhere in its pane, hands it focus. */
+  onFocus: () => void;
   children?: ReactNode;
 }
 
 /** The ticket under the cursor, detailed, and whatever the screen shows beneath it. */
-export const TicketPane = ({ board, selection, focused, onLink, onHide, children }: TicketProps) => {
+export const TicketPane = ({ board, selection, focused, onLink, onHide, foot, onFocus, children }: TicketProps) => {
   const { t } = useTranslation('board');
   const { ticket } = useBoardView({ board, selection });
   return (
     <Pane
       title={t('ticket.title')}
       focused={focused}
-      action={onHide === undefined ? undefined : { kind: PaneActionKind.Hide, label: t('ticket.hide'), onClick: onHide }}
+      foot={foot}
+      onFocus={onFocus}
+      actions={onHide === undefined ? [] : [{ kind: PaneActionKind.Hide, label: t('ticket.hide'), shortcut: t('ticket.hideKey'), onClick: onHide }]}
     >
       {ticket === undefined ? <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} onLink={onLink} />}
       {children}
@@ -219,7 +233,7 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
     <>
       {orderedGroups(view).map((group) => (
         <div key={group.status}>
-          <StatusHeading status={t(`status.${group.status}`)} count={group.tickets.length} />
+          <StatusHeading status={t(`status.${group.status}`)} count={group.tickets.length} colour={statusColourOf(group.status)} />
           <Rows>
             {shownTickets(group).map((ticket) => (
               <TicketRow
@@ -229,6 +243,7 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
                 selected={ticket.id === cursor}
                 done={isDone(group.status)}
                 lamp={markerOf(ticket.id)}
+                type={typeOf(ticket)}
                 onSelect={() => onPress(ticket.id)}
               />
             ))}

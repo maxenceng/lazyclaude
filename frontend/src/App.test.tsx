@@ -210,40 +210,112 @@ const keyBarWidth = () => {
 };
 
 describe('a shown document and the Docs panel', () => {
-  it('carries a close button that gives the main view back to the ticket, focus staying on the Docs panel', async () => {
+  it('carries a close button that gives the main view back to the ticket and focus to it', async () => {
     const started = await readyApp();
     docsRead(started);
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
-    await started.user.click(within(screen.getByRole('region', { name: 'Document' })).getByRole('button', { name: 'Close document' }));
+    await started.user.click(within(screen.getByRole('region', { name: 'Document' })).getByRole('button', { name: 'Close document (esc)' }));
     expect(screen.getByRole('region', { name: 'Ticket' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Close document' })).not.toBeInTheDocument();
-    expect(started.app.layout.get().focus).toBe(Focus.Docs);
+    expect(screen.queryByRole('button', { name: 'Close document (esc)' })).not.toBeInTheDocument();
+    expect(started.app.layout.get().focus).toBe(Focus.Sessions);
+  });
+
+  it('hands focus to the ticket when the document is closed while focus is in the dock', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    act(() => started.app.focusOn(Focus.Dock));
+    await started.user.click(screen.getByRole('button', { name: 'Close document (esc)' }));
+    expect(started.app.layout.get().focus).toBe(Focus.Sessions);
   });
 
   it('shows a document again when the cursor moves after it was closed', async () => {
     const started = await readyApp();
     docsRead(started);
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
-    await started.user.click(screen.getByRole('button', { name: 'Close document' }));
+    await started.user.click(screen.getByRole('button', { name: 'Close document (esc)' }));
+    act(() => started.app.focusOn(Focus.Docs));
     await started.user.keyboard('j');
     expect(screen.getByRole('region', { name: 'Document' })).toBeInTheDocument();
   });
 
-  it('shows esc close on the key bar while a document is shown, and esc back to the Board once it is closed', async () => {
+  it('gives the shown document focus on a click in it, with its own keys on the key bar, l offering it from the Docs panel', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    expect(keyBar()).toHaveTextContent('l document');
+    await started.user.click(screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement);
+    expect(started.app.layout.get().focus).toBe(Focus.Document);
+    expect(keyBar()).toHaveTextContent('j/k scroll');
+    expect(keyBar()).toHaveTextContent('ctrl+d/u half page');
+    expect(keyBar()).toHaveTextContent('h docs');
+    expect(keyBar()).toHaveTextContent('esc close');
+  });
+
+  it('keeps the focused document shown and focused on enter and on l, which have nothing to do there', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    await started.user.click(screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement);
+    await started.user.keyboard('{Enter}');
+    await started.user.keyboard('l');
+    expect(started.app.layout.get().focus).toBe(Focus.Document);
+    expect(screen.getByRole('region', { name: 'Document' })).toBeInTheDocument();
+  });
+
+  it('scrolls the focused document half a page on ctrl+d, which plain d does not', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    const body = screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement;
+    const scrolled = vi.fn();
+    body.scrollBy = scrolled;
+    await started.user.click(body);
+    await started.user.keyboard('d');
+    expect(scrolled).not.toHaveBeenCalled();
+    await started.user.keyboard('{Control>}d{/Control}');
+    expect(scrolled).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the ticket and its picker on n while a document is shown, so the picker is never opened unseen', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    await started.user.click(screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement);
+    await started.user.keyboard('n');
+    await newSessionAnswered(started.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'START' });
+    expect(screen.queryByRole('region', { name: 'Document' })).toBeNull();
+    expect(within(screen.getByRole('region', { name: 'Ticket' })).getByRole('group', { name: 'start with' })).toBeInTheDocument();
+  });
+
+  it('scrolls the focused document down on j and up on k', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    const body = screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement;
+    const scrolled = vi.fn();
+    body.scrollBy = scrolled;
+    await started.user.click(body);
+    await started.user.keyboard('j');
+    await started.user.keyboard('k');
+    expect(scrolled.mock.calls.map((call) => Math.sign((call[0] as ScrollToOptions).top ?? 0))).toEqual([1, -1]);
+  });
+
+  it('shows esc close on the key bar while a document is shown, and esc closes it and hands focus to the ticket', async () => {
     const started = await readyApp();
     docsRead(started);
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     expect(keyBar()).toHaveTextContent('esc close');
     await started.user.keyboard('{Escape}');
     expect(keyBar()).not.toHaveTextContent('esc close');
-    expect(started.app.layout.get().focus).toBe(Focus.Docs);
+    expect(started.app.layout.get().focus).toBe(Focus.Sessions);
   });
 });
 
 describe('the dock minimised', () => {
   it('has no minimise button and ignores M while no session is hosted', async () => {
     const ready = await readyApp();
-    expect(screen.queryByRole('button', { name: 'Minimise dock' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Minimise dock (M)' })).not.toBeInTheDocument();
     await ready.user.keyboard('M');
     expect(ready.app.layout.get().dockMinimised).toBe(false);
     expect(keyBar()).not.toHaveTextContent('M minimise');
@@ -252,7 +324,7 @@ describe('the dock minimised', () => {
   it('folds to the strip of its tabs on its button, and a tab click restores it with that tab selected and its pane focused', async () => {
     const ready = await readyApp();
     await startedSession(ready);
-    await ready.user.click(screen.getByRole('button', { name: 'Minimise dock' }));
+    await ready.user.click(screen.getByRole('button', { name: 'Minimise dock (M)' }));
     expect(screen.queryByRole('group', { name: 'session terminal' })).not.toBeInTheDocument();
     expect(screen.getByRole('tablist', { name: 'hosted sessions' })).toBeInTheDocument();
     expect(ready.app.layout.get().focus, 'minimising the focused dock moves focus to the ticket\'s sessions').toBe(Focus.Sessions);
@@ -269,7 +341,7 @@ describe('the dock minimised', () => {
     await ready.user.keyboard('M');
     expect(screen.queryByRole('group', { name: 'session terminal' })).not.toBeInTheDocument();
     expect(keyBar()).toHaveTextContent('M restore');
-    await ready.user.click(screen.getByRole('button', { name: 'Restore dock' }));
+    await ready.user.click(screen.getByRole('button', { name: 'Restore dock (M)' }));
     expect(screen.getByRole('group', { name: 'session terminal' })).toBeInTheDocument();
   });
 
@@ -378,14 +450,14 @@ describe('the ticket hidden', () => {
   it('has no hide button while no session is hosted', async () => {
     await readyApp();
     expect(screen.getByRole('region', { name: 'Ticket' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Hide ticket' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hide ticket (m)' })).not.toBeInTheDocument();
   });
 
   it('hides on its button so the dock takes the column, the key bar offering m to show it again', async () => {
     const ready = await readyApp();
     await startedSession(ready);
     act(() => ready.app.focusOn(Focus.Board));
-    await ready.user.click(screen.getByRole('button', { name: 'Hide ticket' }));
+    await ready.user.click(screen.getByRole('button', { name: 'Hide ticket (m)' }));
     expect(screen.queryByRole('region', { name: 'Ticket' })).not.toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'session terminal' })).toBeInTheDocument();
     expect(keyBar()).toHaveTextContent('m ticket');
@@ -399,7 +471,7 @@ describe('the ticket hidden', () => {
     await startedSession(ready);
     act(() => ready.app.focusOn(Focus.Board));
     await ready.user.keyboard('M');
-    await ready.user.click(screen.getByRole('button', { name: 'Hide ticket' }));
+    await ready.user.click(screen.getByRole('button', { name: 'Hide ticket (m)' }));
     expect(ready.app.layout.get().dockMinimised).toBe(false);
     expect(screen.getByRole('group', { name: 'session terminal' })).toBeInTheDocument();
   });
@@ -410,6 +482,62 @@ describe('starting a session from the board', () => {
     const { user } = await readyApp();
     await user.keyboard('{Enter}');
     expect(keyBar()).toHaveTextContent('esc back');
+    expect(screen.getByRole('button', { name: /new session/ })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('pins a new session bar at the bottom of the ticket pane, outside what scrolls', async () => {
+    await readyApp();
+    const bar = screen.getByRole('button', { name: /new session/ });
+    const ticket = screen.getByRole('region', { name: 'Ticket' });
+    expect(ticket).toContainElement(bar);
+    expect(bar.closest('[data-pane-foot]'), 'the bar sits in the pane foot, not its scrolling body').not.toBeNull();
+    expect(ticket.querySelector('[data-pane-body]')).not.toContainElement(bar);
+  });
+
+  it('opens the verb picker over the ticket from a click on the new session bar', async () => {
+    const ready = await readyApp();
+    await ready.user.click(screen.getByRole('button', { name: /new session/ }));
+    expect(ready.client.calls.map((call) => call.method)).toContain('session/newSessionFor');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'START' });
+    const picker = screen.getByRole('group', { name: 'start with' });
+    expect(within(picker).getByRole('button', { name: /review/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /new session/ }).closest('[data-pane-foot]')).toContainElement(picker);
+  });
+
+  it('closes the verb picker on a click outside it, starting nothing', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('n');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'START' });
+    await ready.user.click(screen.getByRole('region', { name: 'Board' }));
+    expect(screen.queryByRole('group', { name: 'start with' })).toBeNull();
+    expect(ready.app.sessions.isPicking()).toBe(false);
+    expect(ready.client.calls.map((call) => call.method)).not.toContain('session/startTicket');
+  });
+
+  it('closes the verb picker on a second click on the new session bar, asking for no new picker', async () => {
+    const ready = await readyApp();
+    await ready.user.click(screen.getByRole('button', { name: /new session/ }));
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'START' });
+    const asked = ready.client.calls.filter((call) => call.method === 'session/newSessionFor').length;
+    await ready.user.click(screen.getByRole('button', { name: /new session/ }));
+    expect(screen.queryByRole('group', { name: 'start with' })).toBeNull();
+    expect(ready.client.calls.filter((call) => call.method === 'session/newSessionFor')).toHaveLength(asked);
+  });
+
+  it('gives the ticket focus on a click on its title row or its body', async () => {
+    const ready = await readyApp();
+    const ticket = screen.getByRole('region', { name: 'Ticket' });
+    act(() => ready.app.focusOn(Focus.Board));
+    await ready.user.click(within(ticket).getByRole('heading', { name: 'Ticket' }));
+    expect(ready.app.layout.get().focus).toBe(Focus.Sessions);
+    act(() => ready.app.focusOn(Focus.Board));
+    await ready.user.click(ticket.querySelector('[data-pane-body]') as HTMLElement);
+    expect(ready.app.layout.get().focus).toBe(Focus.Sessions);
+  });
+
+  it('keeps the new session bar outlined while another pane has focus', async () => {
+    const ready = await readyApp();
+    act(() => ready.app.focusOn(Focus.Board));
     expect(screen.getByRole('button', { name: /new session/ })).toHaveAttribute('aria-current', 'true');
   });
 
@@ -707,6 +835,23 @@ describe('what the sidecar is told is watched', () => {
 });
 
 describe('the dock\'s layout', () => {
+  it('names the reserved zoom chord on the dock\'s zoom button, the key that zooms from inside the dock', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    expect(screen.getByRole('button', { name: 'Zoom dock (alt+z)' })).toBeInTheDocument();
+  });
+
+  it('keeps a shown document when the dock is minimised from inside it, focus going up to the document', async () => {
+    const ready = await readyApp();
+    docsRead(ready);
+    await startedSession(ready);
+    act(() => ready.app.focusOn(Focus.Docs));
+    act(() => ready.app.focusOn(Focus.Dock));
+    act(() => ready.app.toggleDockMinimised());
+    expect(ready.app.layout.get().focus).toBe(Focus.Document);
+    expect(ready.app.layout.get().showsDocument()).toBe(true);
+  });
+
   it('zooms the dock over the window on the reserved chord and leaves it again', async () => {
     const ready = await readyApp();
     await startedSession(ready);
@@ -959,7 +1104,7 @@ describe('capturing a draft ticket', () => {
   it("opens on the Board pane's New ticket button, with the focus on its input", async () => {
     const { user, app } = await readyApp();
     act(() => app.focusOn(Focus.Docs));
-    await user.click(screen.getByRole('button', { name: 'New ticket' }));
+    await user.click(screen.getByRole('button', { name: 'New ticket (c)' }));
     expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
     expect(captureBox()).toHaveFocus();
     expect(app.layout.get().focus).toBe(Focus.Board);
@@ -1132,10 +1277,45 @@ describe('quitting the window', () => {
     expect(platform.closes).toBe(1);
   });
 
-  it('quits from the status line button as q does', async () => {
+  it('carries no cross on the status line, quit being in the window menu', async () => {
+    await readyApp();
+    expect(screen.queryByRole('button', { name: /^Quit/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'lazyclaude' })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('quits from the window menu as q does', async () => {
     const { platform, user } = await readyApp();
-    await user.click(screen.getByRole('button', { name: 'Quit lazyclaude' }));
+    await user.click(screen.getByRole('button', { name: 'lazyclaude' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Quit lazyclaude (q)' }));
     expect(platform.closes).toBe(1);
+  });
+
+  it('words its quit item as the action, with its key set apart', async () => {
+    const { user } = await readyApp();
+    await user.click(screen.getByRole('button', { name: 'lazyclaude' }));
+    const quit = screen.getByRole('menuitem', { name: 'Quit lazyclaude (q)' });
+    expect(quit.textContent).toBe('Quit lazyclaudeq');
+    expect(within(quit).getByText('q').tagName).toBe('KBD');
+  });
+
+  it('asks before quitting from the window menu while a session is hosted', async () => {
+    const { client, platform, user } = await readyApp();
+    act(() => client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1')] }));
+    await user.click(screen.getByRole('button', { name: 'lazyclaude' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Quit lazyclaude (q)' }));
+    expect(screen.getByRole('dialog', { name: 'Quit lazyclaude?' })).toBeInTheDocument();
+    expect(platform.closes).toBe(0);
+  });
+
+  it('closes the window menu on esc and on a click outside it', async () => {
+    const { user } = await readyApp();
+    await user.click(screen.getByRole('button', { name: 'lazyclaude' }));
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'lazyclaude' }));
+    await user.click(screen.getByRole('region', { name: 'Board' }));
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 
   it('shows a window that refused to close as a notice', async () => {

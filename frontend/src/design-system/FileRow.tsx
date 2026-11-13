@@ -23,7 +23,7 @@ interface Props {
 export const FileRow = ({ letter, change, name, openThreads, pending, selected, onSelect }: Props) => {
   const { t } = useTranslation('designSystem');
   return (
-    <li>
+    <li data-row="">
       <button type="button" className={[styles.row, selected ? styles.selected : ''].join(' ')} aria-current={selected ? 'true' : undefined} onClick={onSelect}>
         <span className={[styles.letter, styles[change]].join(' ')}>{letter}</span>
         <span className={styles.name}>{name}</span>
