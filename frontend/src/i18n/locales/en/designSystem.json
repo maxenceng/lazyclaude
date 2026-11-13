@@ -12,12 +12,6 @@
     "tile": "{{number}}: {{meaning}}",
     "shortOff": "off"
   },
-  "count": {
-    "permission": "permission",
-    "input": "input",
-    "turn": "your turn",
-    "off": "off"
-  },
   "statusLine": {
     "tiles": "live sessions",
     "counts": "sessions by state",

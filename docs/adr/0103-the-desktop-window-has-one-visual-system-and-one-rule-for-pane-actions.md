@@ -30,7 +30,7 @@ of another and the pane actions of a third.
 - **Quit is not a pane's close.** The status line carries no cross: quit is an item of the `lazyclaude ▾` window menu at its
   far left, and goes through the quit confirmation `q` goes through.
 - **Counts say what they count.** A window tab's count is a badge (`1 in progress`, `0 open`); a lamp count is worded
-  (`0 permission`, `1 input`, `1 your turn`); the status line's session tiles keep a fixed two-row grid so numbers line up.
+  (`0 permission`, `1 needs input`, `1 your turn`); the status line's session tiles keep a fixed two-row grid so numbers line up.
 - **The status line reads left to right as window, then sessions.** The window menu, the window tabs as one group with the
   selected tab lifted, then the project; at the right the counts, coloured by their lamp while non-zero and dim at zero, a
   divider, and the session tiles in the prototype's size with a mono number. The key bar sets each key in bright mono

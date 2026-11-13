@@ -15,7 +15,8 @@ const MEANING = {
   turn: 'lamp.turn',
   off: 'lamp.off',
 } as const satisfies Record<LampColour, string>;
-const SHORT_MEANING = {
+/** What a lamp's state is called where there is room for a word or two: on a tile, and after a count. */
+export const SHORT_MEANING = {
   permission: 'lamp.shortPermission',
   input: 'lamp.shortInput',
   turn: 'lamp.shortTurn',

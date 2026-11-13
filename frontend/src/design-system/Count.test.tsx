@@ -6,7 +6,7 @@ import { LampColour } from './Lamp';
 describe('a lamp count', () => {
   it.each([
     [LampColour.Permission, 0, '0 permission'],
-    [LampColour.Input, 1, '1 input'],
+    [LampColour.Input, 1, '1 needs input'],
     [LampColour.Turn, 1, '1 your turn'],
   ])('words %s as what it counts', (colour, count, words) => {
     const { container } = render(<Count colour={colour} count={count} />);
