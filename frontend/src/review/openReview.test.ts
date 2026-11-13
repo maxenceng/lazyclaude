@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RpcError } from '../protocol';
 import { RowKind } from './diffRows';
-import { added, commentsFixture, diffFixture, fileFixture, hunk, kept, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
+import { added, commentsFixture, diffFixture, fileFixture, hunk, kept, noLine, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
 import { Harness, type Reads } from './reviewHarness';
 import { DiffStateKind } from './diffState';
 
@@ -258,6 +258,18 @@ describe('resolved threads of a review', () => {
     expect(harness.client.calls.at(-2)).toMatchObject({ method: 'review/commentsInDiff', params: { resolvedShown: true } });
     await harness.answerPlacement({ comments: commentsFixture({ threads: [resolved], underLines: [resolved], listed: [resolved] }) });
     expect(harness.review.resolvedShown()).toBe(true);
+    expect(harness.review.rows().all().some((row) => row.kind === RowKind.Thread)).toBe(true);
+  });
+});
+
+describe('resolved threads with no line', () => {
+  it('stay hidden at the top of their file until r shows resolved threads', async () => {
+    const harness = new Harness();
+    const resolved = threadInDiff(threadFixture({ id: 'T1', resolved: true, open: false, position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } }), noLine);
+    await readTo(harness, { comments: commentsFixture({ threads: [resolved], listed: [resolved] }) });
+    expect(harness.review.rows().all().some((row) => row.kind === RowKind.Thread)).toBe(false);
+    harness.review.toggleResolved();
+    await harness.answerPlacement({ comments: commentsFixture({ threads: [resolved], listed: [resolved] }) });
     expect(harness.review.rows().all().some((row) => row.kind === RowKind.Thread)).toBe(true);
   });
 });

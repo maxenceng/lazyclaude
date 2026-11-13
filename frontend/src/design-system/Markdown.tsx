@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode, useEffect, useMemo, useRef } from 'react';
 import styles from './Markdown.module.css';
-import { type Block, BlockKind, type Inline, InlineKind, blocksOf, inlineOf } from './markdown';
+import { runs } from './inlineRuns';
+import { type Block, BlockKind, blocksOf, inlineOf } from './markdown';
 
 /** Where a document was asked to open: at a heading's slug, or at its top; `opened` changes with each ask, so asking again scrolls again. */
 export interface Target {
@@ -15,35 +16,6 @@ interface Props {
 }
 
 const HEADINGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
-
-const runs = (inlines: Inline[], onLink: (href: string) => void): ReactNode => {
-  return inlines.map((inline, index) => {
-    switch (inline.kind) {
-      case InlineKind.Text:
-        return <Fragment key={index}>{inline.text}</Fragment>;
-      case InlineKind.Code:
-        return <code key={index}>{inline.text}</code>;
-      case InlineKind.Strong:
-        return <strong key={index}>{runs(inline.children, onLink)}</strong>;
-      case InlineKind.Emphasis:
-        return <em key={index}>{runs(inline.children, onLink)}</em>;
-      case InlineKind.Link:
-        return (
-          <a
-            key={index}
-            href={inline.href}
-            onClick={(event) => {
-              event.preventDefault();
-              onLink(inline.href);
-            }}
-            onAuxClick={(event) => event.preventDefault()}
-          >
-            {runs(inline.children, onLink)}
-          </a>
-        );
-    }
-  });
-};
 
 const text = (source: string, onLink: (href: string) => void): ReactNode => runs(inlineOf(source), onLink);
 

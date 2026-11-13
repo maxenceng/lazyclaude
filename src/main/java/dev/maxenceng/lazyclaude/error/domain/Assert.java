@@ -46,6 +46,12 @@ public final class Assert {
         }
     }
 
+    public static void notNegative(String field, int input) {
+        if (input < 0) {
+            throw new NegativeValueException(field, input);
+        }
+    }
+
     public static void absolute(String field, Path input) {
         notNull(field, input);
         if (!input.isAbsolute()) {

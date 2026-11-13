@@ -26,6 +26,7 @@ export { WindowTabBar } from './WindowTabBar';
 export type { WindowTabEntry } from './WindowTabBar';
 export { FileChange, FileRow } from './FileRow';
 export { LEFT_BUTTON } from './mouse';
+export { InlineText } from './InlineText';
 export { KeyBar } from './KeyBar';
 export type { Target } from './Document';
 export { headingSlugs } from './markdown';

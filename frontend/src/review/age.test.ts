@@ -24,8 +24,4 @@ describe('the age of a pull request', () => {
   it('is now for an instant ahead of the clock', () => {
     expect(ageOf('2026-11-13T12:05:00Z', NOW)).toEqual({ unit: Elapsed.Now, count: 0 });
   });
-
-  it('is unknown for text that is no instant', () => {
-    expect(ageOf('yesterday', NOW)).toEqual({ unit: Elapsed.Unknown, count: 0 });
-  });
 });

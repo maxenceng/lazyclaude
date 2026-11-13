@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RpcError } from '../protocol';
 import { ruleOf, stylesheet } from '../design-system/stylesheet';
-import { added, commentsFixture, diffFixture, fileFixture, hunk, kept, onLine, placed, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
+import { added, commentsFixture, pullRequestFixture, diffFixture, fileFixture, hunk, kept, onLine, placed, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
 import { DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './ReviewScreen';
 import { Harness, settle } from './reviewHarness';
 
@@ -17,8 +17,9 @@ const lineElements = (): HTMLElement[] => [...document.querySelectorAll<HTMLElem
 const renderDiff = (harness: Harness, focused = true) => {
   const onFocus = vi.fn();
   const onRetry = vi.fn();
-  render(<DiffPane review={harness.review} focused={focused} onFocus={onFocus} onRetry={onRetry} />);
-  return { onFocus, onRetry };
+  const onClose = vi.fn();
+  render(<DiffPane review={harness.review} focused={focused} onFocus={onFocus} onRetry={onRetry} onClose={onClose} />);
+  return { onFocus, onRetry, onClose };
 };
 
 describe('the diff of a review', () => {
@@ -62,10 +63,40 @@ describe('the diff of a review', () => {
     expect(onRetry).toHaveBeenCalled();
   });
 
-  it('titles the pane with the pull request', () => {
-    const harness = new Harness();
+  it('titles the pane Review and names beside it the pull request, the ticket it closes, its CI in a word and its branch', () => {
+    const harness = new Harness(pullRequestFixture({ number: 7, head: 'proj-1-first', checks: [{ name: 'build', outcome: 'FAILED' }], closing: { kind: 'closesIssue', number: 12 } }));
     renderDiff(harness);
-    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toBeInTheDocument();
+    const pane = screen.getByRole('region', { name: 'Review' });
+    expect(within(within(pane).getByRole('list', { name: 'Review' })).getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['#7', '12', 'failing', 'proj-1-first']);
+  });
+
+  it('names no ticket beside the title of a pull request that closes none', () => {
+    const harness = new Harness(pullRequestFixture({ number: 7, head: 'proj-1-first' }));
+    renderDiff(harness);
+    expect(within(screen.getByRole('list', { name: 'Review' })).getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['#7', 'no checks', 'proj-1-first']);
+  });
+
+  it('closes the review from the button in its title row, as esc does', async () => {
+    const harness = new Harness();
+    const { onClose } = renderDiff(harness);
+    await userEvent.click(screen.getByRole('button', { name: /Close the review/ }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('opens each file rule with the letter of what the diff does to it', async () => {
+    const harness = new Harness();
+    await harness.readAll({ diff: diffFixture([fileFixture('src/new.ts', [hunk('@@ -0,0 +1 @@', [added(1, 'x')])], { kind: 'addedFile' })]) });
+    renderDiff(harness);
+    expect(screen.getByRole('heading', { name: /src\/new\.ts/ })).toHaveTextContent(/^Asrc\/new\.ts/);
+  });
+
+  it('sets inline code of a comment in code type, without its backticks', async () => {
+    const harness = new Harness();
+    const thread = threadFixture({ comments: [{ author: 'ada', body: 'Why `tryLock` here?' }] });
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))] }) });
+    renderDiff(harness);
+    expect(screen.getByText('tryLock').tagName).toBe('CODE');
+    expect(screen.queryByText(/`/)).not.toBeInTheDocument();
   });
 
   it('shows each file under a rule with its hunks and their lines behind one gutter of numbers, the old number on a removed line and a sign saying what changed', async () => {
@@ -188,6 +219,12 @@ describe('the diff of a review', () => {
     expect(ruleOf(sheet, '.line')).toContain('var(--size-body)');
   });
 
+  it('keeps a wrapped line\'s number on its first row, and the cursor line clear of the file header held above it', () => {
+    const sheet = stylesheet('DiffLine.module.css');
+    expect(ruleOf(sheet, '.number')).toContain('align-self: flex-start');
+    expect(ruleOf(sheet, '.line')).toContain('scroll-margin-top');
+  });
+
   it('gives the cursor line a lift and an edge, never the inverse of the focused title row', () => {
     const rule = ruleOf(stylesheet('DiffLine.module.css'), '.cursor');
     expect(rule).toContain('background: var(--diff-cursor)');
@@ -213,6 +250,37 @@ describe('the diff of a review', () => {
     expect(within(articles[1]!).getByRole('button', { name: 'Delete your comment on a.ts:1' })).toBeInTheDocument();
   });
 
+  it('names a key on a card only where that key acts on it: the pending comment takes enter before the thread on its line', async () => {
+    const harness = new Harness();
+    const thread = threadFixture({ id: 'T1' });
+    const comment = pendingCommentFixture({ body: 'Rename this' });
+    await harness.readAll({
+      diff,
+      threads: threadsFixture([thread]),
+      pending: openPending([comment]),
+      comments: commentsFixture({
+        threads: [threadInDiff(thread, onLine(0))],
+        underLines: [threadInDiff(thread, onLine(0))],
+        pending: [pendingInDiff(comment, onLine(0))],
+        lastOnLines: [pendingInDiff(comment, onLine(0))],
+      }),
+    });
+    renderDiff(harness);
+    const articles = screen.getAllByRole('article');
+    expect(within(articles[0]!).getByRole('button', { name: /Reply/ }).querySelector('kbd')).toBeNull();
+    expect(within(articles[1]!).getByRole('button', { name: /Edit/ })).toHaveTextContent('Editenter');
+    expect(within(articles[1]!).getByRole('button', { name: /Delete/ })).toHaveTextContent('Deletex');
+  });
+
+  it('names no key on a card with no line, which no key reaches', async () => {
+    const harness = new Harness();
+    const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } });
+    const entry = threadInDiff(outdated, { kind: 'noDiffLine' });
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    expect(screen.getByRole('button', { name: /Reply/ }).querySelector('kbd')).toBeNull();
+  });
+
   it('opens the reply box on a click on Reply, resolved thread included, moving neither the cursor nor the focus', async () => {
     const harness = new Harness();
     const thread = threadFixture({ id: 'T1', resolved: true, open: false, comments: [{ author: 'ada', body: 'Why this?' }] });
@@ -221,7 +289,7 @@ describe('the diff of a review', () => {
     const onFocus = vi.fn();
     render(
       <>
-        <DiffPane review={harness.review} focused={false} onFocus={onFocus} onRetry={() => {}} />
+        <DiffPane review={harness.review} focused={false} onFocus={onFocus} onRetry={() => {}} onClose={() => {}} />
         <ReviewDialogs review={harness.review} />
       </>,
     );
@@ -317,6 +385,13 @@ describe('the Files of a review', () => {
     expect(rows[1]).not.toHaveTextContent('pending');
   });
 
+  it('names beside its title how many files the pull request changes and the lines they add and remove', async () => {
+    const harness = new Harness();
+    await harness.readAll({ diff });
+    render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
+    expect(screen.getByRole('list', { name: 'Files' })).toHaveTextContent('2 files+2 −1');
+  });
+
   it('counts a thread with no line among the threads of its file', async () => {
     const harness = new Harness();
     const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } }, open: true });
@@ -357,7 +432,7 @@ describe('the Files of a review', () => {
     const harness = new Harness();
     await harness.readAll({ diff, pending: openPending([pendingCommentFixture()]) });
     render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
-    const foot = screen.getByRole('region', { name: 'Review' });
+    const foot = screen.getByRole('region', { name: 'Pending review' });
     expect(foot).toHaveTextContent('pending review');
     expect(within(foot).getByRole('button', { name: 'Submit review' })).toBeInTheDocument();
   });
@@ -369,6 +444,7 @@ describe('the Review panel', () => {
     harness.review.read();
     render(<ReviewPanel review={harness.review} />);
     expect(screen.getByRole('status')).toHaveTextContent('Reading the pending review');
+    expect(screen.queryByText('no pending review')).not.toBeInTheDocument();
   });
 
   it('says there is no pending review, and still offers to submit', async () => {
@@ -385,6 +461,7 @@ describe('the Review panel', () => {
     render(<ReviewPanel review={harness.review} />);
     await harness.answer('review/pendingOf', { kind: 'unavailablePendingReview', reason: 'no scope' });
     expect(screen.getByText('pending unknown (no scope)')).toBeInTheDocument();
+    expect(screen.queryByText('no pending review')).not.toBeInTheDocument();
   });
 
   it('badges the pending review and counts its comments with the first line of the summary', async () => {

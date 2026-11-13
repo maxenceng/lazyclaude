@@ -4,7 +4,8 @@ Date: 2026-11-13
 
 ## Status
 
-Accepted. Builds on ADR 0103's visual system. The TUI is unchanged.
+Accepted. Builds on ADR 0103's visual system. Amends ADR 0089: the desktop review has no Comments pane, and the Review panel is
+the files rail's foot. The TUI keeps its layout; only an outdated thread's row changes, as below.
 
 ## Context
 
@@ -19,6 +20,13 @@ cut long lines off, drew the cursor line as the focused title row's inverse, and
   `running`, `passing`, `no checks`), the ticket it closes by number or an explicit dash, title with number, branch, comments
   in words, a `pending` badge for your unsubmitted review, and its age as elapsed time. The row facts come from `review`:
   `openedAt`, `comments`, `pendingReview` and `closing`. The window works out the age and never imports the board.
+- **The open pull requests are read with one `gh api graphql` query**, no longer `gh pr list`: `gh pr list --json` gives neither
+  the review threads' comment counts nor whether you hold a pending review. Moving back to `gh pr list` loses those two columns.
+- **The Ticket column is the issue the pull request closes (`closingIssuesReferences`), not the branch's ticket.** The board's
+  pull request glyph and `p` still match a ticket's branch to the pull request's head (ADR 0090). The two can disagree: a pull
+  request whose body closes nothing shows a dash while its branch's ticket shows its glyph. The column says what merging closes.
+- **The window's CI words are `failing`, `running`, `passing`**, not the glossary's *passed*, *failed*, *pending*, so a row's CI
+  never reads `pending` beside its `pending` review badge.
 - **A thread shows once**, as a card across the whole diff under its line, hung from it, the line marked by a glyph and an
   edge. Open threads are edged blue; your pending comment is a neutral card edged and badged amber, with Edit and Delete
   buttons beside their keys. The desktop review has no Comments pane, so `Focus.Comments`, its keys and its selection are gone;
@@ -41,6 +49,8 @@ cut long lines off, drew the cursor line as the focused title row's inverse, and
 - The TUI keeps its Comments panel, so the two frontends no longer match on this screen: a reader of the TUI will expect a
   Comments panel the window does not have. The window needs none, as every thread is under its line or at the top of its file,
   and its read keys (`enter`, `x`, `c`, `r`) act where the thread is.
+- The TUI's Comments row for an outdated thread reads `was L12` where GitHub keeps the lines it was written on, and `outdated`
+  where it keeps none; the window says `outdated · was line 12`. The panel is narrow, so the TUI keeps the one word.
 - Replying by key to a thread whose line also holds a pending comment reaches the pending comment first; the thread's Reply
   button still works.
 - The protocol's `listed` list is read by the window only for threads with no line.

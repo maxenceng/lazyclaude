@@ -23,6 +23,10 @@ public final class PullRequestDomainFieldsFixture {
     }
 
     public static IssueClosing closesIssue() {
-        return new ClosesIssue(new ClosedIssueNumber(215));
+        return new ClosesIssue(closingIssueNumber());
+    }
+
+    public static ClosingIssueNumber closingIssueNumber() {
+        return new ClosingIssueNumber(215);
     }
 }

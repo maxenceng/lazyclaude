@@ -61,8 +61,7 @@ export class ReviewController {
     const review = new OpenReview({
       client: this.deps.client,
       root,
-      number: pullRequest.number,
-      title: pullRequest.title,
+      pullRequest,
       refuse: (text) => this.deps.notices.raise(text),
       onSubmitted: () => this.leave(),
     });

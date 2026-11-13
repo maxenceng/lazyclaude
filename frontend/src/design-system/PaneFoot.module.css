@@ -18,6 +18,10 @@
   overflow-wrap: anywhere;
 }
 
+.words > * {
+  padding-inline: 0;
+}
+
 .action {
   align-self: flex-end;
 }

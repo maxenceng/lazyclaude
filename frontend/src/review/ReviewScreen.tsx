@@ -16,6 +16,8 @@ import {
   FileRow,
   LineChange,
   Pane,
+  PaneActionKind,
+  type PaneChip,
   PaneFoot,
   Badge,
   BadgeTone,
@@ -25,7 +27,8 @@ import {
   TextArea,
   Tone,
 } from '../design-system';
-import type { ReviewDiffFileView, ReviewDiffLine, ReviewPendingCommentView, ReviewPlacedThread, ReviewReviewThreadView } from '../protocol';
+import type { ReviewDiffFileView, ReviewDiffLine, ReviewPendingCommentView, ReviewPlacedThread, ReviewPullRequestView, ReviewReviewThreadView } from '../protocol';
+import { ciWordKey } from './pullRequestList';
 import { useStore } from '../shared/useStore';
 import { DragRelease } from './dragRelease';
 import { type CommentBox, TargetKind } from './commentBox';
@@ -43,6 +46,11 @@ interface DiffProps extends ReviewProps {
   onRetry: () => void;
 }
 
+interface DiffPaneProps extends DiffProps {
+  /** Leaves the review, as `esc` does. */
+  onClose: () => void;
+}
+
 const RANGE_DASH = '–';
 
 const linesOf = (placed: ReviewPlacedThread): string => (placed.first === placed.last ? String(placed.last) : `${placed.first}${RANGE_DASH}${placed.last}`);
@@ -50,12 +58,25 @@ const linesOf = (placed: ReviewPlacedThread): string => (placed.first === placed
 const labelOf = (file: ReviewDiffFileView, renamed: (from: string, to: string) => string): string =>
   file.status.kind === 'renamedFile' ? renamed(file.status.from, file.path) : file.path;
 
-/** The main view of a review: the diff, unified, with the threads and your pending comments under their lines. */
-export const DiffPane = ({ review, focused, onFocus, onRetry }: DiffProps) => {
+/** What the review's title row names of its pull request: its number, the ticket it closes, its CI in a word, and its branch. */
+const chipsOf = (pullRequest: ReviewPullRequestView, t: TFunction<'review'>): PaneChip[] => [
+    { label: t('diff.number', { number: pullRequest.number }) },
+    ...(pullRequest.closing.kind === 'closesIssue' ? [{ label: String(pullRequest.closing.number) }] : []),
+    { label: t(ciWordKey(pullRequest)) },
+    { label: pullRequest.head },
+];
+
+/** The main view of a review: the diff, unified, with the threads and your pending comments under their lines; its title row names the pull request and closes the review. */
+export const DiffPane = ({ review, focused, onFocus, onRetry, onClose }: DiffPaneProps) => {
   const { t } = useTranslation('review');
   useStore(review.changed);
   return (
-    <Pane title={t('diff.title', { number: review.number(), title: review.title() })} focused={focused}>
+    <Pane
+      title={t('diff.title')}
+      focused={focused}
+      chips={chipsOf(review.pullRequest(), t)}
+      actions={[{ kind: PaneActionKind.Close, label: t('diff.close'), shortcut: t('diff.closeKey'), onClick: onClose }]}
+    >
       <Body state={review.diffState()} review={review} focused={focused} onFocus={onFocus} onRetry={onRetry} />
     </Pane>
   );
@@ -122,7 +143,14 @@ const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow
   const { t } = useTranslation('review');
   switch (row.kind) {
     case RowKind.File:
-      return <DiffRule kind={RuleKind.File} text={labelOf(row.file, (from, to) => t('files.renamed', { from, to }))} delta={deltaOf(row.file)} />;
+      return (
+        <DiffRule
+          kind={RuleKind.File}
+          text={labelOf(row.file, (from, to) => t('files.renamed', { from, to }))}
+          delta={deltaOf(row.file)}
+          change={{ letter: t(`files.letter.${row.file.status.kind}`), kind: CHANGES[row.file.status.kind] }}
+        />
+      );
     case RowKind.Hunk:
       return <DiffRule kind={RuleKind.Hunk} text={row.header} />;
     case RowKind.Line: {
@@ -204,7 +232,7 @@ const tagOf = (thread: ReviewReviewThreadView, lineless: boolean, t: TFunction<'
 const ThreadCard = ({ thread, lineless, review }: { thread: ReviewReviewThreadView; lineless: boolean; review: OpenReview }) => {
   const { t } = useTranslation('review');
   const where = whereOf(thread.path, thread.position, t);
-  const reply: AnnotationAction = { text: t('thread.reply'), label: t('thread.replyLabel', { where }), chip: t('thread.replyKey'), onPress: () => review.replyTo(thread) };
+  const reply: AnnotationAction = { text: t('thread.reply'), label: t('thread.replyLabel', { where }), chip: !lineless && review.enterRepliesTo(thread) ? t('thread.replyKey') : undefined, onPress: () => review.replyTo(thread) };
   return <Annotation kind={CommentKind.Thread} where={where} tag={tagOf(thread, lineless, t)} comments={thread.comments} dim={thread.resolved} actions={[reply]} />;
 };
 
@@ -213,9 +241,10 @@ const PendingCard = ({ comment, lineless, review }: { comment: ReviewPendingComm
   const { t } = useTranslation('review');
   const { anchor } = comment;
   const where = anchor.kind === 'onDiffAnchor' ? whereOf(anchor.path, anchor.position, t) : t('thread.whereReply', { file: lastSegment(anchor.path) });
+  const reached = !lineless && review.keysReach(comment);
   const actions: AnnotationAction[] = [
-    { text: t('pendingComment.edit'), label: t('pendingComment.editLabel', { where }), chip: t('pendingComment.editKey'), onPress: () => review.editPending(comment) },
-    { text: t('pendingComment.delete'), label: t('pendingComment.deleteLabel', { where }), chip: t('pendingComment.deleteKey'), onPress: () => review.deletePending(comment) },
+    { text: t('pendingComment.edit'), label: t('pendingComment.editLabel', { where }), chip: reached ? t('pendingComment.editKey') : undefined, onPress: () => review.editPending(comment) },
+    { text: t('pendingComment.delete'), label: t('pendingComment.deleteLabel', { where }), chip: reached ? t('pendingComment.deleteKey') : undefined, onPress: () => review.deletePending(comment) },
   ];
   return (
     <Annotation
@@ -258,8 +287,16 @@ export const FilesPane = ({ review, focused, onFocus }: ReviewProps) => {
   const files = review.rows().files();
   const selected = review.selectedFile();
   const state = review.diffState();
+  const deltas = files.map(deltaOf);
+  const chips: PaneChip[] =
+    files.length === 0
+      ? []
+      : [
+          { label: t('files.count', { count: files.length }) },
+          { label: t('files.delta', { added: deltas.reduce((sum, delta) => sum + delta.added, 0), removed: deltas.reduce((sum, delta) => sum + delta.removed, 0) }) },
+        ];
   return (
-    <Pane title={t('files.title')} focused={focused} foot={<ReviewPanel review={review} />}>
+    <Pane title={t('files.title')} focused={focused} chips={chips} foot={<ReviewPanel review={review} />}>
       {state.kind === DiffStateKind.Loading ? (
         <Busy>{t('diff.loading')}</Busy>
       ) : (
@@ -272,7 +309,7 @@ export const FilesPane = ({ review, focused, onFocus }: ReviewProps) => {
               name={file.status.kind === 'renamedFile' ? t('files.renamed', { from: lastSegment(file.status.from), to: lastSegment(file.path) }) : lastSegment(file.path)}
               directory={directoryOf(file.path)}
               {...deltaOf(file)}
-              threads={review.threadsPlaced().filter((placed) => placed.thread.open && placed.thread.path === file.path).length}
+              openThreads={review.threadsPlaced().filter((placed) => placed.thread.open && placed.thread.path === file.path).length}
               pending={review.pendingComments().filter((placed) => placed.comment.anchor.path === file.path).length}
               selected={index === selected}
               onSelect={() => {
@@ -329,10 +366,11 @@ export const ReviewPanel = ({ review }: { review: OpenReview }) => {
   useStore(review.changed);
   const pending = review.pending;
   const holds = pending.kind === 'openPendingReview';
+  const known = holds || pending.kind === 'noPendingReview';
   return (
     <PaneFoot
       label={t('panel.title')}
-      badge={<Badge tone={holds ? BadgeTone.Amber : BadgeTone.Plain}>{t(holds ? 'panel.badge' : 'panel.badgeNone')}</Badge>}
+      badge={known ? <Badge tone={holds ? BadgeTone.Amber : BadgeTone.Plain}>{t(holds ? 'panel.badge' : 'panel.badgeNone')}</Badge> : null}
       action={
         <Button tone={ButtonTone.Affirm} chip={t('panel.submitKey')} onClick={() => void review.openSummary()}>
           {t('panel.submit')}

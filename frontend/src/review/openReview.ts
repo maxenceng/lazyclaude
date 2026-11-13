@@ -7,6 +7,7 @@ import type {
   ReviewPendingReviewView,
   ReviewPendingReviewWriteView,
   ReviewPullRequestDiffView,
+  ReviewPullRequestView,
   ReviewReviewThreadView,
   ReviewSummaryDraftPayload,
   ReviewThreadInDiffView,
@@ -20,8 +21,8 @@ import { type DiffState, EmptyDiff, FaultedDiff, LoadingDiff, PopulatedDiff, Una
 export interface ReviewDeps {
   client: Client;
   root: string;
-  number: number;
-  title: string;
+  /** The pull request as listed when its review was opened. */
+  pullRequest: ReviewPullRequestView;
   /** The status line's notice: what a gesture of the review did not do, and why. */
   refuse: (text: string) => void;
   /** GitHub took the submit. */
@@ -38,7 +39,7 @@ const clamp = (index: number, size: number): number => Math.min(Math.max(index, 
 
 /**
  * What the review screen shows of one pull request: its diff, threads and pending review as last read, the cursor over the diff lines
- * and the Files and Comments selections. A read lands only if no later read of the same kind was begun since, and the review is
+ * and the file selected in the files rail. A read lands only if no later read of the same kind was begun since, and the review is
  * closed when the review is left, which drops every read still under way.
  */
 export class OpenReview {
@@ -72,12 +73,16 @@ export class OpenReview {
 
   constructor(private readonly deps: ReviewDeps) {}
 
+  pullRequest(): ReviewPullRequestView {
+    return this.deps.pullRequest;
+  }
+
   number(): number {
-    return this.deps.number;
+    return this.deps.pullRequest.number;
   }
 
   title(): string {
-    return this.deps.title;
+    return this.deps.pullRequest.title;
   }
 
   /** Throws away what reads are still under way. */
@@ -131,7 +136,7 @@ export class OpenReview {
     if (this.diff.kind !== 'readDiff') {
       this.diff = { kind: 'loadingDiff' };
     }
-    const params = { root: this.deps.root, number: this.deps.number };
+    const params = { root: this.deps.root, number: this.deps.pullRequest.number };
     void this.readPending(params);
     void this.readDiff(params);
     void this.readThreads(params);
@@ -217,7 +222,8 @@ export class OpenReview {
   }
 
   private rebuild(): void {
-    this.diffRows = DiffRows.of(this.diff, this.comments.underLines, this.comments.pending, this.comments.listed);
+    const lineless = this.comments.listed.filter((entry) => this.showResolved || entry.kind !== 'threadInDiff' || !entry.thread.resolved);
+    this.diffRows = DiffRows.of(this.diff, this.comments.underLines, this.comments.pending, lineless);
     this.moveTo(this.line);
     this.touch();
   }
@@ -420,7 +426,8 @@ export class OpenReview {
     if (box === undefined || box.saving) {
       return;
     }
-    const { root, number } = this.deps;
+    const { root } = this.deps;
+    const { number } = this.deps.pullRequest;
     const body = box.text;
     switch (box.target.kind) {
       case TargetKind.Summary:
@@ -450,7 +457,8 @@ export class OpenReview {
     this.confirming = false;
     this.touch();
     if (yes) {
-      const { root, number } = this.deps;
+      const { root } = this.deps;
+      const { number } = this.deps.pullRequest;
       this.inOrder(
         async () => this.deps.client.call('review/submit', { root, number, summary: await this.askSummary() }),
         (answer) => {
@@ -483,6 +491,23 @@ export class OpenReview {
   /** The Delete on a pending comment's card: it is deleted, and the cursor stays where it is. */
   deletePending(comment: ReviewPendingCommentView): void {
     this.delete(comment);
+  }
+
+  /** Whether `enter` on its line replies to `thread`: it hangs from a line, it is the last thread there, and no pending comment there takes the key first. */
+  enterRepliesTo(thread: ReviewReviewThreadView): boolean {
+    const placed = this.comments.underLines.find((entry) => entry.thread.id === thread.id);
+    if (placed?.line.kind !== 'onDiffLine') {
+      return false;
+    }
+    const line = placed.line.index;
+    const last = this.comments.underLines.findLast((entry) => entry.line.kind === 'onDiffLine' && entry.line.index === line);
+    const pendingFirst = this.comments.lastOnLines.some((entry) => entry.line.kind === 'onDiffLine' && entry.line.index === line);
+    return last?.thread.id === thread.id && !pendingFirst;
+  }
+
+  /** Whether `enter` and `x` on its line act on `comment`: it is the pending comment `review` picks for its line. */
+  keysReach(comment: ReviewPendingCommentView): boolean {
+    return this.comments.lastOnLines.some((entry) => entry.line.kind === 'onDiffLine' && entry.comment.id === comment.id);
   }
 
   /** The thread under the cursor's line, the last one when the line has several. */
@@ -551,7 +576,8 @@ export class OpenReview {
   }
 
   private delete(comment: ReviewPendingCommentView): void {
-    const { root, number } = this.deps;
+    const { root } = this.deps;
+    const { number } = this.deps.pullRequest;
     this.inOrder(
       () => this.deps.client.call('review/delete', { root, number, comment: comment.id }),
       (answer) => {
@@ -621,7 +647,7 @@ export class OpenReview {
       if (!this.closed) {
         failed();
         this.deps.refuse(i18n.t('review:refused.notWritten', { reason: messageOf(error) }));
-        void this.readPending({ root: this.deps.root, number: this.deps.number });
+        void this.readPending({ root: this.deps.root, number: this.deps.pullRequest.number });
       }
     }
   }

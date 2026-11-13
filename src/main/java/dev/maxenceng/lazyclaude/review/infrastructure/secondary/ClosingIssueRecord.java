@@ -1,13 +1,13 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.secondary;
 
-import dev.maxenceng.lazyclaude.review.domain.ClosedIssueNumber;
+import dev.maxenceng.lazyclaude.review.domain.ClosingIssueNumber;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.MissingFields;
 
 /** One issue a pull request closes as the GraphQL answer writes it, null where the JSON lacks it. */
 record ClosingIssueRecord(Integer number, RepositoryRecord repository) {
 
-    private static final String NUMBER = "closed issue number";
-    private static final String REPOSITORY = "closed issue repository";
+    private static final String NUMBER = "closing issue number";
+    private static final String REPOSITORY = "closing issue repository";
 
     MissingFields missingFields() {
         MissingFields fields = new MissingFields().absent(NUMBER, number).absent(REPOSITORY, repository);
@@ -20,7 +20,7 @@ record ClosingIssueRecord(Integer number, RepositoryRecord repository) {
     }
 
     /** Only once {@link #missingFields()} names none. */
-    ClosedIssueNumber toClosedIssueNumber() {
-        return new ClosedIssueNumber(number);
+    ClosingIssueNumber toClosingIssueNumber() {
+        return new ClosingIssueNumber(number);
     }
 }

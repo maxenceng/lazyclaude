@@ -65,6 +65,18 @@ class AssertTest {
     }
 
     @Test
+    void shouldRefuseANegativeCountSayingIt() {
+        assertThatThrownBy(() -> Assert.notNegative("comment count", -2))
+                .isInstanceOf(NegativeValueException.class)
+                .hasMessage("comment count is never negative, got -2");
+    }
+
+    @Test
+    void shouldAcceptAZeroCount() {
+        assertThatCode(() -> Assert.notNegative("comment count", 0)).doesNotThrowAnyException();
+    }
+
+    @Test
     void shouldRefuseABlankValueNamingItsField() {
         assertThatThrownBy(() -> Assert.notBlank("title", "  "))
                 .isInstanceOf(BlankValueException.class)

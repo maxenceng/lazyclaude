@@ -83,6 +83,7 @@ th.fill {
   --ci-ink-failed: var(--cursor-ci-failed, var(--ci-failed));
   --ci-ink-pending: var(--cursor-ci-pending, var(--ci-pending));
   --ci-ink-passed: var(--cursor-ci-passed, var(--ci-passed));
+  --ci-ink-none: var(--cursor-ink);
   background: var(--cursor-ground);
   color: var(--cursor-ink);
   box-shadow: var(--cursor-edge);

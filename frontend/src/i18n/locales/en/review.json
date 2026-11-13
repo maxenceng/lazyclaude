@@ -7,19 +7,25 @@
       "deletedFile": "D",
       "renamedFile": "R"
     },
-    "renamed": "{{from}} → {{to}}"
+    "renamed": "{{from}} → {{to}}",
+    "count_one": "{{count}} file",
+    "count_other": "{{count}} files",
+    "delta": "+{{added}} −{{removed}}"
   },
   "diff": {
-    "title": "PR #{{number}} {{title}}",
+    "title": "Review",
     "loading": "Reading the diff…",
     "unavailable": "PR unknown ({{reason}})",
     "tooLarge": "diff too large for GitHub ({{reason}})",
     "empty": "no changes",
     "fault": "The diff could not be read",
-    "retry": "Retry"
+    "retry": "Retry",
+    "number": "#{{number}}",
+    "close": "Close the review",
+    "closeKey": "esc"
   },
   "panel": {
-    "title": "Review",
+    "title": "Pending review",
     "loading": "Reading the pending review…",
     "none": "no pending review",
     "unknown": "pending unknown ({{reason}})",
@@ -108,8 +114,7 @@
       "now": "now",
       "minutes": "{{count}}m",
       "hours": "{{count}}h",
-      "days": "{{count}}d",
-      "unknown": "unknown"
+      "days": "{{count}}d"
     },
     "label": "Open pull requests"
   },

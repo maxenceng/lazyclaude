@@ -7,7 +7,7 @@ import dev.maxenceng.lazyclaude.review.published.PullRequestTitle;
 
 /**
  * An open pull request: where it comes from, whether GitHub marks it draft, when it was opened, the checks on its head, its
- * conversation comments, whether you hold an unsubmitted review on it, and the issue it closes.
+ * comments others can see, whether you hold an unsubmitted review on it, and the issue it closes.
  */
 public record PullRequest(
         PullRequestNumber number,

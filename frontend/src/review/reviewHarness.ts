@@ -1,6 +1,7 @@
 import { act } from '@testing-library/react';
+import type { ReviewPullRequestView } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
-import { commentsFixture, diffFixture, threadsFixture } from './fixtures';
+import { commentsFixture, diffFixture, pullRequestFixture, threadsFixture } from './fixtures';
 import { OpenReview } from './openReview';
 
 export interface Reads {
@@ -22,12 +23,11 @@ export class Harness {
   submitted = 0;
   readonly review: OpenReview;
 
-  constructor() {
+  constructor(pullRequest: ReviewPullRequestView = pullRequestFixture()) {
     this.review = new OpenReview({
       client: this.client,
       root: '/p',
-      number: 7,
-      title: 'Add the thing',
+      pullRequest,
       refuse: (text) => this.refusals.push(text),
       onSubmitted: () => {
         this.submitted += 1;

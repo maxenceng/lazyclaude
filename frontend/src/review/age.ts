@@ -4,7 +4,6 @@ export enum Elapsed {
   Minutes = 'minutes',
   Hours = 'hours',
   Days = 'days',
-  Unknown = 'unknown',
 }
 
 export interface Age {
@@ -16,12 +15,9 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
-/** The time between an instant `review` sent and `now`, as elapsed time and not calendar days, so a clock change does not move it; unknown for text that is no instant. */
+/** The time between an instant `review` sent and `now`, as elapsed time and not calendar days, so a clock change does not move it. */
 export const ageOf = (openedAt: string, now: Date): Age => {
   const elapsed = now.getTime() - Date.parse(openedAt);
-  if (Number.isNaN(elapsed)) {
-    return { unit: Elapsed.Unknown, count: 0 };
-  }
   if (elapsed >= DAY_MS) {
     return { unit: Elapsed.Days, count: Math.floor(elapsed / DAY_MS) };
   }

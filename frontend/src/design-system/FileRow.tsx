@@ -17,7 +17,8 @@ interface Props {
   directory: string;
   added: number;
   removed: number;
-  threads: number;
+  /** The file's open threads; a resolved one is not counted. */
+  openThreads: number;
   pending: number;
   selected: boolean;
   onSelect: () => void;
@@ -28,7 +29,7 @@ interface Props {
  * it adds and removes, and under them where it lives and a word badge for its threads and for your pending comments. The selected
  * row is lifted; a press on it goes to its first line.
  */
-export const FileRow = ({ letter, change, name, directory, added, removed, threads, pending, selected, onSelect }: Props) => {
+export const FileRow = ({ letter, change, name, directory, added, removed, openThreads, pending, selected, onSelect }: Props) => {
   const { t } = useTranslation('designSystem');
   return (
     <li data-row="">
@@ -42,7 +43,7 @@ export const FileRow = ({ letter, change, name, directory, added, removed, threa
         </span>
         <span className={styles.directory}>{directory}</span>
         <span className={styles.badges}>
-          {threads === 0 ? null : <Badge tone={BadgeTone.Blue}>{t('fileRow.threads', { count: threads })}</Badge>}
+          {openThreads === 0 ? null : <Badge tone={BadgeTone.Blue}>{t('fileRow.threads', { count: openThreads })}</Badge>}
           {pending === 0 ? null : <Badge tone={BadgeTone.Amber}>{t('fileRow.pending', { count: pending })}</Badge>}
         </span>
       </button>

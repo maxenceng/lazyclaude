@@ -138,7 +138,7 @@ export const App = ({ app, packaged }: Props) => {
       : {
           board: <FilesPane review={review} focused={layout.focus === Focus.Files} onFocus={() => app.focusOn(Focus.Files)} />,
           docs: null,
-          main: <DiffPane review={review} focused={layout.focus === Focus.Diff} onFocus={() => app.focusOn(Focus.Diff)} onRetry={() => review.read()} />,
+          main: <DiffPane review={review} focused={layout.focus === Focus.Diff} onFocus={() => app.focusOn(Focus.Diff)} onRetry={() => review.read()} onClose={() => app.review.leave()} />,
           arrangement: layout.arrangement(hasDock),
         };
 

@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react';
 import { Badge, BadgeTone } from './Badge';
 import { CommentKind } from './comment';
+import { InlineText } from './InlineText';
 import styles from './Annotation.module.css';
 
 interface Comment {
@@ -13,8 +14,8 @@ export interface AnnotationAction {
   text: string;
   /** What the button does, for a screen reader, since the text alone does not say which comment. */
   label: string;
-  /** The key that does the same, in a chip after the text. */
-  chip: string;
+  /** The key that does the same, in a chip after the text; none where no key reaches this card. */
+  chip: string | undefined;
   onPress: () => void;
 }
 
@@ -35,7 +36,7 @@ const keepFocus = (event: MouseEvent) => event.preventDefault();
 
 /**
  * What has been said on a line, as one card across the whole diff under it: where it hangs and its state in a word, then each comment with
- * its author, and its actions. An open thread is edged blue; your pending comment is a neutral card edged and badged amber. A resolved
+ * its author and its words, their inline markdown set, and its actions. An open thread is edged blue; your pending comment is a neutral card edged and badged amber. A resolved
  * thread is dimmed.
  */
 export const Annotation = ({ kind, where, tag, comments, dim, actions }: Props) => {
@@ -49,7 +50,9 @@ export const Annotation = ({ kind, where, tag, comments, dim, actions }: Props) 
         {comments.map((comment, index) => (
           <div key={index} className={styles.comment}>
             <strong className={styles.author}>{comment.author}</strong>
-            <p className={styles.body}>{comment.body}</p>
+            <p className={styles.body}>
+              <InlineText source={comment.body} />
+            </p>
           </div>
         ))}
         {actions.length === 0 ? null : (
@@ -57,7 +60,7 @@ export const Annotation = ({ kind, where, tag, comments, dim, actions }: Props) 
             {actions.map((action) => (
               <button key={action.text} type="button" className={styles.action} aria-label={action.label} onMouseDown={keepFocus} onClick={action.onPress}>
                 {action.text}
-                <kbd className={styles.chip}>{action.chip}</kbd>
+                {action.chip === undefined ? null : <kbd className={styles.chip}>{action.chip}</kbd>}
               </button>
             ))}
           </div>

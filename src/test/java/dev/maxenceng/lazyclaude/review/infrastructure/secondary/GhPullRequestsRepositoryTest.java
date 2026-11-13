@@ -48,9 +48,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import dev.maxenceng.lazyclaude.review.domain.ClosedIssueNumber;
 import dev.maxenceng.lazyclaude.review.domain.ClosesIssue;
 import dev.maxenceng.lazyclaude.review.domain.ClosesNoIssue;
+import dev.maxenceng.lazyclaude.review.domain.ClosingIssueNumber;
 import dev.maxenceng.lazyclaude.review.domain.CommentCount;
 import dev.maxenceng.lazyclaude.review.domain.PullRequest;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestsUnavailableException;
@@ -144,7 +144,7 @@ class GhPullRequestsRepositoryTest {
     @Test
     void shouldCloseTheIssueItNames() throws IOException {
         assertThat(readOnePrinted(root, pullRequestJsonClosing(closingIssuesJson(closingIssueJson(215, thisRepositoryName())))).closing())
-                .isEqualTo(new ClosesIssue(new ClosedIssueNumber(215)));
+                .isEqualTo(new ClosesIssue(new ClosingIssueNumber(215)));
     }
 
     @Test
@@ -154,7 +154,7 @@ class GhPullRequestsRepositoryTest {
                                 pullRequestJsonClosing(closingIssuesJson(
                                         closingIssueJson(7, thisRepositoryName()), closingIssueJson(9, thisRepositoryName()))))
                         .closing())
-                .isEqualTo(new ClosesIssue(new ClosedIssueNumber(7)));
+                .isEqualTo(new ClosesIssue(new ClosingIssueNumber(7)));
     }
 
     @Test
@@ -165,7 +165,7 @@ class GhPullRequestsRepositoryTest {
                                         closingIssueJson(3, "acme/elsewhere"), closingIssueJson(9, thisRepositoryName()))))
                         .closing())
                 .as("an issue number of another repository is not a ticket of this one")
-                .isEqualTo(new ClosesIssue(new ClosedIssueNumber(9)));
+                .isEqualTo(new ClosesIssue(new ClosingIssueNumber(9)));
     }
 
     @Test
@@ -176,18 +176,18 @@ class GhPullRequestsRepositoryTest {
     }
 
     @Test
-    void shouldBeUnavailableWhenAClosedIssueLacksItsNumber() {
+    void shouldBeUnavailableWhenAClosingIssueLacksItsNumber() {
         assertThatThrownBy(() -> readOnePrinted(
                         root, pullRequestJsonClosing(closingIssuesJson("{\"repository\":{\"nameWithOwner\":\"acme/app\"}}"))))
                 .isInstanceOf(PullRequestsUnavailableException.class)
-                .hasMessageContaining("closed issue number");
+                .hasMessageContaining("closing issue number");
     }
 
     @Test
-    void shouldBeUnavailableWhenAClosedIssueLacksItsRepository() {
+    void shouldBeUnavailableWhenAClosingIssueLacksItsRepository() {
         assertThatThrownBy(() -> readOnePrinted(root, pullRequestJsonClosing(closingIssuesJson("{\"number\":4}"))))
                 .isInstanceOf(PullRequestsUnavailableException.class)
-                .hasMessageContaining("closed issue repository");
+                .hasMessageContaining("closing issue repository");
     }
 
     @Test

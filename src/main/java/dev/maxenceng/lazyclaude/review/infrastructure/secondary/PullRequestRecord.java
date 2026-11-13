@@ -40,9 +40,7 @@ record PullRequestRecord(
     private static final String REPOSITORY = "base repository";
     private static final String COMMENTS = "comment count";
     private static final String THREADS = "review threads";
-    private static final String THREAD_COMMENTS = "review thread comment count";
     private static final String PENDING_REVIEWS = "pending reviews";
-    private static final String PENDING_COMMENTS = "pending review comment count";
     private static final String CLOSING_ISSUES = "closing issues";
     private static final String UNREAD_TIME = "gh api graphql wrote a createdAt that is not a time: %s";
 
@@ -50,7 +48,7 @@ record PullRequestRecord(
         return Boolean.TRUE.equals(isCrossRepository);
     }
 
-    /** The fields a pull request cannot be read without that the JSON lacks, its checks', threads' and closed issues' included. */
+    /** The fields a pull request cannot be read without that the JSON lacks, its checks', threads' and closing issues' included. */
     MissingFields missingFields() {
         MissingFields own = new MissingFields()
                 .absent(NUMBER, number)
@@ -82,7 +80,7 @@ record PullRequestRecord(
                 .draft(Boolean.TRUE.equals(isDraft))
                 .openedAt(new OpenedAt(openedTime()))
                 .checks(new Checks(checks().stream().map(CheckRecord::toCheck).toList()))
-                .comments(new CommentCount(visibleComments()))
+                .comments(visibleComments())
                 .pendingReview(!pendingReviews().isEmpty())
                 .closing(closing())
                 .build();
@@ -97,17 +95,18 @@ record PullRequestRecord(
     }
 
     // deferred: only the first 100 review threads are counted, so a pull request with more shows fewer comments — close it when one has that many.
-    private int visibleComments() {
+    private CommentCount visibleComments() {
         int inThreads = threads().stream().mapToInt(ThreadCommentCountRecord::total).sum();
         int yours = pendingReviews().stream().mapToInt(PendingReviewCountRecord::total).sum();
-        return comments.total() + inThreads - yours;
+        return CommentCount.visible(comments.total(), inThreads, yours);
     }
 
+    /** The first issue of this repository the pull request lists as closing, in GitHub's order; the others are not shown (ADR 0106). */
     private IssueClosing closing() {
         return closingIssues().stream()
                 .filter(issue -> issue.in(baseRepository))
                 .findFirst()
-                .<IssueClosing>map(issue -> new ClosesIssue(issue.toClosedIssueNumber()))
+                .<IssueClosing>map(issue -> new ClosesIssue(issue.toClosingIssueNumber()))
                 .orElseGet(ClosesNoIssue::new);
     }
 

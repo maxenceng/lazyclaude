@@ -59,6 +59,7 @@ describe('a table', () => {
     const rows = screen.getAllByRole('row').slice(1);
     expect(rows.map((row) => row.getAttribute('data-stripe'))).toEqual(['passed', 'none']);
     expect(ruleOf(sheet, ".row[data-stripe='passed'] > td:first-child")).toContain('var(--ci-passed)');
+    expect(ruleOf(sheet, '.selected'), 'a row with no checks stays readable on the cursor ground').toContain('--ci-ink-none: var(--cursor-ink)');
   });
 
   it('lifts the selected row on the cursor and gives the CI inks their on-light values there', () => {

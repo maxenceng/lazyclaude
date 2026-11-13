@@ -983,8 +983,8 @@ describe('the Review screen', () => {
     expect(screen.queryByRole('region', { name: 'Board' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Files' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Comments' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Pending review' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Review' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /src\/a\.ts/ })).toBeInTheDocument();
     expect(keyBar()).toHaveTextContent('c comment');
   });
@@ -1003,7 +1003,7 @@ describe('the Review screen', () => {
       ready.client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
       await settle();
     });
-    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toHaveTextContent('Reading the diff');
+    expect(screen.getByRole('region', { name: 'Review' })).toHaveTextContent('Reading the diff');
   });
 
   it('does not open for a ticket without an open pull request', async () => {
@@ -1048,7 +1048,7 @@ describe('the Review screen', () => {
       await settle();
     });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Review' })).toHaveTextContent('0 comments');
+    expect(screen.getByRole('region', { name: 'Pending review' })).toHaveTextContent('0 comments');
   });
 
   it('shows why a comment was not saved, in the popup', async () => {
@@ -1097,7 +1097,7 @@ describe('the Review screen', () => {
       await settle();
     });
     expect(screen.getByRole('banner')).toHaveTextContent('not submitted (nothing to submit)');
-    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Review' })).toBeInTheDocument();
   });
 
   it('takes j and k, in the diff, as the cursor, and h to Files', async () => {

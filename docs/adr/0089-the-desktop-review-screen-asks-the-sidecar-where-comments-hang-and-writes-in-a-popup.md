@@ -7,6 +7,7 @@ Date: 2026-11-05
 Accepted. Builds on ADR 0009 and ADR 0041 (the pending review), ADR 0051 (the mouse), ADR 0057 (the protocol client) and
 ADR 0085 (a controller per context).
 Amended by ADR 0090: the screen rules this ADR ported from the shell are asked of `review`.
+Amended by ADR 0106: the desktop review has no Comments pane, and the Review panel is the files rail's foot.
 
 ## Context
 

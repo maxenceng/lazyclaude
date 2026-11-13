@@ -14,7 +14,7 @@ import dev.maxenceng.lazyclaude.review.published.PullRequestTitle;
 
 /**
  * One open pull request as the shell reads it: when it was opened, its CI result, and its checks failed first, then pending, then
- * passed, its conversation comments, whether you hold an unsubmitted review on it, and the issue it closes.
+ * passed, how many comments others can see, whether you hold an unsubmitted review on it, and the issue it closes.
  */
 public record PullRequestView(
         PullRequestNumber number,

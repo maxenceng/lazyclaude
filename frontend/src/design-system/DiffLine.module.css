@@ -1,5 +1,6 @@
 .line {
   display: flex;
+  scroll-margin-top: calc(var(--size-label) * 1.5 + var(--space-2) * 2 + 2px);
   gap: var(--space-2);
   width: 100%;
   padding: 0 var(--space-4) 0 var(--space-2);
@@ -49,6 +50,7 @@
 
 .number {
   flex: none;
+  align-self: flex-start;
   min-width: 5ch;
   padding: 0;
   border: 0;

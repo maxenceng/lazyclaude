@@ -58,3 +58,24 @@
   color: var(--dim);
   overflow-wrap: anywhere;
 }
+
+.letter {
+  flex: none;
+  font-weight: 600;
+}
+
+.added {
+  color: var(--ansi-green);
+}
+
+.modified {
+  color: var(--ansi-yellow);
+}
+
+.deleted {
+  color: var(--ansi-bright-red);
+}
+
+.renamed {
+  color: var(--ansi-blue);
+}

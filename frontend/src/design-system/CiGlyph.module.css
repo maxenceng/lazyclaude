@@ -27,5 +27,5 @@
 }
 
 .none {
-  color: var(--dim);
+  color: var(--ci-ink-none, var(--dim));
 }

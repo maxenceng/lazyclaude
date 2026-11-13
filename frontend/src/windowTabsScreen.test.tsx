@@ -409,7 +409,7 @@ describe('the Pull requests tab', () => {
       await Promise.resolve();
     });
     await settle();
-    expect(screen.getByRole('region', { name: 'PR #11 Wait for it' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Review' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
     expect(tab(/^Pull requests/)).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('row', { name: /#11/ })).toHaveAttribute('aria-current', 'true');
@@ -427,7 +427,7 @@ describe('the Pull requests tab', () => {
     });
     await settle();
     await user.click(tab(/^Board/));
-    expect(screen.queryByRole('region', { name: 'PR #11 Wait for it' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Review' })).not.toBeInTheDocument();
     expect(tab(/^Board/)).toHaveAttribute('aria-selected', 'true');
     fireEvent.keyDown(window, { key: '&', code: 'Digit1' });
     expect(tab(/^Base/)).toHaveAttribute('aria-selected', 'true');
