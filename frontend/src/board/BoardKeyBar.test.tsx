@@ -19,7 +19,7 @@ describe('the Board\'s key bar', () => {
     expect(bar).toHaveTextContent('1/2/3 tabs');
     expect(bar).not.toHaveTextContent('j/k move');
     expect(bar).not.toHaveTextContent('enter open');
-    expect(bar).not.toHaveTextContent(/\bn new\b/);
+    expect(bar).not.toHaveTextContent('n/N new');
   });
 
   it('leaves the new draft off where there is no project to capture into', () => {

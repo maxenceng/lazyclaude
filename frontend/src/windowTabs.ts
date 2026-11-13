@@ -41,9 +41,9 @@ export class WindowTabs {
     return state.kind === 'openPullRequests' ? worstFirst(state.pullRequests) : [];
   }
 
-  /** The Board tab draws each ticket's pull request, so it asks `review` for them when it is shown and whenever they or the tickets change. */
+  /** The Board tab draws each ticket's pull request and Base names the selected one's, so either asks `review` for them when it is shown and whenever they or the tickets change. */
   pullRequestsChanged(): void {
-    if (this.selected.get() === WindowTab.Board) {
+    if (this.selected.get() !== WindowTab.PullRequests) {
       void this.deps.review.ticketPullRequests.join(this.deps.board.branches());
     }
   }

@@ -1,8 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LampColour } from './markers';
 import { pastFixture } from './fixtures';
-import { HostedRow, LiveRow, PastRow, type SessionRow } from './sessionRows';
+import { HostedRow, LiveRow, PastRow, type SessionRow, STARTING } from './sessionRows';
 import { SessionsList } from './SessionsList';
 
 const list = (rows: SessionRow[]) =>
@@ -10,7 +9,7 @@ const list = (rows: SessionRow[]) =>
 
 describe('a ticket\'s sessions', () => {
   it('carries on each hosted row, one button, the action attach and its key', () => {
-    list([new HostedRow('h1', 'start 145', LampColour.Turn)]);
+    list([new HostedRow('h1', 'start 145', 'yourTurn')]);
     const row = screen.getByRole('button', { name: /start 145/ });
     expect(row).toHaveTextContent('attach');
     expect(row).toHaveTextContent('enter');
@@ -23,17 +22,19 @@ describe('a ticket\'s sessions', () => {
   });
 
   it('carries no action on a live session another window hosts, which cannot be entered', () => {
-    list([new LiveRow('elsewhere', LampColour.Input)]);
+    list([new LiveRow('elsewhere', 'waitingForInput')]);
     expect(screen.getByRole('button', { name: /elsewhere/ })).not.toHaveTextContent('enter');
   });
 
   it.each([
-    [LampColour.Permission, 'permission'],
-    [LampColour.Input, 'needs input'],
-    [LampColour.Turn, 'your turn'],
-    [LampColour.Off, 'busy'],
-  ])('says a %s hosted session in the word %s on its pill', (lamp, word) => {
-    list([new HostedRow('h1', 'start 145', lamp)]);
+    ['waitingForPermission', 'permission'],
+    ['waitingForInput', 'needs input'],
+    ['yourTurn', 'your turn'],
+    ['busy', 'busy'],
+    ['unknown', 'unknown'],
+    [STARTING, 'starting'],
+  ] as const)('says a %s hosted session in the word %s on its pill', (state, word) => {
+    list([new HostedRow('h1', 'start 145', state)]);
     expect(within(screen.getByRole('button')).getByRole('img')).toHaveTextContent(word);
   });
 
@@ -43,7 +44,7 @@ describe('a ticket\'s sessions', () => {
   });
 
   it('marks a waiting session\'s row with its state, and a busy one\'s with none a tint answers to', () => {
-    list([new HostedRow('h1', 'a', LampColour.Turn), new HostedRow('h2', 'b', LampColour.Off)]);
+    list([new HostedRow('h1', 'a', 'yourTurn'), new HostedRow('h2', 'b', 'busy')]);
     expect(screen.getAllByRole('button').map((row) => row.getAttribute('data-lamp'))).toEqual(['turn', 'off']);
   });
 
@@ -52,14 +53,14 @@ describe('a ticket\'s sessions', () => {
     afterEach(() => vi.useRealTimers());
 
     it('shows the age of a hosted session since it started, and of a past one since it last ran', () => {
-      list([new HostedRow('h1', 'a', LampColour.Turn, '2026-03-29T11:48:00Z'), new PastRow(pastFixture({ id: 'p1', title: 'old', lastActivity: '2026-03-27T12:00:00Z' }))]);
+      list([new HostedRow('h1', 'a', 'yourTurn', '2026-03-29T11:48:00Z'), new PastRow(pastFixture({ id: 'p1', title: 'old', lastActivity: '2026-03-27T12:00:00Z' }))]);
       const [hosted, past] = screen.getAllByRole('button');
       expect(hosted).toHaveTextContent('12m');
       expect(past).toHaveTextContent('2d');
     });
 
     it('shows none for a session whose start is not read', () => {
-      list([new HostedRow('h1', 'a', LampColour.Turn)]);
+      list([new HostedRow('h1', 'a', 'yourTurn')]);
       expect(screen.getByRole('button').textContent).not.toMatch(/\d+[mhd]|now/);
     });
   });

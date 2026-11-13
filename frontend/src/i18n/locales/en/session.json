@@ -1,7 +1,6 @@
 {
   "sessions": {
-    "title": "sessions",
-    "older": "older sessions"
+    "title": "sessions"
   },
   "row": {
     "attach": "attach",
@@ -18,6 +17,8 @@
     "input": "needs input",
     "turn": "your turn",
     "busy": "busy",
+    "unknown": "unknown",
+    "starting": "starting",
     "ended": "ended"
   },
   "age": {

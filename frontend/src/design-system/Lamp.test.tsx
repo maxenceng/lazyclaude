@@ -33,4 +33,9 @@ describe('a lamp pill', () => {
     expect(screen.getByRole('img')).toHaveTextContent(words);
     expect(screen.getByRole('img')).toHaveAccessibleName(name);
   });
+
+  it('is named for a screen reader by the words it shows, where it is given its own', () => {
+    render(<Lamp colour={LampColour.Off} size={LampSize.Pill} words="busy" />);
+    expect(screen.getByRole('img')).toHaveAccessibleName('busy');
+  });
 });

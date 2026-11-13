@@ -8,7 +8,7 @@ interface Props {
   title: string;
   selected: boolean;
   done: boolean;
-  /** The strongest session waiting on you, said in words at the row's right end. */
+  /** The strongest marker of the ticket's sessions, said in words at the row's right end. */
   lamp: LampColour | undefined;
   /** The ticket's type, in its own colour at the row's right end. */
   type?: TicketTypeTag | undefined;
@@ -16,7 +16,7 @@ interface Props {
 }
 
 /**
- * One ticket: its number, its title, its type, and the pill of a session waiting on it. The selected row is a light bar; a press on it again opens it. A selected row
+ * One ticket: its number, its title, its type, and the pill of its sessions' strongest marker. The selected row is a light bar; a press on it again opens it. A selected row
  * scrolls into its pane's view, since the done rows come last and a long board puts them below the fold.
  */
 export const TicketRow = ({ id, title, selected, done, lamp, type, onSelect }: Props) => {

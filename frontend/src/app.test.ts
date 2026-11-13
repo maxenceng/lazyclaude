@@ -4,7 +4,7 @@ import { readFixture, treeFixture } from './docs/fixtures';
 import { AppModel } from './app';
 import { Action } from './keys/bindings';
 import { Dock } from './session/dock';
-import { Focus, Panel, WindowTab } from './layout';
+import { Focus, WindowTab } from './layout';
 import { ScrollStep } from './docs/documentScroll';
 import { FaultedConfiguration } from './keys/configurationState';
 import { Connecting, Exited, Ready } from './protocol';
@@ -156,10 +156,10 @@ describe('the app and the left column\'s panel tabs', () => {
   it('switches to the Docs tab on o, focusing it, and back to the Board on o again', async () => {
     const app = await docsApp();
     app.press(Action.TogglePanel);
-    expect(app.layout.get().panel).toBe(Panel.Docs);
+    expect(app.layout.get().panel).toBe(Focus.Docs);
     expect(app.layout.get().focus).toBe(Focus.Docs);
     app.press(Action.TogglePanel);
-    expect(app.layout.get().panel).toBe(Panel.Board);
+    expect(app.layout.get().panel).toBe(Focus.Board);
     expect(app.layout.get().focus).toBe(Focus.Board);
   });
 
@@ -177,9 +177,9 @@ describe('the app and the left column\'s panel tabs', () => {
   it('shows the Docs tab when focus goes down from the Board, and the Board tab on h', async () => {
     const app = await docsApp();
     app.press(Action.FocusDown);
-    expect(app.layout.get().panel).toBe(Panel.Docs);
+    expect(app.layout.get().panel).toBe(Focus.Docs);
     app.press(Action.PanelLeft);
-    expect(app.layout.get().panel).toBe(Panel.Board);
+    expect(app.layout.get().panel).toBe(Focus.Board);
   });
 });
 
@@ -383,7 +383,7 @@ const PULL_REQUEST = { number: 7, title: 'Add the thing', head: 'proj-1-first', 
 
 const opened = async (client: FakeClient, app: AppModel) => {
   app.press(Action.Review);
-  client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+  client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
   await settled();
 };
 
@@ -555,7 +555,7 @@ describe('the app and its window tabs', () => {
     await opened(client, app);
     app.press(Action.ShowBase);
     app.press(Action.Review);
-    client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+    client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
     await settled();
     app.chooseTab(WindowTab.PullRequests);
     expect(app.review.isOpen()).toBe(false);

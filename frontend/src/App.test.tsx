@@ -925,7 +925,7 @@ const reviewOpened = async (answers: { pending?: unknown; threads?: unknown; dif
   });
   await ready.user.keyboard('p');
   await act(async () => {
-    ready.client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+    ready.client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
     await settle();
   });
   await act(async () => {
@@ -986,7 +986,7 @@ describe('the Review screen', () => {
     });
     await ready.user.keyboard('p');
     await act(async () => {
-      ready.client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+      ready.client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
       await settle();
     });
     expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toHaveTextContent('Reading the diff');
@@ -1353,6 +1353,12 @@ const answerPullRequests = (ready: Started, answer: unknown) =>
   });
 
 describe('the left column\'s panel tabs', () => {
+  it('counts the documents on the Docs tab once they are read, while the Board tab is shown', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    expect(screen.getByRole('tab', { name: 'Docs 2' })).toHaveAttribute('aria-selected', 'false');
+  });
+
   it('shows the Board at the column\'s full height with the Docs panel behind its tab, each tab naming its count', async () => {
     await readyApp();
     expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
@@ -1444,10 +1450,23 @@ describe('a ticket\'s waiting session on its Board row', () => {
 
 const factOf = (label: string): string => within(screen.getByRole('region', { name: 'Ticket' })).getByText(label).nextElementSibling?.textContent ?? '';
 
+const pushTwoSessions = (ready: Started, busy: ReturnType<typeof sessionFixture>) => {
+  const turn = sessionFixture({ id: 'turn', ticket: 'PROJ-1', state: { kind: 'yourTurn' } });
+  const hosted = [hostedFixture('h-busy', { ticket: 'PROJ-1', live: busy }), hostedFixture('h-turn', { ticket: 'PROJ-1', live: turn })];
+  act(() => ready.client.push('session/changed', { ...sessionsFixture([busy, turn], { tickets: [ticketSessionsFixture('PROJ-1', { live: [busy, turn], hosted })] }), hosted }));
+};
+
+const currentSessionRow = () => within(screen.getByRole('region', { name: 'Ticket' })).getAllByRole('button').find((row) => row.getAttribute('aria-current') === 'true');
+
 describe('the ticket in the main view', () => {
-  it('says where it stands: status and the open pull request joined from review', async () => {
+  it('says where it stands: status and the open pull request review matched to its branch', async () => {
     const ready = await readyApp();
-    await answerPullRequests(ready, { kind: 'openPullRequests', pullRequests: [{ number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] }] });
+    const pullRequest = { number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] };
+    await answerPullRequests(ready, { kind: 'openPullRequests', pullRequests: [pullRequest] });
+    await act(async () => {
+      ready.client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest });
+      await settle();
+    });
     expect(factOf('status')).toBe('in progress');
     expect(factOf('pull request')).toBe('#7');
   });
@@ -1476,6 +1495,16 @@ describe('the ticket in the main view', () => {
     const ticket = screen.getByRole('region', { name: 'Ticket' });
     const text = ticket.textContent;
     expect(text.indexOf('pull request')).toBeLessThan(text.indexOf('attach'));
+  });
+
+  it('keeps the cursor on its session when a read reorders the rows, so enter opens the one picked', async () => {
+    const ready = await readyApp();
+    pushTwoSessions(ready, sessionFixture({ id: 'busy', ticket: 'PROJ-1', state: { kind: 'busy' } }));
+    await ready.user.keyboard('{Enter}');
+    await ready.user.keyboard('j');
+    expect(currentSessionRow()?.getAttribute('data-lamp')).toBe('off');
+    pushTwoSessions(ready, sessionFixture({ id: 'busy', ticket: 'PROJ-1', state: { kind: 'waitingForPermission', reason: { kind: 'waitingReason', value: 'edit' } } }));
+    expect(currentSessionRow()?.getAttribute('data-lamp'), 'the busy session became the strongest and moved first; the cursor went with it').toBe('permission');
   });
 });
 

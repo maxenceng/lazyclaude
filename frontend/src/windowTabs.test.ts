@@ -58,9 +58,13 @@ describe('the window tabs', () => {
     expect(new Set(client.calls.map((call) => (call.params as { branch: string }).branch))).toEqual(new Set(['proj-1-first', 'proj-2-second', 'proj-3-third']));
   });
 
-  it('ask again when the pull requests change while the Board tab is shown, and not on Base', async () => {
+  it('ask again when the pull requests change while the Board tab or Base is shown, since Base names the selected ticket\'s, and not on Pull requests', async () => {
     const { tabs, client, review } = await setup();
     review.pullRequests.state.set({ kind: 'openPullRequests', pullRequests: [] });
+    tabs.pullRequestsChanged();
+    expect(client.calls).toHaveLength(3);
+    tabs.choose(WindowTab.PullRequests);
+    client.calls.length = 0;
     tabs.pullRequestsChanged();
     expect(client.calls).toEqual([]);
     tabs.choose(WindowTab.Board);

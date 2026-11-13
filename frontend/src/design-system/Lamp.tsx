@@ -43,7 +43,7 @@ export const Lamp = ({ colour, size, number, words }: Props) => {
   const { t } = useTranslation('designSystem');
   if (size === LampSize.Pill) {
     return (
-      <span className={`${styles.pill} ${styles[colour]}`} role="img" aria-label={t(MEANING[colour])}>
+      <span className={`${styles.pill} ${styles[colour]}`} role="img" aria-label={words ?? t(MEANING[colour])}>
         {words ?? t(SHORT_MEANING[colour])}
       </span>
     );

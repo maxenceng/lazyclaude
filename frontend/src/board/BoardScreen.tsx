@@ -34,7 +34,7 @@ import type { BoardStore } from './boardStore';
 import { columnsOf, cursorTicketInColumns, isDone, orderedGroups, shownTickets, selectedIn, selectedInColumns, statusesInOrder } from './rows';
 import type { Selection } from './selection';
 import { statusColourOf } from './statusColours';
-import { PullRequestRead, type TicketStanding } from './ticketStanding';
+import { PullRequestRead, type TicketPullRequest } from './ticketPullRequest';
 
 interface ViewProps {
   board: BoardStore;
@@ -174,7 +174,7 @@ export const BoardPreview = ({ board, selection, onLink }: PreviewProps) => {
 interface TicketProps extends ViewProps {
   focused: boolean;
   /** Whether a pull request is open on the ticket, for its facts line. */
-  standing: TicketStanding;
+  pullRequest: TicketPullRequest;
   onLink: (href: string) => void;
   /** Given while a dock is open: the ticket's button hides the main view so the dock takes the column. */
   onHide?: () => void;
@@ -188,7 +188,7 @@ interface TicketProps extends ViewProps {
 }
 
 /** The ticket under the cursor: its title, its facts line, what the screen shows under them, then its text. No ticket under the cursor leaves only that said. */
-export const TicketPane = ({ board, selection, focused, standing, onLink, onHide, foot, alert, onFocus, children }: TicketProps) => {
+export const TicketPane = ({ board, selection, focused, pullRequest, onLink, onHide, foot, alert, onFocus, children }: TicketProps) => {
   const { t } = useTranslation('board');
   const { ticket } = useBoardView({ board, selection });
   return (
@@ -207,7 +207,7 @@ export const TicketPane = ({ board, selection, focused, standing, onLink, onHide
         <Detail
           facts={[t('ticket.number', { id: ticket.id })]}
           title={ticket.title}
-          summary={<FactsLine facts={factsOf(ticket, standing, t)} />}
+          summary={<FactsLine facts={factsOf(ticket, pullRequest, t)} />}
           lead={children}
           body={ticket.body.kind === 'body' ? ticket.body.value : undefined}
           onLink={onLink}
@@ -230,20 +230,19 @@ const PULL_REQUEST_WORDS = {
   [PullRequestRead.None]: 'facts.noPullRequest',
 } as const;
 
-const pullRequestFact = (standing: TicketStanding, t: TFunction<'board'>): Fact => {
+const pullRequestFact = ({ read, number }: TicketPullRequest, t: TFunction<'board'>): Fact => {
   const label = t('facts.pullRequest');
-  const { read, number } = standing.pullRequest;
   return read === PullRequestRead.Open ? { label, value: t('facts.pullRequestNumber', { number }) } : { label, value: t(PULL_REQUEST_WORDS[read]), tone: Tone.Dim };
 };
 
 /** Where the ticket stands, in the order it is read: its status, type, context, other labels and open pull request. What the ticket lacks is left out, except the pull request, which says there is none. Its branch is not shown: long text wraps the line. */
-const factsOf = (ticket: BoardTicketView, standing: TicketStanding, t: TFunction<'board'>): Fact[] => {
+const factsOf = (ticket: BoardTicketView, pullRequest: TicketPullRequest, t: TFunction<'board'>): Fact[] => {
   return [
     { label: t('facts.status'), value: t(`status.${ticket.status}`) },
     ...(ticket.type.kind === 'typeName' ? [{ label: t('facts.type'), value: ticket.type.value }] : []),
     ...(ticket.context.kind === 'contextName' ? [{ label: t('facts.context'), value: ticket.context.value }] : []),
     ...(ticket.otherLabels.length === 0 ? [] : [{ label: t('facts.labels'), value: ticket.otherLabels.join(', ') }]),
-    pullRequestFact(standing, t),
+    pullRequestFact(pullRequest, t),
   ];
 };
 

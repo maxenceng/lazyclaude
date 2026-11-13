@@ -15,8 +15,8 @@ import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { ModalClicks } from './keys/modalClicks';
 import { WindowKeys } from './keys/windowKeys';
-import { Focus, Panel, WindowTab } from './layout';
-import { PullRequestRead, type TicketStanding } from './board/ticketStanding';
+import { Focus, type Panel, WindowTab } from './layout';
+import { PullRequestRead, type TicketPullRequest } from './board/ticketPullRequest';
 import { StatusKind } from './protocol';
 import { cellsOf, ciOf, worstResult } from './review/pullRequestList';
 import { PullRequestsPane } from './review/PullRequestsScreen';
@@ -26,14 +26,17 @@ import { DockScreen, DockStrip } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
 import { NewSessionBar, SessionFailure, SessionsList } from './session/SessionsList';
-import { standingOf } from './standing';
+import { ticketPullRequestOf } from './ticketPullRequest';
 import { useStore } from './shared/useStore';
 
 const TAB_OF: ReadonlyMap<string, WindowTab> = new Map<string, WindowTab>(Object.values(WindowTab).map((tab) => [tab, tab]));
 
-const PANEL_OF: ReadonlyMap<string, Panel> = new Map<string, Panel>(Object.values(Panel).map((panel) => [panel, panel]));
+const PANEL_OF: ReadonlyMap<string, Panel> = new Map<string, Panel>([
+  [Focus.Board, Focus.Board],
+  [Focus.Docs, Focus.Docs],
+]);
 
-const NO_STANDING: TicketStanding = { pullRequest: { read: PullRequestRead.None, number: undefined } };
+const NO_PULL_REQUEST: TicketPullRequest = { read: PullRequestRead.None, number: undefined };
 
 const COLOURS = [LampColour.Permission, LampColour.Input, LampColour.Turn] as const;
 
@@ -82,6 +85,7 @@ export const App = ({ app, packaged }: Props) => {
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
+  useStore(app.docs.store.state);
 
   useEffect(() => {
     const keys = new WindowKeys((action) => app.press(action), { packaged, reserved: () => app.reserved() });
@@ -101,14 +105,14 @@ export const App = ({ app, packaged }: Props) => {
   const dockKeys = hasDock ? [t(dockKey)] : [];
   const windowTabKeys = [t('keyBar.tabs')];
   const tabKeys = [...windowTabKeys, ...dockKeys];
-  const panelKeys = [t(layout.panel === Panel.Board ? 'keyBar.panelDocs' : 'keyBar.panelBoard'), ...tabKeys];
+  const panelKeys = [t(layout.panel === Focus.Board ? 'keyBar.panelDocs' : 'keyBar.panelBoard'), ...tabKeys];
   const panelTabs = {
     tabs: [
-      { id: Panel.Board, label: t('panels.board'), count: populatedBoard === undefined ? 0 : ticketTotal(populatedBoard) },
-      { id: Panel.Docs, label: t('panels.docs'), count: app.docs.count() },
+      { id: Focus.Board, label: t('panels.board'), count: populatedBoard === undefined ? 0 : ticketTotal(populatedBoard) },
+      { id: Focus.Docs, label: t('panels.docs'), count: app.docs.count() },
     ],
     selected: layout.panel,
-    onSelect: (id: string) => app.showPanel(PANEL_OF.get(id) ?? Panel.Board),
+    onSelect: (id: string) => app.showPanel(PANEL_OF.get(id) ?? Focus.Board),
   };
   const keyBar = {
     [Focus.Board]: <BoardKeyBar ticket={selectedTicket !== undefined} capture={app.board.root() !== undefined} extra={panelKeys} />,
@@ -200,7 +204,7 @@ export const App = ({ app, packaged }: Props) => {
     (unready === undefined
       ? {
           board:
-            layout.panel === Panel.Docs ? (
+            layout.panel === Focus.Docs ? (
               <DocsPane
                 docs={app.docs}
                 focused={layout.focus === Focus.Docs}
@@ -234,7 +238,7 @@ export const App = ({ app, packaged }: Props) => {
               board={app.board.store}
               selection={app.board.selection}
               focused={layout.focus === Focus.Sessions}
-              standing={selectedTicket === undefined ? NO_STANDING : standingOf(selectedTicket, pullRequests)}
+              pullRequest={selectedTicket === undefined ? NO_PULL_REQUEST : ticketPullRequestOf(pullRequests, app.review.ticketPullRequests.of(selectedTicket.branch))}
               onLink={(href) => app.docs.followFromTicket(href)}
               alert={<SessionFailure failure={failure} />}
               onHide={hasDock ? () => app.hideMainView() : undefined}

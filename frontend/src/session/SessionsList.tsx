@@ -2,7 +2,7 @@ import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Alert, Button, PickerBar, SessionRow as Row, StatusHeading, Rows } from '../design-system';
 import type { SessionPastSessionView } from '../protocol';
-import { type SessionRow, SessionRowKind } from './sessionRows';
+import { type RunningState, type SessionRow, SessionRowKind } from './sessionRows';
 import { ageOf } from './age';
 import type { StartFailure } from './hosting';
 import type { VerbPicker } from './verbPicker';
@@ -28,7 +28,6 @@ const labelled = (row: SessionRow, t: TFunction<'session'>): { label: string } =
     case SessionRowKind.Live:
       return { label: row.name };
     case SessionRowKind.Past:
-    case SessionRowKind.Unlinked:
       return { label: titleOf(row.session) ?? t('row.untitled', { id: row.session.id }) };
     case SessionRowKind.New:
       return { label: t('row.new') };
@@ -41,7 +40,6 @@ const actionOf = (row: SessionRow, t: TFunction<'session'>): { label: string; sh
     case SessionRowKind.Hosted:
       return { label: t('row.attach'), shortcut: t('row.enterKey') };
     case SessionRowKind.Past:
-    case SessionRowKind.Unlinked:
       return { label: t('row.resume'), shortcut: t('row.enterKey') };
     case SessionRowKind.Live:
     case SessionRowKind.New:
@@ -50,20 +48,21 @@ const actionOf = (row: SessionRow, t: TFunction<'session'>): { label: string; sh
 };
 
 const STATE_WORDS = {
-  permission: 'state.permission',
-  input: 'state.input',
-  turn: 'state.turn',
-  off: 'state.busy',
-} as const;
+  waitingForPermission: 'state.permission',
+  waitingForInput: 'state.input',
+  yourTurn: 'state.turn',
+  busy: 'state.busy',
+  unknown: 'state.unknown',
+  starting: 'state.starting',
+} as const satisfies Record<RunningState, string>;
 
-/** The state a session row says in words: what it waits on, busy while it waits on nothing, ended once it is past. */
+/** The state a session row says in words: what it waits on, busy while it works, starting before its record is read, unknown when it cannot be, ended once it is past. */
 const stateOf = (row: SessionRow, t: TFunction<'session'>): string | undefined => {
   switch (row.kind) {
     case SessionRowKind.Hosted:
     case SessionRowKind.Live:
-      return t(STATE_WORDS[row.lamp]);
+      return t(STATE_WORDS[row.state]);
     case SessionRowKind.Past:
-    case SessionRowKind.Unlinked:
       return t('state.ended');
     case SessionRowKind.New:
       return undefined;
@@ -77,7 +76,6 @@ const sinceOf = (row: SessionRow): string | undefined => {
     case SessionRowKind.Live:
       return row.since;
     case SessionRowKind.Past:
-    case SessionRowKind.Unlinked:
       return row.session.lastActivity;
     case SessionRowKind.New:
       return undefined;
@@ -125,12 +123,11 @@ export const SessionFailure = ({ failure }: { failure: StartFailure | undefined 
   );
 };
 
-/** The sessions of the selected ticket, in the ticket's pane: the ones hosted here and the older ones to resume. The row that starts one is `NewSessionBar`'s. */
+/** The sessions of the selected ticket, in the ticket's pane: the ones running and the past ones to resume. The row that starts one is `NewSessionBar`'s. */
 export const SessionsList = ({ rows, cursor, picker, onPress }: ListProps) => {
   const { t } = useTranslation('session');
   const listed: Listed[] = rows.map((row, index) => ({ row, index }));
-  const ticketRows = listed.filter(({ row }) => row.kind !== SessionRowKind.Unlinked && row.kind !== SessionRowKind.New);
-  const olderRows = listed.filter(({ row }) => row.kind === SessionRowKind.Unlinked);
+  const ticketRows = listed.filter(({ row }) => row.kind !== SessionRowKind.New);
   const selected = picker === undefined ? cursor : undefined;
   return (
     <>
@@ -138,12 +135,6 @@ export const SessionsList = ({ rows, cursor, picker, onPress }: ListProps) => {
         <div>
           <StatusHeading status={t('sessions.title')} count={ticketRows.length} />
           <RowList entries={ticketRows} cursor={selected} onPress={onPress} />
-        </div>
-      )}
-      {olderRows.length === 0 ? null : (
-        <div>
-          <StatusHeading status={t('sessions.older')} count={olderRows.length} />
-          <RowList entries={olderRows} cursor={selected} onPress={onPress} />
         </div>
       )}
     </>

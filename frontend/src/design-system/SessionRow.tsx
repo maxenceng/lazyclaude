@@ -4,11 +4,11 @@ import styles from './SessionRow.module.css';
 
 interface Props {
   label: string;
-  /** What a press on the row does, with the key that does it: the row is the one control, and says both. */
   /** The session's state in words, which makes the row a tall one with a pill in place of the lamp marker. */
   state?: string | undefined;
   /** How long ago the session started or last ran. */
   age?: string | undefined;
+  /** What a press on the row does, with the key that does it: the row is the one control, and says both. */
   action?: { label: string; shortcut: string } | undefined;
   selected: boolean;
   lamp: LampColour | undefined;

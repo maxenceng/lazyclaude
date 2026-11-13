@@ -6,13 +6,9 @@ export enum PullRequestRead {
   Open = 'open',
 }
 
-export interface PullRequestStanding {
+/** The open pull request a ticket's facts line names, as the window joins it from `review`. */
+export interface TicketPullRequest {
   read: PullRequestRead;
   /** The open pull request's number, given with `Open` and with nothing else. */
   number: number | undefined;
-}
-
-/** What a ticket's facts line says beyond the ticket itself, joined by the window from `session` and `review`: whether a pull request is open on it. */
-export interface TicketStanding {
-  pullRequest: PullRequestStanding;
 }

@@ -6,14 +6,14 @@ import { RpcError } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
 import { BoardPane, TicketPane } from './BoardScreen';
 import { BoardStore } from './boardStore';
-import { PullRequestRead, type TicketStanding } from './ticketStanding';
+import { PullRequestRead, type TicketPullRequest } from './ticketPullRequest';
 import { boardFixture, ticketFixture } from './fixtures';
 import { Selection } from './selection';
 
-const NO_STANDING: TicketStanding = { pullRequest: { read: PullRequestRead.None, number: undefined } };
+const NO_PULL_REQUEST: TicketPullRequest = { read: PullRequestRead.None, number: undefined };
 const PANELS = { tabs: [{ id: 'board', label: 'Board', count: 3 }, { id: 'docs', label: 'Docs', count: 7 }], selected: 'board', onSelect: () => {} };
 
-const setup = (markerOf: (ticket: string) => LampColour | undefined = () => undefined, standing: TicketStanding = NO_STANDING) => {
+const setup = (markerOf: (ticket: string) => LampColour | undefined = () => undefined, pullRequest: TicketPullRequest = NO_PULL_REQUEST) => {
   const client = fakeClient();
   const board = new BoardStore(client);
   const selection = new Selection();
@@ -23,7 +23,7 @@ const setup = (markerOf: (ticket: string) => LampColour | undefined = () => unde
   render(
     <>
       <BoardPane board={board} selection={selection} focused markerOf={markerOf} onOpen={onOpen} onFocus={() => {}} onRetry={() => void board.load()} panelTabs={PANELS} />
-      <TicketPane board={board} selection={selection} focused={false} standing={standing} onLink={onLink} onFocus={() => {}} />
+      <TicketPane board={board} selection={selection} focused={false} pullRequest={pullRequest} onLink={onLink} onFocus={() => {}} />
     </>,
   );
   return { client, board, selection, onOpen, onLink, loaded };
@@ -193,7 +193,7 @@ const factOf = (label: string): string => screen.getByText(label).nextElementSib
 
 describe('the ticket\'s facts line', () => {
   it('says its status, type, context, other labels and open pull request', async () => {
-    const { client, loaded } = setup(() => undefined, { pullRequest: { read: PullRequestRead.Open, number: 12 } });
+    const { client, loaded } = setup(() => undefined, { read: PullRequestRead.Open, number: 12 });
     await answer(client, loaded, richTicket);
     expect(['status', 'type', 'context', 'labels', 'pull request'].map(factOf)).toEqual([
       'in progress',
@@ -211,7 +211,7 @@ describe('the ticket\'s facts line', () => {
   });
 
   it('says the pull requests are unavailable when they could not be read, rather than showing nothing', async () => {
-    const { client, loaded } = setup(() => undefined, { pullRequest: { read: PullRequestRead.Unavailable, number: undefined } });
+    const { client, loaded } = setup(() => undefined, { read: PullRequestRead.Unavailable, number: undefined });
     await answer(client, loaded, richTicket);
     expect(factOf('pull request')).toBe('unavailable');
   });

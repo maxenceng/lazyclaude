@@ -14,6 +14,7 @@
 
 .row[data-lamp='turn'] {
   --row-ground: var(--lamp-turn-tile);
+  --row-frame: var(--lamp-turn);
   --row-dim: var(--lamp-turn-tile-dim);
 }
 
@@ -27,10 +28,6 @@
   --row-ground: var(--lamp-permission-tile);
   --row-frame: var(--lamp-permission);
   --row-dim: var(--lamp-turn-tile-dim);
-}
-
-.row[data-lamp='turn'] {
-  --row-frame: var(--lamp-turn);
 }
 
 .row {

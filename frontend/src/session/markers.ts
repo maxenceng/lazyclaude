@@ -16,8 +16,13 @@ const STRENGTH: readonly LampColour[] = [LampColour.Permission, LampColour.Input
 /** Orders by what asks most of you: permission, then input, then your turn, then what asks nothing; equals keep the order they came in. */
 export const byStrength = (a: { colour: LampColour }, b: { colour: LampColour }) => STRENGTH.indexOf(a.colour) - STRENGTH.indexOf(b.colour);
 
-export const colourOf = (session: SessionLiveSessionView): LampColour => {
-  switch (session.state.kind) {
+/** What a live session is doing, as `session` reads it from its record. */
+export type LiveState = SessionLiveSessionView['state']['kind'];
+
+export const colourOf = (session: SessionLiveSessionView): LampColour => colourOfState(session.state.kind);
+
+export const colourOfState = (state: LiveState): LampColour => {
+  switch (state) {
     case 'waitingForPermission':
       return LampColour.Permission;
     case 'waitingForInput':

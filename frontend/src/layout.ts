@@ -11,11 +11,10 @@ export enum Focus {
   Dock = 'dock',
 }
 
-/** The two faces of the Base tab's left column, one shown at a time: its panel tabs. */
-export enum Panel {
-  Board = 'board',
-  Docs = 'docs',
-}
+/** The two faces of the Base tab's left column, one shown at a time: its panel tabs, named by the focus that shows each. */
+export type Panel = Focus.Board | Focus.Docs;
+
+const isPanel = (focus: Focus): focus is Panel => focus === Focus.Board || focus === Focus.Docs;
 
 /** What the window shows: Base is the window without tabs, Board the status columns, Pull requests every open pull request. */
 export enum WindowTab {
@@ -50,7 +49,7 @@ export class Layout {
     readonly mainHidden: boolean = false,
     private readonly documentShown: boolean = false,
     readonly dockMinimised: boolean = false,
-    readonly panel: Panel = Panel.Board,
+    readonly panel: Panel = Focus.Board,
   ) {}
 
   showsDocument(): boolean {
@@ -106,18 +105,18 @@ export class Layout {
       zoomed: target === this.focus && this.zoomed,
       documentShown: document,
       dockMinimised: target === Focus.Dock ? false : this.dockMinimised,
-      panel: target === Focus.Docs ? Panel.Docs : target === Focus.Board ? Panel.Board : this.panel,
+      panel: isPanel(target) ? target : this.panel,
     });
   }
 
   /** `o`: the other panel tab is shown and takes focus. */
   togglePanel(): Layout {
-    return this.showPanel(this.panel === Panel.Board ? Panel.Docs : Panel.Board);
+    return this.showPanel(this.panel === Focus.Board ? Focus.Docs : Focus.Board);
   }
 
   /** A click on a panel tab: that tab is shown and takes focus. */
   showPanel(panel: Panel): Layout {
-    return this.focusOn(panel === Panel.Docs ? Focus.Docs : Focus.Board);
+    return this.focusOn(panel);
   }
 
   /** Focus goes up to `above`, showing the main view again if that is where it goes. */
