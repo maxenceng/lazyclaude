@@ -388,7 +388,7 @@ const opened = async (client: FakeClient, app: AppModel) => {
 };
 
 const placed = async (client: FakeClient) => {
-  client.answerAll('review/commentsInDiff', { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] });
+  client.answerAll('review/commentsInDiff', { threads: [], pending: [], shown: [], listed: [], lastAtPlaces: [] });
   client.answerAll('review/summaryToSubmit', '');
   await settled();
 };

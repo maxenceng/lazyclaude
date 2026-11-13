@@ -22,7 +22,8 @@
     "retry": "Retry",
     "number": "#{{number}}",
     "close": "Close the review",
-    "closeKey": "esc"
+    "closeKey": "esc",
+    "outside": "Not in this diff"
   },
   "panel": {
     "title": "Pending review",
@@ -130,19 +131,21 @@
     "replyLabel": "Reply to the thread on {{where}}",
     "replyKey": "enter",
     "outdatedWasLine": "outdated · was line {{lines}}",
-    "outdatedWasLines": "outdated · was lines {{lines}}"
+    "outdatedWasLines": "outdated · was lines {{lines}}",
+    "notInDiffLine": "not in this diff · line {{lines}}",
+    "notInDiffLines": "not in this diff · lines {{lines}}"
   },
   "pendingComment": {
     "you": "you",
     "tag": "pending · not submitted",
-    "outdatedTag": "pending · outdated",
     "edit": "Edit",
     "editLabel": "Edit your comment on {{where}}",
     "editKey": "enter",
     "delete": "Delete",
     "deleteLabel": "Delete your comment on {{where}}",
     "deleteKey": "x",
-    "outdatedWasLine": "pending · outdated · was line {{lines}}",
-    "outdatedWasLines": "pending · outdated · was lines {{lines}}"
+    "movedHeadLine": "pending · head moved · line {{lines}}",
+    "movedHeadLines": "pending · head moved · lines {{lines}}",
+    "onOutdatedThread": "pending · on an outdated thread"
   }
 }

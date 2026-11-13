@@ -3,8 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RpcError } from '../protocol';
 import { ruleOf, stylesheet } from '../design-system/stylesheet';
-import { added, commentsFixture, pullRequestFixture, diffFixture, fileFixture, hunk, kept, onLine, placed, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
+import { added, atHead, commentsFixture, pullRequestFixture, diffFixture, fileFixture, hunk, kept, onLine, outside, placed, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
 import { DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './ReviewScreen';
+import { StopKind } from './diffRows';
 import { Harness, settle } from './reviewHarness';
 
 const diff = diffFixture([
@@ -93,7 +94,7 @@ describe('the diff of a review', () => {
   it('sets inline code of a comment in code type, without its backticks', async () => {
     const harness = new Harness();
     const thread = threadFixture({ comments: [{ author: 'ada', body: 'Why `tryLock` here?' }] });
-    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))] }) });
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], shown: [threadInDiff(thread, onLine(0))] }) });
     renderDiff(harness);
     expect(screen.getByText('tryLock').tagName).toBe('CODE');
     expect(screen.queryByText(/`/)).not.toBeInTheDocument();
@@ -115,7 +116,7 @@ describe('the diff of a review', () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     renderDiff(harness);
-    act(() => harness.review.moveLine(2));
+    act(() => harness.review.moveCursor(2));
     expect(lineElements()[2]).toHaveAttribute('aria-current', 'true');
     expect(lineElements()[0]).not.toHaveAttribute('aria-current');
   });
@@ -128,7 +129,7 @@ describe('the diff of a review', () => {
       diff,
       threads: threadsFixture([thread]),
       pending: openPending([comment]),
-      comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))], pending: [pendingInDiff(comment, onLine(0))] }),
+      comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], shown: [threadInDiff(thread, onLine(0))], pending: [pendingInDiff(comment, onLine(0))] }),
     });
     renderDiff(harness);
     const articles = screen.getAllByRole('article');
@@ -144,7 +145,7 @@ describe('the diff of a review', () => {
   it('marks the line a thread hangs from, by a glyph and not by colour alone', async () => {
     const harness = new Harness();
     const thread = threadFixture({ id: 'T1' });
-    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(1))], underLines: [threadInDiff(thread, onLine(1))] }) });
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(1))], shown: [threadInDiff(thread, onLine(1))] }) });
     renderDiff(harness);
     expect(within(lineElements()[1]!).getByRole('img', { name: 'a thread hangs from this line' })).toHaveTextContent('◆');
     expect(within(lineElements()[0]!).queryByRole('img')).not.toBeInTheDocument();
@@ -153,16 +154,16 @@ describe('the diff of a review', () => {
   it('shows a thread once, as a card across the diff, and no second list of it', async () => {
     const harness = new Harness();
     const thread = threadFixture({ id: 'T1' });
-    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }) });
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], shown: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }) });
     renderDiff(harness);
     expect(screen.getAllByText('Why this?')).toHaveLength(1);
   });
 
-  it('shows a thread with no line at the top of its file, under the file header and before the first hunk, marked outdated', async () => {
+  it('shows a thread review places at the head of its file under the file rule and before the first hunk, marked outdated', async () => {
     const harness = new Harness();
     const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } }, open: false, comments: [{ author: 'cy', body: 'Old' }] });
-    const entry = threadInDiff(outdated, { kind: 'noDiffLine' });
-    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], listed: [entry] }) });
+    const entry = threadInDiff(outdated, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
     renderDiff(harness);
     const card = screen.getByRole('article');
     expect(card).toHaveTextContent('b.ts');
@@ -180,28 +181,45 @@ describe('the diff of a review', () => {
   ] as const)('says where an outdated thread was on %s', async (_name, was, tag) => {
     const harness = new Harness();
     const outdated = threadFixture({ id: 'T4', path: 'src/b.ts', position: { kind: 'outdatedThread', was }, open: true });
-    const entry = threadInDiff(outdated, { kind: 'noDiffLine' });
-    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], listed: [entry] }) });
+    const entry = threadInDiff(outdated, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
     renderDiff(harness);
     expect(within(screen.getByRole('article')).getByText(tag, { exact: true })).toBeInTheDocument();
   });
 
-  it('says where a thread was when it is placed on a line the diff no longer holds', async () => {
+  it('says a current thread on a line the diff does not show is not in this diff, and names its line, never outdated', async () => {
     const harness = new Harness();
     const moved = threadFixture({ id: 'T5', path: 'src/b.ts', position: placed(40, 41), open: true });
-    const entry = threadInDiff(moved, { kind: 'noDiffLine' });
-    await harness.readAll({ diff, threads: threadsFixture([moved]), comments: commentsFixture({ threads: [entry], listed: [entry] }) });
+    const entry = threadInDiff(moved, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([moved]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
     renderDiff(harness);
-    expect(screen.getByRole('article')).toHaveTextContent('outdated · was lines 40–41');
+    expect(screen.getByRole('article')).toHaveTextContent('not in this diff · lines 40–41');
+    expect(screen.getByRole('article')).not.toHaveTextContent('outdated');
   });
 
-  it('shows a thread once even when the diff holds no hunk of its file', async () => {
+  it('shows a thread on a file the diff does not hold once, under Not in this diff after the last file', async () => {
     const harness = new Harness();
-    const outdated = threadFixture({ id: 'T3', path: 'src/c.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } });
-    const entry = threadInDiff(outdated, { kind: 'noDiffLine' });
-    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], listed: [entry] }) });
+    const outdated = threadFixture({ id: 'T3', path: 'src/c.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } }, comments: [{ author: 'cy', body: 'Reverted' }] });
+    const entry = threadInDiff(outdated, outside);
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
     renderDiff(harness);
-    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    const rule = screen.getByRole('heading', { name: 'Not in this diff' }).closest('li')!;
+    expect(rule.nextElementSibling).toContainElement(screen.getByRole('article'));
+    expect(rule.nextElementSibling!.nextElementSibling).toBeNull();
+    expect(screen.getAllByText('Reverted')).toHaveLength(1);
+  });
+
+  it('lifts a file rule the cursor stands on, and moves the cursor there on a press', async () => {
+    const harness = new Harness();
+    const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } });
+    const entry = threadInDiff(outdated, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    const rule = screen.getByRole('heading', { name: /src\/b\.ts/ });
+    expect(rule).not.toHaveAttribute('aria-current');
+    fireEvent.mouseDown(rule, { button: 0 });
+    expect(harness.review.cursorStop()).toEqual({ kind: StopKind.Head, file: 1 });
+    expect(screen.getByRole('heading', { name: /src\/b\.ts/ })).toHaveAttribute('aria-current', 'true');
   });
 
   it('opens the comment box from a press on a line number', async () => {
@@ -240,7 +258,7 @@ describe('the diff of a review', () => {
       diff,
       threads: threadsFixture([thread]),
       pending: openPending([comment]),
-      comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))], pending: [pendingInDiff(comment, onLine(0))] }),
+      comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], shown: [threadInDiff(thread, onLine(0))], pending: [pendingInDiff(comment, onLine(0))] }),
     });
     renderDiff(harness);
     const articles = screen.getAllByRole('article');
@@ -260,9 +278,9 @@ describe('the diff of a review', () => {
       pending: openPending([comment]),
       comments: commentsFixture({
         threads: [threadInDiff(thread, onLine(0))],
-        underLines: [threadInDiff(thread, onLine(0))],
+        shown: [threadInDiff(thread, onLine(0))],
         pending: [pendingInDiff(comment, onLine(0))],
-        lastOnLines: [pendingInDiff(comment, onLine(0))],
+        lastAtPlaces: [pendingInDiff(comment, onLine(0))],
       }),
     });
     renderDiff(harness);
@@ -272,20 +290,20 @@ describe('the diff of a review', () => {
     expect(within(articles[1]!).getByRole('button', { name: /Delete/ })).toHaveTextContent('Deletex');
   });
 
-  it('names no key on a card with no line, which no key reaches', async () => {
+  it('names enter on the last thread under a file rule, which the cursor stops on', async () => {
     const harness = new Harness();
     const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } });
-    const entry = threadInDiff(outdated, { kind: 'noDiffLine' });
-    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], listed: [entry] }) });
+    const entry = threadInDiff(outdated, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
     renderDiff(harness);
-    expect(screen.getByRole('button', { name: /Reply/ }).querySelector('kbd')).toBeNull();
+    expect(screen.getByRole('button', { name: /Reply/ })).toHaveTextContent('Replyenter');
   });
 
   it('opens the reply box on a click on Reply, resolved thread included, moving neither the cursor nor the focus', async () => {
     const harness = new Harness();
     const thread = threadFixture({ id: 'T1', resolved: true, open: false, comments: [{ author: 'ada', body: 'Why this?' }] });
-    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }), });
-    harness.review.moveLine(2);
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], shown: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }), });
+    harness.review.moveCursor(2);
     const onFocus = vi.fn();
     render(
       <>
@@ -362,11 +380,11 @@ const withThreads = async (harness: Harness) => {
     threads: threadsFixture([open, left, outdated]),
     pending: openPending([comment]),
     comments: commentsFixture({
-      threads: [threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, { kind: 'noDiffLine' })],
-      underLines: [threadInDiff(open, onLine(0))],
+      threads: [threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, atHead(1))],
+      shown: [threadInDiff(open, onLine(0))],
       pending: [pendingInDiff(comment, onLine(2))],
-      listed: [pendingInDiff(comment, onLine(2)), threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, { kind: 'noDiffLine' })],
-      lastOnLines: [pendingInDiff(comment, onLine(2))],
+      listed: [pendingInDiff(comment, onLine(2)), threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, atHead(1))],
+      lastAtPlaces: [pendingInDiff(comment, onLine(2))],
     }),
   });
 };
@@ -395,7 +413,7 @@ describe('the Files of a review', () => {
   it('counts a thread with no line among the threads of its file', async () => {
     const harness = new Harness();
     const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } }, open: true });
-    const entry = threadInDiff(outdated, { kind: 'noDiffLine' });
+    const entry = threadInDiff(outdated, atHead(1));
     await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], listed: [entry] }) });
     render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
     expect(fileRows()[1]).toHaveTextContent('1 thread');
@@ -655,32 +673,32 @@ describe('the confirm after the summary', () => {
 
 describe('a pending comment with no line', () => {
   it.each([
-    ['one line', placed(40), 'pending · outdated · was line 40'],
-    ['a range', placed(40, 41), 'pending · outdated · was lines 40–41'],
-  ] as const)('says where it was on %s', async (_name, position, tag) => {
+    ['one line', placed(40), 'pending · head moved · line 40'],
+    ['a range', placed(40, 41), 'pending · head moved · lines 40–41'],
+  ] as const)('says the head moved and the line it was written on, for %s', async (_name, position, tag) => {
     const harness = new Harness();
     const comment = pendingCommentFixture({ id: 'C7', anchor: { kind: 'onDiffAnchor', path: 'src/b.ts', position } });
-    const entry = pendingInDiff(comment, { kind: 'noDiffLine' });
+    const entry = pendingInDiff(comment, atHead(1));
     await harness.readAll({ diff, pending: openPending([comment]), comments: commentsFixture({ pending: [entry], listed: [entry] }) });
     renderDiff(harness);
     expect(within(screen.getByRole('article')).getByText(tag, { exact: true })).toBeInTheDocument();
   });
 
-  it('says where a reply was when its thread went outdated', async () => {
+  it('says a reply is on an outdated thread when its thread went outdated', async () => {
     const harness = new Harness();
     const comment = pendingCommentFixture({ id: 'C9', anchor: { kind: 'replyAnchor', path: 'src/b.ts', thread: 'T1', position: { kind: 'outdatedThread', was: { kind: 'originallyPlaced', place: placed(7) } } } });
-    const entry = pendingInDiff(comment, { kind: 'noDiffLine' });
+    const entry = pendingInDiff(comment, atHead(1));
     await harness.readAll({ diff, pending: openPending([comment]), comments: commentsFixture({ pending: [entry], listed: [entry] }) });
     renderDiff(harness);
-    expect(within(screen.getByRole('article')).getByText('pending · outdated · was line 7', { exact: true })).toBeInTheDocument();
+    expect(within(screen.getByRole('article')).getByText('pending · on an outdated thread', { exact: true })).toBeInTheDocument();
   });
 
-  it('says only that it is outdated when its placement carries no line', async () => {
+  it('says a reply is on an outdated thread when GitHub kept no place for it', async () => {
     const harness = new Harness();
     const comment = pendingCommentFixture({ id: 'C8', anchor: { kind: 'replyAnchor', path: 'src/b.ts', thread: 'T1', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } } });
-    const entry = pendingInDiff(comment, { kind: 'noDiffLine' });
+    const entry = pendingInDiff(comment, atHead(1));
     await harness.readAll({ diff, pending: openPending([comment]), comments: commentsFixture({ pending: [entry], listed: [entry] }) });
     renderDiff(harness);
-    expect(within(screen.getByRole('article')).getByText('pending · outdated', { exact: true })).toBeInTheDocument();
+    expect(within(screen.getByRole('article')).getByText('pending · on an outdated thread', { exact: true })).toBeInTheDocument();
   });
 });

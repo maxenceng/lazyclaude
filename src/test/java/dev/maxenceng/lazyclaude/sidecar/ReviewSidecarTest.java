@@ -138,9 +138,9 @@ class ReviewSidecarTest {
                 .thenReturn(CommentsInDiffView.builder()
                         .threads(List.of())
                         .pending(List.of())
-                        .underLines(List.of())
+                        .shown(List.of())
                         .listed(List.of())
-                        .lastOnLines(List.of())
+                        .lastAtPlaces(List.of())
                         .build());
 
         assertThat(linesWritten(review, request(1, "review/commentsInDiff", loadingCommentsParams())))

@@ -15,7 +15,7 @@ import type {
 } from '../protocol';
 import { Store } from '../shared/store';
 import { CommentBox, TargetKind } from './commentBox';
-import { DiffRows } from './diffRows';
+import { DiffRows, type Stop, StopKind, placedAt, samePlace } from './diffRows';
 import { type DiffState, EmptyDiff, FaultedDiff, LoadingDiff, PopulatedDiff, UnavailableDiff } from './diffState';
 
 export interface ReviewDeps {
@@ -29,7 +29,7 @@ export interface ReviewDeps {
   onSubmitted: () => void;
 }
 
-const NO_COMMENTS: ReviewCommentsInDiffView = { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] };
+const NO_COMMENTS: ReviewCommentsInDiffView = { threads: [], pending: [], shown: [], listed: [], lastAtPlaces: [] };
 
 const HALF = 2;
 
@@ -52,7 +52,7 @@ export class OpenReview {
   private summary = '';
   private diffRows: DiffRows = DiffRows.of({ kind: 'loadingDiff' }, [], []);
   private showResolved = false;
-  private line = 0;
+  private stop = 0;
   private fileSelected = 0;
   private viewLines = 0;
   private diffReads = 0;
@@ -108,8 +108,19 @@ export class OpenReview {
     return this.diffRows;
   }
 
-  cursor(): number {
-    return this.line;
+  /** The diff line the cursor is on; none while it stands on a file's rule or after the diff. */
+  cursor(): number | undefined {
+    const at = this.at();
+    return at?.kind === StopKind.Line ? at.line : undefined;
+  }
+
+  /** Where the cursor stands among the stops of the main view. */
+  cursorStop(): Stop | undefined {
+    return this.at();
+  }
+
+  private at(): Stop | undefined {
+    return this.diffRows.stops()[this.stop];
   }
 
   selectedFile(): number {
@@ -221,22 +232,38 @@ export class OpenReview {
     return this.deps.client.call('review/summaryToSubmit', { pending: this.pending, draft });
   }
 
+  /** Builds the rows again; the cursor keeps its stop while there still is one, else goes to the first stop of its file. */
   private rebuild(): void {
-    const lineless = this.comments.listed.filter((entry) => this.showResolved || entry.kind !== 'threadInDiff' || !entry.thread.resolved);
-    this.diffRows = DiffRows.of(this.diff, this.comments.underLines, this.comments.pending, lineless);
-    this.moveTo(this.line);
-    this.touch();
+    const was = this.at();
+    this.diffRows = DiffRows.of(this.diff, this.comments.shown, this.comments.pending);
+    const kept = was === undefined ? undefined : (this.diffRows.indexOf(was) ?? this.diffRows.firstStopOf(was.file));
+    this.goTo(kept ?? this.stop);
   }
 
   /** The cursor on diff line `line`, held within the lines there are; the Files selection goes to the cursor's file. */
   moveTo(line: number): void {
-    this.line = clamp(line, this.diffRows.lineCount());
-    this.fileSelected = this.diffRows.lineCount() === 0 ? clamp(this.fileSelected, this.diffRows.files().length) : this.diffRows.fileOfLine(this.line);
+    this.goTo(this.diffRows.stopOfLine(clamp(line, this.diffRows.lineCount())) ?? 0);
+  }
+
+  /** The cursor on the stop at `stop`, held within the stops there are; the Files selection goes to its file, the last one for after the diff. */
+  private goTo(stop: number): void {
+    this.stop = clamp(stop, this.diffRows.stops().length);
+    const at = this.at();
+    this.fileSelected = clamp(at === undefined ? this.fileSelected : at.file, this.diffRows.files().length);
     this.touch();
   }
 
-  moveLine(delta: number): void {
-    this.moveTo(this.line + delta);
+  /** `j` and `k`: the cursor moves by `delta` stops, a line or the rule of a file with comments under it. */
+  moveCursor(delta: number): void {
+    this.goTo(this.stop + delta);
+  }
+
+  /** A press on the rule of the file at `file`, or after the diff for one past the last: the cursor goes there when it is a stop. */
+  pressRule(file: number): void {
+    const stop = this.diffRows.stops().findIndex((candidate) => candidate.kind !== StopKind.Line && candidate.file === file);
+    if (stop !== -1) {
+      this.goTo(stop);
+    }
   }
 
   /** Takes how many diff lines the main view shows, which is what half a page is of. */
@@ -246,21 +273,21 @@ export class OpenReview {
 
   halfPage(down: boolean): void {
     const half = Math.max(1, Math.floor(this.viewLines / HALF));
-    this.moveLine(down ? half : -half);
+    this.moveCursor(down ? half : -half);
   }
 
-  /** To the first line of the next file that has lines; nowhere from the last. */
+  /** To the first stop of the next file that has one, its rule when comments hang there; nowhere from the last. */
   nextFile(): void {
-    const target = this.diffRows.firstLineOfNextFile(this.line);
+    const target = this.diffRows.firstStopOfNextFile(this.stop);
     if (target !== undefined) {
-      this.moveTo(target);
+      this.goTo(target);
     }
   }
 
   previousFile(): void {
-    const target = this.diffRows.firstLineOfPreviousFile(this.line);
-    if (target !== undefined && this.diffRows.lineCount() > 0) {
-      this.moveTo(target);
+    const target = this.diffRows.firstStopOfPreviousFile(this.stop);
+    if (target !== undefined) {
+      this.goTo(target);
     }
   }
 
@@ -271,9 +298,9 @@ export class OpenReview {
   }
 
   goToSelectedFile(): void {
-    const target = this.diffRows.firstLineOf(this.fileSelected);
+    const target = this.diffRows.firstStopOf(this.fileSelected);
     if (target !== undefined) {
-      this.moveTo(target);
+      this.goTo(target);
     }
   }
 
@@ -299,11 +326,13 @@ export class OpenReview {
   }
 
   private rangeLow(): number {
-    return Math.min(this.rangeStart ?? this.line, this.rangeEnd ?? this.line);
+    const here = this.cursor() ?? this.rangeStart ?? 0;
+    return Math.min(this.rangeStart ?? here, this.rangeEnd ?? here);
   }
 
   private rangeHigh(): number {
-    return Math.max(this.rangeStart ?? this.line, this.rangeEnd ?? this.line);
+    const here = this.cursor() ?? this.rangeStart ?? 0;
+    return Math.max(this.rangeStart ?? here, this.rangeEnd ?? here);
   }
 
   /** A press on a line's gutter: the cursor goes to the line, and the comment box opens on it as `c` opens it. */
@@ -315,13 +344,17 @@ export class OpenReview {
 
   /** `v`: starts a range at the cursor, or ends the one started at it when its lines can take a comment; one that cannot is refused and left as it was. */
   async markRangeKey(): Promise<void> {
+    const here = this.cursor();
+    if (here === undefined) {
+      return;
+    }
     if (this.rangeStart === undefined || this.rangeEnd !== undefined) {
-      this.rangeStart = this.line;
+      this.rangeStart = here;
       this.rangeEnd = undefined;
       this.touch();
       return;
     }
-    await this.markRange(this.rangeStart, this.line);
+    await this.markRange(this.rangeStart, here);
   }
 
   /**
@@ -331,7 +364,10 @@ export class OpenReview {
   async markRange(from: number, to: number): Promise<void> {
     this.moveTo(to);
     const start = clamp(from, this.diffRows.lineCount());
-    const end = this.line;
+    const end = this.cursor();
+    if (end === undefined) {
+      return;
+    }
     const answer = await this.anchorOf(Math.min(start, end), Math.max(start, end));
     if (answer === undefined) {
       return;
@@ -375,11 +411,12 @@ export class OpenReview {
 
   /** `c` on the cursor's line, or on the range marked: the box opens once the sidecar says a comment can hang there. */
   async comment(): Promise<void> {
-    if (this.diffRows.lineCount() === 0) {
+    const here = this.cursor();
+    if (here === undefined) {
       return;
     }
     const marked = this.rangeStart !== undefined;
-    const answer = await this.anchorOf(marked ? this.rangeLow() : this.line, marked ? this.rangeHigh() : this.line);
+    const answer = await this.anchorOf(marked ? this.rangeLow() : here, marked ? this.rangeHigh() : here);
     if (this.open !== undefined) {
       return;
     }
@@ -472,10 +509,10 @@ export class OpenReview {
     }
   }
 
-  /** `enter` on the cursor's line: its pending comment opens in the box, or else the last thread under it to be replied to. */
+  /** `enter` where the cursor stands, a line or a file's rule: its pending comment opens in the box, or else the last thread there to be replied to. */
   enterInDiff(): void {
-    const comment = this.pendingOnCursorLine();
-    const thread = this.threadOnCursorLine();
+    const comment = this.pendingHere();
+    const thread = this.threadHere();
     if (comment !== undefined) {
       this.openBox(new CommentBox({ kind: TargetKind.Edit, comment }, comment.body));
     } else if (thread !== undefined) {
@@ -493,39 +530,40 @@ export class OpenReview {
     this.delete(comment);
   }
 
-  /** Whether `enter` on its line replies to `thread`: it hangs from a line, it is the last thread there, and no pending comment there takes the key first. */
+  /** Whether `enter` where it shows replies to `thread`: it is the last thread there, and no pending comment there takes the key first. */
   enterRepliesTo(thread: ReviewReviewThreadView): boolean {
-    const placed = this.comments.underLines.find((entry) => entry.thread.id === thread.id);
-    if (placed?.line.kind !== 'onDiffLine') {
+    const placed = this.comments.shown.find((entry) => entry.thread.id === thread.id);
+    if (placed === undefined) {
       return false;
     }
-    const line = placed.line.index;
-    const last = this.comments.underLines.findLast((entry) => entry.line.kind === 'onDiffLine' && entry.line.index === line);
-    const pendingFirst = this.comments.lastOnLines.some((entry) => entry.line.kind === 'onDiffLine' && entry.line.index === line);
+    const last = this.comments.shown.findLast((entry) => samePlace(entry.line, placed.line));
+    const pendingFirst = this.comments.lastAtPlaces.some((entry) => samePlace(entry.line, placed.line));
     return last?.thread.id === thread.id && !pendingFirst;
   }
 
-  /** Whether `enter` and `x` on its line act on `comment`: it is the pending comment `review` picks for its line. */
+  /** Whether `enter` and `x` where it shows act on `comment`: it is the pending comment `review` picks for its place. */
   keysReach(comment: ReviewPendingCommentView): boolean {
-    return this.comments.lastOnLines.some((entry) => entry.line.kind === 'onDiffLine' && entry.comment.id === comment.id);
+    return this.comments.lastAtPlaces.some((entry) => entry.comment.id === comment.id);
   }
 
-  /** The thread under the cursor's line, the last one when the line has several. */
-  private threadOnCursorLine(): ReviewReviewThreadView | undefined {
-    return this.comments.underLines.findLast((placed) => placed.line.kind === 'onDiffLine' && placed.line.index === this.line)?.thread;
+  /** The thread where the cursor stands, the last one when there are several. */
+  private threadHere(): ReviewReviewThreadView | undefined {
+    const at = this.at();
+    return at === undefined ? undefined : this.comments.shown.findLast((placed) => placedAt(placed.line, at))?.thread;
   }
 
-  /** `x` on the cursor's line deletes its pending comment. */
+  /** `x` where the cursor stands deletes its pending comment. */
   deleteAtCursor(): void {
-    const comment = this.pendingOnCursorLine();
+    const comment = this.pendingHere();
     if (comment !== undefined) {
       this.delete(comment);
     }
   }
 
-  /** The pending comment `enter` and `x` act on at the cursor's line, as `review` picks it, if the line has one. */
-  private pendingOnCursorLine(): ReviewPendingCommentView | undefined {
-    return this.comments.lastOnLines.find((placed) => placed.line.kind === 'onDiffLine' && placed.line.index === this.line)?.comment;
+  /** The pending comment `enter` and `x` act on where the cursor stands, as `review` picks it, if there is one there. */
+  private pendingHere(): ReviewPendingCommentView | undefined {
+    const at = this.at();
+    return at === undefined ? undefined : this.comments.lastAtPlaces.find((placed) => placedAt(placed.line, at))?.comment;
   }
 
   /** The Reply under a thread's line: the box opens to reply to it, resolved or not, and neither the cursor nor the selection moves. */
@@ -535,7 +573,7 @@ export class OpenReview {
 
   /** A press on a diff line: the cursor goes to it and a drag starts from it, remembering whether it was a second press, on the cursor's line in the focused diff. */
   pressLine(line: number, focused: boolean): void {
-    this.pressedAgain = focused && this.line === line;
+    this.pressedAgain = focused && this.cursor() === line;
     this.moveTo(line);
     this.dragFrom = line;
   }
@@ -557,14 +595,14 @@ export class OpenReview {
     this.pressedAgain = false;
     if (from !== undefined && from !== line) {
       await this.markRange(from, line);
-    } else if (from !== undefined && again && this.pendingOnCursorLine() !== undefined) {
+    } else if (from !== undefined && again && this.pendingHere() !== undefined) {
       this.enterInDiff();
     } else if (from !== undefined && again) {
       await this.comment();
     }
   }
 
-  /** A press on a file: it is selected and the cursor goes to its first line. */
+  /** A press on a file: it is selected and the cursor goes to its first stop. */
   pressFile(index: number): void {
     this.selectFile(index);
     this.goToSelectedFile();

@@ -73,7 +73,7 @@ public final class ReviewSidecarFixture {
     }
 
     public static String noCommentsInDiff() {
-        return "{\"threads\":[],\"pending\":[],\"underLines\":[],\"listed\":[],\"lastOnLines\":[]}";
+        return "{\"threads\":[],\"pending\":[],\"shown\":[],\"listed\":[],\"lastAtPlaces\":[]}";
     }
 
     public static String summaryText() {

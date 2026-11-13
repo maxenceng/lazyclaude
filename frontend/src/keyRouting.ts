@@ -193,7 +193,7 @@ export class KeyRouter {
 
   private moveInReview(current: OpenReview, focus: Focus, delta: number): void {
     if (focus === Focus.Diff) {
-      current.moveLine(delta);
+      current.moveCursor(delta);
     } else if (focus === Focus.Files) {
       current.selectFile(current.selectedFile() + delta);
     }

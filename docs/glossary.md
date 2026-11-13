@@ -132,7 +132,7 @@ words mean.
 | Hunk | One `@@` section of a file's diff. | `review` |
 | Diff line | A `+`, `-` or context line in a hunk; the only rows a cursor or a comment lands on. | `review` |
 | Thread | Comments already on the pull request; *resolved* or *outdated* ones are shown differently. `ReviewThread` in code, beside `java.lang.Thread`. | `review` |
-| Thread's line | The diff line a placed thread shows under: its last line, on the new side for `RIGHT` and the old side for `LEFT`. An outdated thread, or one whose line the diff does not hold, has none. Threads in diff order follow these lines; the ones with none come last. In the desktop review a thread with none shows at the top of its file, under the file header, marked outdated. | `review` |
+| Thread's line | The diff line a placed thread shows under: its last line, on the new side for `RIGHT` and the old side for `LEFT`. An outdated thread, or one whose line the diff does not hold, has none. Threads in diff order follow these lines; the ones with none come last. One with none still has a place: *at its file's head* when the diff holds its file, shown under the file's rule; *outside the diff* when it does not, shown under `Not in this diff` after the last file. Only a thread GitHub calls outdated is marked outdated. | `review` |
 | Summary | What the review says as a whole: typed on the review screen, or an adopted pending review's body, and sent as its body by the submit (ADR 0042). | `review` |
 | Submit | Send the pending review as a *Comment* review — the only kind GitHub allows on your own pull request. | `review` |
 | Moved head | The pull request's head is no longer the commit the pending review was written on. Warned about, never blocking. | `review` |

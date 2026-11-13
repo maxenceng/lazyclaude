@@ -22,8 +22,8 @@ import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.HeadMove;
 import dev.maxenceng.lazyclaude.review.published.HeldHead;
 import dev.maxenceng.lazyclaude.review.published.MovedHead;
-import dev.maxenceng.lazyclaude.review.published.NoDiffLine;
 import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
+import dev.maxenceng.lazyclaude.review.published.OutsideDiff;
 import dev.maxenceng.lazyclaude.review.published.PendingCommentId;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 import dev.maxenceng.lazyclaude.review.published.Summary;
@@ -108,8 +108,8 @@ public final class PendingReviewViewFixture {
         return PendingInDiffView.builder().comment(comment).line(new OnDiffLine(new DiffLineIndex(index))).build();
     }
 
-    public static PendingInDiffView pendingOnNoLineView(PendingCommentView comment) {
-        return PendingInDiffView.builder().comment(comment).line(new NoDiffLine()).build();
+    public static PendingInDiffView pendingOutsideDiffView(PendingCommentView comment) {
+        return PendingInDiffView.builder().comment(comment).line(new OutsideDiff()).build();
     }
 
     public static PendingCommentPayload pendingCommentPayload() {

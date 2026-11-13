@@ -32,7 +32,7 @@ import { ciWordKey } from './pullRequestList';
 import { useStore } from '../shared/useStore';
 import { DragRelease } from './dragRelease';
 import { type CommentBox, TargetKind } from './commentBox';
-import { type DiffRow, RowKind, deltaOf } from './diffRows';
+import { type DiffRow, RowKind, type Stop, StopKind, deltaOf } from './diffRows';
 import { type DiffState, DiffStateKind } from './diffState';
 import type { OpenReview } from './openReview';
 
@@ -111,9 +111,12 @@ const lastAnnotationUnder = (row: Element | null | undefined): Element | undefin
   return lastAnnotationUnder(next) ?? next;
 };
 
+/** A key for where the cursor stands, which changes whenever it moves, to a line or to a rule. */
+const keyOf = (stop: Stop | undefined): string => (stop === undefined ? '' : `${stop.kind}:${stop.file}:${stop.kind === StopKind.Line ? stop.line : ''}`);
+
 const Lines = ({ review, focused, onFocus }: ReviewProps) => {
   const root = useRef<HTMLDivElement>(null);
-  const cursor = review.cursor();
+  const cursor = keyOf(review.cursorStop());
   useEffect(() => {
     const release = new DragRelease(review, () => root.current);
     return () => release.remove();
@@ -149,8 +152,31 @@ const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow
           text={labelOf(row.file, (from, to) => t('files.renamed', { from, to }))}
           delta={deltaOf(row.file)}
           change={{ letter: t(`files.letter.${row.file.status.kind}`), kind: CHANGES[row.file.status.kind] }}
+          cursor={atRule(review, StopKind.Head, row.index)}
+          onPress={
+            row.head
+              ? () => {
+                  onFocus();
+                  review.pressRule(row.index);
+                }
+              : undefined
+          }
         />
       );
+    case RowKind.Outside: {
+      const after = review.rows().files().length;
+      return (
+        <DiffRule
+          kind={RuleKind.File}
+          text={t('diff.outside')}
+          cursor={atRule(review, StopKind.Outside, after)}
+          onPress={() => {
+            onFocus();
+            review.pressRule(after);
+          }}
+        />
+      );
+    }
     case RowKind.Hunk:
       return <DiffRule kind={RuleKind.Hunk} text={row.header} />;
     case RowKind.Line: {
@@ -182,6 +208,11 @@ const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow
   }
 };
 
+const atRule = (review: OpenReview, kind: StopKind, file: number): boolean => {
+  const at = review.cursorStop();
+  return at?.kind === kind && at.file === file;
+};
+
 const hangsFrom = (review: OpenReview, line: number): CommentKind | undefined => {
   if (review.rows().hasThread(line)) {
     return CommentKind.Thread;
@@ -206,16 +237,24 @@ const originalPlaceOf = (position: ReviewReviewThreadView['position']): ReviewPl
   return position.was.kind === 'originallyPlaced' ? position.was.place : undefined;
 };
 
-const outdatedTag = (place: ReviewPlacedThread | undefined, pending: boolean, t: TFunction<'review'>): string => {
+/** What a thread on no line of the diff says of its place: outdated only when GitHub says so, else the line the diff does not show. */
+const linelessTag = (position: ReviewReviewThreadView['position'], t: TFunction<'review'>): string => {
+  if (position.kind === 'placedThread') {
+    return t(position.first === position.last ? 'thread.notInDiffLine' : 'thread.notInDiffLines', { lines: linesOf(position) });
+  }
+  const place = originalPlaceOf(position);
   if (place === undefined) {
-    return t(pending ? 'pendingComment.outdatedTag' : 'thread.outdated');
+    return t('thread.outdated');
   }
-  const lines = linesOf(place);
-  const single = place.first === place.last;
-  if (pending) {
-    return t(single ? 'pendingComment.outdatedWasLine' : 'pendingComment.outdatedWasLines', { lines });
+  return t(place.first === place.last ? 'thread.outdatedWasLine' : 'thread.outdatedWasLines', { lines: linesOf(place) });
+};
+
+/** What a pending comment on no line says: a reply to a thread GitHub calls outdated, or, the head having moved, the line it was written on. */
+const linelessPendingTag = (position: ReviewPendingCommentView['anchor']['position'], t: TFunction<'review'>): string => {
+  if (position.kind !== 'placedThread') {
+    return t('pendingComment.onOutdatedThread');
   }
-  return t(single ? 'thread.outdatedWasLine' : 'thread.outdatedWasLines', { lines });
+  return t(position.first === position.last ? 'pendingComment.movedHeadLine' : 'pendingComment.movedHeadLines', { lines: linesOf(position) });
 };
 
 const tagOf = (thread: ReviewReviewThreadView, lineless: boolean, t: TFunction<'review'>): string => {
@@ -223,16 +262,16 @@ const tagOf = (thread: ReviewReviewThreadView, lineless: boolean, t: TFunction<'
     return t('thread.resolved');
   }
   if (lineless) {
-    return outdatedTag(originalPlaceOf(thread.position), false, t);
+    return linelessTag(thread.position, t);
   }
   return t('thread.open', { count: thread.comments.length });
 };
 
-/** A thread as one card across the diff: under its line, or at the top of its file when `review` places it on none. */
+/** A thread as one card across the diff: under its line, under its file's rule, or after the diff, where `review` places it. */
 const ThreadCard = ({ thread, lineless, review }: { thread: ReviewReviewThreadView; lineless: boolean; review: OpenReview }) => {
   const { t } = useTranslation('review');
   const where = whereOf(thread.path, thread.position, t);
-  const reply: AnnotationAction = { text: t('thread.reply'), label: t('thread.replyLabel', { where }), chip: !lineless && review.enterRepliesTo(thread) ? t('thread.replyKey') : undefined, onPress: () => review.replyTo(thread) };
+  const reply: AnnotationAction = { text: t('thread.reply'), label: t('thread.replyLabel', { where }), chip: review.enterRepliesTo(thread) ? t('thread.replyKey') : undefined, onPress: () => review.replyTo(thread) };
   return <Annotation kind={CommentKind.Thread} where={where} tag={tagOf(thread, lineless, t)} comments={thread.comments} dim={thread.resolved} actions={[reply]} />;
 };
 
@@ -241,7 +280,7 @@ const PendingCard = ({ comment, lineless, review }: { comment: ReviewPendingComm
   const { t } = useTranslation('review');
   const { anchor } = comment;
   const where = anchor.kind === 'onDiffAnchor' ? whereOf(anchor.path, anchor.position, t) : t('thread.whereReply', { file: lastSegment(anchor.path) });
-  const reached = !lineless && review.keysReach(comment);
+  const reached = review.keysReach(comment);
   const actions: AnnotationAction[] = [
     { text: t('pendingComment.edit'), label: t('pendingComment.editLabel', { where }), chip: reached ? t('pendingComment.editKey') : undefined, onPress: () => review.editPending(comment) },
     { text: t('pendingComment.delete'), label: t('pendingComment.deleteLabel', { where }), chip: reached ? t('pendingComment.deleteKey') : undefined, onPress: () => review.deletePending(comment) },
@@ -250,7 +289,7 @@ const PendingCard = ({ comment, lineless, review }: { comment: ReviewPendingComm
     <Annotation
       kind={CommentKind.Pending}
       where={where}
-      tag={lineless ? outdatedTag(originalPlaceOf(anchor.position), true, t) : t('pendingComment.tag')}
+      tag={lineless ? linelessPendingTag(anchor.position, t) : t('pendingComment.tag')}
       comments={[{ author: t('pendingComment.you'), body: comment.body }]}
       dim={false}
       actions={actions}

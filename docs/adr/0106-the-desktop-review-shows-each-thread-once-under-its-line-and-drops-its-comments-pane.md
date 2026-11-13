@@ -5,7 +5,8 @@ Date: 2026-11-13
 ## Status
 
 Accepted. Builds on ADR 0103's visual system. Amends ADR 0089: the desktop review has no Comments pane, and the Review panel is
-the files rail's foot. The TUI keeps its layout; only an outdated thread's row changes, as below.
+the files rail's foot. Keeps ADR 0090: `review` says where every comment shows, a line, a file's rule or after the diff, and the
+window draws it there. The TUI keeps its layout; only an outdated thread's row changes, as below.
 
 ## Context
 
@@ -32,9 +33,20 @@ cut long lines off, drew the cursor line as the focused title row's inverse, and
   buttons beside their keys. The desktop review has no Comments pane, so `Focus.Comments`, its keys and its selection are gone;
   `enter` on a line replies to the thread under it (a pending comment on the line is edited first), and a press on a line
   number opens the comment box as `c` does.
-- **A thread with no line still shows**, once, as a card at the top of its file's diff under the header and before the first
-  hunk, marked `outdated · was line 40` (`was lines 40–41` for a range), or only `outdated` when `review` keeps no original
-  place. A pending comment says the same after `pending ·`. What `review` lists with no line (`listed` with a `noDiffLine`) is what is shown.
+- **A thread with no line still shows, where `review` places it.** `commentsInDiff` answers each thread and pending comment with
+  a place: `onDiffLine`, `atFileHead` (a file the diff holds, on a line it does not show), or `outsideDiff` (a file the diff does
+  not hold, such as one reverted out of the pull request, or a diff not read). An `atFileHead` card stands under its file's rule,
+  before the first hunk; an `outsideDiff` card stands under a `Not in this diff` rule after the last file. The window joins
+  nothing by path, and `r` hides a resolved thread through `review`'s `shown`, wherever it stands.
+- **A lineless card's word comes from its position.** `outdated · was line 40` (`was lines 40–41`, or only `outdated` when GitHub
+  keeps no original place) is said only of a thread GitHub calls outdated. A current thread on a line the diff does not show
+  says `not in this diff · line 40`. A pending comment is never outdated: one on a line the diff no longer shows says
+  `pending · head moved · line 40`, after the glossary's *Moved head*, and a reply to an outdated thread says
+  `pending · on an outdated thread`.
+- **A file's rule with cards under it is a stop of the cursor**, as is the `Not in this diff` rule. `j` and `k` move over it
+  between lines, `J` and `K` land on it first, a press on it moves the cursor there, and `enter` and `x` act on its cards as on
+  a line's: `review`'s `lastAtPlaces` picks the pending comment, else `enter` replies to the last thread there. `c` and `v`
+  do nothing on a rule, which has no line.
 - **The files rail carries the pending review.** Each file shows its added and removed counts and word badges for its
   threads and your pending comments; the rail's foot shows the pending review and a Submit button that calls what `S` calls.
   The button and its key chip are tested at 4.5:1 against their fill.
@@ -53,4 +65,6 @@ cut long lines off, drew the cursor line as the focused title row's inverse, and
   where it keeps none; the window says `outdated · was line 12`. The panel is narrow, so the TUI keeps the one word.
 - Replying by key to a thread whose line also holds a pending comment reaches the pending comment first; the thread's Reply
   button still works.
-- The protocol's `listed` list is read by the window only for threads with no line.
+- The window no longer reads the protocol's `listed`; it is the TUI's Comments panel. `underLines` is renamed `shown` and
+  `lastOnLines` `lastAtPlaces`, as both now hold every place, not only lines. The TUI still draws only `onDiffLine` entries
+  under lines and lists the rest in Comments, so `NoDiffLine` splitting in two changes nothing it shows.

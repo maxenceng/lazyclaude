@@ -1085,6 +1085,19 @@
       "required" : [ "kind", "content", "newNumber" ],
       "additionalProperties" : false
     },
+    "review.AtFileHead" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "atFileHead"
+        },
+        "file" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "file" ],
+      "additionalProperties" : false
+    },
     "review.CheckOutcome" : {
       "type" : "string",
       "enum" : [ "FAILED", "PENDING", "PASSED" ]
@@ -1205,7 +1218,7 @@
             "$ref" : "#/$defs/review.PendingInDiffView"
           }
         },
-        "underLines" : {
+        "shown" : {
           "type" : "array",
           "items" : {
             "$ref" : "#/$defs/review.ThreadInDiffView"
@@ -1217,14 +1230,14 @@
             "$ref" : "#/$defs/review.CommentInDiffView"
           }
         },
-        "lastOnLines" : {
+        "lastAtPlaces" : {
           "type" : "array",
           "items" : {
             "$ref" : "#/$defs/review.PendingInDiffView"
           }
         }
       },
-      "required" : [ "threads", "pending", "underLines", "listed", "lastOnLines" ],
+      "required" : [ "threads", "pending", "shown", "listed", "lastAtPlaces" ],
       "additionalProperties" : false
     },
     "review.ContextLine" : {
@@ -1442,16 +1455,6 @@
       "required" : [ "kind", "writtenOn", "head" ],
       "additionalProperties" : false
     },
-    "review.NoDiffLine" : {
-      "type" : "object",
-      "properties" : {
-        "kind" : {
-          "const" : "noDiffLine"
-        }
-      },
-      "required" : [ "kind" ],
-      "additionalProperties" : false
-    },
     "review.NoHeadedPullRequestView" : {
       "type" : "object",
       "properties" : {
@@ -1583,6 +1586,16 @@
         }
       },
       "required" : [ "kind", "was" ],
+      "additionalProperties" : false
+    },
+    "review.OutsideDiff" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "outsideDiff"
+        }
+      },
+      "required" : [ "kind" ],
       "additionalProperties" : false
     },
     "review.PendingAnchorView" : {
@@ -2059,7 +2072,9 @@
       "oneOf" : [ {
         "$ref" : "#/$defs/review.OnDiffLine"
       }, {
-        "$ref" : "#/$defs/review.NoDiffLine"
+        "$ref" : "#/$defs/review.AtFileHead"
+      }, {
+        "$ref" : "#/$defs/review.OutsideDiff"
       } ],
       "discriminator" : {
         "propertyName" : "kind"

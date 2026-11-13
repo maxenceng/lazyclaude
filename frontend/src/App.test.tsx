@@ -921,7 +921,7 @@ const reviewDiff = {
 const summaryAnswered = async (ready: Awaited<ReturnType<typeof readyApp>>, summary = '') => {
   await act(async () => {
     ready.client.answerAll('review/summaryToSubmit', summary);
-    ready.client.answerAll('review/commentsInDiff', { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] });
+    ready.client.answerAll('review/commentsInDiff', { threads: [], pending: [], shown: [], listed: [], lastAtPlaces: [] });
     await settle();
   });
 };
@@ -949,7 +949,7 @@ const reviewOpened = async (answers: { pending?: unknown; threads?: unknown; dif
     await settle();
   });
   await act(async () => {
-    ready.client.answerAll('review/commentsInDiff', { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] });
+    ready.client.answerAll('review/commentsInDiff', { threads: [], pending: [], shown: [], listed: [], lastAtPlaces: [] });
     ready.client.answerAll('review/summaryToSubmit', '');
     await settle();
   });

@@ -71,7 +71,7 @@ export type ReviewPendingReviewView =
   | ReviewUnavailablePendingReviewView;
 export type ReviewPendingAnchorView = ReviewOnDiffAnchorView | ReviewReplyAnchorView;
 export type ReviewHeadMove = ReviewMovedHead | ReviewHeldHead;
-export type ReviewThreadLine = ReviewOnDiffLine | ReviewNoDiffLine;
+export type ReviewThreadLine = ReviewOnDiffLine | ReviewAtFileHead | ReviewOutsideDiff;
 export type ReviewCommentInDiffView = ReviewThreadInDiffView | ReviewPendingInDiffView;
 export type ReviewCommentAnchorView = ReviewOnDiffAnchorView | ReviewRefusedAnchorView;
 export type ReviewSummaryDraftPayload = ReviewTypedSummaryPayload | ReviewUntypedSummaryPayload;
@@ -696,9 +696,9 @@ export interface ReviewUnavailablePendingReviewView {
 export interface ReviewCommentsInDiffView {
   threads: ReviewThreadInDiffView[];
   pending: ReviewPendingInDiffView[];
-  underLines: ReviewThreadInDiffView[];
+  shown: ReviewThreadInDiffView[];
   listed: ReviewCommentInDiffView[];
-  lastOnLines: ReviewPendingInDiffView[];
+  lastAtPlaces: ReviewPendingInDiffView[];
 }
 export interface ReviewThreadInDiffView {
   kind: 'threadInDiff';
@@ -709,8 +709,12 @@ export interface ReviewOnDiffLine {
   kind: 'onDiffLine';
   index: number;
 }
-export interface ReviewNoDiffLine {
-  kind: 'noDiffLine';
+export interface ReviewAtFileHead {
+  kind: 'atFileHead';
+  file: number;
+}
+export interface ReviewOutsideDiff {
+  kind: 'outsideDiff';
 }
 export interface ReviewPendingInDiffView {
   kind: 'pendingInDiff';

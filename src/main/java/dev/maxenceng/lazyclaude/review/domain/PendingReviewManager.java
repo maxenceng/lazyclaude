@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
-import dev.maxenceng.lazyclaude.review.published.NoDiffLine;
+import dev.maxenceng.lazyclaude.review.published.OutsideDiff;
 import dev.maxenceng.lazyclaude.review.published.PendingCommentId;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 import dev.maxenceng.lazyclaude.review.published.Reason;
@@ -83,13 +83,13 @@ public record PendingReviewManager(PendingReviewPort reviews) {
         return typed.or(() -> adopted).orElse(NO_SUMMARY);
     }
 
-    /** The pending {@code comments} with the diff lines they show under: every one on no line until the diff is read. */
+    /** The pending {@code comments} with the diff lines they show under: every one outside the diff until the diff is read. */
     public PendingCommentsInDiff pendingInDiff(DiffReading diff, List<PendingComment> comments) {
         if (diff instanceof ReadDiff(PullRequestDiff read)) {
             return read.place(comments);
         }
         return new PendingCommentsInDiff(comments.stream()
-                .map(comment -> PendingInDiff.builder().comment(comment).line(new NoDiffLine()).build())
+                .map(comment -> PendingInDiff.builder().comment(comment).line(new OutsideDiff()).build())
                 .toList());
     }
 

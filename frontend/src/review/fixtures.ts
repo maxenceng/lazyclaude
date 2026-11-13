@@ -26,7 +26,9 @@ export const threadFixture = (overrides: Partial<ReviewReviewThreadView> = {}): 
 
 export const onLine = (index: number): ReviewThreadLine => ({ kind: 'onDiffLine', index });
 
-export const noLine: ReviewThreadLine = { kind: 'noDiffLine' };
+export const atHead = (file: number): ReviewThreadLine => ({ kind: 'atFileHead', file });
+
+export const outside: ReviewThreadLine = { kind: 'outsideDiff' };
 
 export const threadInDiff = (thread: ReviewReviewThreadView, line: ReviewThreadLine): ReviewThreadInDiffView => ({ kind: 'threadInDiff', thread, line });
 
@@ -66,8 +68,8 @@ export const pullRequestFixture = (overrides: Partial<ReviewPullRequestView> = {
 export const commentsFixture = (overrides: Partial<ReviewCommentsInDiffView> = {}): ReviewCommentsInDiffView => ({
   threads: [],
   pending: [],
-  underLines: [],
+  shown: [],
   listed: [],
-  lastOnLines: [],
+  lastAtPlaces: [],
   ...overrides,
 });

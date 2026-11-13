@@ -7,12 +7,13 @@ import static dev.maxenceng.lazyclaude.review.domain.PullRequestDiffManagerFixtu
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.pullRequestsUnavailable;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.threadAt;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.loadingPendingView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.atFileHeadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.onLineView;
-import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.onNoLineView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.openThreadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.outdatedThreadView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.outsideDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.pullRequestPayload;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.resolvedThreadView;
@@ -118,15 +119,15 @@ class ReviewQueryPullRequestTest {
         ReviewThreadView outdated = outdatedThreadView(diffPath());
 
         assertThat(query.commentsInDiff(threadsOnlyPayload(twoFileDiffView(), readThreadsViewOf(outdated, onTheOldSide))).threads())
-                .isEqualTo(List.of(onLineView(onTheOldSide, 1), onNoLineView(outdated)));
+                .isEqualTo(List.of(onLineView(onTheOldSide, 1), atFileHeadView(outdated, 0)));
     }
 
     @Test
-    void shouldPutEveryThreadOnNoLineWhileTheDiffItHandedOutIsNotRead() {
+    void shouldPutEveryThreadOutsideTheDiffWhileTheDiffItHandedOutIsNotRead() {
         ReviewThreadView thread = openThreadView(diffPath(), rightOn(3));
 
-        assertThat(query.commentsInDiff(threadsOnlyPayload(tooLargeDiffView(), readThreadsViewOf(thread))).threads()).isEqualTo(List.of(onNoLineView(thread)));
-        assertThat(query.commentsInDiff(threadsOnlyPayload(loadingDiffView(), readThreadsViewOf(thread))).threads()).isEqualTo(List.of(onNoLineView(thread)));
+        assertThat(query.commentsInDiff(threadsOnlyPayload(tooLargeDiffView(), readThreadsViewOf(thread))).threads()).isEqualTo(List.of(outsideDiffView(thread)));
+        assertThat(query.commentsInDiff(threadsOnlyPayload(loadingDiffView(), readThreadsViewOf(thread))).threads()).isEqualTo(List.of(outsideDiffView(thread)));
     }
 
     @Test
@@ -141,10 +142,10 @@ class ReviewQueryPullRequestTest {
         ReviewThreadView resolved = resolvedThreadView(diffPath(), rightOn(3));
         ReadThreadsView threads = readThreadsViewOf(open, resolved);
 
-        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), threads, loadingPendingView(), false)).underLines())
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), threads, loadingPendingView(), false)).shown())
                 .as("the TUI's r and the window's r both ask review which threads show")
                 .isEqualTo(List.of(onLineView(open, 1)));
-        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), threads, loadingPendingView(), true)).underLines())
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), threads, loadingPendingView(), true)).shown())
                 .isEqualTo(List.of(onLineView(open, 1), onLineView(resolved, 2)));
     }
 

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { RpcError } from '../protocol';
-import { RowKind } from './diffRows';
-import { added, commentsFixture, diffFixture, fileFixture, hunk, kept, noLine, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
-import { Harness, type Reads } from './reviewHarness';
+import { TargetKind } from './commentBox';
+import { RowKind, StopKind } from './diffRows';
+import { added, commentsFixture, diffFixture, fileFixture, atHead, hunk, kept, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
+import { Harness, type Reads, settle } from './reviewHarness';
 import { DiffStateKind } from './diffState';
 
 const diff = diffFixture([
@@ -49,7 +50,7 @@ describe('a review being read', () => {
     const comment = pendingCommentFixture();
     const threads = threadsFixture([thread]);
     const pending = openPending([comment]);
-    await readTo(harness, { threads, pending, comments: commentsFixture({ underLines: [threadInDiff(thread, onLine(1))], pending: [pendingInDiff(comment, onLine(2))] }) });
+    await readTo(harness, { threads, pending, comments: commentsFixture({ shown: [threadInDiff(thread, onLine(1))], pending: [pendingInDiff(comment, onLine(2))] }) });
     expect(harness.client.calls.slice(-2)).toEqual([
       { method: 'review/commentsInDiff', params: { diff, threads, pending, resolvedShown: false } },
       { method: 'review/summaryToSubmit', params: { pending, draft: { kind: 'untypedSummaryPayload' } } },
@@ -117,12 +118,12 @@ describe('the cursor of a review', () => {
     const harness = new Harness();
     await readTo(harness);
     const { review } = harness;
-    review.moveLine(-1);
+    review.moveCursor(-1);
     expect(review.cursor()).toBe(0);
-    review.moveLine(2);
+    review.moveCursor(2);
     expect(review.cursor()).toBe(2);
     expect(review.selectedFile()).toBe(0);
-    review.moveLine(9);
+    review.moveCursor(9);
     expect(review.cursor()).toBe(3);
     expect(review.selectedFile()).toBe(1);
   });
@@ -202,7 +203,7 @@ describe('the range of a review', () => {
     const harness = new Harness();
     await readTo(harness);
     const marking = harness.review.markRange(0, 1);
-    harness.review.moveLine(2);
+    harness.review.moveCursor(2);
     harness.client.answerNext(anchored);
     await marking;
     expect([0, 1, 2, 3].map((line) => harness.review.inRange(line))).toEqual([true, true, false, false]);
@@ -236,7 +237,7 @@ describe('the range of a review', () => {
     const { review } = harness;
     await review.markRangeKey();
     expect(review.inRange(0)).toBe(true);
-    review.moveLine(2);
+    review.moveCursor(2);
     const ending = review.markRangeKey();
     expect(harness.client.calls.at(-1)).toEqual({ method: 'review/anchorOf', params: { diff, first: 0, last: 2 } });
     harness.client.answerNext(anchored);
@@ -256,21 +257,66 @@ describe('resolved threads of a review', () => {
     expect(harness.review.rows().all().some((row) => row.kind === RowKind.Thread)).toBe(false);
     harness.review.toggleResolved();
     expect(harness.client.calls.at(-2)).toMatchObject({ method: 'review/commentsInDiff', params: { resolvedShown: true } });
-    await harness.answerPlacement({ comments: commentsFixture({ threads: [resolved], underLines: [resolved], listed: [resolved] }) });
+    await harness.answerPlacement({ comments: commentsFixture({ threads: [resolved], shown: [resolved], listed: [resolved] }) });
     expect(harness.review.resolvedShown()).toBe(true);
     expect(harness.review.rows().all().some((row) => row.kind === RowKind.Thread)).toBe(true);
   });
 });
 
 describe('resolved threads with no line', () => {
-  it('stay hidden at the top of their file until r shows resolved threads', async () => {
+  it('show under their file rule only once review says they show, as r asks it', async () => {
     const harness = new Harness();
-    const resolved = threadInDiff(threadFixture({ id: 'T1', resolved: true, open: false, position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } }), noLine);
+    const resolved = threadInDiff(threadFixture({ id: 'T1', resolved: true, open: false, position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } }), atHead(0));
     await readTo(harness, { comments: commentsFixture({ threads: [resolved], listed: [resolved] }) });
     expect(harness.review.rows().all().some((row) => row.kind === RowKind.Thread)).toBe(false);
     harness.review.toggleResolved();
-    await harness.answerPlacement({ comments: commentsFixture({ threads: [resolved], listed: [resolved] }) });
+    await harness.answerPlacement({ comments: commentsFixture({ threads: [resolved], shown: [resolved], listed: [resolved] }) });
     expect(harness.review.rows().all().some((row) => row.kind === RowKind.Thread)).toBe(true);
+  });
+});
+
+describe('the cursor on a file rule', () => {
+  const lineless = threadFixture({ id: 'T1', path: 'src/a.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } });
+  const atRule = threadInDiff(lineless, atHead(0));
+
+  it('stops on the rule of a file with comments under it, before its first line, as j and k move', async () => {
+    const harness = new Harness();
+    await readTo(harness, { comments: commentsFixture({ threads: [atRule], shown: [atRule], listed: [atRule] }) });
+    expect(harness.review.cursorStop()).toEqual({ kind: StopKind.Head, file: 0 });
+    expect(harness.review.cursor()).toBeUndefined();
+    harness.review.moveCursor(1);
+    expect(harness.review.cursor()).toBe(0);
+    harness.review.moveCursor(-1);
+    expect(harness.review.cursorStop()).toEqual({ kind: StopKind.Head, file: 0 });
+  });
+
+  it('replies with enter to the last thread under the rule', async () => {
+    const harness = new Harness();
+    await readTo(harness, { comments: commentsFixture({ threads: [atRule], shown: [atRule], listed: [atRule] }) });
+    harness.review.enterInDiff();
+    expect(harness.review.box()?.target).toEqual({ kind: TargetKind.Reply, thread: lineless });
+  });
+
+  it('edits with enter and deletes with x the pending comment review picks for the rule, before any thread there', async () => {
+    const harness = new Harness();
+    const comment = pendingCommentFixture({ id: 'C5', anchor: { kind: 'onDiffAnchor', path: 'src/a.ts', position: { kind: 'placedThread', side: 'RIGHT', first: 99, last: 99 } } });
+    const mine = pendingInDiff(comment, atHead(0));
+    await readTo(harness, { pending: openPending([comment]), comments: commentsFixture({ threads: [atRule], shown: [atRule], pending: [mine], listed: [mine, atRule], lastAtPlaces: [mine] }) });
+    harness.review.enterInDiff();
+    expect(harness.review.box()?.target).toEqual({ kind: TargetKind.Edit, comment });
+    harness.review.cancelBox();
+    harness.review.deleteAtCursor();
+    await settle();
+    expect(harness.client.calls.filter((call) => call.method === 'review/delete').map((call) => call.params)).toEqual([expect.objectContaining({ comment: 'C5' })]);
+  });
+
+  it('writes no comment and marks no range on the rule, which has no line', async () => {
+    const harness = new Harness();
+    await readTo(harness, { comments: commentsFixture({ threads: [atRule], shown: [atRule], listed: [atRule] }) });
+    await harness.review.comment();
+    await harness.review.markRangeKey();
+    expect(harness.methods()).not.toContain('review/anchorOf');
+    expect(harness.review.box()).toBeUndefined();
   });
 });
 
@@ -407,7 +453,7 @@ describe('the comment box of a review', () => {
     const harness = new Harness();
     const comment = pendingCommentFixture({ id: 'C1' });
     const placed = pendingInDiff(comment, onLine(0));
-    await readTo(harness, { pending: openPending([comment]), comments: commentsFixture({ pending: [placed], listed: [placed], lastOnLines: [placed] }) });
+    await readTo(harness, { pending: openPending([comment]), comments: commentsFixture({ pending: [placed], listed: [placed], lastAtPlaces: [placed] }) });
     harness.review.deleteAtCursor();
     harness.review.deleteAtCursor();
     await harness.answer('review/delete', written([]));
@@ -417,12 +463,12 @@ describe('the comment box of a review', () => {
 
 const readWithComment = async (harness: Harness, comment: ReturnType<typeof pendingCommentFixture>) => {
   const placed = pendingInDiff(comment, onLine(0));
-  await readTo(harness, { pending: openPending([comment]), comments: commentsFixture({ pending: [placed], listed: [placed], lastOnLines: [placed] }) });
+  await readTo(harness, { pending: openPending([comment]), comments: commentsFixture({ pending: [placed], listed: [placed], lastAtPlaces: [placed] }) });
 };
 
 const readWithThread = async (harness: Harness, thread: ReturnType<typeof threadFixture>) => {
   const placed = threadInDiff(thread, onLine(2));
-  await readTo(harness, { threads: threadsFixture([thread]), comments: commentsFixture({ threads: [placed], underLines: [placed], listed: [placed] }) });
+  await readTo(harness, { threads: threadsFixture([thread]), comments: commentsFixture({ threads: [placed], shown: [placed], listed: [placed] }) });
 };
 
 describe('the pending comments of a review', () => {
@@ -484,7 +530,7 @@ describe('the threads of a review', () => {
     const first = threadFixture({ id: 'T1' });
     const second = threadFixture({ id: 'T2' });
     const placed = [threadInDiff(first, onLine(2)), threadInDiff(second, onLine(2))];
-    await readTo(harness, { threads: threadsFixture([first, second]), comments: commentsFixture({ threads: placed, underLines: placed, listed: placed }) });
+    await readTo(harness, { threads: threadsFixture([first, second]), comments: commentsFixture({ threads: placed, shown: placed, listed: placed }) });
     harness.review.moveTo(2);
     harness.review.enterInDiff();
     expect(harness.review.box()?.target).toEqual({ kind: 'reply', thread: second });
@@ -589,7 +635,7 @@ describe('the mouse over a review', () => {
     const harness = new Harness();
     const comment = pendingCommentFixture({ id: 'C1', body: 'Rename this' });
     await readWithComment(harness, comment);
-    harness.review.moveLine(2);
+    harness.review.moveCursor(2);
     harness.review.pressLine(0, true);
     expect(harness.review.cursor()).toBe(0);
     void harness.review.releaseLine(0);

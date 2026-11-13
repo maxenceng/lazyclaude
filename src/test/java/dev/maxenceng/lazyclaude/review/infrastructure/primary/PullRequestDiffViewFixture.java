@@ -20,14 +20,15 @@ import java.util.List;
 
 import dev.maxenceng.lazyclaude.review.domain.ReviewThread;
 import dev.maxenceng.lazyclaude.review.published.AddedFile;
+import dev.maxenceng.lazyclaude.review.published.AtFileHead;
 import dev.maxenceng.lazyclaude.review.published.DiffLine;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.FileStatus;
 import dev.maxenceng.lazyclaude.review.published.HunkHeader;
 import dev.maxenceng.lazyclaude.review.published.ModifiedFile;
-import dev.maxenceng.lazyclaude.review.published.NoDiffLine;
 import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
+import dev.maxenceng.lazyclaude.review.published.OutsideDiff;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 import dev.maxenceng.lazyclaude.review.published.RenamedFile;
@@ -153,8 +154,12 @@ public final class PullRequestDiffViewFixture {
         return ThreadInDiffView.builder().thread(thread).line(new OnDiffLine(new DiffLineIndex(index))).build();
     }
 
-    public static ThreadInDiffView onNoLineView(ReviewThreadView thread) {
-        return ThreadInDiffView.builder().thread(thread).line(new NoDiffLine()).build();
+    public static ThreadInDiffView atFileHeadView(ReviewThreadView thread, int file) {
+        return ThreadInDiffView.builder().thread(thread).line(new AtFileHead(file)).build();
+    }
+
+    public static ThreadInDiffView outsideDiffView(ReviewThreadView thread) {
+        return ThreadInDiffView.builder().thread(thread).line(new OutsideDiff()).build();
     }
 
     public static CommentsInDiffPayload threadsOnlyPayload(PullRequestDiffView diff, ThreadsView threads) {
