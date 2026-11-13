@@ -16,7 +16,7 @@ import { Action } from './keys/bindings';
 import { ModalClicks } from './keys/modalClicks';
 import { WindowKeys } from './keys/windowKeys';
 import { Focus, Panel, WindowTab } from './layout';
-import { PullRequestRead, type TicketStanding, WorktreeRead } from './board/ticketStanding';
+import { PullRequestRead, type TicketStanding } from './board/ticketStanding';
 import { StatusKind } from './protocol';
 import { cellsOf, ciOf, worstResult } from './review/pullRequestList';
 import { PullRequestsPane } from './review/PullRequestsScreen';
@@ -33,7 +33,7 @@ const TAB_OF: ReadonlyMap<string, WindowTab> = new Map<string, WindowTab>(Object
 
 const PANEL_OF: ReadonlyMap<string, Panel> = new Map<string, Panel>(Object.values(Panel).map((panel) => [panel, panel]));
 
-const NO_STANDING: TicketStanding = { worktree: { read: WorktreeRead.None, path: undefined }, pullRequest: { read: PullRequestRead.None, number: undefined } };
+const NO_STANDING: TicketStanding = { pullRequest: { read: PullRequestRead.None, number: undefined } };
 
 const COLOURS = [LampColour.Permission, LampColour.Input, LampColour.Turn] as const;
 
@@ -80,7 +80,6 @@ export const App = ({ app, packaged }: Props) => {
   const capturing = useStore(app.board.capture.state).isOpen();
   const quitAsked = useStore(app.quitting.asking);
   useStore(app.board.selection.selected);
-  useStore(app.worktrees.answer);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
 
@@ -235,7 +234,7 @@ export const App = ({ app, packaged }: Props) => {
               board={app.board.store}
               selection={app.board.selection}
               focused={layout.focus === Focus.Sessions}
-              standing={selectedTicket === undefined ? NO_STANDING : standingOf(selectedTicket, app.worktrees.of(selectedTicket.id), pullRequests)}
+              standing={selectedTicket === undefined ? NO_STANDING : standingOf(selectedTicket, pullRequests)}
               onLink={(href) => app.docs.followFromTicket(href)}
               alert={<SessionFailure failure={failure} />}
               onHide={hasDock ? () => app.hideMainView() : undefined}

@@ -6,11 +6,11 @@ import { RpcError } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
 import { BoardPane, TicketPane } from './BoardScreen';
 import { BoardStore } from './boardStore';
-import { PullRequestRead, type TicketStanding, WorktreeRead } from './ticketStanding';
+import { PullRequestRead, type TicketStanding } from './ticketStanding';
 import { boardFixture, ticketFixture } from './fixtures';
 import { Selection } from './selection';
 
-const NO_STANDING: TicketStanding = { worktree: { read: WorktreeRead.None, path: undefined }, pullRequest: { read: PullRequestRead.None, number: undefined } };
+const NO_STANDING: TicketStanding = { pullRequest: { read: PullRequestRead.None, number: undefined } };
 const PANELS = { tabs: [{ id: 'board', label: 'Board', count: 3 }, { id: 'docs', label: 'Docs', count: 7 }], selected: 'board', onSelect: () => {} };
 
 const setup = (markerOf: (ticket: string) => LampColour | undefined = () => undefined, standing: TicketStanding = NO_STANDING) => {
@@ -192,40 +192,35 @@ const richTicket = boardFixture([
 const factOf = (label: string): string => screen.getByText(label).nextElementSibling?.textContent ?? '';
 
 describe('the ticket\'s facts line', () => {
-  it('says its status, type, context, branch, other labels, worktree and open pull request', async () => {
-    const { client, loaded } = setup(() => undefined, { worktree: { read: WorktreeRead.Held, path: '.worktrees/PROJ-1' }, pullRequest: { read: PullRequestRead.Open, number: 12 } });
+  it('says its status, type, context, other labels and open pull request', async () => {
+    const { client, loaded } = setup(() => undefined, { pullRequest: { read: PullRequestRead.Open, number: 12 } });
     await answer(client, loaded, richTicket);
-    expect(['status', 'type', 'context', 'branch', 'labels', 'worktree', 'pull request'].map(factOf)).toEqual([
+    expect(['status', 'type', 'context', 'labels', 'pull request'].map(factOf)).toEqual([
       'in progress',
       'fix',
       'session',
-      'proj-1-rich',
       'ux, desktop',
-      '.worktrees/PROJ-1',
       '#12',
     ]);
   });
 
-  it('says there is no worktree and no open pull request where they would be', async () => {
+  it('says there is no open pull request where it would be', async () => {
     const { client, loaded } = setup();
     await answer(client, loaded, richTicket);
-    expect(factOf('worktree')).toBe('none');
     expect(factOf('pull request')).toBe('none open');
   });
 
   it('says the pull requests are unavailable when they could not be read, rather than showing nothing', async () => {
-    const { client, loaded } = setup(() => undefined, { worktree: { read: WorktreeRead.None, path: undefined }, pullRequest: { read: PullRequestRead.Unavailable, number: undefined } });
+    const { client, loaded } = setup(() => undefined, { pullRequest: { read: PullRequestRead.Unavailable, number: undefined } });
     await answer(client, loaded, richTicket);
     expect(factOf('pull request')).toBe('unavailable');
   });
 
-  it.each([
-    [WorktreeRead.Unavailable, 'unavailable'],
-    [WorktreeRead.Reading, 'reading…'],
-  ])('says the worktree is %s in words, never as none', async (read, words) => {
-    const { client, loaded } = setup(() => undefined, { worktree: { read, path: undefined }, pullRequest: { read: PullRequestRead.None, number: undefined } });
+  it('leaves out the branch and the worktree, whose long text would wrap the line', async () => {
+    const { client, loaded } = setup();
     await answer(client, loaded, richTicket);
-    expect(factOf('worktree')).toBe(words);
+    expect(screen.queryByText('branch')).not.toBeInTheDocument();
+    expect(screen.queryByText('worktree')).not.toBeInTheDocument();
   });
 
   it('leaves out the type, context and labels a ticket does not carry', async () => {

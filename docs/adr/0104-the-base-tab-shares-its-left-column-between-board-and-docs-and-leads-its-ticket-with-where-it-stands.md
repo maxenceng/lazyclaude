@@ -9,7 +9,7 @@ Accepted.
 ## Context
 
 The Base tab stacked the Board over the Docs in a narrow left column, so each had half a column, and the main view kept the
-ticket's prose hugging its left edge under a row of facts that said nothing of the ticket's branch, worktree or pull request.
+ticket's prose hugging its left edge under a row of facts that said nothing of the ticket's pull request.
 A session waiting on a ticket showed only as a small glyph. A throwaway prototype (variant H) was drawn and chosen.
 
 ## Decision
@@ -21,10 +21,10 @@ A session waiting on a ticket showed only as a small glyph. A throwaway prototyp
   pane action, so it shows on the Board tab only.
 - **A waiting session is a worded pill** (`permission`, `needs input`, `your turn`) at the end of its ticket's Board row, the
   strongest when several wait, none for a busy or ended session.
-- **A facts line under the title** says status, type, context, branch, other labels, worktree and open pull request; a ticket
-  with no worktree or no open pull request says so, and unreadable pull requests say `unavailable`. The join of `session`'s
-  worktree and `review`'s pull request is made in `src/standing.ts`, in the window's composition, so no context imports another.
-  The prototype's links are not built: nothing produces them.
+- **A facts line under the title** says status, type, context, other labels and open pull request; a ticket with no open
+  pull request says so, and unreadable pull requests say `unavailable`. It leaves out branch and worktree because their long
+  text wraps the line. The pull request is matched on its head being the ticket's branch, in `src/standing.ts`, in the
+  window's composition. The prototype's links are not built: nothing produces them.
 - **Sessions come right after the facts**, waiting first and strongest first (`rowsFor` orders them, so the cursor and the
   display agree), each row one button carrying its action (`attach`, `resume`) and its key, `enter`. The ticket's prose is
   centred at its reading measure.
@@ -36,8 +36,6 @@ A session waiting on a ticket showed only as a small glyph. A throwaway prototyp
 
 ## Consequences
 
-- The worktree comes from the new `session/worktreeOf` method, not a field on `session/watch`, because it runs git and needs
-  per-ticket input; the window asks once the cursor rests and drops an answer for a ticket it has left.
 - With no ticket under the cursor the main view lists no sessions, so the five newest unlinked sessions are no longer
   reachable there; `N` still starts an unlinked session.
 - The Docs panel's `enter open or fold` is labelled `enter open`; the fold is unchanged.

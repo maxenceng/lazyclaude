@@ -10,7 +10,6 @@ import { bytesOfText, toBase64 } from './protocol';
 import { folderFixture, readFixture, treeFixture } from './docs/fixtures';
 import { hostedFixture, pastFixture, sessionFixture, sessionsFixture, ticketSessionsFixture } from './session/fixtures';
 import { Dock } from './session/dock';
-import { WORKTREE_DEBOUNCE_MS } from './session/ticketWorktrees';
 import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './session/recordings';
 import { fakeClient } from './test/fakeClient';
 import { testPlatform } from './testPlatform';
@@ -1443,42 +1442,20 @@ describe('a ticket\'s waiting session on its Board row', () => {
   });
 });
 
-const answerWorktree = (ready: Started, answer: unknown) =>
-  act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, WORKTREE_DEBOUNCE_MS + 20));
-    ready.client.answer('session/worktreeOf', answer);
-    await settle();
-  });
-
 const factOf = (label: string): string => within(screen.getByRole('region', { name: 'Ticket' })).getByText(label).nextElementSibling?.textContent ?? '';
 
 describe('the ticket in the main view', () => {
-  it('says where it stands: worktree and open pull request joined from session and review', async () => {
+  it('says where it stands: status and the open pull request joined from review', async () => {
     const ready = await readyApp();
     await answerPullRequests(ready, { kind: 'openPullRequests', pullRequests: [{ number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] }] });
-    act(() => ready.client.push('session/changed', sessionsFixture([])));
-    expect(factOf('worktree')).toBe('reading…');
-    await answerWorktree(ready, { kind: 'heldWorktree', path: '/p/.worktrees/PROJ-1', state: { kind: 'noMergedPullRequest' }, clear: false });
     expect(factOf('status')).toBe('in progress');
-    expect(factOf('branch')).toBe('proj-1-first');
-    expect(factOf('worktree')).toBe('/p/.worktrees/PROJ-1');
     expect(factOf('pull request')).toBe('#7');
   });
 
-  it('says there is no worktree and no open pull request where they would be', async () => {
+  it('says there is no open pull request where it would be', async () => {
     const ready = await readyApp();
     await answerPullRequests(ready, { kind: 'openPullRequests', pullRequests: [] });
-    act(() => ready.client.push('session/changed', sessionsFixture([])));
-    await answerWorktree(ready, { kind: 'noWorktree' });
-    expect(factOf('worktree')).toBe('none');
     expect(factOf('pull request')).toBe('none open');
-  });
-
-  it('says the worktree is unavailable when it could not be read', async () => {
-    const ready = await readyApp();
-    act(() => ready.client.push('session/changed', sessionsFixture([])));
-    await answerWorktree(ready, { kind: 'unreadableWorktree', reason: 'git failed' });
-    expect(factOf('worktree')).toBe('unavailable');
   });
 
   it('says the pull requests are unavailable when they could not be read', async () => {
