@@ -1,33 +1,57 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.argumentsRecordedIn;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.checkRunJson;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.closingIssueJson;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.closingIssuesJson;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.commitsOf;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.countJson;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.directoryRecordedIn;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.forkPullRequestJson;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghFailing;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghHanging;
-import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghTitlingWithItsArguments;
-import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghTitlingWithItsDirectory;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghRecordingItsArguments;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghRecordingItsDirectory;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.impatientRepositoryOver;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.listOfPullRequests;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.missingCommand;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.outcomeOfTheOnlyCheck;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pendingReviewsJson;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.projectAt;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pullRequestJson;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pullRequestJsonClosing;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pullRequestJsonWithComments;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pullRequestJsonWithCommits;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pullRequestJsonWithPendingReviewOf;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pullRequestJsonWithReviews;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pullRequestJsonWithTime;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pullRequestJsonWithout;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.readOnePrinted;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.readPrinted;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.repositoryOver;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.repositoryOverMissingGh;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.rollupOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.statusContextJson;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.thisRepositoryName;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.threadsJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import dev.maxenceng.lazyclaude.review.domain.ClosedIssueNumber;
+import dev.maxenceng.lazyclaude.review.domain.ClosesIssue;
+import dev.maxenceng.lazyclaude.review.domain.ClosesNoIssue;
+import dev.maxenceng.lazyclaude.review.domain.CommentCount;
 import dev.maxenceng.lazyclaude.review.domain.PullRequest;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestsUnavailableException;
 import dev.maxenceng.lazyclaude.review.published.CheckOutcome;
@@ -46,6 +70,131 @@ class GhPullRequestsRepositoryTest {
         assertThat(read.title().value()).isEqualTo("PR and CI");
         assertThat(read.head().value()).isEqualTo("PROJ-1-pr");
         assertThat(read.draft()).isTrue();
+    }
+
+    @Test
+    void shouldReadWhenItWasOpenedAsAnInstant() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonWithTime("2026-11-13T10:21:46Z")).openedAt().at())
+                .isEqualTo(Instant.parse("2026-11-13T10:21:46Z"));
+    }
+
+    @Test
+    void shouldBeUnavailableWhenItsCreatedAtIsNotATime() {
+        assertThatThrownBy(() -> readOnePrinted(root, pullRequestJsonWithTime("last Tuesday")))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("last Tuesday");
+    }
+
+    @Test
+    void shouldBeUnavailableWhenAPullRequestLacksWhenItWasOpened() {
+        assertThatThrownBy(() -> readOnePrinted(root, pullRequestJsonWithout("createdAt")))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("created at");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "comments,comment count",
+        "reviewThreads,review threads",
+        "reviews,pending reviews",
+        "closingIssuesReferences,closing issues",
+        "baseRepository,base repository"
+    })
+    void shouldBeUnavailableWhenAPullRequestLacksWhatItsFactsAreReadFrom(String field, String named) {
+        assertThatThrownBy(() -> readOnePrinted(root, pullRequestJsonWithout(field)))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining(named);
+    }
+
+    @Test
+    void shouldCountItsConversationComments() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonWithComments(countJson(2), threadsJson())).comments())
+                .isEqualTo(new CommentCount(2));
+    }
+
+    @Test
+    void shouldCountNoCommentsForAPullRequestNobodyCommentedOn() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonWithComments(countJson(0), threadsJson())).comments())
+                .isEqualTo(new CommentCount(0));
+    }
+
+    @Test
+    void shouldAddEveryCommentOfEveryReviewThreadToTheConversationOnes() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonWithComments(countJson(2), threadsJson(3, 1, 4))).comments())
+                .as("a thread with several comments counts each, not once")
+                .isEqualTo(new CommentCount(10));
+    }
+
+    @Test
+    void shouldLeaveOutTheCommentsOfYourPendingReviewWhichNobodyElseCanSee() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonWithPendingReviewOf(2, 5)).comments())
+                .isEqualTo(new CommentCount(3));
+    }
+
+    @Test
+    void shouldHaveAPendingReviewWhenGitHubShowsYouOne() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonWithReviews(pendingReviewsJson(0))).pendingReview()).isTrue();
+    }
+
+    @Test
+    void shouldHaveNoPendingReviewWhenGitHubShowsYouNone() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonWithReviews(threadsJson())).pendingReview()).isFalse();
+    }
+
+    @Test
+    void shouldCloseTheIssueItNames() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonClosing(closingIssuesJson(closingIssueJson(215, thisRepositoryName())))).closing())
+                .isEqualTo(new ClosesIssue(new ClosedIssueNumber(215)));
+    }
+
+    @Test
+    void shouldCloseTheFirstIssueWhenItNamesSeveral() throws IOException {
+        assertThat(readOnePrinted(
+                                root,
+                                pullRequestJsonClosing(closingIssuesJson(
+                                        closingIssueJson(7, thisRepositoryName()), closingIssueJson(9, thisRepositoryName()))))
+                        .closing())
+                .isEqualTo(new ClosesIssue(new ClosedIssueNumber(7)));
+    }
+
+    @Test
+    void shouldCloseTheFirstIssueOfThisRepositoryWhenAnotherRepositoryComesFirst() throws IOException {
+        assertThat(readOnePrinted(
+                                root,
+                                pullRequestJsonClosing(closingIssuesJson(
+                                        closingIssueJson(3, "acme/elsewhere"), closingIssueJson(9, thisRepositoryName()))))
+                        .closing())
+                .as("an issue number of another repository is not a ticket of this one")
+                .isEqualTo(new ClosesIssue(new ClosedIssueNumber(9)));
+    }
+
+    @Test
+    void shouldCloseNoIssueForNoneOrForAnotherRepositoryOnly() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonClosing(closingIssuesJson())).closing()).isEqualTo(new ClosesNoIssue());
+        assertThat(readOnePrinted(root, pullRequestJsonClosing(closingIssuesJson(closingIssueJson(3, "acme/elsewhere")))).closing())
+                .isEqualTo(new ClosesNoIssue());
+    }
+
+    @Test
+    void shouldBeUnavailableWhenAClosedIssueLacksItsNumber() {
+        assertThatThrownBy(() -> readOnePrinted(
+                        root, pullRequestJsonClosing(closingIssuesJson("{\"repository\":{\"nameWithOwner\":\"acme/app\"}}"))))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("closed issue number");
+    }
+
+    @Test
+    void shouldBeUnavailableWhenAClosedIssueLacksItsRepository() {
+        assertThatThrownBy(() -> readOnePrinted(root, pullRequestJsonClosing(closingIssuesJson("{\"number\":4}"))))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("closed issue repository");
+    }
+
+    @Test
+    void shouldBeUnavailableWhenAThreadLacksItsCommentCount() {
+        assertThatThrownBy(() -> readOnePrinted(root, pullRequestJsonWithComments(countJson(0), "{\"nodes\":[{}]}")))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("review thread comment count");
     }
 
     @Test
@@ -73,10 +222,13 @@ class GhPullRequestsRepositoryTest {
     }
 
     @Test
-    void shouldHaveNoChecksForARollupThatIsNull() throws IOException {
-        String output = "[{\"number\":1,\"title\":\"t\",\"headRefName\":\"b\",\"isDraft\":false,\"statusCheckRollup\":null}]";
+    void shouldHaveNoChecksForACommitWithNoRollup() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonWithCommits(commitsOf("null"))).checks().listed()).isEmpty();
+    }
 
-        assertThat(readPrinted(root, output).getFirst().checks().listed()).isEmpty();
+    @Test
+    void shouldHaveNoChecksForAPullRequestWithNoCommit() throws IOException {
+        assertThat(readOnePrinted(root, pullRequestJsonWithCommits("{\"nodes\":[]}")).checks().listed()).isEmpty();
     }
 
     @ParameterizedTest
@@ -137,18 +289,25 @@ class GhPullRequestsRepositoryTest {
     }
 
     @Test
-    void shouldAskForTheOpenPullRequestsWithTheFieldsTheBoardNeeds() throws IOException {
-        List<PullRequest> read = repositoryOver(ghTitlingWithItsArguments(root)).openPullRequests(projectAt(root));
+    void shouldAskOneGraphqlQueryForTheOpenPullRequestsNewestFirstInThisRepository() throws IOException {
+        repositoryOver(ghRecordingItsArguments(root, "[]")).openPullRequests(projectAt(root));
 
-        assertThat(read.getFirst().title().value())
-                .isEqualTo("pr list --state open --limit 100 --json number,title,headRefName,isDraft,isCrossRepository,statusCheckRollup");
+        assertThat(argumentsRecordedIn(root))
+                .containsSequence("api", "graphql")
+                .contains("owner={owner}", "repo={repo}", ".data.repository.pullRequests.nodes")
+                .anySatisfy(argument -> assertThat(argument)
+                        .startsWith("query=")
+                        .contains("pullRequests(states: OPEN, first: 100, orderBy: {field: CREATED_AT, direction: DESC})")
+                        .contains("reviews(states: PENDING, first: 1)")
+                        .contains("reviewThreads(first: 100)")
+                        .contains("closingIssuesReferences(first: 10)"));
     }
 
     @Test
     void shouldAskInTheProjectsDirectoryWhereverLazyclaudeWasStarted() throws IOException {
-        List<PullRequest> read = repositoryOver(ghTitlingWithItsDirectory(root)).openPullRequests(projectAt(root));
+        repositoryOver(ghRecordingItsDirectory(root, "[]")).openPullRequests(projectAt(root));
 
-        assertThat(read.getFirst().title().value()).isEqualTo(root.toRealPath().toString());
+        assertThat(directoryRecordedIn(root)).isEqualTo(root.toRealPath());
     }
 
     @Test
@@ -169,26 +328,29 @@ class GhPullRequestsRepositoryTest {
     }
 
     @Test
+    void shouldBeUnavailableWhenTheRepositoryAnswersNoListOfPullRequests() {
+        assertThatThrownBy(() -> readPrinted(root, "null"))
+                .isInstanceOf(PullRequestsUnavailableException.class)
+                .hasMessageContaining("no list of pull requests");
+    }
+
+    @Test
     void shouldBeUnavailableWhenGhPrintsSomethingThatIsNotJson() {
         assertThatThrownBy(() -> readPrinted(root, "Welcome to gh"))
                 .isInstanceOf(PullRequestsUnavailableException.class)
-                .hasMessageContaining("gh pr list");
+                .hasMessageContaining("gh api graphql");
     }
 
     @Test
     void shouldBeUnavailableWhenAPullRequestLacksItsHeadBranch() {
-        String output = "[{\"number\":1,\"title\":\"t\",\"isDraft\":false,\"statusCheckRollup\":[]}]";
-
-        assertThatThrownBy(() -> readPrinted(root, output))
+        assertThatThrownBy(() -> readPrinted(root, listOfPullRequests(pullRequestJsonWithout("headRefName"))))
                 .isInstanceOf(PullRequestsUnavailableException.class)
                 .hasMessageContaining("head branch");
     }
 
     @Test
     void shouldBeUnavailableWhenACheckLacksItsName() {
-        String output = "[{\"number\":1,\"title\":\"t\",\"headRefName\":\"b\",\"isDraft\":false,\"statusCheckRollup\":[{\"status\":\"COMPLETED\"}]}]";
-
-        assertThatThrownBy(() -> readPrinted(root, output))
+        assertThatThrownBy(() -> readOnePrinted(root, pullRequestJsonWithCommits(commitsOf(rollupOf("{\"status\":\"COMPLETED\"}")))))
                 .isInstanceOf(PullRequestsUnavailableException.class)
                 .hasMessageContaining("wrote a pull request without check name");
     }

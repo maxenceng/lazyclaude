@@ -54,7 +54,11 @@ export const pullRequestFixture = (overrides: Partial<ReviewPullRequestView> = {
   title: 'Add the thing',
   head: 'proj-1-first',
   draft: false,
+  openedAt: '2026-01-01T00:00:00Z',
   checks: [],
+  comments: 0,
+  pendingReview: false,
+  closing: { kind: 'closesNoIssue' },
   ...overrides,
 });
 

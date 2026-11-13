@@ -63,6 +63,7 @@ export type ReviewDiffLine = ReviewAddedLine | ReviewRemovedLine | ReviewContext
 export type ReviewThreadsView = ReviewLoadingThreadsView | ReviewReadThreadsView | ReviewUnavailableThreadsView;
 export type ReviewThreadPosition = ReviewPlacedThread | ReviewOutdatedThread;
 export type ReviewThreadSide = 'LEFT' | 'RIGHT';
+export type ReviewOriginalPlace = ReviewOriginallyPlaced | ReviewNoOriginalPlace;
 export type ReviewPendingReviewView =
   | ReviewLoadingPendingReviewView
   | ReviewNoPendingReviewView
@@ -77,6 +78,7 @@ export type ReviewSummaryDraftPayload = ReviewTypedSummaryPayload | ReviewUntype
 export type ReviewPullRequestsView =
   ReviewCheckingPullRequestsView | ReviewOpenPullRequestsView | ReviewUnavailablePullRequestsView;
 export type ReviewCheckOutcome = 'FAILED' | 'PENDING' | 'PASSED';
+export type ReviewIssueClosing = ReviewClosesIssue | ReviewClosesNoIssue;
 export type ReviewPullRequestOnView = ReviewHeadedPullRequestView | ReviewNoHeadedPullRequestView;
 export type ReviewPendingReviewWriteView = ReviewWrittenReviewView | ReviewRefusedWriteView;
 export type SessionWatchedPayload = SessionWatchedSessionPayload | SessionNoWatchedSessionPayload;
@@ -624,6 +626,14 @@ export interface ReviewPlacedThread {
 }
 export interface ReviewOutdatedThread {
   kind: 'outdatedThread';
+  was: ReviewOriginalPlace;
+}
+export interface ReviewOriginallyPlaced {
+  kind: 'originallyPlaced';
+  place: ReviewPlacedThread;
+}
+export interface ReviewNoOriginalPlace {
+  kind: 'noOriginalPlace';
 }
 export interface ReviewThreadComment {
   author: string;
@@ -743,11 +753,22 @@ export interface ReviewPullRequestView {
   title: string;
   head: string;
   draft: boolean;
+  openedAt: string;
   checks: ReviewCheckView[];
+  comments: number;
+  pendingReview: boolean;
+  closing: ReviewIssueClosing;
 }
 export interface ReviewCheckView {
   name: string;
   outcome: ReviewCheckOutcome;
+}
+export interface ReviewClosesIssue {
+  kind: 'closesIssue';
+  number: number;
+}
+export interface ReviewClosesNoIssue {
+  kind: 'closesNoIssue';
 }
 export interface ReviewUnavailablePullRequestsView {
   kind: 'unavailablePullRequests';

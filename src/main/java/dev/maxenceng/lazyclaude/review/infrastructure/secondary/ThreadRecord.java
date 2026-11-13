@@ -14,6 +14,9 @@ import dev.maxenceng.lazyclaude.review.domain.ReviewThread;
 import dev.maxenceng.lazyclaude.review.published.CommentBody;
 import dev.maxenceng.lazyclaude.review.published.DiffLineNumber;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
+import dev.maxenceng.lazyclaude.review.published.NoOriginalPlace;
+import dev.maxenceng.lazyclaude.review.published.OriginalPlace;
+import dev.maxenceng.lazyclaude.review.published.OriginallyPlaced;
 import dev.maxenceng.lazyclaude.review.published.OutdatedThread;
 import dev.maxenceng.lazyclaude.review.published.PendingCommentId;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
@@ -100,14 +103,7 @@ record ThreadRecord(
         Integer last = line == null ? originalLine : line;
         Integer first = line == null ? originalStartLine : startLine;
         return Optional.ofNullable(last)
-                .map(end -> PendingOnDiff.builder()
-                        .path(new DiffPath(path))
-                        .position(PlacedThread.builder()
-                                .side(side())
-                                .first(new DiffLineNumber(first == null ? end : first))
-                                .last(new DiffLineNumber(end))
-                                .build())
-                        .build());
+                .map(end -> PendingOnDiff.builder().path(new DiffPath(path)).position(placed(first, end)).build());
     }
 
     private PendingReply reply() {
@@ -118,15 +114,28 @@ record ThreadRecord(
                 .build();
     }
 
-    /** A thread GitHub marks outdated, or that names no line, sits on none; a range runs from its start line to its line. */
+    /**
+     * A thread GitHub marks outdated, or that names no line, sits on none, and was on the lines it was written on, when GitHub names
+     * them; a range runs from its start line to its line.
+     */
     private ThreadPosition position() {
         if (Boolean.TRUE.equals(isOutdated) || line == null) {
-            return new OutdatedThread();
+            return new OutdatedThread(originalPlace());
         }
+        return placed(startLine, line);
+    }
+
+    private OriginalPlace originalPlace() {
+        return Optional.ofNullable(originalLine)
+                .<OriginalPlace>map(last -> new OriginallyPlaced(placed(originalStartLine, last)))
+                .orElseGet(NoOriginalPlace::new);
+    }
+
+    private PlacedThread placed(Integer first, int last) {
         return PlacedThread.builder()
                 .side(side())
-                .first(new DiffLineNumber(startLine == null ? line : startLine))
-                .last(new DiffLineNumber(line))
+                .first(new DiffLineNumber(first == null ? last : first))
+                .last(new DiffLineNumber(last))
                 .build();
     }
 

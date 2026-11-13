@@ -15,6 +15,7 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingThreadsView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.openThreadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.outdatedThreadView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.outdatedThreadViewFrom;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.resolvedThreadView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
@@ -25,6 +26,7 @@ import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDi
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.pendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.secondPendingCommentId;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightRange;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAgeQueryFixture.sessionAgeQuery;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
@@ -226,6 +228,10 @@ final class ShellReviewFixture {
                 openThreadView(diffPath(), rightOn(3)),
                 outdatedThreadView(diffPath()),
                 resolvedThreadView(secondDiffPath(), rightOn(1)));
+    }
+
+    static ReadThreadsView threadsWithAnOutdatedThreadOnItsOriginalLine() {
+        return readThreadsViewOf(outdatedThreadViewFrom(diffPath(), rightOn(12)), outdatedThreadViewFrom(diffPath(), rightRange(8, 11)));
     }
 
     static Shell shellReviewingWhileTheReadsHang(PullRequestDiffView diff, ThreadsView threads) {

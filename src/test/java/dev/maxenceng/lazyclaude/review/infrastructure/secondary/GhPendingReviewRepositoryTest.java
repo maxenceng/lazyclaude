@@ -34,7 +34,7 @@ import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.pending
 import static dev.maxenceng.lazyclaude.review.published.PendingIdFixture.threadId;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.leftRange;
-import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.outdated;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.outdatedFrom;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -112,14 +112,14 @@ class GhPendingReviewRepositoryTest {
     }
 
     @Test
-    void shouldReadAReplyToAnOutdatedThreadAsSittingOnNoLine() throws IOException {
+    void shouldReadAReplyToAnOutdatedThreadAsSittingOnNoLineAndWrittenOnItsOriginalLine() throws IOException {
         String output = pendingPageJson(
                 REVIEW,
                 pendingThreadJson(
                         "PRRT_1", "src/Board.java", "null", "3", "null", "RIGHT", true,
                         threadCommentJson("PRRC_0", "SUBMITTED", "Why?"), threadCommentJson("PRRC_2", "PENDING", REPLY)));
 
-        assertThat(readPendingCommentsPrinted(root, output)).containsExactly(replyCommentOn(diffPath(), outdated()));
+        assertThat(readPendingCommentsPrinted(root, output)).containsExactly(replyCommentOn(diffPath(), outdatedFrom(rightOn(3))));
     }
 
     @Test

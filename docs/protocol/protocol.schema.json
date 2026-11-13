@@ -1112,6 +1112,29 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
+    "review.ClosesIssue" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "closesIssue"
+        },
+        "number" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "number" ],
+      "additionalProperties" : false
+    },
+    "review.ClosesNoIssue" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "closesNoIssue"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
     "review.CommentAnchorPayload" : {
       "type" : "object",
       "properties" : {
@@ -1340,6 +1363,16 @@
       "required" : [ "header", "lines" ],
       "additionalProperties" : false
     },
+    "review.IssueClosing" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.ClosesIssue"
+      }, {
+        "$ref" : "#/$defs/review.ClosesNoIssue"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
     "review.LoadingDiffView" : {
       "type" : "object",
       "properties" : {
@@ -1429,6 +1462,16 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
+    "review.NoOriginalPlace" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noOriginalPlace"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
     "review.NoPendingReviewView" : {
       "type" : "object",
       "properties" : {
@@ -1506,14 +1549,40 @@
       "required" : [ "kind", "pullRequests" ],
       "additionalProperties" : false
     },
+    "review.OriginalPlace" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.OriginallyPlaced"
+      }, {
+        "$ref" : "#/$defs/review.NoOriginalPlace"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "review.OriginallyPlaced" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "originallyPlaced"
+        },
+        "place" : {
+          "$ref" : "#/$defs/review.PlacedThread"
+        }
+      },
+      "required" : [ "kind", "place" ],
+      "additionalProperties" : false
+    },
     "review.OutdatedThread" : {
       "type" : "object",
       "properties" : {
         "kind" : {
           "const" : "outdatedThread"
+        },
+        "was" : {
+          "$ref" : "#/$defs/review.OriginalPlace"
         }
       },
-      "required" : [ "kind" ],
+      "required" : [ "kind", "was" ],
       "additionalProperties" : false
     },
     "review.PendingAnchorView" : {
@@ -1756,14 +1825,26 @@
         "draft" : {
           "type" : "boolean"
         },
+        "openedAt" : {
+          "type" : "string"
+        },
         "checks" : {
           "type" : "array",
           "items" : {
             "$ref" : "#/$defs/review.CheckView"
           }
+        },
+        "comments" : {
+          "type" : "integer"
+        },
+        "pendingReview" : {
+          "type" : "boolean"
+        },
+        "closing" : {
+          "$ref" : "#/$defs/review.IssueClosing"
         }
       },
-      "required" : [ "number", "title", "head", "draft", "checks" ],
+      "required" : [ "number", "title", "head", "draft", "openedAt", "checks", "comments", "pendingReview", "closing" ],
       "additionalProperties" : false
     },
     "review.PullRequestsView" : {

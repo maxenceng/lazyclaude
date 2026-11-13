@@ -3,7 +3,7 @@ import { PullRequestRead } from './board/ticketPullRequest';
 import type { ReviewPullRequestView, ReviewPullRequestsView } from './protocol';
 import { ticketPullRequestOf } from './ticketPullRequest';
 
-const pullRequest = (number: number, head: string): ReviewPullRequestView => ({ number, title: 'A change', head, draft: false, checks: [] });
+const pullRequest = (number: number, head: string): ReviewPullRequestView => ({ number, title: 'A change', head, draft: false, openedAt: '2026-01-01T00:00:00Z', checks: [], comments: 0, pendingReview: false, closing: { kind: 'closesNoIssue' } });
 const open = (...pullRequests: ReviewPullRequestView[]): ReviewPullRequestsView => ({ kind: 'openPullRequests', pullRequests });
 
 describe('the pull request a ticket\'s facts line names', () => {
