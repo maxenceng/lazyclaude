@@ -2,12 +2,11 @@
   "board": {
     "title": "Board",
     "loading": "Reading the board…",
-    "empty": "No tickets on the board.",
     "noProject": "This directory is not a project",
     "unavailableBoard": "The board cannot be read",
     "fault": "The board could not be read",
     "retry": "Retry",
-    "unreadable": "unreadable",
+    "none": "none",
     "capture": "New ticket",
     "captureKey": "c"
   },

@@ -6,6 +6,8 @@ Date: 2026-11-06
 
 Accepted. Builds on ADR 0082 (the composition side) and ADR 0090 (`review` decides the rules both frontends show).
 Amended by ADR 0100: Base lists the ten latest closed done tickets, and a done card goes to Base.
+Amended by ADR 0105: the Board tab's preview sits beside the columns and never closes, and a card's footer drops the
+other labels.
 
 ## Context
 

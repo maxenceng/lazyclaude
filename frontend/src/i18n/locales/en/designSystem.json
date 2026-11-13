@@ -19,9 +19,6 @@
     "warning": "⚠ {{text}}",
     "warningCounted": "⚠ {{count}} · {{text}}"
   },
-  "unreadableRow": {
-    "row": "{{id}} — {{reason}}"
-  },
   "dockTabs": {
     "label": "hosted sessions"
   },

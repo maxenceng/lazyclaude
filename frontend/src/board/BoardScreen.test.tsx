@@ -102,18 +102,11 @@ describe('the Board', () => {
     expect(within(screen.getByRole('region', { name: 'Board' })).getByText('in review').parentElement).toHaveTextContent('in review0');
   });
 
-  it('shows the unreadable tickets with their reasons under their own heading', async () => {
+  it('draws no section and no row for the tickets that could not be read', async () => {
     const { client, loaded } = setup();
     await answer(client, loaded, { ...tickets, unreadable: [{ id: 'PROJ-9', reason: 'no title' }] });
-    const board = within(screen.getByRole('region', { name: 'Board' }));
-    expect(board.getByText('unreadable').parentElement).toHaveTextContent('unreadable1');
-    expect(board.getByText('PROJ-9 — no title')).toBeInTheDocument();
-  });
-
-  it('shows no unreadable heading when none is unreadable', async () => {
-    const { client, loaded } = setup();
-    await answer(client, loaded, tickets);
     expect(screen.queryByText('unreadable')).not.toBeInTheDocument();
+    expect(screen.queryByText(/PROJ-9/)).not.toBeInTheDocument();
   });
 
   it('typesets a ticket\'s body as markdown and hands its links to the page', async () => {

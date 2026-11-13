@@ -3,6 +3,7 @@
   --cursor-ink: var(--text);
   --cursor-border: color-mix(in srgb, var(--text) 45%, var(--pane));
   --cursor-edge: inset 0 0 0 1px var(--cursor-border);
+  --cursor-card: var(--card);
   --pane-action-ink: var(--dim);
   --pane-action-hover: var(--seam);
   display: flex;
@@ -41,6 +42,7 @@
   --cursor-ink: var(--text-on-light);
   --cursor-border: var(--selected);
   --cursor-edge: none;
+  --cursor-card: var(--card-lifted);
   --cursor-tag-ink: var(--text-on-light);
   --pane-action-ink: var(--lit-ink);
   --pane-action-hover: color-mix(in srgb, var(--lit-ink) 14%, transparent);

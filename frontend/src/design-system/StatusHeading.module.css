@@ -6,8 +6,9 @@
   font-size: var(--size-small);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--dim);
-  border-bottom: 1px solid var(--seam);
+  --status-ink: var(--dim);
+  color: var(--status-ink);
+  border-bottom: 2px solid color-mix(in srgb, var(--status-ink) 50%, transparent);
 }
 
 .count {
@@ -15,21 +16,21 @@
 }
 
 .heading[data-status='in-progress'] {
-  color: var(--status-in-progress);
+  --status-ink: var(--status-in-progress);
 }
 
 .heading[data-status='in-review'] {
-  color: var(--status-in-review);
+  --status-ink: var(--status-in-review);
 }
 
 .heading[data-status='todo'] {
-  color: var(--status-todo);
+  --status-ink: var(--status-todo);
 }
 
 .heading[data-status='draft'] {
-  color: var(--status-draft);
+  --status-ink: var(--status-draft);
 }
 
 .heading[data-status='done'] {
-  color: var(--status-done);
+  --status-ink: var(--status-done);
 }

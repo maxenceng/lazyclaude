@@ -75,7 +75,7 @@ export class AppModel {
       onOpened: () => this.focusOn(Focus.Dock),
       onPicking: () => this.layout.set(this.layout.get().showTicket()),
     });
-    this.tabs = new WindowTabs({ board: this.board, review: this.review, layout: this.layout });
+    this.tabs = new WindowTabs({ board: this.board, review: this.review, layout: this.layout, pressRow: (index) => this.pressRow(index) });
     this.quitting = new Quitting({
       hosted: () => hostedOf(this.sessionStore.sessions.get(), this.hosting.dock.get().tabs.length),
       closeWindow: () => platform.closeWindow(),

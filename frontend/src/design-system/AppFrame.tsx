@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import styles from './AppFrame.module.css';
 
-/** Which panes the window shows: every one, all but the dock, all but the main view, the dock minimised to its strip under the main view, the dock zoomed over the rest, or a tab's screen over a dock folded to a strip. */
+/** Which panes the window shows: every one, all but the dock, all but the main view, the dock minimised to its strip under the main view, the dock zoomed over the rest, a tab's screen over a dock folded to a strip, or a tab's screen with its preview beside it over that strip. */
 export enum Arrangement {
   Full = 'full',
   NoDock = 'noDock',
   NoMain = 'noMain',
   Zoomed = 'zoomed',
   Tab = 'tab',
+  TabPreview = 'tabPreview',
   Minimised = 'minimised',
 }
 
@@ -15,7 +16,7 @@ interface Props {
   statusLine: ReactNode;
   keyBar: ReactNode;
   board: ReactNode;
-  /** Under the board: the Docs panel, or a tab's preview of what its cursor is on. */
+  /** Under the board: the Docs panel. */
   docs: ReactNode;
   /** A short panel under the left column's others, as a review's pending review stands under Files and Comments. */
   foot?: ReactNode;

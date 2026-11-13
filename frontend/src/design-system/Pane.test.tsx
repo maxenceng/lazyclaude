@@ -92,6 +92,11 @@ describe('a pane', () => {
     expect(ruleOf(pane, '.focused')).toContain('--cursor-edge: none');
   });
 
+  it('lifts the selected card only in the focused pane, the unfocused one keeping the plain card ground', () => {
+    expect(ruleOf(pane, '.pane')).toContain('--cursor-card: var(--card)');
+    expect(ruleOf(pane, '.focused')).toContain('--cursor-card: var(--card-lifted)');
+  });
+
   it('keeps its title row one height whatever it holds: a title, panel tabs, chips, tabs beside it or actions', () => {
     expect(ruleOf(pane, '.head')).toContain('height: var(--pane-head)');
     expect(ruleOf(pane, '.title')).toContain('padding: 0 0 0 var(--space-4)');
