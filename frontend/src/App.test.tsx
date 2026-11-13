@@ -139,9 +139,10 @@ const docsRead = (started: Started) => {
 };
 
 describe('the Docs panel in the window', () => {
-  it('shows the tree under the Board and the document the main view shows once a row is pressed', async () => {
+  it('shows the tree in the Docs tab of the left column and the document the main view shows once a row is pressed', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     expect(within(screen.getByRole('region', { name: 'Docs' })).getAllByRole('button').map((row) => row.textContent)).toEqual(['README.md', 'guide1', 'intro.md']);
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     expect(screen.getByRole('region', { name: 'Document' })).toBeInTheDocument();
@@ -152,6 +153,7 @@ describe('the Docs panel in the window', () => {
   it('moves over the tree with j and k while it has focus, and gives the main view back to the ticket on the Board', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     await started.user.keyboard('jj');
     expect(screen.getByRole('button', { name: 'intro.md' })).toHaveAttribute('aria-current', 'true');
@@ -163,6 +165,7 @@ describe('the Docs panel in the window', () => {
   it('follows a link to a heading, and says on the status line when the heading is not there', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     await started.user.click(screen.getByRole('link', { name: 'nowhere' }));
     expect(screen.getByRole('button', { name: 'intro.md' })).toHaveAttribute('aria-current', 'true');
@@ -173,6 +176,7 @@ describe('the Docs panel in the window', () => {
     const started = await readyApp();
     started.platform.opener.failure = new Error('no browser');
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     await act(async () => {
       started.app.docs.follow('https://example.com');
@@ -213,6 +217,7 @@ describe('a shown document and the Docs panel', () => {
   it('carries a close button that gives the main view back to the ticket and focus to it', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     await started.user.click(within(screen.getByRole('region', { name: 'Document' })).getByRole('button', { name: 'Close document (esc)' }));
     expect(screen.getByRole('region', { name: 'Ticket' })).toBeInTheDocument();
@@ -223,6 +228,7 @@ describe('a shown document and the Docs panel', () => {
   it('hands focus to the ticket when the document is closed while focus is in the dock', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     act(() => started.app.focusOn(Focus.Dock));
     await started.user.click(screen.getByRole('button', { name: 'Close document (esc)' }));
@@ -232,6 +238,7 @@ describe('a shown document and the Docs panel', () => {
   it('shows a document again when the cursor moves after it was closed', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     await started.user.click(screen.getByRole('button', { name: 'Close document (esc)' }));
     act(() => started.app.focusOn(Focus.Docs));
@@ -242,8 +249,9 @@ describe('a shown document and the Docs panel', () => {
   it('gives the shown document focus on a click in it, with its own keys on the key bar, l offering it from the Docs panel', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
-    expect(keyBar()).toHaveTextContent('l document');
+    expect(keyBar()).toHaveTextContent('l read');
     await started.user.click(screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement);
     expect(started.app.layout.get().focus).toBe(Focus.Document);
     expect(keyBar()).toHaveTextContent('j/k scroll');
@@ -255,6 +263,7 @@ describe('a shown document and the Docs panel', () => {
   it('keeps the focused document shown and focused on enter and on l, which have nothing to do there', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     await started.user.click(screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement);
     await started.user.keyboard('{Enter}');
@@ -266,6 +275,7 @@ describe('a shown document and the Docs panel', () => {
   it('scrolls the focused document half a page on ctrl+d, which plain d does not', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     const body = screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement;
     const scrolled = vi.fn();
@@ -280,6 +290,7 @@ describe('a shown document and the Docs panel', () => {
   it('shows the ticket and its picker on n while a document is shown, so the picker is never opened unseen', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     await started.user.click(screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement);
     await started.user.keyboard('n');
@@ -291,6 +302,7 @@ describe('a shown document and the Docs panel', () => {
   it('scrolls the focused document down on j and up on k', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     const body = screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement;
     const scrolled = vi.fn();
@@ -304,6 +316,7 @@ describe('a shown document and the Docs panel', () => {
   it('shows esc close on the key bar while a document is shown, and esc closes it and hands focus to the ticket', async () => {
     const started = await readyApp();
     docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     expect(keyBar()).toHaveTextContent('esc close');
     await started.user.keyboard('{Escape}');
@@ -731,13 +744,26 @@ describe('a hosted session\'s pane', () => {
     expect(keyBar()).toHaveTextContent('enter open');
   });
 
-  it('takes its tabs from the hosted sessions the watch lists, with their lamp', async () => {
+  it('takes its tabs from the hosted sessions the watch lists, each named by its session and with its lamp', async () => {
     const { client } = await readyApp();
-    const waiting = sessionFixture({ id: 'live1', state: { kind: 'waitingForPermission', reason: { kind: 'waitingReason', value: 'edit' } }, ticket: 'PROJ-1' });
+    const waiting = sessionFixture({ id: 'live1', name: 'PROJ-1 start', state: { kind: 'waitingForPermission', reason: { kind: 'waitingReason', value: 'edit' } }, ticket: 'PROJ-1' });
     act(() => client.push('session/changed', { ...sessionsFixture([waiting]), hosted: [hostedFixture('h1', { ticket: 'PROJ-1', live: waiting })] }));
     const tab = within(dockTabs()).getByRole('tab');
-    expect(tab).toHaveTextContent('PROJ-1');
+    expect(tab).toHaveTextContent(/^.*PROJ-1 start$/);
     expect(within(tab).getByRole('img', { name: 'waiting for permission' })).toBeInTheDocument();
+  });
+
+  it('names a starting tab by its ticket until its session is read', async () => {
+    const { client } = await readyApp();
+    act(() => client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1', { ticket: 'PROJ-1' })] }));
+    expect(within(dockTabs()).getByRole('tab')).toHaveTextContent('PROJ-1');
+  });
+
+  it('titles the dock Sessions, its tabs in its title row', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    const dock = screen.getByRole('region', { name: 'Sessions' });
+    expect(within(dock).getByRole('tablist', { name: 'hosted sessions' }).closest('[data-pane-body]')).toBeNull();
   });
 
   it('shows the shift+drag hint while the focused pane\'s claude reports the mouse, and not after', async () => {
@@ -856,9 +882,9 @@ describe('the dock\'s layout', () => {
     const ready = await readyApp();
     await startedSession(ready);
     await ready.user.keyboard('{Alt>}z{/Alt}');
-    expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Board' })).not.toBeInTheDocument();
     await ready.user.keyboard('{Alt>}z{/Alt}');
-    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
   });
 });
 
@@ -912,7 +938,7 @@ const reviewOpened = async (answers: { pending?: unknown; threads?: unknown; dif
   });
   await ready.user.keyboard('p');
   await act(async () => {
-    ready.client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+    ready.client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
     await settle();
   });
   await act(async () => {
@@ -953,7 +979,7 @@ describe('the Review screen', () => {
 
   it('opens on p for a ticket whose branch heads an open pull request, with Files, Comments and Review beside the diff', async () => {
     await reviewOpened();
-    expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Board' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Files' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Comments' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Review' })).toBeInTheDocument();
@@ -973,7 +999,7 @@ describe('the Review screen', () => {
     });
     await ready.user.keyboard('p');
     await act(async () => {
-      ready.client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+      ready.client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
       await settle();
     });
     expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toHaveTextContent('Reading the diff');
@@ -982,13 +1008,13 @@ describe('the Review screen', () => {
   it('does not open for a ticket without an open pull request', async () => {
     const ready = await readyApp();
     await ready.user.keyboard('p');
-    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
   });
 
   it('goes back to the Board on escape', async () => {
     const ready = await reviewOpened();
     await ready.user.keyboard('{Escape}');
-    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
   });
 
   it('shows the refusal of a range across hunks on the status line', async () => {
@@ -1054,7 +1080,7 @@ describe('the Review screen', () => {
       ready.client.answer('review/submit', { kind: 'writtenReview', pending: { kind: 'noPendingReview' } });
       await settle();
     });
-    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
   });
 
   it('shows why the submit was refused on the status line, and stays in the review', async () => {
@@ -1080,7 +1106,7 @@ describe('the Review screen', () => {
     expect(lines[1]).toHaveAttribute('aria-current', 'true');
     await ready.user.keyboard('h');
     await ready.user.keyboard('{Escape}');
-    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
   });
 });
 
@@ -1103,7 +1129,6 @@ describe('capturing a draft ticket', () => {
 
   it("opens on the Board pane's New ticket button, with the focus on its input", async () => {
     const { user, app } = await readyApp();
-    act(() => app.focusOn(Focus.Docs));
     await user.click(screen.getByRole('button', { name: 'New ticket (c)' }));
     expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
     expect(captureBox()).toHaveFocus();
@@ -1114,7 +1139,7 @@ describe('capturing a draft ticket', () => {
     const { user, app } = await readyApp();
     await user.keyboard('c');
     await user.click(screen.getByRole('button', { name: /PROJ-2/ }));
-    await user.click(screen.getByRole('tab', { name: /^Board/ }));
+    await user.click(within(screen.getByRole('tablist', { name: 'window tabs' })).getByRole('tab', { name: /^Board/ }));
     expect(app.board.selection.selected.get()).toBeUndefined();
     expect(screen.getByRole('tab', { name: 'Base' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
@@ -1331,5 +1356,208 @@ describe('quitting the window', () => {
     await user.keyboard('c');
     await user.keyboard('q');
     expect(platform.closes).toBe(0);
+  });
+});
+
+const answerPullRequests = (ready: Started, answer: unknown) =>
+  act(async () => {
+    ready.client.answer('review/watch', answer);
+    await settle();
+  });
+
+describe('the left column\'s panel tabs', () => {
+  it('counts the documents on the Docs tab once they are read, while the Board tab is shown', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    expect(screen.getByRole('tab', { name: 'Docs 2' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('shows the Board at the column\'s full height with the Docs panel behind its tab, each tab naming its count', async () => {
+    await readyApp();
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Docs' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Board 2' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Docs 0' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('switches to the Docs panel on a click on its tab and on o, and back, the Docs cursor kept', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
+    expect(screen.getByRole('region', { name: 'Docs' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Board' })).not.toBeInTheDocument();
+    await started.user.keyboard('j');
+    await started.user.keyboard('o');
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
+    await started.user.keyboard('o');
+    expect(screen.getByRole('region', { name: 'Docs' })).toBeInTheDocument();
+    expect(started.app.docs.selectedKey()?.path).toBe('guide');
+  });
+
+  it('shows the Docs tab on any move that focuses Docs, and the Board\'s on moving back', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.keyboard('l');
+    await started.user.keyboard('j');
+    expect(screen.getByRole('button', { name: /PROJ-1/ })).toBeInTheDocument();
+    act(() => started.app.focusOn(Focus.Docs));
+    expect(screen.getByRole('region', { name: 'Docs' })).toBeInTheDocument();
+    await started.user.keyboard('h');
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
+  });
+
+  it('keeps the selected ticket across a switch to the Docs tab and back', async () => {
+    const started = await readyApp();
+    await started.user.keyboard('j');
+    await started.user.keyboard('o');
+    await started.user.keyboard('o');
+    expect(screen.getByRole('button', { name: /PROJ-2/ })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('carries the new draft button on the Board tab only', async () => {
+    const started = await readyApp();
+    expect(screen.getByRole('button', { name: 'New ticket (c)' })).toBeInTheDocument();
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
+    expect(screen.queryByRole('button', { name: 'New ticket (c)' })).not.toBeInTheDocument();
+  });
+
+  it('offers the other panel on the key bar, and the window tab key', async () => {
+    const started = await readyApp();
+    expect(keyBar()).toHaveTextContent('o docs');
+    await started.user.keyboard('o');
+    expect(keyBar()).toHaveTextContent('o board');
+  });
+});
+
+const waiting = (id: string, kind: 'waitingForPermission' | 'waitingForInput' | 'yourTurn' | 'busy', ticket: string) =>
+  sessionFixture({
+    id,
+    ticket,
+    state:
+      kind === 'waitingForPermission'
+        ? { kind, reason: { kind: 'waitingReason', value: 'Bash' } }
+        : kind === 'waitingForInput'
+          ? { kind, reason: { kind: 'noWaitingReason' } }
+          : { kind },
+  });
+
+describe('a ticket\'s waiting session on its Board row', () => {
+  it('carries a worded pill, the strongest when several wait, and none for a busy session', async () => {
+    const { client } = await readyApp();
+    act(() =>
+      client.push(
+        'session/changed',
+        sessionsFixture([waiting('a', 'yourTurn', 'PROJ-1'), waiting('b', 'waitingForPermission', 'PROJ-1'), waiting('c', 'busy', 'PROJ-2')]),
+      ),
+    );
+    expect(within(screen.getByRole('button', { name: /PROJ-1/ })).getByRole('img')).toHaveTextContent('permission');
+    expect(within(screen.getByRole('button', { name: /PROJ-2/ })).queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('carries no pill for a ticket whose session has ended', async () => {
+    const { client } = await readyApp();
+    act(() => client.push('session/changed', sessionsFixture([], { past: [pastFixture({ id: 'p1', ticket: 'PROJ-1' })], tickets: [ticketSessionsFixture('PROJ-1', { past: [pastFixture({ id: 'p1', ticket: 'PROJ-1' })] })] })));
+    expect(within(screen.getByRole('button', { name: /PROJ-1/ })).queryByRole('img')).not.toBeInTheDocument();
+  });
+});
+
+const factOf = (label: string): string => within(screen.getByRole('region', { name: 'Ticket' })).getByText(label).nextElementSibling?.textContent ?? '';
+
+const pushTwoSessions = (ready: Started, busy: ReturnType<typeof sessionFixture>) => {
+  const turn = sessionFixture({ id: 'turn', ticket: 'PROJ-1', state: { kind: 'yourTurn' } });
+  const hosted = [hostedFixture('h-busy', { ticket: 'PROJ-1', live: busy }), hostedFixture('h-turn', { ticket: 'PROJ-1', live: turn })];
+  act(() => ready.client.push('session/changed', { ...sessionsFixture([busy, turn], { tickets: [ticketSessionsFixture('PROJ-1', { live: [busy, turn], hosted })] }), hosted }));
+};
+
+const currentSessionRow = () => within(screen.getByRole('region', { name: 'Ticket' })).getAllByRole('button').find((row) => row.getAttribute('aria-current') === 'true');
+
+describe('the ticket in the main view', () => {
+  it('says where it stands: status and the open pull request review matched to its branch', async () => {
+    const ready = await readyApp();
+    const pullRequest = { number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] };
+    await answerPullRequests(ready, { kind: 'openPullRequests', pullRequests: [pullRequest] });
+    await act(async () => {
+      ready.client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest });
+      await settle();
+    });
+    expect(factOf('status')).toBe('in progress');
+    expect(factOf('pull request')).toBe('#7');
+  });
+
+  it('says there is no open pull request where it would be', async () => {
+    const ready = await readyApp();
+    await answerPullRequests(ready, { kind: 'openPullRequests', pullRequests: [] });
+    expect(factOf('pull request')).toBe('none open');
+  });
+
+  it('says the pull requests are unavailable when they could not be read', async () => {
+    const ready = await readyApp();
+    await answerPullRequests(ready, { kind: 'unavailablePullRequests', reason: 'gh is not signed in' });
+    expect(factOf('pull request')).toBe('unavailable');
+  });
+
+  it('lists its sessions right after the facts, the waiting one first, each row one button with its action and key', async () => {
+    const ready = await readyApp();
+    const busy = sessionFixture({ id: 'busy', ticket: 'PROJ-1', state: { kind: 'busy' } });
+    const turn = sessionFixture({ id: 'turn', ticket: 'PROJ-1', state: { kind: 'yourTurn' } });
+    const hosted = [hostedFixture('h-busy', { ticket: 'PROJ-1', live: busy }), hostedFixture('h-turn', { ticket: 'PROJ-1', live: turn })];
+    act(() => ready.client.push('session/changed', { ...sessionsFixture([busy, turn], { tickets: [ticketSessionsFixture('PROJ-1', { live: [busy, turn], hosted })] }), hosted }));
+    const rows = within(screen.getByRole('region', { name: 'Ticket' })).getAllByRole('button', { name: /attach/ });
+    expect(rows.map((row) => row.getAttribute('data-lamp'))).toEqual(['turn', 'off']);
+    expect(rows[0]).toHaveTextContent('enter');
+    const ticket = screen.getByRole('region', { name: 'Ticket' });
+    const text = ticket.textContent;
+    expect(text.indexOf('pull request')).toBeLessThan(text.indexOf('attach'));
+  });
+
+  it('keeps a resumed session in its ticket\'s list, tinted while it is your turn, instead of dropping it', async () => {
+    const ready = await readyApp();
+    const resumed = sessionFixture({ id: 'p1', name: 'PROJ-1 start', ticket: 'PROJ-1', state: { kind: 'yourTurn' } });
+    const hosted = [hostedFixture('p1', { live: resumed })];
+    act(() => ready.client.push('session/changed', { ...sessionsFixture([resumed], { tickets: [ticketSessionsFixture('PROJ-1', { live: [resumed], hosted })] }), hosted }));
+    const row = within(screen.getByRole('region', { name: 'Ticket' })).getByRole('button', { name: /PROJ-1 start/ });
+    expect(row).toHaveAttribute('data-lamp', 'turn');
+    expect(row).toHaveTextContent('attach');
+  });
+
+  it('keeps the cursor on its session when a read reorders the rows, so enter opens the one picked', async () => {
+    const ready = await readyApp();
+    pushTwoSessions(ready, sessionFixture({ id: 'busy', ticket: 'PROJ-1', state: { kind: 'busy' } }));
+    await ready.user.keyboard('{Enter}');
+    await ready.user.keyboard('j');
+    expect(currentSessionRow()?.getAttribute('data-lamp')).toBe('off');
+    pushTwoSessions(ready, sessionFixture({ id: 'busy', ticket: 'PROJ-1', state: { kind: 'waitingForPermission', reason: { kind: 'waitingReason', value: 'edit' } } }));
+    expect(currentSessionRow()?.getAttribute('data-lamp'), 'the busy session became the strongest and moved first; the cursor went with it').toBe('permission');
+  });
+});
+
+describe('an empty board', () => {
+  it('leaves the main view in place saying no ticket is selected, with no facts, sessions or new-session bar', async () => {
+    const ready = await readyApp(false, boardFixture([]));
+    const ticket = screen.getByRole('region', { name: 'Ticket' });
+    expect(within(ticket).getByText('No ticket selected.')).toBeInTheDocument();
+    expect(within(ticket).queryByText('status')).not.toBeInTheDocument();
+    expect(within(ticket).queryByText('pull request')).not.toBeInTheDocument();
+    expect(within(ticket).queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Board 0' })).toBeInTheDocument();
+    expect(ready.app.board.selectedTicket()).toBeUndefined();
+  });
+
+  it('keeps on the key bar only the keys that act: the new draft, the panel and the window tabs', async () => {
+    await readyApp(false, boardFixture([]));
+    expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['c new draft', 'o docs', '1/2/3 tabs']);
+  });
+
+  it('starts no session on N, which its key bar does not offer', async () => {
+    const ready = await readyApp(false, boardFixture([]));
+    await ready.user.keyboard('N');
+    await settle();
+    expect(ready.client.calls.map((call) => call.method)).not.toContain('session/startUnlinked');
+  });
+
+  it('opens the capture popup on c, a first draft having a project to go into', async () => {
+    const ready = await readyApp(false, boardFixture([]));
+    await ready.user.keyboard('c');
+    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
   });
 });

@@ -14,6 +14,19 @@
 
 .row[data-lamp='turn'] {
   --row-ground: var(--lamp-turn-tile);
+  --row-frame: var(--lamp-turn);
+  --row-dim: var(--lamp-turn-tile-dim);
+}
+
+.row[data-lamp='input'] {
+  --row-ground: var(--lamp-input-tile);
+  --row-frame: var(--lamp-input);
+  --row-dim: var(--lamp-turn-tile-dim);
+}
+
+.row[data-lamp='permission'] {
+  --row-ground: var(--lamp-permission-tile);
+  --row-frame: var(--lamp-permission);
   --row-dim: var(--lamp-turn-tile-dim);
 }
 
@@ -39,12 +52,76 @@
   text-overflow: ellipsis;
 }
 
-.detail {
+.action {
   flex: none;
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-weight: 600;
+  font-size: var(--size-small);
   color: var(--row-dim, var(--dim));
-  font-variant-numeric: tabular-nums;
 }
 
-.selected .detail {
+.selected .action {
   color: var(--cursor-ink);
+}
+
+.key {
+  padding: 0 var(--space-2);
+  border: 1px solid currentColor;
+  border-radius: var(--card-radius);
+  font: inherit;
+}
+
+.tall {
+  display: grid;
+  grid-template-columns: var(--session-state-column) minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  margin: 0 0 var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--row-frame, var(--card-edge));
+  border-radius: var(--pane-radius);
+  background: var(--row-ground, var(--card));
+  color: var(--tall-ink, var(--dim));
+}
+
+.tall > :first-child {
+  justify-self: start;
+}
+
+.tall .label {
+  font: 400 var(--size-body) / var(--session-name-leading) var(--font-mono);
+}
+
+.tall[data-lamp='turn'],
+.tall[data-lamp='input'],
+.tall[data-lamp='permission'] {
+  --tall-ink: var(--text);
+  padding: var(--session-waiting-pad) var(--space-4);
+}
+
+.tall[data-lamp='turn'] .label,
+.tall[data-lamp='input'] .label,
+.tall[data-lamp='permission'] .label {
+  font-size: var(--size-base);
+}
+
+.tall .action,
+.tall.selected .action {
+  color: var(--tall-ink, var(--dim));
+}
+
+.tall.selected {
+  background: var(--row-ground, var(--card));
+  color: var(--tall-ink, var(--dim));
+  box-shadow: none;
+}
+
+.tall:hover {
+  cursor: pointer;
+}
+
+.tall:hover .action {
+  color: var(--text);
 }

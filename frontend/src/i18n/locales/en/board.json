@@ -21,17 +21,28 @@
   "ticket": {
     "title": "Ticket",
     "noneSelected": "No ticket selected.",
+    "number": "#{{id}}",
     "hide": "Hide ticket",
     "hideKey": "m"
+  },
+  "facts": {
+    "status": "status",
+    "type": "type",
+    "context": "context",
+    "labels": "labels",
+    "pullRequest": "pull request",
+    "pullRequestNumber": "#{{number}}",
+    "noPullRequest": "none open",
+    "pullRequestsUnavailable": "unavailable",
+    "readingPullRequest": "reading…"
   },
   "keyBar": {
     "move": "j/k move",
     "open": "enter open",
-    "new": "n new",
-    "newUnlinked": "N new",
+    "new": "n/N new",
     "columns": "h/j/k/l move",
     "openTicket": "enter go to ticket",
-    "capture": "c capture",
+    "capture": "c new draft",
     "create": "enter create",
     "cancel": "esc cancel"
   },

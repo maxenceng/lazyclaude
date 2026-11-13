@@ -5,7 +5,7 @@ import type { AppModel } from './app';
 import { BoardKeyBar, BoardTabKeyBar, CaptureKeyBar } from './board/BoardKeyBar';
 import { CapturePopup } from './board/CapturePopup';
 import { BoardColumns, BoardPane, BoardPreview, TicketPane } from './board/BoardScreen';
-import { inProgressCount } from './board/rows';
+import { inProgressCount, ticketTotal } from './board/rows';
 import { statusColourOf } from './board/statusColours';
 import { ConnectionScreen } from './connection/ConnectionScreen';
 import { DocsKeyBar, DocumentKeyBar } from './docs/DocsKeyBar';
@@ -15,7 +15,8 @@ import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { ModalClicks } from './keys/modalClicks';
 import { WindowKeys } from './keys/windowKeys';
-import { Focus, WindowTab } from './layout';
+import { Focus, type Panel, WindowTab } from './layout';
+import { PullRequestRead, type TicketPullRequest } from './board/ticketPullRequest';
 import { StatusKind } from './protocol';
 import { cellsOf, ciOf, worstResult } from './review/pullRequestList';
 import { PullRequestsPane } from './review/PullRequestsScreen';
@@ -24,10 +25,18 @@ import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKe
 import { DockScreen, DockStrip } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
-import { NewSessionBar, SessionsList } from './session/SessionsList';
+import { NewSessionBar, SessionFailure, SessionsList } from './session/SessionsList';
+import { ticketPullRequestOf } from './ticketPullRequest';
 import { useStore } from './shared/useStore';
 
 const TAB_OF: ReadonlyMap<string, WindowTab> = new Map<string, WindowTab>(Object.values(WindowTab).map((tab) => [tab, tab]));
+
+const PANEL_OF: ReadonlyMap<string, Panel> = new Map<string, Panel>([
+  [Focus.Board, Focus.Board],
+  [Focus.Docs, Focus.Docs],
+]);
+
+const NO_PULL_REQUEST: TicketPullRequest = { read: PullRequestRead.None, number: undefined };
 
 const COLOURS = [LampColour.Permission, LampColour.Input, LampColour.Turn] as const;
 
@@ -76,6 +85,7 @@ export const App = ({ app, packaged }: Props) => {
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
+  useStore(app.docs.store.state);
 
   useEffect(() => {
     const keys = new WindowKeys((action) => app.press(action), { packaged, reserved: () => app.reserved() });
@@ -87,17 +97,28 @@ export const App = ({ app, packaged }: Props) => {
   }, [app, packaged]);
 
   const markers = sessions === undefined ? [] : markersOf(sessions);
-  const project = board.shown()?.root ?? t('app.project');
+  const project = app.board.root() ?? t('app.project');
+  const selectedTicket = app.board.selectedTicket();
+  const populatedBoard = board.shown();
   const hasDock = dock.tabs.length > 0;
   const dockKey = layout.mainHidden ? 'keyBar.showTicket' : layout.dockMinimised ? 'keyBar.restoreDock' : 'keyBar.minimiseDock';
   const dockKeys = hasDock ? [t(dockKey)] : [];
   const windowTabKeys = [t('keyBar.tabs')];
   const tabKeys = [...windowTabKeys, ...dockKeys];
+  const panelKeys = [t(layout.panel === Focus.Board ? 'keyBar.panelDocs' : 'keyBar.panelBoard'), ...tabKeys];
+  const panelTabs = {
+    tabs: [
+      { id: Focus.Board, label: t('panels.board'), count: populatedBoard === undefined ? 0 : ticketTotal(populatedBoard) },
+      { id: Focus.Docs, label: t('panels.docs'), count: app.docs.count() },
+    ],
+    selected: layout.panel,
+    onSelect: (id: string) => app.showPanel(PANEL_OF.get(id) ?? Focus.Board),
+  };
   const keyBar = {
-    [Focus.Board]: <BoardKeyBar extra={tabKeys} />,
-    [Focus.Docs]: <DocsKeyBar documentShown={layout.showsDocumentInView()} extra={tabKeys} />,
+    [Focus.Board]: <BoardKeyBar ticket={selectedTicket !== undefined} capture={app.board.root() !== undefined} extra={panelKeys} />,
+    [Focus.Docs]: <DocsKeyBar documentShown={layout.showsDocumentInView()} extra={panelKeys} />,
     [Focus.Document]: <DocumentKeyBar extra={tabKeys} />,
-    [Focus.Sessions]: <SessionsKeyBar picking={false} extra={tabKeys} />,
+    [Focus.Sessions]: <SessionsKeyBar picking={false} extra={panelKeys} />,
     [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
     [Focus.Comments]: <ReviewKeyBar panel={ReviewFocus.Comments} />,
     [Focus.Diff]: <ReviewKeyBar panel={ReviewFocus.Diff} />,
@@ -124,7 +145,6 @@ export const App = ({ app, packaged }: Props) => {
           arrangement: layout.arrangement(hasDock),
         };
 
-  const populatedBoard = board.shown();
   const pullRequestList = app.tabs.pullRequests();
   const tabScreen =
     tab === WindowTab.Board
@@ -183,9 +203,19 @@ export const App = ({ app, packaged }: Props) => {
     tabbed ??
     (unready === undefined
       ? {
-          board: (
+          board:
+            layout.panel === Focus.Docs ? (
+              <DocsPane
+                docs={app.docs}
+                focused={layout.focus === Focus.Docs}
+                panelTabs={panelTabs}
+                onFocus={() => app.focusOn(Focus.Docs)}
+                onRetry={() => void app.docs.load()}
+              />
+            ) : (
             <BoardPane
               board={app.board.store}
+              panelTabs={panelTabs}
               selection={app.board.selection}
               focused={layout.focus === Focus.Board}
               markerOf={(ticket) => (sessions === undefined ? undefined : markerOfTicket(sessions, ticket))}
@@ -194,15 +224,8 @@ export const App = ({ app, packaged }: Props) => {
               onRetry={() => void app.load()}
               onCapture={app.board.root() === undefined ? undefined : () => app.capture()}
             />
-          ),
-          docs: (
-            <DocsPane
-              docs={app.docs}
-              focused={layout.focus === Focus.Docs}
-              onFocus={() => app.focusOn(Focus.Docs)}
-              onRetry={() => void app.docs.load()}
-            />
-          ),
+            ),
+          docs: null,
           main: layout.showsDocument() ? (
             <DocumentPane
               docs={app.docs}
@@ -215,7 +238,9 @@ export const App = ({ app, packaged }: Props) => {
               board={app.board.store}
               selection={app.board.selection}
               focused={layout.focus === Focus.Sessions}
+              pullRequest={selectedTicket === undefined ? NO_PULL_REQUEST : ticketPullRequestOf(pullRequests, app.review.ticketPullRequests.of(selectedTicket.branch))}
               onLink={(href) => app.docs.followFromTicket(href)}
+              alert={<SessionFailure failure={failure} />}
               onHide={hasDock ? () => app.hideMainView() : undefined}
               onFocus={() => app.focusOn(Focus.Sessions)}
               foot={
@@ -233,7 +258,6 @@ export const App = ({ app, packaged }: Props) => {
                 rows={app.sessions.rows()}
                 cursor={cursor}
                 picker={picker}
-                failure={failure}
                 onPress={(index) => app.pressRow(index)}
               />
             </TicketPane>

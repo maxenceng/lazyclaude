@@ -14,20 +14,20 @@
 }
 
 .full {
-  grid-template-columns: minmax(280px, 440px) 1fr;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-columns: minmax(400px, 32%) 1fr;
+  grid-template-rows: minmax(0, 62fr) minmax(0, 38fr);
   grid-template-areas:
     'board main'
     'board dock';
 }
 
 .noDock {
-  grid-template-columns: minmax(280px, 440px) 1fr;
+  grid-template-columns: minmax(400px, 32%) 1fr;
   grid-template-areas: 'board main';
 }
 
 .noMain {
-  grid-template-columns: minmax(280px, 440px) 1fr;
+  grid-template-columns: minmax(400px, 32%) 1fr;
   grid-template-areas: 'board dock';
 }
 
@@ -86,7 +86,7 @@
 }
 
 .minimised {
-  grid-template-columns: minmax(280px, 440px) 1fr;
+  grid-template-columns: minmax(400px, 32%) 1fr;
   grid-template-rows: minmax(0, 1fr) auto;
   grid-template-areas:
     'board main'

@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -8,7 +9,11 @@ import {
   Column,
   Columns,
   Detail,
+  type Fact,
+  FactsLine,
   type LampColour,
+  type PaneChip,
+  type PanelTabsProps,
   type PullRequestCells,
   Pane,
   PaneActionKind,
@@ -26,9 +31,10 @@ import type { BoardBoardView, BoardTicketView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import { type BoardState, BoardStateKind, UnavailableCause } from './boardState';
 import type { BoardStore } from './boardStore';
-import { columnsOf, cursorTicketInColumns, isDone, orderedGroups, shownTickets, selectedIn, selectedInColumns } from './rows';
+import { columnsOf, cursorTicketInColumns, isDone, orderedGroups, shownTickets, selectedIn, selectedInColumns, statusesInOrder } from './rows';
 import type { Selection } from './selection';
 import { statusColourOf } from './statusColours';
+import { PullRequestRead, type TicketPullRequest } from './ticketPullRequest';
 
 interface ViewProps {
   board: BoardStore;
@@ -50,21 +56,26 @@ interface BoardProps extends ViewProps {
   onOpen: (ticket: string) => void;
   onFocus: () => void;
   onRetry: () => void;
+  /** The left column's panel tabs, which the Board's title row shows in place of its title. */
+  panelTabs: PanelTabsProps;
   /** Given while there is a project to capture into: the title's button opens the capture popup, as `c` does. */
   onCapture?: () => void;
 }
 
-/** The Board: the tickets by status. A press on the selected ticket opens it. */
-export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus, onRetry, onCapture }: BoardProps) => {
+/** The Board: the tickets by status, every status at 0 while none is on it. A press on the selected ticket opens it. */
+export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus, onRetry, panelTabs, onCapture }: BoardProps) => {
   const { t } = useTranslation('board');
   const { state, populated, cursor } = useBoardView({ board, selection });
   return (
     <Pane
       title={t('board.title')}
       focused={focused}
+      tabs={panelTabs}
       actions={onCapture === undefined ? [] : [{ kind: PaneActionKind.Add, label: t('board.capture'), shortcut: t('board.captureKey'), onClick: onCapture }]}
     >
-      {populated === undefined ? (
+      {state.kind === BoardStateKind.Empty ? (
+        <EmptyGroups />
+      ) : populated === undefined ? (
         <Unread state={state} onRetry={onRetry} />
       ) : (
         <Tickets
@@ -162,18 +173,22 @@ export const BoardPreview = ({ board, selection, onLink }: PreviewProps) => {
 
 interface TicketProps extends ViewProps {
   focused: boolean;
+  /** Whether a pull request is open on the ticket, for its facts line. */
+  pullRequest: TicketPullRequest;
   onLink: (href: string) => void;
   /** Given while a dock is open: the ticket's button hides the main view so the dock takes the column. */
   onHide?: () => void;
   /** Pinned under the ticket whatever its scroll. */
   foot?: ReactNode;
+  /** Above the ticket, whether or not one is under the cursor: what failed and can be retried. */
+  alert?: ReactNode;
   /** A click on the ticket, anywhere in its pane, hands it focus. */
   onFocus: () => void;
   children?: ReactNode;
 }
 
-/** The ticket under the cursor, detailed, and whatever the screen shows beneath it. */
-export const TicketPane = ({ board, selection, focused, onLink, onHide, foot, onFocus, children }: TicketProps) => {
+/** The ticket under the cursor: its title, its facts line, what the screen shows under them, then its text. No ticket under the cursor leaves only that said. */
+export const TicketPane = ({ board, selection, focused, pullRequest, onLink, onHide, foot, alert, onFocus, children }: TicketProps) => {
   const { t } = useTranslation('board');
   const { ticket } = useBoardView({ board, selection });
   return (
@@ -181,13 +196,54 @@ export const TicketPane = ({ board, selection, focused, onLink, onHide, foot, on
       title={t('ticket.title')}
       focused={focused}
       foot={foot}
+      chips={ticket === undefined ? [] : chipsOf(ticket, t)}
       onFocus={onFocus}
       actions={onHide === undefined ? [] : [{ kind: PaneActionKind.Hide, label: t('ticket.hide'), shortcut: t('ticket.hideKey'), onClick: onHide }]}
     >
-      {ticket === undefined ? <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} onLink={onLink} />}
-      {children}
+      {alert}
+      {ticket === undefined ? (
+        <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text>
+      ) : (
+        <Detail
+          facts={[t('ticket.number', { id: ticket.id })]}
+          title={ticket.title}
+          summary={<FactsLine facts={factsOf(ticket, pullRequest, t)} />}
+          lead={children}
+          body={ticket.body.kind === 'body' ? ticket.body.value : undefined}
+          onLink={onLink}
+        />
+      )}
     </Pane>
   );
+};
+
+/** The words beside the ticket's title: its status in its colour, then its context and type where it has them. */
+const chipsOf = (ticket: BoardTicketView, t: TFunction<'board'>): PaneChip[] => [
+  { label: t(`status.${ticket.status}`), colour: statusColourOf(ticket.status) },
+  ...(ticket.context.kind === 'contextName' ? [{ label: ticket.context.value }] : []),
+  ...(ticket.type.kind === 'typeName' ? [{ label: ticket.type.value }] : []),
+];
+
+const PULL_REQUEST_WORDS = {
+  [PullRequestRead.Reading]: 'facts.readingPullRequest',
+  [PullRequestRead.Unavailable]: 'facts.pullRequestsUnavailable',
+  [PullRequestRead.None]: 'facts.noPullRequest',
+} as const;
+
+const pullRequestFact = ({ read, number }: TicketPullRequest, t: TFunction<'board'>): Fact => {
+  const label = t('facts.pullRequest');
+  return read === PullRequestRead.Open ? { label, value: t('facts.pullRequestNumber', { number }) } : { label, value: t(PULL_REQUEST_WORDS[read]), tone: Tone.Dim };
+};
+
+/** Where the ticket stands, in the order it is read: its status, type, context, other labels and open pull request. What the ticket lacks is left out, except the pull request, which says there is none. Its branch is not shown: long text wraps the line. */
+const factsOf = (ticket: BoardTicketView, pullRequest: TicketPullRequest, t: TFunction<'board'>): Fact[] => {
+  return [
+    { label: t('facts.status'), value: t(`status.${ticket.status}`) },
+    ...(ticket.type.kind === 'typeName' ? [{ label: t('facts.type'), value: ticket.type.value }] : []),
+    ...(ticket.context.kind === 'contextName' ? [{ label: t('facts.context'), value: ticket.context.value }] : []),
+    ...(ticket.otherLabels.length === 0 ? [] : [{ label: t('facts.labels'), value: ticket.otherLabels.join(', ') }]),
+    pullRequestFact(pullRequest, t),
+  ];
 };
 
 const UNAVAILABLE = {
@@ -251,6 +307,18 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
         </div>
       ))}
       <Unreadable view={view} />
+    </>
+  );
+};
+
+/** The board with no ticket: every status keeps its heading, at 0. */
+const EmptyGroups = () => {
+  const { t } = useTranslation('board');
+  return (
+    <>
+      {statusesInOrder().map((status) => (
+        <StatusHeading key={status} status={t(`status.${status}`)} count={0} colour={statusColourOf(status)} />
+      ))}
     </>
   );
 };

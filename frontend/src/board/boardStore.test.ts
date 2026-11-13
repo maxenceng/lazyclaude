@@ -45,7 +45,7 @@ describe('the board store', () => {
     const loaded = store.load();
     client.answerNext(boardFixture([]));
     await loaded;
-    expect(store.state.get()).toEqual(new EmptyBoard());
+    expect(store.state.get()).toEqual(new EmptyBoard('/p'));
   });
 
   it('is empty when its statuses are all without a ticket', async () => {
@@ -54,7 +54,7 @@ describe('the board store', () => {
     const loaded = store.load();
     client.answerNext({ ...boardFixture([]), groups: [{ status: 'TODO', tickets: [] }] });
     await loaded;
-    expect(store.state.get()).toEqual(new EmptyBoard());
+    expect(store.state.get()).toEqual(new EmptyBoard('/p'));
   });
 
   it('is not empty when only unreadable tickets are on it', async () => {

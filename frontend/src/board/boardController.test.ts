@@ -71,3 +71,15 @@ describe('the new ticket selected after a capture', () => {
     expect(started.board.selection.selected.get()).toBe('PROJ-1');
   });
 });
+
+describe('the project of an empty board', () => {
+  it('is known, so a first draft can be captured, though no ticket is on it', async () => {
+    const client = fakeClient();
+    const board = new BoardController(client);
+    const loading = board.load();
+    client.answerNext(boardFixture([]));
+    await loading;
+    expect(board.shown()).toBeUndefined();
+    expect(board.root()).toBe('/p');
+  });
+});

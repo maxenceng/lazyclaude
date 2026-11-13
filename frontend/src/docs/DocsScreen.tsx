@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Busy, Button, Detail, DocsTreeRow, Document, Pane, PaneActionKind, Text, Tone, Rows } from '../design-system';
+import { Alert, Busy, Button, Detail, DocsTreeRow, Document, Pane, PaneActionKind, type PanelTabsProps, Text, Tone, Rows } from '../design-system';
 import { useStore } from '../shared/useStore';
 import type { DocsController } from './docsController';
 import { type DocsState, DocsStateKind } from './docsState';
@@ -14,19 +14,21 @@ interface PaneProps {
 }
 
 interface TreeProps extends PaneProps {
+  /** The left column's panel tabs, which the Docs panel's title row shows in place of its title. */
+  panelTabs: PanelTabsProps;
   onFocus: () => void;
   onRetry: () => void;
 }
 
 /** The Docs panel: the tree of `docs/`. A press on the selected row opens it, or folds it if it is a folder. */
-export const DocsPane = ({ docs, focused, onFocus, onRetry }: TreeProps) => {
+export const DocsPane = ({ docs, focused, panelTabs, onFocus, onRetry }: TreeProps) => {
   const { t } = useTranslation('docs');
   const state = useStore(docs.store.state);
   useStore(docs.selection);
   useStore(docs.folded);
   const selected = docs.selectedKey();
   return (
-    <Pane title={t('docs.title')} focused={focused}>
+    <Pane title={t('docs.title')} focused={focused} tabs={panelTabs}>
       {state.kind === DocsStateKind.Populated ? (
         <Rows>
           {docs.rows().map((row) => (

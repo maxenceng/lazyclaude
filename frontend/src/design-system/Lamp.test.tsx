@@ -22,3 +22,20 @@ describe('a lamp marker', () => {
     expect(ruleOf(lamp, '.marker.off')).toContain('color: var(--ended-dot)');
   });
 });
+
+describe('a lamp pill', () => {
+  it.each([
+    [LampColour.Permission, 'permission', 'waiting for permission'],
+    [LampColour.Input, 'needs input', 'waiting for input'],
+    [LampColour.Turn, 'your turn', 'your turn'],
+  ])('says a %s session in words, and names it for a screen reader', (colour, words, name) => {
+    render(<Lamp colour={colour} size={LampSize.Pill} />);
+    expect(screen.getByRole('img')).toHaveTextContent(words);
+    expect(screen.getByRole('img')).toHaveAccessibleName(name);
+  });
+
+  it('is named for a screen reader by the words it shows, where it is given its own', () => {
+    render(<Lamp colour={LampColour.Off} size={LampSize.Pill} words="busy" />);
+    expect(screen.getByRole('img')).toHaveAccessibleName('busy');
+  });
+});

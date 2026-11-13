@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Pane, PaneActionKind } from './Pane';
+import { StatusColour } from './StatusHeading';
 import { ruleOf, stylesheet } from './stylesheet';
 
 const CROSS = 'M2 2 L10 10 M10 2 L2 10';
@@ -91,6 +92,21 @@ describe('a pane', () => {
     expect(ruleOf(pane, '.focused')).toContain('--cursor-edge: none');
   });
 
+  it('keeps its title row one height whatever it holds: a title, panel tabs, chips, tabs beside it or actions', () => {
+    expect(ruleOf(pane, '.head')).toContain('height: var(--pane-head)');
+    expect(ruleOf(pane, '.title')).toContain('padding: 0 0 0 var(--space-4)');
+  });
+
+  it('holds what it is given beside its title in its title row, not its body', () => {
+    render(
+      <Pane title="Sessions" focused={false} beside={<span>tabs</span>}>
+        body
+      </Pane>,
+    );
+    expect(screen.getByText('tabs').closest('[data-pane-body]')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Sessions' }).parentElement).toContainElement(screen.getByText('tabs'));
+  });
+
   it('pins its foot under the body, which is the part that scrolls', () => {
     render(
       <Pane title="Ticket" focused={false} foot={<button type="button">pinned</button>}>
@@ -103,5 +119,41 @@ describe('a pane', () => {
     expect(foot).not.toBeNull();
     expect(body).not.toContainElement(screen.getByRole('button', { name: 'pinned' }));
     expect(ruleOf(pane, '.foot')).toContain('flex: none');
+  });
+});
+
+describe('a pane with panel tabs', () => {
+  it('names the tabs in its title row, the pane itself labelled by its title', () => {
+    render(
+      <Pane title="Panels" focused tabs={{ tabs: [{ id: 'a', label: 'A', count: 1 }], selected: 'a', onSelect: () => {} }}>
+        body
+      </Pane>,
+    );
+    expect(screen.getByRole('region', { name: 'Panels' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'A 1' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+  });
+});
+
+describe('a pane with chips', () => {
+  it('names them beside its title, in the title row', () => {
+    render(
+      <Pane title="Ticket" focused={false} chips={[{ label: 'todo', colour: StatusColour.Todo }, { label: 'fix' }]}>
+        body
+      </Pane>,
+    );
+    expect(screen.getByRole('list', { name: 'Ticket' })).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['todo', 'fix']);
+    expect(screen.getByText('todo')).toHaveAttribute('data-status', 'todo');
+  });
+
+  it('carries none when it has none', () => {
+    render(<Pane title="Ticket" focused={false}>body</Pane>);
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  it('keeps its title row one line, the chips clipped rather than wrapped', () => {
+    expect(ruleOf(pane, '.chips')).toContain('white-space: nowrap');
+    expect(ruleOf(pane, '.chips')).toContain('overflow: hidden');
   });
 });

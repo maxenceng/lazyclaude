@@ -67,14 +67,14 @@ const hostSession = async ({ client, user }: Awaited<ReturnType<typeof started>>
   await settle();
 };
 
-const tab = (name: RegExp | string) => screen.getByRole('tab', { name });
+const tab = (name: RegExp | string) => within(screen.getByRole('tablist', { name: 'window tabs' })).getByRole('tab', { name });
 
 describe('the window tabs', () => {
   it('begin the status line with Base, Board and Pull requests, and open on Base', async () => {
     await started();
-    expect(screen.getAllByRole('tab').map((each) => each.textContent)).toEqual(['Base', 'Board1 in progress', 'Pull requests4 open✗']);
+    expect(within(screen.getByRole('tablist', { name: 'window tabs' })).getAllByRole('tab').map((each) => each.textContent)).toEqual(['Base', 'Board1 in progress', 'Pull requests4 open✗']);
     expect(tab('Base')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Ticket' })).toBeInTheDocument();
   });
 

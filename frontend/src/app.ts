@@ -5,7 +5,7 @@ import { Action, type KeyPress } from './keys/bindings';
 import type { Binding } from './keys/chords';
 import { ConfigurationStore } from './keys/configurationStore';
 import { KeyRouter } from './keyRouting';
-import { Focus, Layout, WindowTab } from './layout';
+import { Focus, Layout, type Panel, WindowTab } from './layout';
 import { WindowTabs } from './windowTabs';
 import type { Platform } from './platform';
 import type { Client } from './protocol';
@@ -171,6 +171,11 @@ export class AppModel {
     if (root !== undefined) {
       void this.review.pullRequests.watch(root);
     }
+  }
+
+  /** A click on a panel tab of the left column: that tab is shown and takes focus. */
+  showPanel(panel: Panel): void {
+    this.layout.set(this.layout.get().showPanel(panel));
   }
 
   focusOn(focus: Focus): void {

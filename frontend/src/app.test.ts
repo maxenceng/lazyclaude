@@ -152,6 +152,37 @@ const hostedApp = async () => {
   return app;
 };
 
+describe('the app and the left column\'s panel tabs', () => {
+  it('switches to the Docs tab on o, focusing it, and back to the Board on o again', async () => {
+    const app = await docsApp();
+    app.press(Action.TogglePanel);
+    expect(app.layout.get().panel).toBe(Focus.Docs);
+    expect(app.layout.get().focus).toBe(Focus.Docs);
+    app.press(Action.TogglePanel);
+    expect(app.layout.get().panel).toBe(Focus.Board);
+    expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+
+  it('keeps each tab\'s selection across switches', async () => {
+    const app = await docsApp();
+    app.focusOn(Focus.Docs);
+    app.docs.move(1);
+    const document = app.docs.selectedKey()?.path;
+    app.press(Action.TogglePanel);
+    app.press(Action.TogglePanel);
+    expect(app.docs.selectedKey()?.path).toBe(document);
+    expect(app.board.selectedTicket()?.id).toBe('PROJ-1');
+  });
+
+  it('shows the Docs tab when focus goes down from the Board, and the Board tab on h', async () => {
+    const app = await docsApp();
+    app.press(Action.FocusDown);
+    expect(app.layout.get().panel).toBe(Focus.Docs);
+    app.press(Action.PanelLeft);
+    expect(app.layout.get().panel).toBe(Focus.Board);
+  });
+});
+
 describe('the app and a shown document', () => {
   it('moves focus from the Docs panel to the shown document on l, and back on h with the document kept', async () => {
     const app = await docsApp();
@@ -352,7 +383,7 @@ const PULL_REQUEST = { number: 7, title: 'Add the thing', head: 'proj-1-first', 
 
 const opened = async (client: FakeClient, app: AppModel) => {
   app.press(Action.Review);
-  client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+  client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
   await settled();
 };
 
@@ -524,7 +555,7 @@ describe('the app and its window tabs', () => {
     await opened(client, app);
     app.press(Action.ShowBase);
     app.press(Action.Review);
-    client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+    client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
     await settled();
     app.chooseTab(WindowTab.PullRequests);
     expect(app.review.isOpen()).toBe(false);
