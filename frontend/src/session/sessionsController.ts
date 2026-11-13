@@ -91,10 +91,10 @@ export class SessionsController {
     }
   }
 
-  /** `N`: a session in the project root, linked to no ticket. */
+  /** `N`: a session in the project root, linked to no ticket; nothing while no ticket is under the cursor, as on an empty board, whose key bar does not offer it. */
   async newUnlinked(): Promise<void> {
     const project = this.deps.project();
-    if (project !== undefined) {
+    if (project !== undefined && this.deps.ticket() !== undefined) {
       await this.opened(this.hosting.startUnlinked(project.root));
     }
   }

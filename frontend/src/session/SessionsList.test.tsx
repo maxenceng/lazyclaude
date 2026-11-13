@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { pastFixture } from './fixtures';
 import { HostedRow, LiveRow, PastRow, type SessionRow, STARTING } from './sessionRows';
 import { SessionsList } from './SessionsList';
@@ -46,22 +46,5 @@ describe('a ticket\'s sessions', () => {
   it('marks a waiting session\'s row with its state, and a busy one\'s with none a tint answers to', () => {
     list([new HostedRow('h1', 'a', 'yourTurn'), new HostedRow('h2', 'b', 'busy')]);
     expect(screen.getAllByRole('button').map((row) => row.getAttribute('data-lamp'))).toEqual(['turn', 'off']);
-  });
-
-  describe('and how long ago they ran', () => {
-    beforeEach(() => vi.useFakeTimers({ now: Date.parse('2026-03-29T12:00:00Z') }));
-    afterEach(() => vi.useRealTimers());
-
-    it('shows the age of a hosted session since it started, and of a past one since it last ran', () => {
-      list([new HostedRow('h1', 'a', 'yourTurn', '2026-03-29T11:48:00Z'), new PastRow(pastFixture({ id: 'p1', title: 'old', lastActivity: '2026-03-27T12:00:00Z' }))]);
-      const [hosted, past] = screen.getAllByRole('button');
-      expect(hosted).toHaveTextContent('12m');
-      expect(past).toHaveTextContent('2d');
-    });
-
-    it('shows none for a session whose start is not read', () => {
-      list([new HostedRow('h1', 'a', 'yourTurn')]);
-      expect(screen.getByRole('button').textContent).not.toMatch(/\d+[mhd]|now/);
-    });
   });
 });

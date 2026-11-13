@@ -44,7 +44,20 @@
   --cursor-tag-ink: var(--text-on-light);
   --pane-action-ink: var(--lit-ink);
   --pane-action-hover: color-mix(in srgb, var(--lit-ink) 14%, transparent);
+  --tab-ink: var(--lit-ink);
+  --tab-on: color-mix(in srgb, var(--lit-ink) 14%, transparent);
+  --tab-on-ink: var(--lit-ink);
   color: var(--text);
+}
+
+.head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--pane-head);
+  padding-right: var(--space-2);
+  border-bottom: 1px solid var(--seam);
 }
 
 .focused .head {
@@ -52,16 +65,24 @@
   color: var(--lit-ink);
 }
 
+.title {
+  font: 600 var(--size-label) var(--font-read);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding: 0 0 0 var(--space-4);
+}
+
 .focused .title {
   color: var(--lit-ink);
 }
 
-.head {
-  flex: none;
+
+.beside {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
-  padding-right: var(--space-2);
-  border-bottom: 1px solid var(--seam);
 }
 
 .slot {
@@ -71,13 +92,6 @@
   gap: 2px;
 }
 
-.title {
-  font: 600 var(--size-label) var(--font-read);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--dim);
-  padding: var(--space-3) var(--space-4) var(--space-2);
-}
 
 .chips {
   display: flex;

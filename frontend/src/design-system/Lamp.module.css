@@ -11,9 +11,9 @@
 
 .pill {
   flex: none;
-  padding: 0 var(--space-3);
-  border-radius: var(--card-radius);
-  font-size: var(--size-small);
+  padding: 1px var(--space-2);
+  border-radius: var(--pill-radius);
+  font-size: var(--size-micro);
   font-weight: 600;
   line-height: var(--lamp-marker);
   white-space: nowrap;

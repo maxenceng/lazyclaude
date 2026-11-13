@@ -15,7 +15,7 @@
 
 .full {
   grid-template-columns: minmax(400px, 32%) 1fr;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-rows: minmax(0, 62fr) minmax(0, 38fr);
   grid-template-areas:
     'board main'
     'board dock';

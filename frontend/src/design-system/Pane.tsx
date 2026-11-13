@@ -27,6 +27,8 @@ interface Props {
   tabs?: PanelTabsProps;
   /** Words about what the pane shows, beside its title; the title row stays one line, so chips that do not fit are clipped. */
   chips?: readonly PaneChip[];
+  /** What the pane names beside its title, in its title row, such as the dock's tabs; it takes the room the actions leave. */
+  beside?: ReactNode;
   /** Buttons in the fixed slot at the right end of the title row; screens give them, they do not place their own. */
   actions?: readonly PaneActionProps[];
   /** Pinned under the body, whatever its scroll. */
@@ -37,7 +39,7 @@ interface Props {
 }
 
 /** A region of the screen between hairline seams; the focused one lights its title and top edge, and only it gives its cursor row the bright fill. */
-export const Pane = ({ title, focused, layout = PaneLayout.Flow, actions = [], tabs, chips = [], foot, onFocus, children }: Props) => {
+export const Pane = ({ title, focused, layout = PaneLayout.Flow, actions = [], tabs, chips = [], beside, foot, onFocus, children }: Props) => {
   const heading = useId();
   const body = useWholeRows<HTMLDivElement>();
   const pane = useRef<HTMLElement>(null);
@@ -61,6 +63,7 @@ export const Pane = ({ title, focused, layout = PaneLayout.Flow, actions = [], t
             ))}
           </ul>
         )}
+        {beside === undefined ? null : <div className={styles.beside}>{beside}</div>}
         {actions.length === 0 ? null : (
           <div className={styles.slot} data-pane-actions="">
             {actions.map((action) => (

@@ -92,6 +92,21 @@ describe('a pane', () => {
     expect(ruleOf(pane, '.focused')).toContain('--cursor-edge: none');
   });
 
+  it('keeps its title row one height whatever it holds: a title, panel tabs, chips, tabs beside it or actions', () => {
+    expect(ruleOf(pane, '.head')).toContain('height: var(--pane-head)');
+    expect(ruleOf(pane, '.title')).toContain('padding: 0 0 0 var(--space-4)');
+  });
+
+  it('holds what it is given beside its title in its title row, not its body', () => {
+    render(
+      <Pane title="Sessions" focused={false} beside={<span>tabs</span>}>
+        body
+      </Pane>,
+    );
+    expect(screen.getByText('tabs').closest('[data-pane-body]')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Sessions' }).parentElement).toContainElement(screen.getByText('tabs'));
+  });
+
   it('pins its foot under the body, which is the part that scrolls', () => {
     render(
       <Pane title="Ticket" focused={false} foot={<button type="button">pinned</button>}>

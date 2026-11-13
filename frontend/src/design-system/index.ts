@@ -46,6 +46,7 @@ export { TerminalSurface } from './TerminalSurface';
 export { terminalLook } from './terminalTheme';
 export type { TerminalLook, TerminalTheme } from './terminalTheme';
 export { Text, Tone } from './Text';
+export { ReadingSection } from './ReadingSection';
 export { Rows } from './Rows';
 export { TicketCard } from './TicketCard';
 export { TicketRow } from './TicketRow';

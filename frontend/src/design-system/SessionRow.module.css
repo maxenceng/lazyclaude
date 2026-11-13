@@ -34,23 +34,6 @@
   background: var(--row-ground, transparent);
 }
 
-.tall {
-  align-items: center;
-  gap: var(--space-4);
-  margin-block: var(--space-1);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--row-frame, var(--seam));
-  border-radius: var(--card-radius);
-  color: var(--text);
-}
-
-.age {
-  flex: none;
-  font-size: var(--size-small);
-  font-variant-numeric: tabular-nums;
-  color: var(--row-dim, var(--dim));
-}
-
 .selected {
   background: var(--cursor-ground, var(--row-ground, transparent));
   color: var(--cursor-ink);
@@ -88,4 +71,51 @@
   border: 1px solid currentColor;
   border-radius: var(--card-radius);
   font: inherit;
+}
+
+.tall {
+  display: grid;
+  grid-template-columns: var(--session-state-column) minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  margin-block: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--row-frame, var(--card-edge));
+  border-radius: var(--pane-radius);
+  background: var(--row-ground, var(--card));
+  color: var(--tall-ink, var(--dim));
+}
+
+.tall > :first-child {
+  justify-self: start;
+}
+
+.tall .label {
+  font: 400 var(--size-body) var(--font-mono);
+}
+
+.tall[data-lamp='turn'],
+.tall[data-lamp='input'],
+.tall[data-lamp='permission'] {
+  --tall-ink: var(--text);
+  padding: var(--space-4);
+}
+
+.tall[data-lamp='turn'] .label,
+.tall[data-lamp='input'] .label,
+.tall[data-lamp='permission'] .label {
+  font-size: var(--size-base);
+}
+
+.tall .action,
+.tall.selected .action {
+  color: var(--tall-ink, var(--dim));
+}
+
+.tall.selected {
+  background: var(--row-ground, var(--card));
+  color: var(--tall-ink, var(--dim));
+  box-shadow: none;
+  outline: var(--focus-edge) solid var(--cursor-border);
+  outline-offset: 1px;
 }

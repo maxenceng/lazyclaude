@@ -21,12 +21,6 @@
     "starting": "starting",
     "ended": "ended"
   },
-  "age": {
-    "now": "now",
-    "minutes": "{{count}}m",
-    "hours": "{{count}}h",
-    "days": "{{count}}d"
-  },
   "picker": {
     "title": "start with"
   },
@@ -43,7 +37,7 @@
     "retry": "Retry"
   },
   "dock": {
-    "title": "Dock",
+    "title": "Sessions",
     "terminal": "session terminal",
     "starting": "starting",
     "minimise": "Minimise dock",

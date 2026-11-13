@@ -744,13 +744,26 @@ describe('a hosted session\'s pane', () => {
     expect(keyBar()).toHaveTextContent('enter open');
   });
 
-  it('takes its tabs from the hosted sessions the watch lists, with their lamp', async () => {
+  it('takes its tabs from the hosted sessions the watch lists, each named by its session and with its lamp', async () => {
     const { client } = await readyApp();
-    const waiting = sessionFixture({ id: 'live1', state: { kind: 'waitingForPermission', reason: { kind: 'waitingReason', value: 'edit' } }, ticket: 'PROJ-1' });
+    const waiting = sessionFixture({ id: 'live1', name: 'PROJ-1 start', state: { kind: 'waitingForPermission', reason: { kind: 'waitingReason', value: 'edit' } }, ticket: 'PROJ-1' });
     act(() => client.push('session/changed', { ...sessionsFixture([waiting]), hosted: [hostedFixture('h1', { ticket: 'PROJ-1', live: waiting })] }));
     const tab = within(dockTabs()).getByRole('tab');
-    expect(tab).toHaveTextContent('PROJ-1');
+    expect(tab).toHaveTextContent(/^.*PROJ-1 start$/);
     expect(within(tab).getByRole('img', { name: 'waiting for permission' })).toBeInTheDocument();
+  });
+
+  it('names a starting tab by its ticket until its session is read', async () => {
+    const { client } = await readyApp();
+    act(() => client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1', { ticket: 'PROJ-1' })] }));
+    expect(within(dockTabs()).getByRole('tab')).toHaveTextContent('PROJ-1');
+  });
+
+  it('titles the dock Sessions, its tabs in its title row', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    const dock = screen.getByRole('region', { name: 'Sessions' });
+    expect(within(dock).getByRole('tablist', { name: 'hosted sessions' }).closest('[data-pane-body]')).toBeNull();
   });
 
   it('shows the shift+drag hint while the focused pane\'s claude reports the mouse, and not after', async () => {
@@ -1523,6 +1536,13 @@ describe('an empty board', () => {
   it('keeps on the key bar only the keys that act: the new draft, the panel and the window tabs', async () => {
     await readyApp(false, boardFixture([]));
     expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['c new draft', 'o docs', '1/2/3 tabs']);
+  });
+
+  it('starts no session on N, which its key bar does not offer', async () => {
+    const ready = await readyApp(false, boardFixture([]));
+    await ready.user.keyboard('N');
+    await settle();
+    expect(ready.client.calls.map((call) => call.method)).not.toContain('session/startUnlinked');
   });
 
   it('opens the capture popup on c, a first draft having a project to go into', async () => {

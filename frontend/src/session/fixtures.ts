@@ -1,11 +1,11 @@
 import type { SessionHostedSessionView, SessionLiveSessionView, SessionPastSessionView, SessionSessionsView, SessionTicketSessionsView, SessionUnlinkedSessionsView } from '../protocol';
 
-export const sessionFixture = (overrides: { id?: string; state?: SessionLiveSessionView['state']; ticket?: string | undefined; tickets?: string[]; directory?: string } = {}): SessionLiveSessionView => {
+export const sessionFixture = (overrides: { id?: string; name?: string; state?: SessionLiveSessionView['state']; ticket?: string | undefined; tickets?: string[]; directory?: string } = {}): SessionLiveSessionView => {
   const tickets = overrides.tickets ?? (overrides.ticket === undefined ? [] : [overrides.ticket]);
   return {
     id: overrides.id ?? 's',
     pid: 1,
-    name: 'session',
+    name: overrides.name ?? 'session',
     directory: overrides.directory ?? '/p',
     startedAt: '2026-01-01T00:00:00Z',
     version: { kind: 'noVersion' },

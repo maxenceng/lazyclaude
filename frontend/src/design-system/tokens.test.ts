@@ -49,6 +49,7 @@ describe('the dim marks', () => {
     ['a dim label on a pane', 'dim', 'pane'],
     ['a dim label on a lifted pane', 'dim', 'pane-lift'],
     ['the done ticket ink', 'dim-done', 'pane'],
+    ['a session row that waits on nothing', 'dim', 'card'],
     ['a session detail on a your-turn row', 'lamp-turn-tile-dim', 'lamp-turn-tile'],
     ['a session detail on a needs-input row', 'lamp-turn-tile-dim', 'lamp-input-tile'],
     ['a session detail on a permission row', 'lamp-turn-tile-dim', 'lamp-permission-tile'],

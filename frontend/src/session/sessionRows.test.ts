@@ -19,8 +19,8 @@ describe('the sessions listed under a ticket', () => {
     });
     const rows = rowsFor(view, 'PROJ-1');
     expect(rows.map((row) => row.kind)).toEqual([SessionRowKind.Hosted, SessionRowKind.Live, SessionRowKind.Past, SessionRowKind.New]);
-    expect(rows[0]).toEqual(new HostedRow('h1', 'session', 'waitingForInput', '2026-01-01T00:00:00Z'));
-    expect(rows[1]).toEqual(new LiveRow('session', 'busy', '2026-01-01T00:00:00Z'));
+    expect(rows[0]).toEqual(new HostedRow('h1', 'session', 'waitingForInput'));
+    expect(rows[1]).toEqual(new LiveRow('session', 'busy'));
     expect((rows[2] as PastRow).session.id).toBe('p1');
   });
 
