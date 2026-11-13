@@ -25,6 +25,8 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreePayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeView;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
 
 import tools.jackson.databind.JsonNode;
@@ -44,6 +46,8 @@ final class SessionMethods {
             ServedMethod.of("session/resumePast", ResumePastPayload.class, HostStart.class, HostedSessionCommand::resumePast));
     private static final ServedMethod<SessionQuery, NewSessionPayload, NewSessionView> NEW_SESSION =
             ServedMethod.of("session/newSessionFor", NewSessionPayload.class, NewSessionView.class, SessionQuery::newSessionFor);
+    private static final ServedMethod<SessionQuery, WorktreePayload, WorktreeView> WORKTREE =
+            ServedMethod.of("session/worktreeOf", WorktreePayload.class, WorktreeView.class, SessionQuery::worktreeOf);
     private static final ServedMethod<ConfigurationView, NoParams, ConfigurationView> CONFIGURATION =
             ServedMethod.of("session/configuration", NoParams.class, ConfigurationView.class, (held, _) -> held);
     private static final ProtocolMethod<SessionPayload, SessionsView> WATCH =
@@ -80,7 +84,7 @@ final class SessionMethods {
 
     static Protocol protocol() {
         return new Protocol(
-                Stream.concat(STARTS.stream().map(ServedMethod::method), Stream.of(NEW_SESSION.method(), CONFIGURATION.method(), WATCH))
+                Stream.concat(STARTS.stream().map(ServedMethod::method), Stream.of(NEW_SESSION.method(), WORKTREE.method(), CONFIGURATION.method(), WATCH))
                         .<ProtocolMethod<?, ?>>map(declared -> declared)
                         .toList(),
                 Stream.concat(INPUTS.stream().map(ServedInput::input), Stream.of(WATCHING.input()))
@@ -98,6 +102,7 @@ final class SessionMethods {
                         INPUTS.stream().map(input -> input.boundTo(hosting)),
                         Stream.of(WATCHING.boundTo(watched)),
                         Stream.of(NEW_SESSION.boundTo(sessions)),
+                        Stream.of(WORKTREE.boundTo(sessions)),
                         Stream.of(CONFIGURATION.boundTo(configuration)),
                         Stream.of(Map.<String, SidecarMethod>entry(WATCH.name(), this::watch)))
                 .flatMap(served -> served)

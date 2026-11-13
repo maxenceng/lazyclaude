@@ -6,6 +6,8 @@ import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.wor
 
 import java.util.List;
 
+import dev.maxenceng.lazyclaude.session.published.Reason;
+
 public final class WorktreeViewFixture {
 
     private WorktreeViewFixture() {}
@@ -32,5 +34,9 @@ public final class WorktreeViewFixture {
 
     public static HeldWorktreeView clearHeldWorktreeView() {
         return heldWorktreeView(clearWorktreeContentsViewBuilder().build(), true);
+    }
+
+    public static UnreadableWorktreeView unreadableWorktreeView() {
+        return new UnreadableWorktreeView(new Reason("git could not list the worktrees"));
     }
 }

@@ -98,6 +98,19 @@
           "required" : [ "params", "result" ],
           "additionalProperties" : false
         },
+        "session/worktreeOf" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.WorktreePayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/session.WorktreeView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
         "session/configuration" : {
           "type" : "object",
           "properties" : {
@@ -398,7 +411,7 @@
           "additionalProperties" : false
         }
       },
-      "required" : [ "board/boardFor", "board/watch", "board/capture", "session/startUnlinked", "session/startTicket", "session/resumePast", "session/newSessionFor", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/commentsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/summaryToSubmit", "review/pullRequestOn", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
+      "required" : [ "board/boardFor", "board/watch", "board/capture", "session/startUnlinked", "session/startTicket", "session/resumePast", "session/newSessionFor", "session/worktreeOf", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/commentsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/summaryToSubmit", "review/pullRequestOn", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
       "additionalProperties" : false
     },
     "inputs" : {
@@ -1370,6 +1383,16 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
+    "review.MergedHead" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/review.HeadCommit"
+      }, {
+        "$ref" : "#/$defs/review.NoMergedHead"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
     "review.MergedHeadView" : {
       "type" : "object",
       "properties" : {
@@ -1424,6 +1447,16 @@
       "properties" : {
         "kind" : {
           "const" : "noHeadedPullRequest"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "review.NoMergedHead" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noMergedHead"
         }
       },
       "required" : [ "kind" ],
@@ -2191,6 +2224,25 @@
       "required" : [ "kind", "value" ],
       "additionalProperties" : false
     },
+    "session.HeldWorktreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "heldWorktree"
+        },
+        "path" : {
+          "type" : "string"
+        },
+        "state" : {
+          "$ref" : "#/$defs/session.WorktreeStateView"
+        },
+        "clear" : {
+          "type" : "boolean"
+        }
+      },
+      "required" : [ "kind", "path", "state", "clear" ],
+      "additionalProperties" : false
+    },
     "session.HostStart" : {
       "oneOf" : [ {
         "$ref" : "#/$defs/session.StartedHost"
@@ -2349,6 +2401,16 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
+    "session.NoMergedPullRequestView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noMergedPullRequest"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
     "session.NoTicketListingPayload" : {
       "type" : "object",
       "properties" : {
@@ -2394,6 +2456,16 @@
       "properties" : {
         "kind" : {
           "const" : "noWatchedSessionPayload"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.NoWorktreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noWorktree"
         }
       },
       "required" : [ "kind" ],
@@ -2840,6 +2912,19 @@
       "required" : [ "kind", "reason" ],
       "additionalProperties" : false
     },
+    "session.UnreadableWorktreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unreadableWorktree"
+        },
+        "reason" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason" ],
+      "additionalProperties" : false
+    },
     "session.VerbChoiceView" : {
       "type" : "object",
       "properties" : {
@@ -2943,6 +3028,69 @@
       },
       "required" : [ "kind", "session" ],
       "additionalProperties" : false
+    },
+    "session.WorktreeContentsView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "worktreeContents"
+        },
+        "dirtyPaths" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "commitsBeyondMerge" : {
+          "type" : "integer"
+        },
+        "sessions" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        }
+      },
+      "required" : [ "kind", "dirtyPaths", "commitsBeyondMerge", "sessions" ],
+      "additionalProperties" : false
+    },
+    "session.WorktreePayload" : {
+      "type" : "object",
+      "properties" : {
+        "sessions" : {
+          "$ref" : "#/$defs/session.SessionPayload"
+        },
+        "branch" : {
+          "type" : "string"
+        },
+        "mergedHead" : {
+          "$ref" : "#/$defs/review.MergedHead"
+        }
+      },
+      "required" : [ "sessions", "branch", "mergedHead" ],
+      "additionalProperties" : false
+    },
+    "session.WorktreeStateView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.WorktreeContentsView"
+      }, {
+        "$ref" : "#/$defs/session.NoMergedPullRequestView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.WorktreeView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.HeldWorktreeView"
+      }, {
+        "$ref" : "#/$defs/session.NoWorktreeView"
+      }, {
+        "$ref" : "#/$defs/session.UnreadableWorktreeView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
     },
     "session.YourTurn" : {
       "type" : "object",

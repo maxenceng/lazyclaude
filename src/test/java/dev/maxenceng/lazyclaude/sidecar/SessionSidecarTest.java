@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
+import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newSessionPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyInputPayload;
@@ -9,17 +10,22 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSess
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.sessionExitView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ticketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.typedPtyInputPayload;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.worktreePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.emptySessionsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceViewFixture.designPreselected;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.clearHeldWorktreeView;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.unreadableWorktreeView;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.appliedOnReturn;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.changingAtOnce;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.designPreselectedView;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.exitingAtOnce;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.heldWorktree;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.newHostedParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.newSessionParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.noSessions;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.noWatchedSessionParams;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.noWorktree;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.notStartedHost;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.outputtingAtOnce;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.ptyInputParams;
@@ -33,7 +39,10 @@ import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.sessionsPar
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.startedHost;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.ticketHostedParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.typedPtyInputParams;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.unreadableWorktree;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.watchedSessionParams;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.worktreeParams;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.worktreeUnderMergeParams;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.failingAfterReleasing;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.linesWritten;
 import static dev.maxenceng.lazyclaude.sidecar.SidecarFixture.notification;
@@ -58,8 +67,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
+import dev.maxenceng.lazyclaude.review.published.NoMergedHead;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.RepaintPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
@@ -120,6 +131,30 @@ class SessionSidecarTest {
 
         assertThat(linesWritten(sessions, hosting, request(1, "session/newSessionFor", newSessionParams())))
                 .containsExactly(ready(), resultOf(1, designPreselectedView()));
+    }
+
+    @Test
+    void answers_a_ticket_without_a_worktree_with_none() {
+        when(sessions.worktreeOf(worktreePayload(new NoMergedHead()))).thenReturn(new NoWorktreeView());
+
+        assertThat(linesWritten(sessions, hosting, request(1, "session/worktreeOf", worktreeParams())))
+                .containsExactly(ready(), resultOf(1, noWorktree()));
+    }
+
+    @Test
+    void answers_a_worktree_git_could_not_read_with_the_reason_as_a_result() {
+        when(sessions.worktreeOf(worktreePayload(new NoMergedHead()))).thenReturn(unreadableWorktreeView());
+
+        assertThat(linesWritten(sessions, hosting, request(1, "session/worktreeOf", worktreeParams())))
+                .containsExactly(ready(), resultOf(1, unreadableWorktree()));
+    }
+
+    @Test
+    void answers_a_held_worktree_with_its_facts_for_the_merged_head_it_is_asked_with() {
+        when(sessions.worktreeOf(worktreePayload(headCommit()))).thenReturn(clearHeldWorktreeView());
+
+        assertThat(linesWritten(sessions, hosting, request(1, "session/worktreeOf", worktreeUnderMergeParams())))
+                .containsExactly(ready(), resultOf(1, heldWorktree()));
     }
 
     @Test
