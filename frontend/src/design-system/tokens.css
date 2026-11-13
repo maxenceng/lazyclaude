@@ -115,11 +115,14 @@
   --lamp-words-row: 13px;
   --lamp-marker: 14px;
   --session-state-column: 110px;
+  --session-waiting-pad: 14px;
+  --session-name-leading: 1.4;
   --pane-head: 38px;
   --pane-action: 24px;
   --pane-action-icon: 12px;
   --card-radius: 3px;
   --pill-radius: 9px;
+  --hover-ground: color-mix(in srgb, currentColor 8%, transparent);
   --popup-shadow: 0 8px 28px rgb(0 0 0 / 0.5);
   --popup-shadow-up: 0 -12px 28px rgb(0 0 0 / 0.45);
 }

@@ -30,3 +30,8 @@
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
+
+.tab:hover:not(.selected) {
+  background: var(--hover-ground);
+  opacity: 1;
+}

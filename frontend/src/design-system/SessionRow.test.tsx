@@ -77,14 +77,19 @@ describe('a session row', () => {
     expect(ruleOf(sheet, '.tall:hover .action')).toContain('color: var(--text)');
   });
 
+  it('keeps the prototype\'s card heights: its name on a set leading, a waiting card a little roomier', () => {
+    expect(ruleOf(sheet, '.tall .label')).toContain('/ var(--session-name-leading)');
+    expect(ruleOf(sheet, ".tall[data-lamp='permission']")).toContain('padding: var(--session-waiting-pad) var(--space-4)');
+  });
+
   it('names its session in the mono face', () => {
     expect(ruleOf(sheet, '.tall .label')).toContain('var(--font-mono)');
   });
 
-  it('keeps its own ground when selected and outlines it, rather than filling it with the cursor', () => {
+  it('keeps its own ground when selected, with no cursor fill, edge or outline', () => {
     expect(ruleOf(sheet, '.tall.selected')).toContain('background: var(--row-ground, var(--card))');
-    expect(ruleOf(sheet, '.tall.selected')).toContain('outline: var(--cursor-outline, var(--focus-edge)) solid var(--cursor-border)');
     expect(ruleOf(sheet, '.tall.selected')).toContain('box-shadow: none');
+    expect(ruleOf(sheet, '.tall.selected')).not.toContain('outline');
   });
 
   it('is tall when it carries a state, and keeps the plain row for a verb', () => {

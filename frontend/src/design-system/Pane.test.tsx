@@ -90,8 +90,6 @@ describe('a pane', () => {
     expect(ruleOf(pane, '.pane')).toContain('--cursor-edge: inset 0 0 0 1px var(--cursor-border)');
     expect(ruleOf(pane, '.focused')).toContain('--cursor-ground: var(--selected)');
     expect(ruleOf(pane, '.focused')).toContain('--cursor-edge: none');
-    expect(ruleOf(pane, '.pane')).toContain('--cursor-outline: 1px');
-    expect(ruleOf(pane, '.focused')).toContain('--cursor-outline: var(--focus-edge)');
   });
 
   it('keeps its title row one height whatever it holds: a title, panel tabs, chips, tabs beside it or actions', () => {

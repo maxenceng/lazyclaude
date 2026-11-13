@@ -33,7 +33,7 @@ A session's marker showed on its ticket only as a small glyph. A throwaway proto
   state pill (permission, needs input, your turn, busy, starting, unknown, ended) in a column of one width on every row,
   read from the session's state and not its lamp, which merges the states that carry no marker; the session's name in the
   mono face; then the action and `enter`. A row waiting on nothing sits on the card ground in the dim ink; a row with a marker
-  takes the frame and tint of its marker, the plain ink and more room. The cursor outlines its row and keeps its ground. No
+  takes the frame and tint of its marker, the plain ink and more room. A selected row keeps its ground and draws no outline. No
   age is shown: ADR 0096 keeps it off the desktop until a protocol method serves it. The ticket pane's title
   row carries status, context and type as chips, and the number reads `#n` above the title.
 - **An empty board** leaves the main view in place saying `No ticket selected.`, with no facts line, sessions or new-session

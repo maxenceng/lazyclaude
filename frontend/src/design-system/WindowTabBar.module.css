@@ -46,3 +46,8 @@
 .finding[data-status='in-progress'] {
   background: color-mix(in srgb, var(--status-in-progress) 30%, transparent);
 }
+
+.tab:hover:not(.selected) {
+  background: var(--hover-ground);
+  color: var(--text);
+}

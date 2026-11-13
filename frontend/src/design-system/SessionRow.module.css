@@ -91,14 +91,14 @@
 }
 
 .tall .label {
-  font: 400 var(--size-body) var(--font-mono);
+  font: 400 var(--size-body) / var(--session-name-leading) var(--font-mono);
 }
 
 .tall[data-lamp='turn'],
 .tall[data-lamp='input'],
 .tall[data-lamp='permission'] {
   --tall-ink: var(--text);
-  padding: var(--space-4);
+  padding: var(--session-waiting-pad) var(--space-4);
 }
 
 .tall[data-lamp='turn'] .label,
@@ -116,8 +116,6 @@
   background: var(--row-ground, var(--card));
   color: var(--tall-ink, var(--dim));
   box-shadow: none;
-  outline: var(--cursor-outline, var(--focus-edge)) solid var(--cursor-border);
-  outline-offset: 1px;
 }
 
 .tall:hover {

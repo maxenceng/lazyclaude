@@ -39,3 +39,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.row:hover:not(.selected) {
+  background: var(--hover-ground);
+}
