@@ -12,6 +12,7 @@ import {
   type Fact,
   FactsLine,
   type LampColour,
+  type PaneChip,
   type PanelTabsProps,
   type PullRequestCells,
   Pane,
@@ -195,6 +196,7 @@ export const TicketPane = ({ board, selection, focused, standing, onLink, onHide
       title={t('ticket.title')}
       focused={focused}
       foot={foot}
+      chips={ticket === undefined ? [] : chipsOf(ticket, t)}
       onFocus={onFocus}
       actions={onHide === undefined ? [] : [{ kind: PaneActionKind.Hide, label: t('ticket.hide'), shortcut: t('ticket.hideKey'), onClick: onHide }]}
     >
@@ -203,7 +205,7 @@ export const TicketPane = ({ board, selection, focused, standing, onLink, onHide
         <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text>
       ) : (
         <Detail
-          facts={[ticket.id]}
+          facts={[t('ticket.number', { id: ticket.id })]}
           title={ticket.title}
           summary={<FactsLine facts={factsOf(ticket, standing, t)} />}
           lead={children}
@@ -214,6 +216,13 @@ export const TicketPane = ({ board, selection, focused, standing, onLink, onHide
     </Pane>
   );
 };
+
+/** The words beside the ticket's title: its status in its colour, then its context and type where it has them. */
+const chipsOf = (ticket: BoardTicketView, t: TFunction<'board'>): PaneChip[] => [
+  { label: t(`status.${ticket.status}`), colour: statusColourOf(ticket.status) },
+  ...(ticket.context.kind === 'contextName' ? [{ label: ticket.context.value }] : []),
+  ...(ticket.type.kind === 'typeName' ? [{ label: ticket.type.value }] : []),
+];
 
 const PULL_REQUEST_WORDS = {
   [PullRequestRead.Reading]: 'facts.readingPullRequest',

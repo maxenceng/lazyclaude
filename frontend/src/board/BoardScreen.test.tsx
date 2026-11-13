@@ -239,3 +239,31 @@ describe('the ticket\'s facts line', () => {
     expect(screen.queryByText('worktree')).not.toBeInTheDocument();
   });
 });
+
+describe('the ticket pane\'s title row and number', () => {
+  it('names the ticket\'s status, context and type as chips beside its title', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, richTicket);
+    const chips = within(screen.getByRole('region', { name: 'Ticket' })).getByRole('list', { name: 'Ticket' });
+    expect(within(chips).getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['in progress', 'session', 'fix']);
+  });
+
+  it('leaves out the context and type a ticket does not carry', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, tickets);
+    const chips = within(screen.getByRole('region', { name: 'Ticket' })).getByRole('list', { name: 'Ticket' });
+    expect(within(chips).getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['in progress']);
+  });
+
+  it('carries no chip when no ticket is under the cursor', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, boardFixture([]));
+    expect(within(screen.getByRole('region', { name: 'Ticket' })).queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  it('sets a # before the ticket\'s number above its title', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, richTicket);
+    expect(within(screen.getByRole('region', { name: 'Ticket' })).getByText('#PROJ-1')).toBeInTheDocument();
+  });
+});

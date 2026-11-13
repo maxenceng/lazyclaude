@@ -34,15 +34,17 @@ interface Props {
   colour: LampColour;
   size: LampSize;
   number?: string;
+  /** The words a pill says in place of its lamp's own, for a state the lamp does not tell apart: busy, ended. */
+  words?: string;
 }
 
 /** A session's state as a lamp: a marker beside a session, a pill saying it in words on a ticket's row, or a tile on the andon board. Its colour means session state and nothing else. */
-export const Lamp = ({ colour, size, number }: Props) => {
+export const Lamp = ({ colour, size, number, words }: Props) => {
   const { t } = useTranslation('designSystem');
   if (size === LampSize.Pill) {
     return (
       <span className={`${styles.pill} ${styles[colour]}`} role="img" aria-label={t(MEANING[colour])}>
-        {t(SHORT_MEANING[colour])}
+        {words ?? t(SHORT_MEANING[colour])}
       </span>
     );
   }

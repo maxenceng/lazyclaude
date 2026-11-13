@@ -21,6 +21,7 @@
   "ticket": {
     "title": "Ticket",
     "noneSelected": "No ticket selected.",
+    "number": "#{{id}}",
     "hide": "Hide ticket",
     "hideKey": "m"
   },

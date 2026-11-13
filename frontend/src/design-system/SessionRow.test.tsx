@@ -40,4 +40,27 @@ describe('a session row', () => {
     render(<SessionRow label="start" selected={false} lamp={undefined} onSelect={() => {}} />);
     expect(screen.getByRole('button')).not.toHaveTextContent('enter');
   });
+
+  it('says its state in a worded pill on the left, with its age before its action, in the one button', () => {
+    render(<SessionRow label="start 145" state="your turn" age="12m" action={{ label: 'attach', shortcut: 'enter' }} selected={false} lamp={LampColour.Turn} onSelect={() => {}} />);
+    const row = screen.getByRole('button');
+    expect(screen.getByRole('img')).toHaveTextContent('your turn');
+    expect(row.textContent).toMatch(/your turn.*start 145.*12m.*attach.*enter/);
+  });
+
+  it('words a session that waits on nothing by the state it is in, not by the lamp', () => {
+    render(<SessionRow label="start 145" state="ended" selected={false} lamp={LampColour.Off} onSelect={() => {}} />);
+    expect(screen.getByRole('img')).toHaveTextContent('ended');
+  });
+
+  it.each(['permission', 'input'])('marks a %s row with the frame and tint of its state', (state) => {
+    expect(ruleOf(sheet, `.row[data-lamp='${state}']`)).toContain(`--row-ground: var(--lamp-${state}-tile)`);
+    expect(ruleOf(sheet, `.row[data-lamp='${state}']`)).toContain(`--row-frame: var(--lamp-${state})`);
+  });
+
+  it('is tall when it carries a state, and keeps the plain row for a verb', () => {
+    expect(ruleOf(sheet, '.tall')).toContain('padding');
+    render(<SessionRow label="start" state="busy" selected={false} lamp={LampColour.Off} onSelect={() => {}} />);
+    expect(screen.getByRole('button').className).toContain('tall');
+  });
 });

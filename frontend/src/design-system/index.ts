@@ -30,6 +30,7 @@ export type { Target } from './Document';
 export { headingSlugs } from './markdown';
 export { Lamp, LampColour, LampSize } from './Lamp';
 export { Pane, PaneActionKind, PaneLayout } from './Pane';
+export type { PaneChip } from './Pane';
 export { PaneAction } from './PaneAction';
 export type { PanelTab, PanelTabsProps } from './PanelTabs';
 export type { PaneActionProps } from './PaneAction';

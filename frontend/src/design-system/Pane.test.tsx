@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Pane, PaneActionKind } from './Pane';
+import { StatusColour } from './StatusHeading';
 import { ruleOf, stylesheet } from './stylesheet';
 
 const CROSS = 'M2 2 L10 10 M10 2 L2 10';
@@ -116,5 +117,28 @@ describe('a pane with panel tabs', () => {
     expect(screen.getByRole('region', { name: 'Panels' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'A 1' })).toBeInTheDocument();
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+  });
+});
+
+describe('a pane with chips', () => {
+  it('names them beside its title, in the title row', () => {
+    render(
+      <Pane title="Ticket" focused={false} chips={[{ label: 'todo', colour: StatusColour.Todo }, { label: 'fix' }]}>
+        body
+      </Pane>,
+    );
+    expect(screen.getByRole('list', { name: 'Ticket' })).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['todo', 'fix']);
+    expect(screen.getByText('todo')).toHaveAttribute('data-status', 'todo');
+  });
+
+  it('carries none when it has none', () => {
+    render(<Pane title="Ticket" focused={false}>body</Pane>);
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  it('keeps its title row one line, the chips clipped rather than wrapped', () => {
+    expect(ruleOf(pane, '.chips')).toContain('white-space: nowrap');
+    expect(ruleOf(pane, '.chips')).toContain('overflow: hidden');
   });
 });

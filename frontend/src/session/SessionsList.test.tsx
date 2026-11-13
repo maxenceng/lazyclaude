@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LampColour } from './markers';
 import { pastFixture } from './fixtures';
 import { HostedRow, LiveRow, PastRow, type SessionRow } from './sessionRows';
@@ -25,5 +25,42 @@ describe('a ticket\'s sessions', () => {
   it('carries no action on a live session another window hosts, which cannot be entered', () => {
     list([new LiveRow('elsewhere', LampColour.Input)]);
     expect(screen.getByRole('button', { name: /elsewhere/ })).not.toHaveTextContent('enter');
+  });
+
+  it.each([
+    [LampColour.Permission, 'permission'],
+    [LampColour.Input, 'needs input'],
+    [LampColour.Turn, 'your turn'],
+    [LampColour.Off, 'busy'],
+  ])('says a %s hosted session in the word %s on its pill', (lamp, word) => {
+    list([new HostedRow('h1', 'start 145', lamp)]);
+    expect(within(screen.getByRole('button')).getByRole('img')).toHaveTextContent(word);
+  });
+
+  it('says a past session has ended', () => {
+    list([new PastRow(pastFixture({ id: 'p1', title: 'refine 145' }))]);
+    expect(within(screen.getByRole('button')).getByRole('img')).toHaveTextContent('ended');
+  });
+
+  it('marks a waiting session\'s row with its state, and a busy one\'s with none a tint answers to', () => {
+    list([new HostedRow('h1', 'a', LampColour.Turn), new HostedRow('h2', 'b', LampColour.Off)]);
+    expect(screen.getAllByRole('button').map((row) => row.getAttribute('data-lamp'))).toEqual(['turn', 'off']);
+  });
+
+  describe('and how long ago they ran', () => {
+    beforeEach(() => vi.useFakeTimers({ now: Date.parse('2026-03-29T12:00:00Z') }));
+    afterEach(() => vi.useRealTimers());
+
+    it('shows the age of a hosted session since it started, and of a past one since it last ran', () => {
+      list([new HostedRow('h1', 'a', LampColour.Turn, '2026-03-29T11:48:00Z'), new PastRow(pastFixture({ id: 'p1', title: 'old', lastActivity: '2026-03-27T12:00:00Z' }))]);
+      const [hosted, past] = screen.getAllByRole('button');
+      expect(hosted).toHaveTextContent('12m');
+      expect(past).toHaveTextContent('2d');
+    });
+
+    it('shows none for a session whose start is not read', () => {
+      list([new HostedRow('h1', 'a', LampColour.Turn)]);
+      expect(screen.getByRole('button').textContent).not.toMatch(/\d+[mhd]|now/);
+    });
   });
 });

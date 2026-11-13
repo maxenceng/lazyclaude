@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Button, PickerBar, SessionRow as Row, StatusHeading, Rows } from '../design-system';
 import type { SessionPastSessionView } from '../protocol';
 import { type SessionRow, SessionRowKind } from './sessionRows';
+import { ageOf } from './age';
 import type { StartFailure } from './hosting';
 import type { VerbPicker } from './verbPicker';
 
@@ -48,6 +49,47 @@ const actionOf = (row: SessionRow, t: TFunction<'session'>): { label: string; sh
   }
 };
 
+const STATE_WORDS = {
+  permission: 'state.permission',
+  input: 'state.input',
+  turn: 'state.turn',
+  off: 'state.busy',
+} as const;
+
+/** The state a session row says in words: what it waits on, busy while it waits on nothing, ended once it is past. */
+const stateOf = (row: SessionRow, t: TFunction<'session'>): string | undefined => {
+  switch (row.kind) {
+    case SessionRowKind.Hosted:
+    case SessionRowKind.Live:
+      return t(STATE_WORDS[row.lamp]);
+    case SessionRowKind.Past:
+    case SessionRowKind.Unlinked:
+      return t('state.ended');
+    case SessionRowKind.New:
+      return undefined;
+  }
+};
+
+/** When the row's session started, or last ran if it is past. */
+const sinceOf = (row: SessionRow): string | undefined => {
+  switch (row.kind) {
+    case SessionRowKind.Hosted:
+    case SessionRowKind.Live:
+      return row.since;
+    case SessionRowKind.Past:
+    case SessionRowKind.Unlinked:
+      return row.session.lastActivity;
+    case SessionRowKind.New:
+      return undefined;
+  }
+};
+
+const ageWords = (row: SessionRow, t: TFunction<'session'>): string | undefined => {
+  const since = sinceOf(row);
+  const age = since === undefined ? undefined : ageOf(since, Date.now());
+  return age === undefined ? undefined : t(`age.${age.unit}`, { count: age.count });
+};
+
 const lampOf = (row: SessionRow) => (row.kind === SessionRowKind.Hosted || row.kind === SessionRowKind.Live ? row.lamp : undefined);
 
 interface Listed {
@@ -67,7 +109,7 @@ const RowList = ({ entries, cursor, onPress }: RowListProps) => {
   return (
     <Rows>
       {entries.map(({ row, index }) => (
-        <Row key={index} {...labelled(row, t)} action={actionOf(row, t)} selected={index === cursor} lamp={lampOf(row)} onSelect={() => onPress(index)} />
+        <Row key={index} {...labelled(row, t)} state={stateOf(row, t)} age={ageWords(row, t)} action={actionOf(row, t)} selected={index === cursor} lamp={lampOf(row)} onSelect={() => onPress(index)} />
       ))}
     </Rows>
   );

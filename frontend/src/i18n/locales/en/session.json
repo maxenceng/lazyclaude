@@ -13,6 +13,19 @@
     "starting": "starting",
     "untitled": "session {{id}}"
   },
+  "state": {
+    "permission": "permission",
+    "input": "needs input",
+    "turn": "your turn",
+    "busy": "busy",
+    "ended": "ended"
+  },
+  "age": {
+    "now": "now",
+    "minutes": "{{count}}m",
+    "hours": "{{count}}h",
+    "days": "{{count}}d"
+  },
   "picker": {
     "title": "start with"
   },

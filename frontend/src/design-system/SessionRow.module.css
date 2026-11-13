@@ -17,8 +17,41 @@
   --row-dim: var(--lamp-turn-tile-dim);
 }
 
+.row[data-lamp='input'] {
+  --row-ground: var(--lamp-input-tile);
+  --row-frame: var(--lamp-input);
+  --row-dim: var(--lamp-turn-tile-dim);
+}
+
+.row[data-lamp='permission'] {
+  --row-ground: var(--lamp-permission-tile);
+  --row-frame: var(--lamp-permission);
+  --row-dim: var(--lamp-turn-tile-dim);
+}
+
+.row[data-lamp='turn'] {
+  --row-frame: var(--lamp-turn);
+}
+
 .row {
   background: var(--row-ground, transparent);
+}
+
+.tall {
+  align-items: center;
+  gap: var(--space-4);
+  margin-block: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--row-frame, var(--seam));
+  border-radius: var(--card-radius);
+  color: var(--text);
+}
+
+.age {
+  flex: none;
+  font-size: var(--size-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--row-dim, var(--dim));
 }
 
 .selected {

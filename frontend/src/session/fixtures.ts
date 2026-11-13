@@ -34,14 +34,14 @@ export const ticketSessionsFixture = (
   return { ticket, live: sessions.live ?? [], past: sessions.past ?? [], hosted: sessions.hosted ?? [] };
 };
 
-export const pastFixture = (overrides: { id?: string; title?: string; ticket?: string; interrupted?: boolean; directory?: string } = {}): SessionPastSessionView => {
+export const pastFixture = (overrides: { id?: string; title?: string; ticket?: string; interrupted?: boolean; directory?: string; lastActivity?: string } = {}): SessionPastSessionView => {
   return {
     id: overrides.id ?? 'old',
     title: overrides.title === undefined ? { kind: 'noTitle' } : { kind: 'aiTitle', value: overrides.title },
     opening: { kind: 'noFirstPrompt' },
     reading: { kind: 'readableTranscript' },
     directory: overrides.directory ?? '/p/wt',
-    lastActivity: '2026-01-01T00:00:00Z',
+    lastActivity: overrides.lastActivity ?? '2026-01-01T00:00:00Z',
     startedAt: '2026-01-01T00:00:00Z',
     links: overrides.ticket === undefined ? [] : [{ ticket: overrides.ticket, verb: 'start' }],
     interrupted: overrides.interrupted ?? false,

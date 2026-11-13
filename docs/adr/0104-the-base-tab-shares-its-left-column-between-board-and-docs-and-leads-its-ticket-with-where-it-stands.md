@@ -28,6 +28,9 @@ A session waiting on a ticket showed only as a small glyph. A throwaway prototyp
 - **Sessions come right after the facts**, waiting first and strongest first (`rowsFor` orders them, so the cursor and the
   display agree), each row one button carrying its action (`attach`, `resume`) and its key, `enter`. The ticket's prose is
   centred at its reading measure.
+- **Session rows are tall, as in H:** a worded state pill (your turn, needs input, permission, busy, ended), the prompt, the
+  age as elapsed time, then the action and `enter`; a waiting row takes the frame and tint of its state. The ticket pane's title
+  row carries status, context and type as chips, and the number reads `#n` above the title.
 - **An empty board** leaves the main view in place saying `No ticket selected.`, with no facts line, sessions or new-session
   bar; the Board shows every status at 0, the project is known from the empty board so a first draft can be captured, and the
   key bar keeps only the keys that act.

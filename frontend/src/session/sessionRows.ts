@@ -18,6 +18,7 @@ export class HostedRow {
     readonly session: string,
     readonly name: string | undefined,
     readonly lamp: LampColour,
+    readonly since?: string,
   ) {}
 }
 
@@ -27,6 +28,7 @@ export class LiveRow {
   constructor(
     readonly name: string,
     readonly lamp: LampColour,
+    readonly since?: string,
   ) {}
 }
 
@@ -58,8 +60,8 @@ export const rowsFor = (view: SessionSessionsView | undefined, ticket: string | 
   const own = view?.tickets.find((listed) => listed.ticket === ticket);
   const hostedIds = new Set((view?.hosted ?? []).map((session) => session.live?.id ?? session.id));
   const running = [
-    ...(own?.hosted ?? []).map((session) => new HostedRow(session.id, session.live?.name, session.live === null ? LampColour.Off : colourOf(session.live))),
-    ...(own?.live ?? []).filter((session) => !hostedIds.has(session.id)).map((session) => new LiveRow(session.name, colourOf(session))),
+    ...(own?.hosted ?? []).map((session) => new HostedRow(session.id, session.live?.name, session.live === null ? LampColour.Off : colourOf(session.live), session.live?.startedAt)),
+    ...(own?.live ?? []).filter((session) => !hostedIds.has(session.id)).map((session) => new LiveRow(session.name, colourOf(session), session.startedAt)),
   ];
   return [
     ...running.sort((a, b) => byStrength({ colour: a.lamp }, { colour: b.lamp })),
