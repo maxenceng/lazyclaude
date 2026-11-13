@@ -6,7 +6,7 @@ import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
 
 /**
  * The sessions a ticket lists, and none other: the live and past ones linked to it, in the project's order, and the hosted
- * tabs started for it, in tab order. Each frontend lays them out; which belong is this view's.
+ * tabs started for it or running a session linked to it, a resumed one included, in tab order. Each frontend lays them out; which belong is this view's.
  */
 public record TicketSessionsView(
         LinkedTicketId ticket, List<LiveSessionView> live, List<PastSessionView> past, List<HostedSessionView> hosted) {
@@ -18,7 +18,8 @@ public record TicketSessionsView(
                 .live(live.stream().filter(session -> session.linkTo(ticket).isPresent()).toList())
                 .past(past.stream().filter(session -> session.linkTo(ticket).isPresent()).toList())
                 .hosted(hosted.stream()
-                        .filter(tab -> tab.ticket().filter(ticket::equals).isPresent())
+                        .filter(tab -> tab.ticket().filter(ticket::equals).isPresent()
+                                || tab.live().flatMap(session -> session.linkTo(ticket)).isPresent())
                         .toList())
                 .build();
     }
