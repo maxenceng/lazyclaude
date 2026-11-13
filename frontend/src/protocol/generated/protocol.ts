@@ -15,9 +15,6 @@ export type SessionHostStart = SessionStartedHost | SessionNotStartedHost;
 export type SessionListingPayload = SessionTicketListingPayload | SessionNoTicketListingPayload;
 export type SessionMergeState = 'MERGED' | 'NOT_MERGED' | 'UNKNOWN';
 export type SessionNewSessionView = SessionVerbChoiceView | SessionUnlinkedStartView;
-export type ReviewMergedHead = ReviewHeadCommit | ReviewNoMergedHead;
-export type SessionWorktreeView = SessionHeldWorktreeView | SessionNoWorktreeView | SessionUnreadableWorktreeView;
-export type SessionWorktreeStateView = SessionWorktreeContentsView | SessionNoMergedPullRequestView;
 export type SessionReservedAction =
   'FOCUS_LEFT' | 'FOCUS_DOWN' | 'FOCUS_UP' | 'FOCUS_RIGHT' | 'HIDE_MAIN_VIEW' | 'ZOOM' | 'NEXT_WAITING';
 export type SessionModifier = 'CTRL' | 'ALT' | 'SHIFT';
@@ -116,10 +113,6 @@ export interface LazyclaudeProtocol {
     'session/newSessionFor': {
       params: SessionNewSessionPayload;
       result: SessionNewSessionView;
-    };
-    'session/worktreeOf': {
-      params: SessionWorktreePayload;
-      result: SessionWorktreeView;
     };
     'session/configuration': {
       params: SidecarNoParams;
@@ -387,40 +380,6 @@ export interface SessionVerbChoiceView {
 }
 export interface SessionUnlinkedStartView {
   kind: 'unlinkedStart';
-}
-export interface SessionWorktreePayload {
-  sessions: SessionSessionPayload;
-  branch: string;
-  mergedHead: ReviewMergedHead;
-}
-export interface ReviewHeadCommit {
-  kind: 'headCommit';
-  value: string;
-}
-export interface ReviewNoMergedHead {
-  kind: 'noMergedHead';
-}
-export interface SessionHeldWorktreeView {
-  kind: 'heldWorktree';
-  path: string;
-  state: SessionWorktreeStateView;
-  clear: boolean;
-}
-export interface SessionWorktreeContentsView {
-  kind: 'worktreeContents';
-  dirtyPaths: string[];
-  commitsBeyondMerge: number;
-  sessions: string[];
-}
-export interface SessionNoMergedPullRequestView {
-  kind: 'noMergedPullRequest';
-}
-export interface SessionNoWorktreeView {
-  kind: 'noWorktree';
-}
-export interface SessionUnreadableWorktreeView {
-  kind: 'unreadableWorktree';
-  reason: string;
 }
 export interface SidecarNoParams {}
 export interface SessionConfigurationView {
@@ -871,6 +830,10 @@ export interface SessionSessionExitView {
 export interface ReviewMergedHeadView {
   branch: string;
   commit: ReviewHeadCommit;
+}
+export interface ReviewHeadCommit {
+  kind: 'headCommit';
+  value: string;
 }
 
 export type MethodName = keyof LazyclaudeProtocol['methods'];

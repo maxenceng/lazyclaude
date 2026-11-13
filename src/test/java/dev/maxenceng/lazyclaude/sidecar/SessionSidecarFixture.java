@@ -1,6 +1,5 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
-import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyInputPayload;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
@@ -47,34 +46,6 @@ public final class SessionSidecarFixture {
         return ("{\"sessions\":{\"root\":\"%s\",\"ticketIds\":[\"1\"]},\"ticket\":\"1\",\"verbs\":[\"REVIEW\",\"DESIGN\"],"
                         + "\"merged\":\"UNKNOWN\"}")
                 .formatted(project().root());
-    }
-
-    public static String worktreeParams() {
-        return worktreeParams("{\"kind\":\"noMergedHead\"}");
-    }
-
-    public static String worktreeUnderMergeParams() {
-        return worktreeParams("{\"kind\":\"headCommit\",\"value\":\"%s\"}".formatted(headCommit().value()));
-    }
-
-    private static String worktreeParams(String mergedHead) {
-        return "{\"sessions\":{\"root\":\"%s\",\"ticketIds\":[\"1\"]},\"branch\":\"%s\",\"mergedHead\":%s}"
-                .formatted(project().root(), branchName().value(), mergedHead);
-    }
-
-    public static String noWorktree() {
-        return "{\"kind\":\"noWorktree\"}";
-    }
-
-    public static String unreadableWorktree() {
-        return "{\"kind\":\"unreadableWorktree\",\"reason\":\"git could not list the worktrees\"}";
-    }
-
-    public static String heldWorktree() {
-        return ("{\"kind\":\"heldWorktree\",\"path\":\"%s\","
-                        + "\"state\":{\"kind\":\"worktreeContents\",\"dirtyPaths\":[],\"commitsBeyondMerge\":0,\"sessions\":[]},"
-                        + "\"clear\":true}")
-                .formatted(worktreeDirectory().path());
     }
 
     public static String designPreselectedView() {
