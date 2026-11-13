@@ -9,6 +9,7 @@ export enum Ci {
 }
 
 const GLYPH: Record<Ci, string> = { failed: '✗', pending: '◌', passed: '✓' };
+const NONE_GLYPH = '–';
 const MEANING = {
   failed: 'ci.failed',
   pending: 'ci.pending',
@@ -17,19 +18,34 @@ const MEANING = {
 
 interface Props {
   ci: Ci | undefined;
-  /** The glyph stands on a selected row's light bar, so it takes the darker colour. */
-  onLight?: boolean;
+  /** The result in words, set beside the glyph, in its colour; for a pull request with no result it is the dim reason, after a dash. */
+  word?: string;
 }
 
 /** The glyph of a CI result in its colour; a blank cell of the same width where there is none, so the rows keep their columns. */
-export const CiGlyph = ({ ci, onLight = false }: Props) => {
+export const CiGlyph = ({ ci, word }: Props) => {
   const { t } = useTranslation('designSystem');
   if (ci === undefined) {
-    return <span className={styles.glyph} />;
+    return word === undefined ? (
+      <span className={styles.glyph} />
+    ) : (
+      <span className={[styles.cell, styles.none].join(' ')}>
+        <span className={styles.glyph}>{NONE_GLYPH}</span>
+        {word}
+      </span>
+    );
   }
-  return (
-    <span className={[styles.glyph, styles[ci], onLight ? styles.onLight : ''].join(' ')} role="img" aria-label={t(MEANING[ci])}>
+  const glyph = (
+    <span className={[styles.glyph, styles[ci]].join(' ')} role="img" aria-label={t(MEANING[ci])}>
       {GLYPH[ci]}
+    </span>
+  );
+  return word === undefined ? (
+    glyph
+  ) : (
+    <span className={[styles.cell, styles[ci]].join(' ')}>
+      {glyph}
+      {word}
     </span>
   );
 };

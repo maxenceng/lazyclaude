@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { COMMENT_MARKS, CommentKind } from './comment';
+import { Badge, BadgeTone } from './Badge';
 import styles from './FileRow.module.css';
 
 export enum FileChange {
@@ -13,32 +13,38 @@ interface Props {
   letter: string;
   change: FileChange;
   name: string;
-  openThreads: number;
+  /** Where the file lives, dimmed under its name. */
+  directory: string;
+  added: number;
+  removed: number;
+  threads: number;
   pending: number;
   selected: boolean;
   onSelect: () => void;
 }
 
-/** One file of a pull request: the letter that says what it does to the file, its name, and the open threads and pending comments on it. The selected row is a light bar; a press on it again goes to its first line. */
-export const FileRow = ({ letter, change, name, openThreads, pending, selected, onSelect }: Props) => {
+/**
+ * One file of a pull request in the rail beside its diff: the letter that says what it does to the file, its name and how many lines
+ * it adds and removes, and under them where it lives and a word badge for its threads and for your pending comments. The selected
+ * row is lifted; a press on it goes to its first line.
+ */
+export const FileRow = ({ letter, change, name, directory, added, removed, threads, pending, selected, onSelect }: Props) => {
   const { t } = useTranslation('designSystem');
   return (
     <li data-row="">
       <button type="button" className={[styles.row, selected ? styles.selected : ''].join(' ')} aria-current={selected ? 'true' : undefined} onClick={onSelect}>
-        <span className={[styles.letter, styles[change]].join(' ')}>{letter}</span>
+        <span className={[styles.letter, styles[change]].join(' ')} title={t(`fileRow.change.${change}`)}>
+          {letter}
+        </span>
         <span className={styles.name}>{name}</span>
-        {openThreads === 0 ? null : (
-          <span className={styles.threads} aria-label={t('fileRow.openThreads', { count: openThreads })}>
-            {COMMENT_MARKS[CommentKind.Thread]}
-            {openThreads}
-          </span>
-        )}
-        {pending === 0 ? null : (
-          <span className={styles.pending} aria-label={t('fileRow.pending', { count: pending })}>
-            {COMMENT_MARKS[CommentKind.Pending]}
-            {pending}
-          </span>
-        )}
+        <span className={styles.delta}>
+          <b className={styles.plus}>+{added}</b> <b className={styles.minus}>−{removed}</b>
+        </span>
+        <span className={styles.directory}>{directory}</span>
+        <span className={styles.badges}>
+          {threads === 0 ? null : <Badge tone={BadgeTone.Blue}>{t('fileRow.threads', { count: threads })}</Badge>}
+          {pending === 0 ? null : <Badge tone={BadgeTone.Amber}>{t('fileRow.pending', { count: pending })}</Badge>}
+        </span>
       </button>
     </li>
   );

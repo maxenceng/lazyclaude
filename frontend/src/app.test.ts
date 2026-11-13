@@ -437,20 +437,18 @@ describe('the app and a review', () => {
     expect(app.layout.get().focus).toBe(Focus.Board);
   });
 
-  it('moves focus between Files, Comments and the diff with the panel keys', async () => {
+  it('moves focus between Files and the diff with the panel keys, and down from Files goes nowhere', async () => {
     const { client, app } = await reviewing();
     await opened(client, app);
     app.press(Action.PanelLeft);
     expect(app.layout.get().focus).toBe(Focus.Files);
     app.press(Action.FocusDown);
-    expect(app.layout.get().focus).toBe(Focus.Comments);
-    app.press(Action.FocusUp);
     expect(app.layout.get().focus).toBe(Focus.Files);
     app.press(Action.PanelRight);
     expect(app.layout.get().focus).toBe(Focus.Diff);
   });
 
-  it('takes j and k as the cursor of the diff, and of Files and Comments once they have focus', async () => {
+  it('takes j and k as the cursor of the diff, and of Files once it has focus', async () => {
     const { client, app } = await reviewing();
     await opened(client, app);
     const current = app.review.current.get();

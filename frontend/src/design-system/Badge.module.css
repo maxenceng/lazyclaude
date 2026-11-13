@@ -1,0 +1,20 @@
+.badge {
+  display: inline-block;
+  flex: none;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--pill-radius);
+  font: 600 var(--size-small) var(--font-read);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.blue {
+  border-color: var(--edge-open);
+}
+
+.amber {
+  border-color: var(--badge-pending-ground);
+  background: var(--badge-pending-ground);
+  color: var(--badge-pending-ink);
+}

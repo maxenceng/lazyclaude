@@ -38,15 +38,7 @@ export class KeyRouter {
     private readonly tabs: WindowTabs,
     private readonly quitting: Quitting,
   ) {
-    layout.subscribe(() => {
-      const focus = layout.get().focus;
-      if (focus === Focus.Files || focus === Focus.Comments) {
-        this.lastLeft = focus;
-      }
-    });
   }
-
-  private lastLeft: Focus = Focus.Files;
 
   /** Whether a popup holds the keys and the mouse alone (ADR 0051): the one answer both the keys here and the window's clicks read. */
   isModal(): boolean {
@@ -92,7 +84,7 @@ export class KeyRouter {
     switch (action) {
       case Action.FocusLeft:
         if (!this.sessions.hosting.selectPrevious()) {
-          this.change((current) => current.focusOn(this.review.isOpen() ? this.lastLeft : Focus.Board));
+          this.change((current) => current.focusOn(this.review.isOpen() ? Focus.Files : Focus.Board));
         }
         break;
       case Action.FocusRight:
@@ -135,7 +127,6 @@ export class KeyRouter {
   private openReview(): void {
     const ticket = this.board.selectedTicket();
     if ((this.focus() === Focus.Board || this.focus() === Focus.Sessions) && ticket !== undefined) {
-      this.lastLeft = Focus.Files;
       void this.review.open(ticket.branch);
     }
   }
@@ -174,9 +165,9 @@ export class KeyRouter {
       case Action.MoveUp:
         return this.moveInReview(current, focus, -1);
       case Action.Capture:
-        return focus === Focus.Comments ? current.commentOnSelectedComment() : focus === Focus.Diff ? void current.comment() : undefined;
+        return focus === Focus.Diff ? void current.comment() : undefined;
       case Action.Delete:
-        return focus === Focus.Comments ? current.deleteSelectedComment() : focus === Focus.Diff ? current.deleteAtCursor() : undefined;
+        return focus === Focus.Diff ? current.deleteAtCursor() : undefined;
       case Action.Range:
         return focus === Focus.Diff ? void current.markRangeKey() : undefined;
       case Action.NextFile:
@@ -197,8 +188,6 @@ export class KeyRouter {
       current.enterInDiff();
     } else if (focus === Focus.Files) {
       current.goToSelectedFile();
-    } else if (focus === Focus.Comments) {
-      current.enterOnComment();
     }
   }
 
@@ -207,8 +196,6 @@ export class KeyRouter {
       current.moveLine(delta);
     } else if (focus === Focus.Files) {
       current.selectFile(current.selectedFile() + delta);
-    } else if (focus === Focus.Comments) {
-      current.moveComment(delta);
     }
   }
 
@@ -217,20 +204,13 @@ export class KeyRouter {
     switch (action) {
       case Action.PanelLeft:
       case Action.FocusLeft:
-        return this.focusOnReview(this.lastLeft);
+        return this.focusOnReview(Focus.Files);
       case Action.PanelRight:
       case Action.FocusRight:
         return this.focusOnReview(Focus.Diff);
       case Action.FocusDown:
-        if (focus === Focus.Files) {
-          this.focusOnReview(Focus.Comments);
-        } else if (focus === Focus.Diff && this.sessions.hosting.hasTabs()) {
+        if (focus === Focus.Diff && this.sessions.hosting.hasTabs()) {
           this.change((current) => current.focusOn(Focus.Dock));
-        }
-        return;
-      case Action.FocusUp:
-        if (focus === Focus.Comments) {
-          this.focusOnReview(Focus.Files);
         }
         return;
       case Action.Zoom:

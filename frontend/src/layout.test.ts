@@ -77,7 +77,7 @@ describe('the window\'s layout', () => {
 
   it('shows no document while a review panel has focus', () => {
     expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Files).showsDocument()).toBe(false);
-    expect(new Layout().focusOn(Focus.Comments).showsDocument()).toBe(false);
+    expect(new Layout().focusOn(Focus.Diff).showsDocument()).toBe(false);
   });
 
   it('closes a shown document back to the ticket and hands focus to it, and shows one again', () => {

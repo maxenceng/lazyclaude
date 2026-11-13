@@ -29,8 +29,19 @@ const board = boardFixture(
   [{ id: 'PROJ-9', reason: 'no status label' }],
 );
 
-const failing = pullRequestFixture({ number: 12, title: 'Break it', head: 'proj-2-second', checks: [{ name: 'build', outcome: 'FAILED' }] });
-const passing = pullRequestFixture({ number: 10, title: 'Fix it', head: 'proj-1-first', checks: [{ name: 'build', outcome: 'PASSED' }] });
+const HOUR_MS = 3_600_000;
+const hoursAgo = (hours: number): string => new Date(Date.now() - hours * HOUR_MS).toISOString();
+const failing = pullRequestFixture({
+  number: 12,
+  title: 'Break it',
+  head: 'proj-2-second',
+  checks: [{ name: 'build', outcome: 'FAILED' }],
+  comments: 3,
+  pendingReview: true,
+  closing: { kind: 'closesIssue', number: 145 },
+  openedAt: hoursAgo(2),
+});
+const passing = pullRequestFixture({ number: 10, title: 'Fix it', head: 'proj-1-first', checks: [{ name: 'build', outcome: 'PASSED' }], comments: 1 });
 const pending = pullRequestFixture({ number: 11, title: 'Wait for it', head: 'chore-tidy', checks: [{ name: 'build', outcome: 'PENDING' }] });
 const draft = pullRequestFixture({ number: 13, title: 'Not yet', head: 'proj-3-third', draft: true, checks: [] });
 
@@ -317,12 +328,38 @@ describe('the Board tab with no ticket under the cursor', () => {
   });
 });
 
+const rowsOf = () => screen.getAllByRole('row').slice(1);
+
 describe('the Pull requests tab', () => {
-  it('lists every open pull request with its CI glyph, number, title and head, failed first and drafts last', async () => {
+  it('lists every open pull request as a row, failed first and drafts last', async () => {
     const { user } = await started();
     await user.keyboard('3');
-    const rows = screen.getAllByRole('button').filter((button) => /#\d+/.test(button.textContent));
-    expect(rows.map((row) => row.textContent)).toEqual(['✗#12Break itproj-2-second', '◌#11Wait for itchore-tidy', '✓#10Fix itproj-1-first', '#13Not yetproj-3-third']);
+    expect(rowsOf().map((row) => within(row).getAllByRole('cell')[2]!.textContent)).toEqual(['Break it#12', 'Wait for it#11', 'Fix it#10', 'Not yet#13']);
+  });
+
+  it('says in each row its CI in a glyph and a word, its ticket, branch, comments in words, pending badge and age', async () => {
+    const { user } = await started();
+    await user.keyboard('3');
+    const [failed, running, passed, none] = rowsOf().map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+    expect(failed).toEqual(['✗failing', '145', 'Break it#12', 'proj-2-second', '3 commentspending', '2h']);
+    expect(running?.[0]).toBe('◌running');
+    expect(passed?.[0]).toBe('✓passing');
+    expect(none?.[0]).toBe('–no checks');
+    expect(running?.[4]).toBe('no comments');
+    expect(passed?.[4]).toBe('1 comment');
+    expect(screen.getAllByText('pending')).toHaveLength(1);
+  });
+
+  it('shows an explicit mark for a pull request that closes no ticket', async () => {
+    const { user } = await started();
+    await user.keyboard('3');
+    expect(within(rowsOf()[2]!).getByRole('img', { name: 'no ticket' })).toHaveTextContent('–');
+  });
+
+  it('names its columns', async () => {
+    const { user } = await started();
+    await user.keyboard('3');
+    expect(screen.getAllByRole('columnheader').map((head) => head.textContent)).toEqual(['CI', 'Ticket', 'Title', 'Branch', 'Comments', 'Age']);
   });
 
   it('says there is no open pull request', async () => {
@@ -363,7 +400,7 @@ describe('the Pull requests tab', () => {
     const { client, user } = await started();
     await user.keyboard('3');
     await user.keyboard('j');
-    expect(screen.getByRole('button', { name: /#11/ })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('row', { name: /#11/ })).toHaveAttribute('aria-current', 'true');
     await user.keyboard('{Enter}');
     await act(async () => {
       client.answerAll('review/pendingOf', { kind: 'noPendingReview' });
@@ -375,13 +412,13 @@ describe('the Pull requests tab', () => {
     expect(screen.getByRole('region', { name: 'PR #11 Wait for it' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
     expect(tab(/^Pull requests/)).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('button', { name: /#11/ })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('row', { name: /#11/ })).toHaveAttribute('aria-current', 'true');
   });
 
   it('ends a review opened from it when another tab is clicked or keyed, the AZERTY digit row included', async () => {
     const { client, user } = await started();
     await user.keyboard('3');
-    await user.click(screen.getByRole('button', { name: /#11/ }));
+    await user.click(screen.getByRole('row', { name: /#11/ }));
     await act(async () => {
       client.answerAll('review/pendingOf', { kind: 'noPendingReview' });
       client.answerAll('review/threadsOf', { kind: 'readThreads', threads: [] });
@@ -399,7 +436,7 @@ describe('the Pull requests tab', () => {
   it('opens the review of a pull request whose head is no ticket\'s branch when it is clicked', async () => {
     const { client, user } = await started();
     await user.keyboard('3');
-    await user.click(screen.getByRole('button', { name: /#11/ }));
+    await user.click(screen.getByRole('row', { name: /#11/ }));
     expect(client.calls.map((call) => call.method)).toContain('review/diffOf');
   });
 });
@@ -419,7 +456,7 @@ describe('the window tabs and a hosted session', () => {
     const ready = await started();
     await hostSession(ready);
     await ready.user.click(tab(/^Pull requests/));
-    await ready.user.click(screen.getByRole('button', { name: /#11/ }));
+    await ready.user.click(screen.getByRole('row', { name: /#11/ }));
     await act(async () => {
       ready.client.answerAll('review/pendingOf', { kind: 'noPendingReview' });
       ready.client.answerAll('review/threadsOf', { kind: 'readThreads', threads: [] });

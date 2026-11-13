@@ -1,7 +1,6 @@
 import { i18n } from '../i18n/i18n';
 import type {
   Client,
-  ReviewCommentInDiffView,
   ReviewCommentsInDiffView,
   ReviewPendingCommentView,
   ReviewPendingInDiffView,
@@ -54,8 +53,6 @@ export class OpenReview {
   private showResolved = false;
   private line = 0;
   private fileSelected = 0;
-  private commentSelected = 0;
-  private commentGoneTo = 0;
   private viewLines = 0;
   private diffReads = 0;
   private threadsReads = 0;
@@ -114,10 +111,6 @@ export class OpenReview {
     return this.fileSelected;
   }
 
-  selectedComment(): number {
-    return this.commentSelected;
-  }
-
   resolvedShown(): boolean {
     return this.showResolved;
   }
@@ -130,11 +123,6 @@ export class OpenReview {
   /** The threads in diff order, the ones on no line last; none until they are read. */
   threadsPlaced(): ReviewThreadInDiffView[] {
     return this.comments.threads;
-  }
-
-  /** What Comments lists, in the order `review` lists it. */
-  entries(): ReviewCommentInDiffView[] {
-    return this.comments.listed;
   }
 
   /** Reads the pending review, the diff and the threads again; each lands unless a later read of its kind was begun. */
@@ -229,9 +217,8 @@ export class OpenReview {
   }
 
   private rebuild(): void {
-    this.diffRows = DiffRows.of(this.diff, this.comments.underLines, this.comments.pending);
+    this.diffRows = DiffRows.of(this.diff, this.comments.underLines, this.comments.pending, this.comments.listed);
     this.moveTo(this.line);
-    this.commentSelected = clamp(this.commentSelected, this.entries().length);
     this.touch();
   }
 
@@ -311,6 +298,13 @@ export class OpenReview {
 
   private rangeHigh(): number {
     return Math.max(this.rangeStart ?? this.line, this.rangeEnd ?? this.line);
+  }
+
+  /** A press on a line's gutter: the cursor goes to the line, and the comment box opens on it as `c` opens it. */
+  commentOn(line: number): Promise<void> {
+    this.clearRange();
+    this.moveTo(line);
+    return this.comment();
   }
 
   /** `v`: starts a range at the cursor, or ends the one started at it when its lines can take a comment; one that cannot is refused and left as it was. */
@@ -470,12 +464,30 @@ export class OpenReview {
     }
   }
 
-  /** `enter` on the cursor's line: its pending comment opens in the box. */
+  /** `enter` on the cursor's line: its pending comment opens in the box, or else the last thread under it to be replied to. */
   enterInDiff(): void {
     const comment = this.pendingOnCursorLine();
+    const thread = this.threadOnCursorLine();
     if (comment !== undefined) {
       this.openBox(new CommentBox({ kind: TargetKind.Edit, comment }, comment.body));
+    } else if (thread !== undefined) {
+      this.replyTo(thread);
     }
+  }
+
+  /** The Edit on a pending comment's card: the box opens with its text, and the cursor stays where it is. */
+  editPending(comment: ReviewPendingCommentView): void {
+    this.openBox(new CommentBox({ kind: TargetKind.Edit, comment }, comment.body));
+  }
+
+  /** The Delete on a pending comment's card: it is deleted, and the cursor stays where it is. */
+  deletePending(comment: ReviewPendingCommentView): void {
+    this.delete(comment);
+  }
+
+  /** The thread under the cursor's line, the last one when the line has several. */
+  private threadOnCursorLine(): ReviewReviewThreadView | undefined {
+    return this.comments.underLines.findLast((placed) => placed.line.kind === 'onDiffLine' && placed.line.index === this.line)?.thread;
   }
 
   /** `x` on the cursor's line deletes its pending comment. */
@@ -491,64 +503,9 @@ export class OpenReview {
     return this.comments.lastOnLines.find((placed) => placed.line.kind === 'onDiffLine' && placed.line.index === this.line)?.comment;
   }
 
-  selectComment(index: number): void {
-    this.commentSelected = clamp(index, this.entries().length);
-    this.touch();
-  }
-
-  moveComment(delta: number): void {
-    this.selectComment(this.commentSelected + delta);
-  }
-
-  selectedEntry(): ReviewCommentInDiffView | undefined {
-    return this.entries()[this.commentSelected];
-  }
-
-  /** To the line the selected entry shows under, its comments to be shown whole; nowhere for one on no line. */
-  goToSelectedComment(): void {
-    const line = this.selectedEntry()?.line;
-    if (line?.kind === 'onDiffLine') {
-      this.commentGoneTo += 1;
-      this.moveTo(line.index);
-    }
-  }
-
-  /** How many times the cursor went to a comment: the diff shows the comments under the cursor's line each time it changes, the cursor moved or not. */
-  goneToComment(): number {
-    return this.commentGoneTo;
-  }
-
-  /** `enter` in Comments: goes to the entry's line and, on a pending comment, opens it in the box. */
-  enterOnComment(): void {
-    const entry = this.selectedEntry();
-    if (entry !== undefined) {
-      this.goToSelectedComment();
-      if (entry.kind === 'pendingInDiff') {
-        this.openBox(new CommentBox({ kind: TargetKind.Edit, comment: entry.comment }, entry.comment.body));
-      }
-    }
-  }
-
   /** The Reply under a thread's line: the box opens to reply to it, resolved or not, and neither the cursor nor the selection moves. */
   replyTo(thread: ReviewReviewThreadView): void {
     this.openBox(new CommentBox({ kind: TargetKind.Reply, thread }));
-  }
-
-  /** `x` in Comments deletes a pending comment. */
-  deleteSelectedComment(): void {
-    const entry = this.selectedEntry();
-    if (entry?.kind === 'pendingInDiff') {
-      this.goToSelectedComment();
-      this.delete(entry.comment);
-    }
-  }
-
-  /** `c` in Comments replies to a thread. */
-  commentOnSelectedComment(): void {
-    const entry = this.selectedEntry();
-    if (entry?.kind === 'threadInDiff') {
-      this.replyTo(entry.thread);
-    }
   }
 
   /** A press on a diff line: the cursor goes to it and a drag starts from it, remembering whether it was a second press, on the cursor's line in the focused diff. */
@@ -586,21 +543,6 @@ export class OpenReview {
   pressFile(index: number): void {
     this.selectFile(index);
     this.goToSelectedFile();
-  }
-
-  /**
-   * A press on a comment: it is selected and the cursor goes to its line, whether or not Comments had focus; a second press on the
-   * selected one, in the focused Comments, is `enter`.
-   */
-  pressComment(index: number, focused: boolean): void {
-    const second = focused && index === this.commentSelected;
-    this.selectComment(index);
-    if (second) {
-      this.enterOnComment();
-    } else {
-      // deferred: an outdated thread has no diff line, so a press selects it and the diff stays — closes when the sidecar places an outdated thread on the nearest line
-      this.goToSelectedComment();
-    }
   }
 
   private openBox(box: CommentBox): void {

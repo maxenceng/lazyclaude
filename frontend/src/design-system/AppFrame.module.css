@@ -66,17 +66,12 @@
   grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
 }
 
-.left:has(> .foot) {
-  grid-template-rows: minmax(0, 2fr) minmax(0, 1fr) auto;
-}
-
 .left:has(> :only-child) {
   grid-template-rows: minmax(0, 1fr);
 }
 
 .board,
-.docs,
-.foot {
+.docs {
   min-height: 0;
   min-width: 0;
 }
