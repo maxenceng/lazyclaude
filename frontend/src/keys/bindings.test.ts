@@ -39,6 +39,7 @@ describe('the keys the TUI binds', () => {
     ['K', Action.PreviousFile],
     ['r', Action.Resolved],
     ['y', Action.Yes],
+    ['o', Action.TogglePanel],
     ['1', Action.ShowBase],
     ['2', Action.ShowBoard],
     ['3', Action.ShowPullRequests],

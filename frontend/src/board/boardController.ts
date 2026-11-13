@@ -21,7 +21,7 @@ export class BoardController {
   }
 
   root(): string | undefined {
-    return this.shown()?.root;
+    return this.store.state.get().root();
   }
 
   ticketIds(): string[] {

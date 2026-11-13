@@ -9,6 +9,16 @@
   flex: none;
 }
 
+.pill {
+  flex: none;
+  padding: 0 var(--space-3);
+  border-radius: var(--card-radius);
+  font-size: var(--size-small);
+  font-weight: 600;
+  line-height: var(--lamp-marker);
+  white-space: nowrap;
+}
+
 .tile {
   display: grid;
   grid-template-rows: var(--lamp-number-row) var(--lamp-words-row);

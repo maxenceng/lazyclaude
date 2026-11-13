@@ -23,9 +23,10 @@ export const SHORT_MEANING = {
   off: 'lamp.shortOff',
 } as const satisfies Record<LampColour, string>;
 
-/** A marker beside a ticket or a session, or a tile on the andon board. */
+/** A marker beside a session, a worded pill on a ticket's row, or a tile on the andon board. */
 export enum LampSize {
   Marker = 'marker',
+  Pill = 'pill',
   Tile = 'tile',
 }
 
@@ -35,9 +36,16 @@ interface Props {
   number?: string;
 }
 
-/** A session's state as a lamp: a marker beside a ticket, or a tile on the andon board. Its colour means session state and nothing else. */
+/** A session's state as a lamp: a marker beside a session, a pill saying it in words on a ticket's row, or a tile on the andon board. Its colour means session state and nothing else. */
 export const Lamp = ({ colour, size, number }: Props) => {
   const { t } = useTranslation('designSystem');
+  if (size === LampSize.Pill) {
+    return (
+      <span className={`${styles.pill} ${styles[colour]}`} role="img" aria-label={t(MEANING[colour])}>
+        {t(SHORT_MEANING[colour])}
+      </span>
+    );
+  }
   if (size === LampSize.Marker) {
     return (
       <span className={`${styles.marker} ${styles[colour]}`} role="img" aria-label={t(MEANING[colour])}>

@@ -2,6 +2,12 @@ import type { BoardBoardView, BoardStatus, BoardTicketView } from '../protocol';
 
 const STATUS_ORDER: readonly BoardStatus[] = ['IN_PROGRESS', 'IN_REVIEW', 'TODO', 'DRAFT', 'DONE'];
 
+/** Every status the board has a heading for, in the order Base lists them: what a board with no ticket shows, each at 0. */
+export const statusesInOrder = (): readonly BoardStatus[] => STATUS_ORDER;
+
+/** How many tickets the board holds in all, done ones included, which the Board panel tab counts. */
+export const ticketTotal = (view: BoardBoardView): number => view.groups.reduce((total, group) => total + group.tickets.length, 0);
+
 /** The Board tab's columns run the lifecycle left to right, so a ticket moves rightwards as it advances. */
 const COLUMN_ORDER: readonly BoardStatus[] = ['DRAFT', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
 

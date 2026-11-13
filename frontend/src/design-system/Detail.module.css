@@ -13,8 +13,14 @@
   grid-column: column-start / column-end;
 }
 
+.detail > .across {
+  grid-column: full-start / full-end;
+}
+
 .detail > .body {
   grid-column: full-start / full-end;
+  justify-self: center;
+  width: min(100%, var(--reading-measure));
 }
 
 .facts {
@@ -25,6 +31,10 @@
   color: var(--dim);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.across {
+  padding-bottom: var(--space-4);
 }
 
 .title {

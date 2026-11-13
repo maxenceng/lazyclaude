@@ -314,6 +314,8 @@ export class KeyRouter {
         return this.toggleDockMinimised();
       case Action.NextWaiting:
         return this.nextWaiting();
+      case Action.TogglePanel:
+        return this.change((current) => current.togglePanel());
       default:
         return undefined;
     }

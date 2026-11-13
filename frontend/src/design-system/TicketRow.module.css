@@ -28,12 +28,6 @@
   color: var(--cursor-ink);
 }
 
-.noLamp {
-  display: inline-block;
-  width: var(--lamp-marker);
-  flex: none;
-}
-
 .id {
   font-weight: 600;
   font-variant-numeric: tabular-nums;

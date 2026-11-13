@@ -105,3 +105,16 @@ describe('a pane', () => {
     expect(ruleOf(pane, '.foot')).toContain('flex: none');
   });
 });
+
+describe('a pane with panel tabs', () => {
+  it('names the tabs in its title row, the pane itself labelled by its title', () => {
+    render(
+      <Pane title="Panels" focused tabs={{ tabs: [{ id: 'a', label: 'A', count: 1 }], selected: 'a', onSelect: () => {} }}>
+        body
+      </Pane>,
+    );
+    expect(screen.getByRole('region', { name: 'Panels' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'A 1' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+  });
+});

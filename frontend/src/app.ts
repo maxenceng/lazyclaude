@@ -5,7 +5,7 @@ import { Action, type KeyPress } from './keys/bindings';
 import type { Binding } from './keys/chords';
 import { ConfigurationStore } from './keys/configurationStore';
 import { KeyRouter } from './keyRouting';
-import { Focus, Layout, WindowTab } from './layout';
+import { Focus, Layout, type Panel, WindowTab } from './layout';
 import { WindowTabs } from './windowTabs';
 import type { Platform } from './platform';
 import type { Client } from './protocol';
@@ -13,6 +13,7 @@ import { ReviewController } from './review/reviewController';
 import { Hosting } from './session/hosting';
 import { SessionsController } from './session/sessionsController';
 import { SessionStore } from './session/sessionStore';
+import { TicketWorktrees } from './session/ticketWorktrees';
 import { WatchingReporter } from './session/watched';
 import { Store } from './shared/store';
 import { NoticeStore } from './shared/noticeStore';
@@ -26,6 +27,7 @@ export class AppModel {
   readonly docs: DocsController;
   readonly review: ReviewController;
   readonly sessionStore: SessionStore;
+  readonly worktrees: TicketWorktrees;
   readonly hosting: Hosting;
   readonly sessions: SessionsController;
   readonly configuration: ConfigurationStore;
@@ -45,6 +47,7 @@ export class AppModel {
   ) {
     this.board = new BoardController(client);
     this.sessionStore = new SessionStore(client);
+    this.worktrees = new TicketWorktrees({ client, project: () => this.project() });
     this.configuration = new ConfigurationStore(client);
     this.warnings = new WarningStore(client);
     this.docs = new DocsController({ client, root: () => this.board.root(), opener: platform.opener, notices: this.notices, onOpened: () => this.focusOn(Focus.Docs) });
@@ -89,6 +92,8 @@ export class AppModel {
     this.board.store.state.subscribe(() => this.boardRead());
     this.board.store.state.subscribe(() => this.tabs.pullRequestsChanged());
     this.review.pullRequests.state.subscribe(() => this.tabs.pullRequestsChanged());
+    this.board.selection.selected.subscribe(() => this.askWorktree());
+    this.sessionStore.sessions.subscribe(() => this.askWorktree());
     this.board.selection.selected.subscribe(() => this.notices.clear());
     this.board.selection.selected.subscribe(() => this.sessions.followSelection());
   }
@@ -173,6 +178,11 @@ export class AppModel {
     }
   }
 
+  /** A click on a panel tab of the left column: that tab is shown and takes focus. */
+  showPanel(panel: Panel): void {
+    this.layout.set(this.layout.get().showPanel(panel));
+  }
+
   focusOn(focus: Focus): void {
     this.layout.set(this.layout.get().focusOn(focus));
   }
@@ -234,6 +244,13 @@ export class AppModel {
   private tellWatching(): void {
     const paneFocused = this.layout.get().focus === Focus.Dock && this.hosting.hasTabs();
     this.watching.tell(this.hosting.dock.get().selectedTab(), paneFocused, this.windowFocus.focused.get());
+  }
+
+  /** The selected ticket's worktree is read once the sessions are watched, which the read relies on, and again whenever they change. */
+  private askWorktree(): void {
+    if (this.watched) {
+      this.worktrees.ask(this.board.selectedTicket());
+    }
   }
 
   private boardRead(): void {

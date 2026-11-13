@@ -6,10 +6,14 @@ import { RpcError } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
 import { BoardPane, TicketPane } from './BoardScreen';
 import { BoardStore } from './boardStore';
+import { PullRequestRead, type TicketStanding, WorktreeRead } from './ticketStanding';
 import { boardFixture, ticketFixture } from './fixtures';
 import { Selection } from './selection';
 
-const setup = (markerOf: (ticket: string) => LampColour | undefined = () => undefined) => {
+const NO_STANDING: TicketStanding = { worktree: { read: WorktreeRead.None, path: undefined }, pullRequest: { read: PullRequestRead.None, number: undefined } };
+const PANELS = { tabs: [{ id: 'board', label: 'Board', count: 3 }, { id: 'docs', label: 'Docs', count: 7 }], selected: 'board', onSelect: () => {} };
+
+const setup = (markerOf: (ticket: string) => LampColour | undefined = () => undefined, standing: TicketStanding = NO_STANDING) => {
   const client = fakeClient();
   const board = new BoardStore(client);
   const selection = new Selection();
@@ -18,8 +22,8 @@ const setup = (markerOf: (ticket: string) => LampColour | undefined = () => unde
   const loaded = board.load();
   render(
     <>
-      <BoardPane board={board} selection={selection} focused markerOf={markerOf} onOpen={onOpen} onFocus={() => {}} onRetry={() => void board.load()} />
-      <TicketPane board={board} selection={selection} focused={false} onLink={onLink} onFocus={() => {}} />
+      <BoardPane board={board} selection={selection} focused markerOf={markerOf} onOpen={onOpen} onFocus={() => {}} onRetry={() => void board.load()} panelTabs={PANELS} />
+      <TicketPane board={board} selection={selection} focused={false} standing={standing} onLink={onLink} onFocus={() => {}} />
     </>,
   );
   return { client, board, selection, onOpen, onLink, loaded };
@@ -44,10 +48,20 @@ describe('the Board', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Reading the board');
   });
 
-  it('says the board has no tickets when it is empty', async () => {
+  it('keeps every status as a group at 0 when it has no ticket, and the ticket\'s view says none is selected', async () => {
     const { client, loaded } = setup();
     await answer(client, loaded, boardFixture([]));
-    expect(screen.getByText('No tickets on the board.')).toBeInTheDocument();
+    const board = screen.getByRole('region', { name: 'Board' });
+    expect(['in progress', 'in review', 'todo', 'draft', 'done'].map((status) => within(board).getByText(status).textContent)).toHaveLength(5);
+    expect(within(board).getAllByText('0')).toHaveLength(5);
+    expect(screen.getByText('No ticket selected.')).toBeInTheDocument();
+  });
+
+  it('shows the panel tabs in its title row with the new-draft button beside them, for as long as the Board is the tab shown', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, tickets);
+    expect(screen.getByRole('tab', { name: 'Board 3' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Docs 7' })).toBeInTheDocument();
   });
 
   it('says why the board is unavailable, by its kind', async () => {
@@ -160,5 +174,73 @@ describe('the Board', () => {
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(client.calls).toHaveLength(2);
     expect(screen.getByRole('status')).toHaveTextContent('Reading the board');
+  });
+});
+
+const richTicket = boardFixture([
+  ticketFixture({
+    id: 'PROJ-1',
+    title: 'A rich ticket',
+    status: 'IN_PROGRESS',
+    branch: 'proj-1-rich',
+    type: { kind: 'typeName', value: 'fix' },
+    context: { kind: 'contextName', value: 'session' },
+    otherLabels: ['ux', 'desktop'],
+  }),
+]);
+
+const factOf = (label: string): string => screen.getByText(label).nextElementSibling?.textContent ?? '';
+
+describe('the ticket\'s facts line', () => {
+  it('says its status, type, context, branch, other labels, worktree and open pull request', async () => {
+    const { client, loaded } = setup(() => undefined, { worktree: { read: WorktreeRead.Held, path: '.worktrees/PROJ-1' }, pullRequest: { read: PullRequestRead.Open, number: 12 } });
+    await answer(client, loaded, richTicket);
+    expect(['status', 'type', 'context', 'branch', 'labels', 'worktree', 'pull request'].map(factOf)).toEqual([
+      'in progress',
+      'fix',
+      'session',
+      'proj-1-rich',
+      'ux, desktop',
+      '.worktrees/PROJ-1',
+      '#12',
+    ]);
+  });
+
+  it('says there is no worktree and no open pull request where they would be', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, richTicket);
+    expect(factOf('worktree')).toBe('none');
+    expect(factOf('pull request')).toBe('none open');
+  });
+
+  it('says the pull requests are unavailable when they could not be read, rather than showing nothing', async () => {
+    const { client, loaded } = setup(() => undefined, { worktree: { read: WorktreeRead.None, path: undefined }, pullRequest: { read: PullRequestRead.Unavailable, number: undefined } });
+    await answer(client, loaded, richTicket);
+    expect(factOf('pull request')).toBe('unavailable');
+  });
+
+  it.each([
+    [WorktreeRead.Unavailable, 'unavailable'],
+    [WorktreeRead.Reading, 'reading…'],
+  ])('says the worktree is %s in words, never as none', async (read, words) => {
+    const { client, loaded } = setup(() => undefined, { worktree: { read, path: undefined }, pullRequest: { read: PullRequestRead.None, number: undefined } });
+    await answer(client, loaded, richTicket);
+    expect(factOf('worktree')).toBe(words);
+  });
+
+  it('leaves out the type, context and labels a ticket does not carry', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, tickets);
+    expect(screen.queryByText('type')).not.toBeInTheDocument();
+    expect(screen.queryByText('context')).not.toBeInTheDocument();
+    expect(screen.queryByText('labels')).not.toBeInTheDocument();
+  });
+
+  it('is not drawn when no ticket is under the cursor, which says so alone', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, boardFixture([]));
+    expect(screen.getByText('No ticket selected.')).toBeInTheDocument();
+    expect(screen.queryByText('status')).not.toBeInTheDocument();
+    expect(screen.queryByText('worktree')).not.toBeInTheDocument();
   });
 });

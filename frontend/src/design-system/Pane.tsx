@@ -3,6 +3,7 @@ import styles from './Pane.module.css';
 import { useWholeRows } from './wholeRows';
 import { usePressFocus } from './pressFocus';
 import { PaneAction, type PaneActionProps } from './PaneAction';
+import { PanelTabs, type PanelTabsProps } from './PanelTabs';
 
 export { PaneActionKind } from './PaneAction';
 
@@ -16,6 +17,8 @@ interface Props {
   title: string;
   focused: boolean;
   layout?: PaneLayout;
+  /** The faces the pane shares with another, named in its title row in place of its title, which then only labels the pane. */
+  tabs?: PanelTabsProps;
   /** Buttons in the fixed slot at the right end of the title row; screens give them, they do not place their own. */
   actions?: readonly PaneActionProps[];
   /** Pinned under the body, whatever its scroll. */
@@ -26,17 +29,21 @@ interface Props {
 }
 
 /** A region of the screen between hairline seams; the focused one lights its title and top edge, and only it gives its cursor row the bright fill. */
-export const Pane = ({ title, focused, layout = PaneLayout.Flow, actions = [], foot, onFocus, children }: Props) => {
+export const Pane = ({ title, focused, layout = PaneLayout.Flow, actions = [], tabs, foot, onFocus, children }: Props) => {
   const heading = useId();
   const body = useWholeRows<HTMLDivElement>();
   const pane = useRef<HTMLElement>(null);
   usePressFocus(pane, onFocus);
   return (
-    <section className={[styles.pane, styles[layout], focused ? styles.focused : ''].join(' ')} aria-labelledby={heading} ref={pane}>
+    <section className={[styles.pane, styles[layout], focused ? styles.focused : ''].join(' ')} aria-labelledby={tabs === undefined ? heading : undefined} aria-label={tabs === undefined ? undefined : title} ref={pane}>
       <div className={styles.head}>
-        <h2 id={heading} className={styles.title}>
-          {title}
-        </h2>
+        {tabs === undefined ? (
+          <h2 id={heading} className={styles.title}>
+            {title}
+          </h2>
+        ) : (
+          <PanelTabs {...tabs} />
+        )}
         {actions.length === 0 ? null : (
           <div className={styles.slot} data-pane-actions="">
             {actions.map((action) => (

@@ -8,7 +8,7 @@ import { DocsStore } from './docsStore';
 import { ScrollRequest, type ScrollStep } from './documentScroll';
 import { type DocumentLink, LinkKind, type LinkTarget, linkTarget } from './links';
 import type { LinkOpener } from './opener';
-import { type DocsRow, RowKind, documentIn, visibleRows } from './rows';
+import { type DocsRow, RowKind, documentCount, documentIn, visibleRows } from './rows';
 import { FoundDocument, MissingDocument, NoDocument, type ShownDocument } from './shownDocument';
 
 export interface DocsDeps {
@@ -61,6 +61,12 @@ export class DocsController {
   rows(): DocsRow[] {
     const tree = this.store.state.get().shown();
     return tree === undefined ? [] : visibleRows(tree, this.folded.get());
+  }
+
+  /** How many documents the tree lists, none while it is not read. */
+  count(): number {
+    const tree = this.store.state.get().shown();
+    return tree === undefined ? 0 : documentCount(tree);
   }
 
   /** The row the selection is on: the one chosen, or the first before any is. */

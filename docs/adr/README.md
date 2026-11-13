@@ -105,3 +105,4 @@
 - 0101 [Markdown type and measure scale with the pane, by container queries](0101-markdown-type-and-measure-scale-with-the-pane-by-container-queries.md) — Accepted.
 - 0102 [The bundle job caches the Temurin download and tauri's AppImage tools, keyed on their pins](0102-the-bundle-job-caches-the-temurin-download-and-tauris-appimage-tools-keyed-on-their-pins.md) — Accepted.
 - 0103 [The desktop window has one visual system and one rule for pane actions](0103-the-desktop-window-has-one-visual-system-and-one-rule-for-pane-actions.md) — Accepted.
+- 0104 [The Base tab shares its left column between Board and Docs and leads its ticket with where it stands](0104-the-base-tab-shares-its-left-column-between-board-and-docs-and-leads-its-ticket-with-where-it-stands.md) — Accepted.

@@ -1,0 +1,35 @@
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--reading-label-em);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.value,
+.dim {
+  margin: 0;
+  font: 400 var(--reading-code-em) var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.value {
+  color: var(--text);
+}
+
+.dim {
+  color: var(--dim);
+}

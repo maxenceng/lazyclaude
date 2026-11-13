@@ -23,9 +23,9 @@
   },
   "keyBar": {
     "move": "j/k move",
-    "open": "enter open or fold",
+    "open": "enter open",
     "close": "esc close",
-    "toDocument": "l document",
+    "toDocument": "l read",
     "scroll": "j/k scroll",
     "halfPage": "ctrl+d/u half page",
     "toDocs": "h docs"

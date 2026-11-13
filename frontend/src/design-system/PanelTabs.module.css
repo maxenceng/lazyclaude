@@ -1,0 +1,32 @@
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: var(--space-1) var(--space-2);
+}
+
+.tab {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: var(--pane-radius);
+  background: transparent;
+  color: inherit;
+  font: 600 var(--size-label) var(--font-read);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  cursor: default;
+}
+
+.selected {
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  opacity: 1;
+}
+
+.count {
+  font-weight: 400;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}

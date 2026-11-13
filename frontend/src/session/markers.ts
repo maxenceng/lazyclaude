@@ -13,7 +13,8 @@ export interface Marker {
 // deferred: the marker's mapping and strength are written here and in SessionState — close it when SessionLiveSessionView carries its marker on the wire.
 const STRENGTH: readonly LampColour[] = [LampColour.Permission, LampColour.Input, LampColour.Turn, LampColour.Off];
 
-const byStrength = (a: { colour: LampColour }, b: { colour: LampColour }) => STRENGTH.indexOf(a.colour) - STRENGTH.indexOf(b.colour);
+/** Orders by what asks most of you: permission, then input, then your turn, then what asks nothing; equals keep the order they came in. */
+export const byStrength = (a: { colour: LampColour }, b: { colour: LampColour }) => STRENGTH.indexOf(a.colour) - STRENGTH.indexOf(b.colour);
 
 export const colourOf = (session: SessionLiveSessionView): LampColour => {
   switch (session.state.kind) {

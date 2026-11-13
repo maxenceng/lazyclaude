@@ -11,6 +11,12 @@ export enum Focus {
   Dock = 'dock',
 }
 
+/** The two faces of the Base tab's left column, one shown at a time: its panel tabs. */
+export enum Panel {
+  Board = 'board',
+  Docs = 'docs',
+}
+
 /** What the window shows: Base is the window without tabs, Board the status columns, Pull requests every open pull request. */
 export enum WindowTab {
   Base = 'base',
@@ -27,6 +33,7 @@ interface Parts {
   mainHidden: boolean;
   documentShown: boolean;
   dockMinimised: boolean;
+  panel: Panel;
 }
 
 /**
@@ -34,6 +41,7 @@ interface Parts {
  * minimised to its strip, as the TUI keeps them, and whether the main view shows a document: it does from the Docs panel taking
  * focus until the Board or the sessions do, or until it is closed.
  * The main view hidden and the dock minimised exclude each other: whichever was asked last stands.
+ * The left column shows the Board or the Docs panel, the one focus moved to last: focus on the Docs panel shows its tab, focus on the Board shows the Board's, focus elsewhere leaves it.
  */
 export class Layout {
   constructor(
@@ -42,6 +50,7 @@ export class Layout {
     readonly mainHidden: boolean = false,
     private readonly documentShown: boolean = false,
     readonly dockMinimised: boolean = false,
+    readonly panel: Panel = Panel.Board,
   ) {}
 
   showsDocument(): boolean {
@@ -97,7 +106,18 @@ export class Layout {
       zoomed: target === this.focus && this.zoomed,
       documentShown: document,
       dockMinimised: target === Focus.Dock ? false : this.dockMinimised,
+      panel: target === Focus.Docs ? Panel.Docs : target === Focus.Board ? Panel.Board : this.panel,
     });
+  }
+
+  /** `o`: the other panel tab is shown and takes focus. */
+  togglePanel(): Layout {
+    return this.showPanel(this.panel === Panel.Board ? Panel.Docs : Panel.Board);
+  }
+
+  /** A click on a panel tab: that tab is shown and takes focus. */
+  showPanel(panel: Panel): Layout {
+    return this.focusOn(panel === Panel.Docs ? Focus.Docs : Focus.Board);
   }
 
   /** Focus goes up to `above`, showing the main view again if that is where it goes. */
@@ -161,6 +181,7 @@ export class Layout {
       changes.mainHidden ?? this.mainHidden,
       changes.documentShown ?? this.documentShown,
       changes.dockMinimised ?? this.dockMinimised,
+      changes.panel ?? this.panel,
     );
   }
 }

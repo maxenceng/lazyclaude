@@ -30,6 +30,14 @@ const setup = async (tree = TREE) => {
   return { controller, client, opener, notices, noticeStore };
 };
 
+describe('the documents the tree lists', () => {
+  it('are counted while the tree is read, and none before', async () => {
+    const { controller } = await setup();
+    expect(controller.count()).toBe(3);
+    expect(new DocsController({ client: fakeClient(), root: () => '/p', opener: new RecordingOpener(), notices: new NoticeStore(), onOpened: () => {} }).count()).toBe(0);
+  });
+});
+
 describe('the notice a link raises', () => {
   it('is cleared by the next row selected', async () => {
     const { controller, noticeStore } = await setup();

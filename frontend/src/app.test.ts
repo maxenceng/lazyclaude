@@ -4,7 +4,7 @@ import { readFixture, treeFixture } from './docs/fixtures';
 import { AppModel } from './app';
 import { Action } from './keys/bindings';
 import { Dock } from './session/dock';
-import { Focus, WindowTab } from './layout';
+import { Focus, Panel, WindowTab } from './layout';
 import { ScrollStep } from './docs/documentScroll';
 import { FaultedConfiguration } from './keys/configurationState';
 import { Connecting, Exited, Ready } from './protocol';
@@ -151,6 +151,37 @@ const hostedApp = async () => {
   app.hosting.dock.set(new Dock().opened('h1'));
   return app;
 };
+
+describe('the app and the left column\'s panel tabs', () => {
+  it('switches to the Docs tab on o, focusing it, and back to the Board on o again', async () => {
+    const app = await docsApp();
+    app.press(Action.TogglePanel);
+    expect(app.layout.get().panel).toBe(Panel.Docs);
+    expect(app.layout.get().focus).toBe(Focus.Docs);
+    app.press(Action.TogglePanel);
+    expect(app.layout.get().panel).toBe(Panel.Board);
+    expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+
+  it('keeps each tab\'s selection across switches', async () => {
+    const app = await docsApp();
+    app.focusOn(Focus.Docs);
+    app.docs.move(1);
+    const document = app.docs.selectedKey()?.path;
+    app.press(Action.TogglePanel);
+    app.press(Action.TogglePanel);
+    expect(app.docs.selectedKey()?.path).toBe(document);
+    expect(app.board.selectedTicket()?.id).toBe('PROJ-1');
+  });
+
+  it('shows the Docs tab when focus goes down from the Board, and the Board tab on h', async () => {
+    const app = await docsApp();
+    app.press(Action.FocusDown);
+    expect(app.layout.get().panel).toBe(Panel.Docs);
+    app.press(Action.PanelLeft);
+    expect(app.layout.get().panel).toBe(Panel.Board);
+  });
+});
 
 describe('the app and a shown document', () => {
   it('moves focus from the Docs panel to the shown document on l, and back on h with the document kept', async () => {

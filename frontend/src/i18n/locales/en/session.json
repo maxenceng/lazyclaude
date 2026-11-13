@@ -4,7 +4,9 @@
     "older": "older sessions"
   },
   "row": {
-    "hosted": "hosted",
+    "attach": "attach",
+    "resume": "resume",
+    "enterKey": "enter",
     "live": "hosted in another window",
     "new": "new session",
     "newKey": "n",
@@ -40,7 +42,7 @@
     "move": "j/k move",
     "open": "enter open",
     "back": "esc back",
-    "new": "n new session",
+    "new": "n new",
     "start": "enter start",
     "cancel": "esc cancel",
     "copy": "ctrl+shift+c copy",

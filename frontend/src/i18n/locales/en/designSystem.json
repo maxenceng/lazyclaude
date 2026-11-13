@@ -36,6 +36,9 @@
     "pending": "checks pending",
     "passed": "checks passed"
   },
+  "panelTabs": {
+    "label": "panels"
+  },
   "windowTabs": {
     "label": "window tabs"
   },

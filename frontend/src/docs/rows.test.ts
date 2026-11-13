@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { emptyFixture, folderFixture, readFixture, treeFixture } from './fixtures';
-import { RowKind, documentIn, visibleRows } from './rows';
+import { RowKind, documentCount, documentIn, visibleRows } from './rows';
 
 const tree = treeFixture(
   [readFixture('README.md', '# Hi'), emptyFixture('blank.md')],
@@ -44,5 +44,12 @@ describe('the rows of the docs tree', () => {
   it('finds a document at any depth by its path, and none for a path the tree does not list', () => {
     expect(documentIn(tree, 'adr/old/0000.md')?.path).toBe('adr/old/0000.md');
     expect(documentIn(tree, 'adr/missing.md')).toBeUndefined();
+  });
+});
+
+describe('the documents of the docs tree', () => {
+  it('counts every document at any depth, a folded folder\'s included, and no folder', () => {
+    expect(documentCount(tree)).toBe(5);
+    expect(documentCount(treeFixture([]))).toBe(0);
   });
 });

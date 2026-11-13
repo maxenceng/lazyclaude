@@ -26,7 +26,13 @@
     "inProgress": "in progress",
     "open": "open"
   },
+  "panels": {
+    "board": "Board",
+    "docs": "Docs"
+  },
   "keyBar": {
+    "panelDocs": "o docs",
+    "panelBoard": "o board",
     "tabs": "1/2/3 tabs",
     "minimiseDock": "M minimise",
     "restoreDock": "M restore",

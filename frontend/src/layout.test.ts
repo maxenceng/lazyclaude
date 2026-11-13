@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Focus, Layout } from './layout';
+import { Focus, Layout, Panel } from './layout';
 import { Arrangement } from './design-system';
 
 describe('the window\'s layout', () => {
@@ -191,5 +191,35 @@ describe('the window\'s layout', () => {
     expect(zoomed.focus).toBe(Focus.Dock);
     expect(zoomed.zoomed).toBe(true);
     expect(zoomed.zoomDock().zoomed).toBe(false);
+  });
+  it('shows the Board in the left column to begin with', () => {
+    expect(new Layout().panel).toBe(Panel.Board);
+  });
+
+  it('shows the Docs tab on any move that focuses Docs, and the Board again on moving back to it', () => {
+    const docs = new Layout().focusOn(Focus.Docs);
+    expect(docs.panel).toBe(Panel.Docs);
+    expect(docs.focusOn(Focus.Board).panel).toBe(Panel.Board);
+  });
+
+  it('keeps the tab shown while focus is on the main view or the dock', () => {
+    expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Sessions).panel).toBe(Panel.Docs);
+    expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Dock).panel).toBe(Panel.Docs);
+    expect(new Layout().focusOn(Focus.Sessions).panel).toBe(Panel.Board);
+  });
+
+  it('switches the tab and focuses it, whichever is shown', () => {
+    const docs = new Layout().togglePanel();
+    expect(docs.panel).toBe(Panel.Docs);
+    expect(docs.focus).toBe(Focus.Docs);
+    expect(docs.showsDocument()).toBe(true);
+    const board = docs.togglePanel();
+    expect(board.panel).toBe(Panel.Board);
+    expect(board.focus).toBe(Focus.Board);
+  });
+
+  it('switches to a named tab, and stays on it when it is the one shown', () => {
+    expect(new Layout().showPanel(Panel.Docs).panel).toBe(Panel.Docs);
+    expect(new Layout().showPanel(Panel.Board).focus).toBe(Focus.Board);
   });
 });

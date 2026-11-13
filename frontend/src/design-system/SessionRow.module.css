@@ -39,12 +39,23 @@
   text-overflow: ellipsis;
 }
 
-.detail {
+.action {
   flex: none;
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-weight: 600;
+  font-size: var(--size-small);
   color: var(--row-dim, var(--dim));
-  font-variant-numeric: tabular-nums;
 }
 
-.selected .detail {
+.selected .action {
   color: var(--cursor-ink);
+}
+
+.key {
+  padding: 0 var(--space-2);
+  border: 1px solid currentColor;
+  border-radius: var(--card-radius);
+  font: inherit;
 }

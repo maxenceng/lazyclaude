@@ -22,4 +22,12 @@ describe('the detail of what is selected', () => {
     expect(screen.getAllByRole('article')).toHaveLength(1);
     expect(screen.getByRole('heading', { name: 'A ticket' })).toBeInTheDocument();
   });
+
+  it('sets the summary and the lead between the title and the body', () => {
+    render(<Detail facts={[]} title="A ticket" summary={<p>where it stands</p>} lead={<p>what to do</p>} body="The text." onLink={() => {}} />);
+    const text = screen.getAllByRole('article')[0]?.textContent ?? '';
+    expect(text.indexOf('A ticket')).toBeLessThan(text.indexOf('where it stands'));
+    expect(text.indexOf('where it stands')).toBeLessThan(text.indexOf('what to do'));
+    expect(text.indexOf('what to do')).toBeLessThan(text.indexOf('The text.'));
+  });
 });

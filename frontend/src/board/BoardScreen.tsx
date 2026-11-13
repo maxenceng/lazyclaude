@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -8,7 +9,10 @@ import {
   Column,
   Columns,
   Detail,
+  type Fact,
+  FactsLine,
   type LampColour,
+  type PanelTabsProps,
   type PullRequestCells,
   Pane,
   PaneActionKind,
@@ -26,9 +30,10 @@ import type { BoardBoardView, BoardTicketView } from '../protocol';
 import { useStore } from '../shared/useStore';
 import { type BoardState, BoardStateKind, UnavailableCause } from './boardState';
 import type { BoardStore } from './boardStore';
-import { columnsOf, cursorTicketInColumns, isDone, orderedGroups, shownTickets, selectedIn, selectedInColumns } from './rows';
+import { columnsOf, cursorTicketInColumns, isDone, orderedGroups, shownTickets, selectedIn, selectedInColumns, statusesInOrder } from './rows';
 import type { Selection } from './selection';
 import { statusColourOf } from './statusColours';
+import { PullRequestRead, type TicketStanding, WorktreeRead } from './ticketStanding';
 
 interface ViewProps {
   board: BoardStore;
@@ -50,21 +55,26 @@ interface BoardProps extends ViewProps {
   onOpen: (ticket: string) => void;
   onFocus: () => void;
   onRetry: () => void;
+  /** The left column's panel tabs, which the Board's title row shows in place of its title. */
+  panelTabs: PanelTabsProps;
   /** Given while there is a project to capture into: the title's button opens the capture popup, as `c` does. */
   onCapture?: () => void;
 }
 
-/** The Board: the tickets by status. A press on the selected ticket opens it. */
-export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus, onRetry, onCapture }: BoardProps) => {
+/** The Board: the tickets by status, every status at 0 while none is on it. A press on the selected ticket opens it. */
+export const BoardPane = ({ board, selection, focused, markerOf, onOpen, onFocus, onRetry, panelTabs, onCapture }: BoardProps) => {
   const { t } = useTranslation('board');
   const { state, populated, cursor } = useBoardView({ board, selection });
   return (
     <Pane
       title={t('board.title')}
       focused={focused}
+      tabs={panelTabs}
       actions={onCapture === undefined ? [] : [{ kind: PaneActionKind.Add, label: t('board.capture'), shortcut: t('board.captureKey'), onClick: onCapture }]}
     >
-      {populated === undefined ? (
+      {state.kind === BoardStateKind.Empty ? (
+        <EmptyGroups />
+      ) : populated === undefined ? (
         <Unread state={state} onRetry={onRetry} />
       ) : (
         <Tickets
@@ -162,18 +172,22 @@ export const BoardPreview = ({ board, selection, onLink }: PreviewProps) => {
 
 interface TicketProps extends ViewProps {
   focused: boolean;
+  /** Where the ticket is worked and whether a pull request is open on it, for its facts line. */
+  standing: TicketStanding;
   onLink: (href: string) => void;
   /** Given while a dock is open: the ticket's button hides the main view so the dock takes the column. */
   onHide?: () => void;
   /** Pinned under the ticket whatever its scroll. */
   foot?: ReactNode;
+  /** Above the ticket, whether or not one is under the cursor: what failed and can be retried. */
+  alert?: ReactNode;
   /** A click on the ticket, anywhere in its pane, hands it focus. */
   onFocus: () => void;
   children?: ReactNode;
 }
 
-/** The ticket under the cursor, detailed, and whatever the screen shows beneath it. */
-export const TicketPane = ({ board, selection, focused, onLink, onHide, foot, onFocus, children }: TicketProps) => {
+/** The ticket under the cursor: its title, its facts line, what the screen shows under them, then its text. No ticket under the cursor leaves only that said. */
+export const TicketPane = ({ board, selection, focused, standing, onLink, onHide, foot, alert, onFocus, children }: TicketProps) => {
   const { t } = useTranslation('board');
   const { ticket } = useBoardView({ board, selection });
   return (
@@ -184,10 +198,55 @@ export const TicketPane = ({ board, selection, focused, onLink, onHide, foot, on
       onFocus={onFocus}
       actions={onHide === undefined ? [] : [{ kind: PaneActionKind.Hide, label: t('ticket.hide'), shortcut: t('ticket.hideKey'), onClick: onHide }]}
     >
-      {ticket === undefined ? <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text> : <TicketDetail ticket={ticket} onLink={onLink} />}
-      {children}
+      {alert}
+      {ticket === undefined ? (
+        <Text tone={Tone.Dim}>{t('ticket.noneSelected')}</Text>
+      ) : (
+        <Detail
+          facts={[ticket.id]}
+          title={ticket.title}
+          summary={<FactsLine facts={factsOf(ticket, standing, t)} />}
+          lead={children}
+          body={ticket.body.kind === 'body' ? ticket.body.value : undefined}
+          onLink={onLink}
+        />
+      )}
     </Pane>
   );
+};
+
+const WORKTREE_WORDS = {
+  [WorktreeRead.Reading]: 'facts.readingWorktree',
+  [WorktreeRead.Unavailable]: 'facts.worktreeUnavailable',
+  [WorktreeRead.None]: 'facts.noWorktree',
+} as const;
+
+const PULL_REQUEST_WORDS = {
+  [PullRequestRead.Reading]: 'facts.readingPullRequest',
+  [PullRequestRead.Unavailable]: 'facts.pullRequestsUnavailable',
+  [PullRequestRead.None]: 'facts.noPullRequest',
+} as const;
+
+const pullRequestFact = (standing: TicketStanding, t: TFunction<'board'>): Fact => {
+  const label = t('facts.pullRequest');
+  const { read, number } = standing.pullRequest;
+  return read === PullRequestRead.Open ? { label, value: t('facts.pullRequestNumber', { number }) } : { label, value: t(PULL_REQUEST_WORDS[read]), tone: Tone.Dim };
+};
+
+/** Where the ticket stands, in the order it is read: its status, type, context, branch, other labels, worktree and open pull request. What the ticket lacks is left out, except the worktree and the pull request, which say there is none. */
+const factsOf = (ticket: BoardTicketView, standing: TicketStanding, t: TFunction<'board'>): Fact[] => {
+  const { read, path } = standing.worktree;
+  const worktree: Fact =
+    read === WorktreeRead.Held ? { label: t('facts.worktree'), value: path ?? '' } : { label: t('facts.worktree'), value: t(WORKTREE_WORDS[read]), tone: Tone.Dim };
+  return [
+    { label: t('facts.status'), value: t(`status.${ticket.status}`) },
+    ...(ticket.type.kind === 'typeName' ? [{ label: t('facts.type'), value: ticket.type.value }] : []),
+    ...(ticket.context.kind === 'contextName' ? [{ label: t('facts.context'), value: ticket.context.value }] : []),
+    { label: t('facts.branch'), value: ticket.branch },
+    ...(ticket.otherLabels.length === 0 ? [] : [{ label: t('facts.labels'), value: ticket.otherLabels.join(', ') }]),
+    worktree,
+    pullRequestFact(standing, t),
+  ];
 };
 
 const UNAVAILABLE = {
@@ -251,6 +310,18 @@ const Tickets = ({ view, cursor, markerOf, onPress }: TicketsProps) => {
         </div>
       ))}
       <Unreadable view={view} />
+    </>
+  );
+};
+
+/** The board with no ticket: every status keeps its heading, at 0. */
+const EmptyGroups = () => {
+  const { t } = useTranslation('board');
+  return (
+    <>
+      {statusesInOrder().map((status) => (
+        <StatusHeading key={status} status={t(`status.${status}`)} count={0} colour={statusColourOf(status)} />
+      ))}
     </>
   );
 };
