@@ -16,6 +16,10 @@ describe('a reading section', () => {
     expect(screen.getByRole('heading', { name: 'Sessions' })).toBeInTheDocument();
   });
 
+  it('leaves room under its title before the first row it holds', () => {
+    expect(ruleOf(sheet, '.title')).toContain('margin: var(--space-3) 0 calc(var(--space-2) * 2)');
+  });
+
   it('sets its title as a small dim label, with no count and no rule under it', () => {
     expect(ruleOf(sheet, '.title')).toContain('font-size: var(--size-micro)');
     expect(ruleOf(sheet, '.title')).toContain('color: var(--dim)');

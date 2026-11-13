@@ -72,6 +72,11 @@ describe('a session row', () => {
     expect(ruleOf(sheet, '.tall')).toContain('margin: 0 0 var(--space-2)');
   });
 
+  it('answers the pointer: a hand over it, and its action lit', () => {
+    expect(ruleOf(sheet, '.tall:hover')).toContain('cursor: pointer');
+    expect(ruleOf(sheet, '.tall:hover .action')).toContain('color: var(--text)');
+  });
+
   it('names its session in the mono face', () => {
     expect(ruleOf(sheet, '.tall .label')).toContain('var(--font-mono)');
   });

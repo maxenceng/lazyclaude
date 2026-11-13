@@ -1510,6 +1510,16 @@ describe('the ticket in the main view', () => {
     expect(text.indexOf('pull request')).toBeLessThan(text.indexOf('attach'));
   });
 
+  it('keeps a resumed session in its ticket\'s list, tinted while it is your turn, instead of dropping it', async () => {
+    const ready = await readyApp();
+    const resumed = sessionFixture({ id: 'p1', name: 'PROJ-1 start', ticket: 'PROJ-1', state: { kind: 'yourTurn' } });
+    const hosted = [hostedFixture('p1', { live: resumed })];
+    act(() => ready.client.push('session/changed', { ...sessionsFixture([resumed], { tickets: [ticketSessionsFixture('PROJ-1', { live: [resumed], hosted })] }), hosted }));
+    const row = within(screen.getByRole('region', { name: 'Ticket' })).getByRole('button', { name: /PROJ-1 start/ });
+    expect(row).toHaveAttribute('data-lamp', 'turn');
+    expect(row).toHaveTextContent('attach');
+  });
+
   it('keeps the cursor on its session when a read reorders the rows, so enter opens the one picked', async () => {
     const ready = await readyApp();
     pushTwoSessions(ready, sessionFixture({ id: 'busy', ticket: 'PROJ-1', state: { kind: 'busy' } }));

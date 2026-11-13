@@ -119,3 +119,11 @@
   outline: var(--cursor-outline, var(--focus-edge)) solid var(--cursor-border);
   outline-offset: 1px;
 }
+
+.tall:hover {
+  cursor: pointer;
+}
+
+.tall:hover .action {
+  color: var(--text);
+}
