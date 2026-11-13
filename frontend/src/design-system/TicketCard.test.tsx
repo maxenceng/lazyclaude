@@ -66,6 +66,21 @@ describe('a ticket card', () => {
     expect(screen.getByRole('button')).not.toHaveAttribute('data-lamp');
   });
 
+  it('marks the selected card by a lifted ground and a brighter border, never an outline', () => {
+    expect(card, 'an outline drawn outside the card clashed with the hover').not.toMatch(/outline/);
+    expect(ruleOf(card, '.card.selected:not([data-lamp])')).toContain('background: var(--cursor-card)');
+    expect(ruleOf(card, '.card.selected')).toContain('border-top-color: var(--cursor-border)');
+    expect(ruleOf(card, '.card.selected')).toContain('border-right-color: var(--cursor-border)');
+    expect(ruleOf(card, '.card.selected')).toContain('border-bottom-color: var(--cursor-border)');
+    expect(ruleOf(card, '.card.selected'), 'the type edge keeps its colour when selected').not.toContain('border-left-color');
+  });
+
+  it('lifts its ground one step on hover, short of the selected card, and leaves its border and a tint alone', () => {
+    const hover = ruleOf(card, '.card:not([data-lamp]):not(.selected):hover');
+    expect(hover).toContain('background: var(--card-hover)');
+    expect(hover).not.toContain('border');
+  });
+
   it('looks the same whatever its column: no state class dims, dashes or flattens it', () => {
     expect(card).not.toMatch(/\.done|dashed|transparent/);
   });

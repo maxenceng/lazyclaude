@@ -74,7 +74,10 @@
   --cursor-edge: none;
   --card: #232427;
   --card-edge: #2f3034;
-  --card-dim: #908d86;
+  --card-hover: #2a2b2e;
+  --card-lifted: #323234;
+  --cursor-card: var(--card-lifted);
+  --card-dim: #a29f98;
 
   --font-read: Barlow, system-ui, sans-serif;
   --font-stencil: 'Saira Stencil One', Barlow, sans-serif;

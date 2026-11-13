@@ -15,7 +15,14 @@ describe('a status heading', () => {
   ])('carries the %s colour from its token', (status, token) => {
     render(<StatusHeading status="the status" count={1} colour={status} />);
     expect(screen.getByText('the status').parentElement).toHaveAttribute('data-status', status);
-    expect(ruleOf(sheet, `.heading[data-status='${status}']`)).toContain(`color: var(--${token})`);
+    expect(ruleOf(sheet, `.heading[data-status='${status}']`)).toContain(`--status-ink: var(--${token})`);
+  });
+
+  it('is underlined in its own status colour, not in the seam between panes', () => {
+    expect(ruleOf(sheet, '.heading'), 'the prototype underlines each heading in its status colour at half strength').toContain(
+      'border-bottom: 2px solid color-mix(in srgb, var(--status-ink) 50%, transparent)',
+    );
+    expect(ruleOf(sheet, '.heading')).toContain('color: var(--status-ink)');
   });
 
   it('stays dim when its heading means no status', () => {

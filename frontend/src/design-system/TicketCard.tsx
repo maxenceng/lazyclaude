@@ -23,7 +23,7 @@ interface Props {
   onSelect: () => void;
 }
 
-/** One ticket on a status column, the same in every column: its title up to three lines over a footer of its number and type, its pull request's marks and the pill of a session waiting on you. Its left edge is its type's colour; a waiting session tints it. The selected card is outlined. */
+/** One ticket on a status column, the same in every column: its title up to three lines over a footer of its number and type, its pull request's marks and the pill of a session waiting on you. Its left edge is its type's colour; a waiting session tints it. The selected card is lifted and its border brightened, fully only in the focused pane. */
 export const TicketCard = ({ id, title, type, selected, lamp, pullRequest, onSelect }: Props) => {
   const { t } = useTranslation('designSystem');
   const card = useRef<HTMLButtonElement>(null);

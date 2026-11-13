@@ -36,6 +36,11 @@ chosen.
   lamp's colour. A ticket with no `type:` label has no edge and no type; a busy or ended session adds nothing. The
   type is written as well as coloured, so the edge is never the only sign. The fix colour was lightened a step so it reads
   at 4.5:1 on the your-turn tint.
+- **A selected card is lifted, not outlined**, as the user chose over the prototype's outline, which clashed with hover: its
+  fill lifts two steps and its border brightens, in the focused pane only (the unfocused one keeps the border alone); hover
+  lifts an untinted card one step. A tinted card keeps its tint, so it shows its selection by its border. The footer's dim
+  ink was lightened so it reads at 4.5:1 on the lifted fill.
+- **Each status heading is underlined in its own colour**, at half strength, as the prototype drew it.
 - **The preview reuses Base's ticket pane**, so its facts line leaves out branch and worktree as ADR 0104's does, though the
   prototype drew them. A click on one of its session rows goes to the ticket on Base and runs the row's action, the one the
   row is labelled with.

@@ -70,7 +70,7 @@ describe('the colours that carry meaning', () => {
 });
 
 describe('a ticket card in its three tints', () => {
-  const grounds = ['card', 'lamp-turn-tile', 'lamp-input-tile', 'lamp-permission-tile'];
+  const grounds = ['card', 'card-hover', 'card-lifted', 'lamp-turn-tile', 'lamp-input-tile', 'lamp-permission-tile'];
   const inks = ['text', 'type-feature', 'type-fix', 'type-chore'];
   it.each(grounds.flatMap((ground) => inks.map((ink) => [ink, ground])))('%s reads on %s', (ink, ground) => {
     expect(contrast(ink, ground)).toBeGreaterThanOrEqual(MARK_CONTRAST);
@@ -78,6 +78,8 @@ describe('a ticket card in its three tints', () => {
 
   it.each([
     ['card-dim', 'card'],
+    ['card-dim', 'card-hover'],
+    ['card-dim', 'card-lifted'],
     ['lamp-turn-tile-dim', 'lamp-turn-tile'],
     ['lamp-turn-tile-dim', 'lamp-input-tile'],
     ['lamp-turn-tile-dim', 'lamp-permission-tile'],

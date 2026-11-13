@@ -18,8 +18,8 @@
   cursor: default;
 }
 
-.card:hover {
-  border-color: var(--dim);
+.card:not([data-lamp]):not(.selected):hover {
+  background: var(--card-hover);
 }
 
 .card[data-lamp='permission'] {
@@ -40,6 +40,16 @@
   --footer-ink: var(--lamp-turn-tile-dim);
 }
 
+.card.selected:not([data-lamp]) {
+  background: var(--cursor-card);
+}
+
+.card.selected {
+  border-top-color: var(--cursor-border);
+  border-right-color: var(--cursor-border);
+  border-bottom-color: var(--cursor-border);
+}
+
 .card[data-type='feature'] {
   border-left-color: var(--type-feature);
 }
@@ -56,11 +66,6 @@
   border-left-color: var(--dim);
 }
 
-.selected,
-.selected:hover {
-  outline: var(--focus-edge) solid var(--cursor-border);
-  outline-offset: 1px;
-}
 
 .title {
   display: -webkit-box;
