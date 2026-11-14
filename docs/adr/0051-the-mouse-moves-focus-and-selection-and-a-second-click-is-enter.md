@@ -4,7 +4,8 @@ Date: 2026-10-27
 
 ## Status
 
-Accepted. Extends ADR 0008; amends ADR 0026 (when a hosted pane receives the mouse).
+Accepted. Extends ADR 0008; amends ADR 0026 (when a hosted pane receives the mouse). Amended by ADR 0112: in the desktop
+window a status line lamp tile or count is a button.
 
 ## Context
 

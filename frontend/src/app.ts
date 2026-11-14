@@ -169,11 +169,20 @@ export class AppModel {
 
   /** A click on a status line tile: the tab hosting that live session opens and takes focus, as a click on the tab does; nothing where this window does not host it. */
   goToLive(liveId: string): void {
-    const view = this.sessionStore.sessions.get();
-    const tab = view === undefined ? undefined : tabOfLive(view, liveId);
+    const tab = this.tabOf(liveId);
     if (tab !== undefined) {
       this.openDockTab(tab);
     }
+  }
+
+  /** Whether a click on the tile of live session `liveId` has a dock tab to go to: the tile is a button only then. */
+  canGoToLive(liveId: string): boolean {
+    return this.tabOf(liveId) !== undefined;
+  }
+
+  private tabOf(liveId: string): string | undefined {
+    const view = this.sessionStore.sessions.get();
+    return view === undefined ? undefined : tabOfLive(view, liveId);
   }
 
   /** A click on a status line count: the next hosted session of that colour after the selected tab opens and takes focus; nothing where none is hosted. */

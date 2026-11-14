@@ -25,7 +25,6 @@ import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKe
 import { ClosePopup } from './session/ClosePopup';
 import { DockScreen, DockStrip } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
-import { tabOfLive } from './session/statusLineTargets';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
 import { NewSessionBar, SessionFailure, SessionsList } from './session/SessionsList';
 import { ticketPullRequestOf } from './ticketPullRequest';
@@ -342,7 +341,7 @@ export const App = ({ app, packaged }: Props) => {
                 colour={marker.colour}
                 size={LampSize.Tile}
                 number={marker.ticket}
-                onClick={sessions !== undefined && tabOfLive(sessions, marker.session) !== undefined ? () => app.goToLive(marker.session) : undefined}
+                onClick={app.canGoToLive(marker.session) ? () => app.goToLive(marker.session) : undefined}
               />
             ))}
             counts={COLOURS.map((colour) => (

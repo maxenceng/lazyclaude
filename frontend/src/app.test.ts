@@ -330,6 +330,13 @@ describe('the app and the status line', () => {
     expect(app.layout.get().focus).toBe(Focus.Board);
   });
 
+  it('lets a tile be clicked only when its live session has a tab here, the /clear-replaced one included', async () => {
+    const app = await twoHosted();
+    expect(app.canGoToLive('cleared')).toBe(true);
+    expect(app.canGoToLive('h2')).toBe(true);
+    expect(app.canGoToLive('elsewhere')).toBe(false);
+  });
+
   it('goes from a count to the next hosted session of its colour, wrapping, and focuses the dock', async () => {
     const app = await twoHosted();
     app.focusOn(Focus.Board);

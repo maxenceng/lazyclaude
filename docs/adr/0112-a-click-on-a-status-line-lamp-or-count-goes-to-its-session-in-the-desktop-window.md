@@ -21,8 +21,8 @@ tab, and the window has the data to reach it: a hosted session lists the live se
 - **A click on a count goes to the next hosted session of its colour after the selected tab, in dock tab order,
   wrapping**; from a tab of another colour, to the first one after it; with one of that colour, always to it. A count
   with no hosted session of its colour is a disabled button.
-- **The move goes through the operation the dock tab calls.** `StatusLine` takes the clicks from `App.tsx`, since the
-  design system cannot import `session`; the rule that picks the tab lives in `frontend/src/session/`.
+- **The move goes through the operation the dock tab calls.** `App.tsx` wires the clicks onto the lamp tiles and counts it puts in
+  `StatusLine`'s slots, since the design system cannot import `session`; the rule that picks the tab lives in `frontend/src/session/`.
 - **The tiles and counts look like the dock tabs**: no hover change, default cursor, the blue focus edge from the keyboard.
   Lamp colours still mean session state only (ADR 0079). A disabled count dims its number and keeps its colour.
 - The zoom key and its reserved chord still only leave the zoom.
