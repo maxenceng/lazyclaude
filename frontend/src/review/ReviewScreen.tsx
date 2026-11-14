@@ -460,7 +460,7 @@ const boxTitle = (box: CommentBox, t: TFunction<'review'>): string => {
   }
 };
 
-const BoxDialog = ({ review, box }: { review: OpenReview; box: CommentBox }) => {
+const BoxPopup = ({ review, box }: { review: OpenReview; box: CommentBox }) => {
   const { t } = useTranslation('review');
   return (
     <Popup
@@ -491,12 +491,12 @@ const BoxDialog = ({ review, box }: { review: OpenReview; box: CommentBox }) => 
 };
 
 /** What the review asks in a popup: the box a comment or the summary is written in, or the confirm that submits it. */
-export const ReviewDialogs = ({ review }: { review: OpenReview }) => {
+export const ReviewPopups = ({ review }: { review: OpenReview }) => {
   const { t } = useTranslation('review');
   useStore(review.changed);
   const box = review.box();
   if (box !== undefined) {
-    return <BoxDialog review={review} box={box} />;
+    return <BoxPopup review={review} box={box} />;
   }
   return review.submitPrompt() ? (
     <Popup

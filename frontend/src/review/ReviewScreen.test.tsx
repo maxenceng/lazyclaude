@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { RpcError } from '../protocol';
 import { ruleOf, stylesheet } from '../design-system/stylesheet';
 import { added, atHead, commentsFixture, pullRequestFixture, diffFixture, fileFixture, hunk, kept, onLine, outside, placed, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
-import { DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './ReviewScreen';
+import { DiffPane, FilesPane, ReviewPopups, ReviewPanel } from './ReviewScreen';
 import { StopKind } from './diffRows';
 import { Harness, settle } from './reviewHarness';
 
@@ -308,7 +308,7 @@ describe('the diff of a review', () => {
     render(
       <>
         <DiffPane review={harness.review} focused={false} onFocus={onFocus} onRetry={() => {}} onClose={() => {}} />
-        <ReviewDialogs review={harness.review} />
+        <ReviewPopups review={harness.review} />
       </>,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Reply to the thread on a.ts:1' }));
@@ -525,7 +525,7 @@ describe('the Review panel', () => {
     render(
       <>
         <ReviewPanel review={harness.review} />
-        <ReviewDialogs review={harness.review} />
+        <ReviewPopups review={harness.review} />
       </>,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Submit review' }));
@@ -554,13 +554,13 @@ describe('the comment box of a review', () => {
   it('shows nothing while no box is open', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('is a popup titled for a pending comment, holding what is typed', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await openedBox(harness);
     expect(screen.getByRole('dialog', { name: 'Pending comment' })).toBeInTheDocument();
     await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
@@ -569,7 +569,7 @@ describe('the comment box of a review', () => {
 
   it('saves with ctrl+s and says it is saving, holding the text still', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await openedBox(harness);
     await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
     await userEvent.keyboard('{Control>}s{/Control}');
@@ -580,7 +580,7 @@ describe('the comment box of a review', () => {
 
   it('says why a comment was not saved, keeping the text to save again', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await openedBox(harness);
     await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
     await userEvent.keyboard('{Control>}s{/Control}');
@@ -592,7 +592,7 @@ describe('the comment box of a review', () => {
 
   it('answers with Cancel and Save buttons that carry esc and ctrl+s', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await openedBox(harness);
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveAttribute('aria-keyshortcuts', 'esc');
     expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-keyshortcuts', 'ctrl+s');
@@ -601,7 +601,7 @@ describe('the comment box of a review', () => {
 
   it('saves from the Save button as ctrl+s does', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await openedBox(harness);
     await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -611,7 +611,7 @@ describe('the comment box of a review', () => {
 
   it('is thrown away by the Cancel button and by the close action as by escape', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await openedBox(harness);
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(harness.review.box()).toBeUndefined();
@@ -622,7 +622,7 @@ describe('the comment box of a review', () => {
 
   it('leaves an escape that ends an input method composition to the composition, keeping the box', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await openedBox(harness);
     await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
     act(() => {
@@ -634,7 +634,7 @@ describe('the comment box of a review', () => {
 
   it('is thrown away by escape', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await openedBox(harness);
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -643,7 +643,7 @@ describe('the comment box of a review', () => {
 
   it('is thrown away, as by escape, by a press outside it', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await openedBox(harness);
     await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
     await userEvent.click(screen.getByRole('dialog').parentElement!);
@@ -653,7 +653,7 @@ describe('the comment box of a review', () => {
 
   it('stays open for a press inside it, even one let go outside it', async () => {
     const harness = new Harness();
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await openedBox(harness);
     const user = userEvent.setup();
     await user.pointer([{ keys: '[MouseLeft>]', target: screen.getByRole('textbox', { name: 'Comment text' }) }, { target: screen.getByRole('dialog').parentElement! }, { keys: '[/MouseLeft]' }]);
@@ -664,7 +664,7 @@ describe('the comment box of a review', () => {
     const harness = new Harness();
     const thread = threadFixture({ id: 'T1', comments: [{ author: 'ada', body: 'Why this?\nReally.' }, { author: 'bob', body: 'Speed' }] });
     await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }) });
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     act(() => harness.review.replyTo(thread));
     expect(screen.getByRole('dialog', { name: 'Why this?' })).toBeInTheDocument();
     expect(screen.getByText(/ada\s+Why this\?/)).toBeInTheDocument();
@@ -674,7 +674,7 @@ describe('the comment box of a review', () => {
   it('is titled Summary for the summary, and keeps it for the submit', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
-    render(<ReviewDialogs review={harness.review} />);
+    render(<ReviewPopups review={harness.review} />);
     await harness.openSummary('From github.com');
     expect(screen.getByRole('dialog', { name: 'Summary' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Comment text' })).toHaveValue('From github.com');
@@ -684,7 +684,7 @@ describe('the comment box of a review', () => {
 const confirming = async () => {
   const harness = new Harness();
   await harness.readAll({ diff });
-  render(<ReviewDialogs review={harness.review} />);
+  render(<ReviewPopups review={harness.review} />);
   await harness.openSummary();
   act(() => harness.review.saveBox());
   await harness.answerPlacement();

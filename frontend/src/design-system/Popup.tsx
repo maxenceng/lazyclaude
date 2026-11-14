@@ -23,11 +23,12 @@ interface Props {
   children?: ReactNode;
 }
 
-/** A press on the scrim itself, not on the popup inside it. */
+/** A press on the scrim itself, not on the popup inside it; it keeps the focus in the popup, since the window's modal guard lets a press on the scrim through. */
 const dismissOn =
   (onDismiss: (() => void) | undefined) =>
   (event: MouseEvent): void => {
     if (event.target === event.currentTarget) {
+      event.preventDefault();
       onDismiss?.();
     }
   };

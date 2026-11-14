@@ -27,12 +27,12 @@ export const CapturePopup = ({ capture }: { capture: CaptureController }) => {
       />
       {state.kind === CaptureStateKind.Creating ? (
         <div role="status">
-          <Text tone={Tone.Dim}>{t('capture.creating')}</Text>
+          <Text tone={Tone.Dim} tight>{t('capture.creating')}</Text>
         </div>
       ) : null}
       {state.kind === CaptureStateKind.Refused ? (
         <div role="alert">
-          <Text tone={Tone.Warning}>{t('capture.refused', { reason: state.reason })}</Text>
+          <Text tone={Tone.Warning} tight>{t('capture.refused', { reason: state.reason })}</Text>
         </div>
       ) : null}
     </Popup>

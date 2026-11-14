@@ -61,3 +61,7 @@
   border-top: 1px solid var(--seam);
   background: var(--pane-sunk);
 }
+
+.body > p {
+  padding-inline: 0;
+}

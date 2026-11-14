@@ -4,7 +4,7 @@ Date: 2026-11-07
 
 ## Status
 
-Accepted. Carries ADR 0051's modal popups into the desktop window, which that ADR left to the browser.
+Accepted. Amended by ADR 0108: every popup, the capture one included, now has a scrim. Carries ADR 0051's modal popups into the desktop window, which that ADR left to the browser.
 
 ## Context
 

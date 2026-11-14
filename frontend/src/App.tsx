@@ -20,7 +20,7 @@ import { PullRequestRead, type TicketPullRequest } from './board/ticketPullReque
 import { StatusKind } from './protocol';
 import { cellsOf, ciOf, worstResult } from './review/pullRequestList';
 import { PullRequestsPane } from './review/PullRequestsScreen';
-import { DiffPane, FilesPane, ReviewDialogs } from './review/ReviewScreen';
+import { DiffPane, FilesPane, ReviewPopups } from './review/ReviewScreen';
 import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKeyBar';
 import { DockScreen, DockStrip } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
@@ -348,15 +348,15 @@ export const App = ({ app, packaged }: Props) => {
         dock={dock.tabs.length === 0 ? null : dockScreen}
         arrangement={shown.arrangement}
       />
-      {review === undefined ? null : <ReviewDialogs review={review} />}
+      {review === undefined ? null : <ReviewPopups review={review} />}
       <CapturePopup capture={app.board.capture} />
-      {quitAsked === undefined ? null : <QuitDialog hosted={quitAsked} onAnswer={(yes) => app.quitting.answer(yes)} />}
+      {quitAsked === undefined ? null : <QuitPopup hosted={quitAsked} onAnswer={(yes) => app.quitting.answer(yes)} />}
     </>
   );
 };
 
 /** The question `q` asks while sessions are hosted, as the TUI's quit prompt does: y quits, anything else stays. */
-const QuitDialog = ({ hosted, onAnswer }: { hosted: number; onAnswer: (yes: boolean) => void }) => {
+const QuitPopup = ({ hosted, onAnswer }: { hosted: number; onAnswer: (yes: boolean) => void }) => {
   const { t } = useTranslation();
   return (
     <Popup

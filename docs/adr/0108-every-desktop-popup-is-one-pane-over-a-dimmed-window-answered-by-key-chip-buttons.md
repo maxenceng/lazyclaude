@@ -39,4 +39,6 @@ frame three ways (issue #221, variants P1 to P3), and P2 was chosen.
   (the rule that every desktop action has a button and a key).
 - Because the capture popup now has a scrim, the scrim is a single place where a press outside could cancel it. It does
   not, because a press there would throw away a title half typed.
+- Every `Button`, not only a popup's, keeps the focus where it was when pressed, as `PaneAction` already did: a press on
+  a popup's answer must not take the keys from its input, and the window's other buttons are reached by key, not by tab.
 - The session picker and the window menu are dropdowns anchored to what opened them, not popups, and keep their own shape.

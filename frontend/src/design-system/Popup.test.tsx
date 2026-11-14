@@ -75,6 +75,11 @@ describe('a popup', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the focus where it was for a press on its scrim, dismissed or not', () => {
+    render(<Popup title="New ticket" {...answers()} />);
+    expect(fireEvent.mouseDown(screen.getByRole('dialog').parentElement!), 'the scrim lets a press through the window guard, so it must keep the input focused itself').toBe(false);
+  });
+
   it('is not dismissed by a click, so a selection dragged out of it stays', () => {
     const onDismiss = vi.fn();
     render(<Popup title="Quit lazyclaude?" {...answers()} onDismiss={onDismiss} />);
@@ -88,5 +93,9 @@ describe('a popup', () => {
     expect(ruleOf(sheet, '.frame')).toContain('box-shadow: var(--popup-shadow)');
     expect(ruleOf(sheet, '.head')).toContain('background: var(--lit)');
     expect(ruleOf(sheet, '.foot')).toContain('background: var(--pane-sunk)');
+  });
+
+  it('sets its words flush with its input, the body padding being their only indent', () => {
+    expect(ruleOf(sheet, '.body > p'), 'a Text brings its own inline padding, which doubled the indent of the quit question and the reply thread').toContain('padding-inline: 0');
   });
 });

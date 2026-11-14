@@ -1279,7 +1279,7 @@ describe('capturing a draft ticket', () => {
     await user.keyboard('c');
     await user.pointer({ keys: '[MouseLeft]', target: screen.getByRole('dialog', { name: 'New ticket' }).parentElement! });
     expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
-    expect(app.board.selection.selected.get()).toBeUndefined();
+    expect(app.board.selection.selected.get()).toBeUndefined();    expect(captureBox()).toHaveFocus();
   });
 
   it('answers enter and esc from the window when focus has left the input, and nothing else', async () => {
