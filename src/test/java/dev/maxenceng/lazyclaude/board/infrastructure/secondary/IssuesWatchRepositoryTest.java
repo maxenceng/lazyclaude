@@ -34,7 +34,7 @@ import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 class IssuesWatchRepositoryTest {
 
     private final GhCommand gh = mock(GhCommand.class);
-    private IssuesWatchRepository watcher = new IssuesWatchRepository(gh, Duration.ofSeconds(30));
+    private IssuesWatchRepository watcher = new IssuesWatchRepository(gh, IssuesWatchRepository.INTERVAL);
 
     @AfterEach
     void stopWatching() {
@@ -42,8 +42,10 @@ class IssuesWatchRepositoryTest {
     }
 
     @Test
-    void shouldCheckEveryThirtySecondsByDefault() {
-        assertThat(IssuesWatchRepository.INTERVAL).isEqualTo(Duration.ofSeconds(30));
+    void shouldCheckEveryTenSecondsByDefault() {
+        assertThat(IssuesWatchRepository.INTERVAL)
+                .as("a 304 costs no rate limit, so the board catches a status change within about ten seconds (ADR 0108)")
+                .isEqualTo(Duration.ofSeconds(10));
     }
 
     @Test
