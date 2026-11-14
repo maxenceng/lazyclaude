@@ -1,0 +1,16 @@
+/* PROTOTYPE: the three looks of a drawn diagram, and its parse failure. Not shipped. */
+.proto-stage { position: fixed; inset: 0; background: var(--ground); display: flex; padding: 12px; }
+.proto-stage > * { height: 100%; }
+
+.diagram { grid-column: column-start / full-end; justify-self: start; max-width: 100%; overflow-x: auto; }
+.diagram-svg svg { display: block; width: clamp(calc(var(--natural) * 0.85), 100%, var(--natural)); max-width: none !important; height: auto; }
+.diagram-sunk { background: var(--pane-sunk); padding: var(--space-3) var(--space-4); }
+.diagram-bare { padding: var(--space-2) 0; }
+.diagram-line { padding: var(--space-2) 0; border-block: 1px solid var(--seam); }
+.diagram-line .node rect, .diagram-line .node polygon, .diagram-line rect.actor { stroke-width: 1px; }
+
+.diagram-fallback { grid-column: column-start / full-end; justify-self: start; max-width: 100%; }
+.diagram-fallback pre { margin: 0; }
+.diagram-error { margin: 0 0 var(--space-2); font-size: var(--reading-label-em); color: var(--dim); }
+.diagram-error-head { color: var(--ci-failed); font-weight: 600; }
+.diagram-fallback pre { font: var(--reading-code-em) / 1.5 var(--font-mono); background: var(--pane-sunk); padding: var(--space-3); overflow-x: auto; white-space: pre; width: fit-content; max-width: 100%; }
