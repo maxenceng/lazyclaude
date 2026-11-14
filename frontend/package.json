@@ -11,7 +11,8 @@
     "build": "vite build",
     "dev": "vite",
     "tauri": "tauri",
-    "prototype": "vite --port 1421 --open /prototype-ux.html"
+    "prototype": "vite --port 1421 --open /prototype-ux.html",
+    "prototype:popups": "vite --port 1421 --open /prototype-popups.html"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",
