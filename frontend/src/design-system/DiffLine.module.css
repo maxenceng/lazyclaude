@@ -1,13 +1,13 @@
 .line {
   display: flex;
+  scroll-margin-top: calc(var(--size-label) * 1.5 + var(--space-2) * 2 + 2px);
   gap: var(--space-2);
   width: 100%;
-  padding: 0 var(--space-4);
-  border: 0;
+  padding: 0 var(--space-4) 0 var(--space-2);
   background: transparent;
   color: var(--text);
   text-align: left;
-  font: var(--size-body) / 1.5 var(--font-mono);
+  font: var(--size-body) / 1.55 var(--font-mono);
   cursor: default;
   user-select: none;
 }
@@ -24,22 +24,63 @@
   background: var(--diff-range);
 }
 
+.thread {
+  box-shadow: inset 3px 0 0 var(--edge-open);
+}
+
+.pending {
+  box-shadow: inset 3px 0 0 var(--edge-pending);
+}
+
 .cursor {
-  background: var(--cursor-ground);
-  color: var(--cursor-ink);
-  box-shadow: var(--cursor-edge);
+  background: var(--diff-cursor);
+  box-shadow: inset 3px 0 0 var(--lift-edge, var(--dim));
+}
+
+.mark {
+  flex: none;
+  width: 2ch;
+  text-align: center;
+  color: var(--edge-open);
+}
+
+.pending .mark {
+  color: var(--edge-pending);
 }
 
 .number {
   flex: none;
-  min-width: 4ch;
+  align-self: flex-start;
+  min-width: 5ch;
+  padding: 0;
+  border: 0;
+  background: transparent;
   text-align: right;
-  color: var(--dim);
+  font: inherit;
+  color: var(--diff-gutter);
   font-variant-numeric: tabular-nums;
+  cursor: pointer;
 }
 
-.cursor .number {
-  color: var(--cursor-ink);
+.number:hover {
+  color: var(--diff-gutter-hot);
+  text-decoration: underline;
+}
+
+.number:focus-visible {
+  outline: var(--focus-edge) solid var(--focus);
+  outline-offset: 1px;
+}
+
+.cursor .number,
+.thread .number,
+.pending .number {
+  color: var(--diff-gutter-hot);
+  font-weight: 700;
+}
+
+.removed .number {
+  color: var(--ansi-bright-red);
 }
 
 .sign {
@@ -55,13 +96,12 @@
   color: var(--ansi-bright-red);
 }
 
-.cursor .sign {
-  color: var(--cursor-ink);
-}
-
 .text {
   flex: 1;
-  white-space: pre;
-  overflow: hidden;
+  min-width: 0;
+  padding-left: 4ch;
+  text-indent: -4ch;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   tab-size: 4;
 }

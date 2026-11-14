@@ -1,5 +1,7 @@
 import type { MouseEvent } from 'react';
-import { COMMENT_MARKS, CommentKind } from './comment';
+import { Badge, BadgeTone } from './Badge';
+import { CommentKind } from './comment';
+import { InlineText } from './InlineText';
 import styles from './Annotation.module.css';
 
 interface Comment {
@@ -7,42 +9,61 @@ interface Comment {
   body: string;
 }
 
-export interface AnnotationReply {
+export interface AnnotationAction {
   /** The button's text. */
   text: string;
-  /** What the button does, for a screen reader, since the text alone does not say which thread. */
+  /** What the button does, for a screen reader, since the text alone does not say which comment. */
   label: string;
-  onReply: () => void;
+  /** The key that does the same, in a chip after the text; none where no key reaches this card. */
+  chip: string | undefined;
+  onPress: () => void;
 }
 
 interface Props {
   kind: CommentKind;
-  heading: string;
+  /** Where the card hangs, in code type: the file and its line. */
+  where: string;
+  /** The card's state in a word, in a badge beside where it hangs. */
+  tag: string;
   comments: readonly Comment[];
   dim: boolean;
-  reply?: AnnotationReply;
+  /** What can be done to the card: a thread is replied to, a pending comment edited and deleted. */
+  actions: readonly AnnotationAction[];
 }
 
 /** A click keeps the focus where the window's panes put it. */
 const keepFocus = (event: MouseEvent) => event.preventDefault();
 
-/** What has been said on a line, set under it: a thread's comments, or your own pending comment. A resolved thread is dimmed. Given a reply, it ends with a quiet Reply button, lit when hovered. */
-export const Annotation = ({ kind, heading, comments, dim, reply }: Props) => {
+/**
+ * What has been said on a line, as one card across the whole diff under it: where it hangs and its state in a word, then each comment with
+ * its author and its words, their inline markdown set, and its actions. An open thread is edged blue; your pending comment is a neutral card edged and badged amber. A resolved
+ * thread is dimmed.
+ */
+export const Annotation = ({ kind, where, tag, comments, dim, actions }: Props) => {
   return (
-    <li>
-      <article className={[styles.annotation, styles[kind], dim ? styles.dim : ''].join(' ')}>
-        <p className={styles.heading}>
-          <span className={styles.mark}>{COMMENT_MARKS[kind]}</span> {heading}
-        </p>
+    <li className={styles.item}>
+      <article className={[styles.card, styles[kind], dim ? styles.dim : ''].join(' ')}>
+        <header className={styles.head}>
+          <span className={styles.where}>{where}</span>
+          <Badge tone={kind === CommentKind.Pending ? BadgeTone.Amber : BadgeTone.Blue}>{tag}</Badge>
+        </header>
         {comments.map((comment, index) => (
-          <p key={index} className={index === 0 ? undefined : styles.reply}>
-            <strong className={styles.author}>{comment.author}</strong> {comment.body}
-          </p>
+          <div key={index} className={styles.comment}>
+            <strong className={styles.author}>{comment.author}</strong>
+            <p className={styles.body}>
+              <InlineText source={comment.body} />
+            </p>
+          </div>
         ))}
-        {reply === undefined ? null : (
-          <button type="button" className={styles.replyAction} aria-label={reply.label} onMouseDown={keepFocus} onClick={reply.onReply}>
-            {reply.text}
-          </button>
+        {actions.length === 0 ? null : (
+          <div className={styles.actions}>
+            {actions.map((action) => (
+              <button key={action.text} type="button" className={styles.action} aria-label={action.label} onMouseDown={keepFocus} onClick={action.onPress}>
+                {action.text}
+                {action.chip === undefined ? null : <kbd className={styles.chip}>{action.chip}</kbd>}
+              </button>
+            ))}
+          </div>
         )}
       </article>
     </li>

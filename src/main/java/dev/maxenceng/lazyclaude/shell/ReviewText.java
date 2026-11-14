@@ -27,9 +27,12 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.UnavailableThreads
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
 import dev.maxenceng.lazyclaude.review.published.HeldHead;
 import dev.maxenceng.lazyclaude.review.published.MovedHead;
+import dev.maxenceng.lazyclaude.review.published.OriginallyPlaced;
+import dev.maxenceng.lazyclaude.review.published.OutdatedThread;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 import dev.maxenceng.lazyclaude.review.published.RenamedFile;
 import dev.maxenceng.lazyclaude.review.published.Summary;
+import dev.maxenceng.lazyclaude.review.published.ThreadPosition;
 import dev.maxenceng.lazyclaude.review.published.ThreadSide;
 import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
@@ -50,6 +53,7 @@ final class ReviewText {
     private static final String DIFF_TOO_LARGE = "diff too large for GitHub (%s)";
     private static final String THREADS_UNKNOWN = "threads unknown (%s)";
     private static final String OUTDATED = "outdated";
+    private static final String WAS_ON = "was %s";
     private static final String OPEN_MARK = "◆ ";
     private static final String NO_MARK = "  ";
     private static final String OPEN_GLYPH = "◆";
@@ -154,10 +158,17 @@ final class ReviewText {
                 List.of());
     }
 
+    /** {@code outdated}, or {@code was L12} when GitHub names the lines the thread was written on; narrow panel, so the one word. */
+    private static String outdatedWords(ThreadPosition position) {
+        return position instanceof OutdatedThread(OriginallyPlaced(PlacedThread was))
+                ? WAS_ON.formatted(ThreadText.range(was))
+                : OUTDATED;
+    }
+
     private static String where(ReviewThreadView thread) {
         String file = lastSegment(thread.path().value());
         if (!(thread.position() instanceof PlacedThread placed)) {
-            return OUTDATED_ROW.formatted(file, OUTDATED);
+            return OUTDATED_ROW.formatted(file, outdatedWords(thread.position()));
         }
         String lines = placed.side() == ThreadSide.LEFT ? OLD_SIDE + ThreadText.lines(placed) : ThreadText.lines(placed);
         return thread.comments().stream()

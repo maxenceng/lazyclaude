@@ -4,9 +4,10 @@ import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.addedFile;
 import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.fileWithOldNumbersFarAboveNewOnes;
 import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.modifiedFile;
 import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.pullRequestDiffOf;
+import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.atFileHead;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.onLine;
-import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.onNoLine;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.outdatedThreadIn;
+import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.outsideDiff;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.threadAt;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDiffPath;
@@ -68,20 +69,28 @@ class PullRequestDiffTest {
     }
 
     @Test
-    void shouldPutOnNoLineAndLastAnOutdatedThreadOrOneOnALineTheDiffDoesNotHold() {
+    void shouldPutUnderItsFileHeaderAndLastAnOutdatedThreadOrOneOnALineTheDiffDoesNotHold() {
         ReviewThread outdated = outdatedThreadIn(diffPath());
         ReviewThread offTheDiff = threadAt(diffPath(), rightOn(99));
         ReviewThread placed = threadAt(diffPath(), rightOn(3));
 
         assertThat(pullRequestDiffOf(modifiedFile()).place(new ReadThreads(List.of(outdated, offTheDiff, placed))).threads())
-                .containsExactly(onLine(placed, 2), onNoLine(offTheDiff), onNoLine(outdated));
+                .containsExactly(onLine(placed, 2), atFileHead(offTheDiff, 0), atFileHead(outdated, 0));
+    }
+
+    @Test
+    void shouldPutAfterTheDiffAThreadOnAFileTheDiffDoesNotHold() {
+        ReviewThread inSecond = threadAt(secondDiffPath(), rightOn(3));
+
+        assertThat(pullRequestDiffOf(modifiedFile()).place(new ReadThreads(List.of(inSecond))).threads())
+                .containsExactly(outsideDiff(inSecond));
     }
 
     @Test
     void shouldNotPutAThreadOnTheLineOfAnotherFileWithTheSameNumber() {
         ReviewThread inSecond = threadAt(secondDiffPath(), rightOn(3));
 
-        assertThat(pullRequestDiffOf(modifiedFile()).place(new ReadThreads(List.of(inSecond))).threads())
-                .containsExactly(onNoLine(inSecond));
+        assertThat(pullRequestDiffOf(modifiedFile(), addedFile()).place(new ReadThreads(List.of(inSecond))).threads())
+                .containsExactly(atFileHead(inSecond, 1));
     }
 }

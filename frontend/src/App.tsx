@@ -20,7 +20,7 @@ import { PullRequestRead, type TicketPullRequest } from './board/ticketPullReque
 import { StatusKind } from './protocol';
 import { cellsOf, ciOf, worstResult } from './review/pullRequestList';
 import { PullRequestsPane } from './review/PullRequestsScreen';
-import { CommentsPane, DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './review/ReviewScreen';
+import { DiffPane, FilesPane, ReviewDialogs } from './review/ReviewScreen';
 import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKeyBar';
 import { DockScreen, DockStrip } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
@@ -119,7 +119,6 @@ export const App = ({ app, packaged }: Props) => {
     [Focus.Document]: <DocumentKeyBar extra={tabKeys} />,
     [Focus.Sessions]: <SessionsKeyBar picking={false} extra={panelKeys} />,
     [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
-    [Focus.Comments]: <ReviewKeyBar panel={ReviewFocus.Comments} />,
     [Focus.Diff]: <ReviewKeyBar panel={ReviewFocus.Diff} />,
     [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} />,
   }[layout.focus];
@@ -138,9 +137,8 @@ export const App = ({ app, packaged }: Props) => {
       ? undefined
       : {
           board: <FilesPane review={review} focused={layout.focus === Focus.Files} onFocus={() => app.focusOn(Focus.Files)} />,
-          docs: <CommentsPane review={review} focused={layout.focus === Focus.Comments} onFocus={() => app.focusOn(Focus.Comments)} />,
-          foot: <ReviewPanel review={review} />,
-          main: <DiffPane review={review} focused={layout.focus === Focus.Diff} onFocus={() => app.focusOn(Focus.Diff)} onRetry={() => review.read()} />,
+          docs: null,
+          main: <DiffPane review={review} focused={layout.focus === Focus.Diff} onFocus={() => app.focusOn(Focus.Diff)} onRetry={() => review.read()} onClose={() => app.review.leave()} />,
           arrangement: layout.arrangement(hasDock),
         };
 
@@ -191,6 +189,7 @@ export const App = ({ app, packaged }: Props) => {
               state={pullRequests}
               list={pullRequestList}
               cursor={app.review.cursor.cursorIn(pullRequestList)?.number}
+              now={new Date()}
               onOpen={(pullRequest) => app.tabs.openPullRequest(pullRequest)}
               onRetry={() => app.retryPullRequests()}
             />
@@ -345,7 +344,6 @@ export const App = ({ app, packaged }: Props) => {
         keyBar={capturing ? <CaptureKeyBar /> : picker === undefined ? (tabbed === undefined ? keyBar : tabScreen.bar) : <SessionsKeyBar picking />}
         board={shown.board}
         docs={shown.docs}
-        foot={reviewing?.foot}
         main={shown.main}
         dock={dock.tabs.length === 0 ? null : dockScreen}
         arrangement={shown.arrangement}

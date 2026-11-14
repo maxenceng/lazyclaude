@@ -6,7 +6,6 @@ export enum Focus {
   Document = 'document',
   Sessions = 'sessions',
   Files = 'files',
-  Comments = 'comments',
   Diff = 'diff',
   Dock = 'dock',
 }

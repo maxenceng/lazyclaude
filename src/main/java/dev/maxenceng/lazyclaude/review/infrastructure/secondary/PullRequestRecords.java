@@ -6,7 +6,7 @@ import java.util.List;
 import dev.maxenceng.lazyclaude.review.domain.PullRequest;
 import dev.maxenceng.lazyclaude.review.domain.PullRequestsUnavailableException;
 
-/** Reads the JSON {@code gh pr list} writes into open pull requests, through {@link GhJson}. */
+/** Reads the JSON {@code gh api graphql} writes for the open pull requests into open pull requests, through {@link GhJson}. */
 final class PullRequestRecords {
 
     private PullRequestRecords() {}
@@ -14,6 +14,9 @@ final class PullRequestRecords {
     /** @throws PullRequestsUnavailableException saying what {@code source} held that could not be read */
     static List<PullRequest> pullRequests(byte[] json, String source) {
         PullRequestRecord[] records = GhJson.records(json, PullRequestRecord[].class, source);
+        if (records == null) {
+            throw new PullRequestsUnavailableException("%s wrote no list of pull requests".formatted(source));
+        }
         return Arrays.stream(records)
                 .filter(record -> !record.fromAFork())
                 .map(record -> complete(record, source))

@@ -21,6 +21,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.reviewsAnswering
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.shellOnATicketWithAnOpenPullRequest;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.shellReviewing;
 import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.threadsOnTwoFiles;
+import static dev.maxenceng.lazyclaude.shell.ShellReviewFixture.threadsWithAnOutdatedThreadOnItsOriginalLine;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
@@ -73,6 +74,15 @@ class ShellReviewKeysTest {
                 .containsSubsequence("◆ Board.java:3 alice", "  Docs.java:1 alice", "  Board.java  outdated");
         assertThat(screen.dimText()).anySatisfy(text -> assertThat(text).contains("Docs.java:1 alice"));
         assertThat(screen.dimText()).noneSatisfy(text -> assertThat(text).contains("Board.java:3"));
+    }
+
+    @Test
+    void shouldSayWhereAnOutdatedThreadWasWrittenWhenGitHubNamesTheLines() {
+        Screen screen = Screen.of(shellReviewing(twoFileDiffView(), threadsWithAnOutdatedThreadOnItsOriginalLine()));
+
+        assertThat(screen.boardPanelLines())
+                .anySatisfy(row -> assertThat(row).isEqualTo("  Board.java  was L12"))
+                .anySatisfy(row -> assertThat(row).isEqualTo("  Board.java  was L8–11"));
     }
 
     @Test

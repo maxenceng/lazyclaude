@@ -46,8 +46,11 @@
   --ansi-bright-cyan: #8cc2c2;
   --ansi-bright-white: #ece9e2;
 
-  --diff-added: color-mix(in srgb, var(--ansi-green) 11%, var(--pane));
-  --diff-removed: color-mix(in srgb, var(--ansi-red) 11%, var(--pane));
+  --diff-added: #222725;
+  --diff-removed: #2a2223;
+  --diff-cursor: #26282b;
+  --diff-gutter: #a19e96;
+  --diff-gutter-hot: #d9d6cf;
   --diff-range: color-mix(in srgb, var(--ansi-blue) 16%, var(--pane));
 
   --status-in-progress: #8cb7de;
@@ -63,8 +66,17 @@
   --ci-pending: #c9a94c;
   --ci-passed: #6fb27c;
   --ci-failed-on-light: #9c2a22;
-  --ci-pending-on-light: #7a5d00;
+  --ci-pending-on-light: #6b5100;
   --ci-passed-on-light: #1d6b34;
+
+  --edge-open: #8cb7de;
+  --edge-pending: #f2a900;
+  --badge-pending-ground: #f2a900;
+  --badge-pending-ink: #231800;
+  --affirm-ground: #6fb27c;
+  --affirm-ink: #08170d;
+  --affirm-chip-ground: #0d2415;
+  --affirm-chip-ink: #e6f4ea;
 
   --focus: #5aa9e6;
   --selected: #d9d6cf;

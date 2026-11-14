@@ -5,7 +5,7 @@ import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.pullRequest
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.commentOn;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onDiff;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onDiffLine;
-import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onNoDiffLine;
+import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pendingOutsideDiff;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pendingReview;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pendingReviewId;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pullRequestNodeId;
@@ -256,7 +256,7 @@ class PendingReviewManagerTest {
 
         assertThat(manager.pendingInDiff(unavailableDiff(), List.of(onTheAddedLine, replyToThread())))
                 .as("the Comments panel lists the pending comments as soon as they are read, whatever became of the diff")
-                .isEqualTo(new PendingCommentsInDiff(List.of(onNoDiffLine(onTheAddedLine), onNoDiffLine(replyToThread()))));
+                .isEqualTo(new PendingCommentsInDiff(List.of(pendingOutsideDiff(onTheAddedLine), pendingOutsideDiff(replyToThread()))));
     }
 
     @Test

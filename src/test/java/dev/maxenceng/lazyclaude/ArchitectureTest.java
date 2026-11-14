@@ -426,6 +426,16 @@ class ArchitectureTest {
             .should(takeNoRawValueInAPublicMethod())
             .allowEmptyShould(true);
 
+    // A view carries published values; a domain type it holds is a value of its own context, never a role or another context's (ADR 0107).
+    @ArchTest
+    static final ArchRule views_hold_only_values_of_their_own_domain = classes()
+            .that()
+            .resideInAPackage("..infrastructure.primary..")
+            .and()
+            .haveSimpleNameEndingWith("View")
+            .should(holdOnlyValuesOfTheirOwnDomain())
+            .allowEmptyShould(true);
+
     // A manager orders its rules and raises its own context's exceptions; asserting is second-guessing what it was handed.
     @ArchTest
     static final ArchRule managers_assert_nothing = noClasses()
@@ -528,6 +538,28 @@ class ArchitectureTest {
                 }
             }
         };
+    }
+
+    private static final List<String> DOMAIN_ROLES = List.of("Manager", "Port", "Exception");
+
+    private static ArchCondition<JavaClass> holdOnlyValuesOfTheirOwnDomain() {
+        return new ArchCondition<>("hold only values of their own context's domain") {
+            @Override
+            public void check(JavaClass view, ConditionEvents events) {
+                nonStaticFields(view).forEach(component -> Stream.concat(Stream.of(component.getRawType()), carriedTypes(component))
+                        .filter(held -> held.getPackageName().contains(".domain"))
+                        .filter(held -> !Objects.equals(moduleNameOf(held), moduleNameOf(view)) || !isDomainValue(held))
+                        .forEach(held -> events.add(SimpleConditionEvent.violated(
+                                component,
+                                "%s holds %s; a view holds only records, enums and sealed values of its own context's domain"
+                                        .formatted(view.getSimpleName(), held.getName())))));
+            }
+        };
+    }
+
+    private static boolean isDomainValue(JavaClass held) {
+        boolean value = held.isRecord() || held.isEnum() || held.reflect().isSealed();
+        return value && DOMAIN_ROLES.stream().noneMatch(held.getSimpleName()::endsWith);
     }
 
     private static Stream<JavaClass> carriedTypes(JavaField component) {

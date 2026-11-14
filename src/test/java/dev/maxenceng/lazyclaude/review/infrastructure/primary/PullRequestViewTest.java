@@ -1,5 +1,8 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestFixture.discussedPullRequest;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestFixture.pullRequest;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.discussedPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.failedPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.passedPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.pendingPullRequestView;
@@ -24,5 +27,19 @@ class PullRequestViewTest {
         assertThat(pullRequestView().ciResult())
                 .as("passed would claim a green run that never happened")
                 .isEmpty();
+    }
+
+    @Test
+    void shouldCarryWhenItWasOpenedItsCommentsItsPendingReviewAndTheIssueItCloses() {
+        assertThat(PullRequestView.from(discussedPullRequest()))
+                .usingRecursiveComparison()
+                .isEqualTo(discussedPullRequestView());
+    }
+
+    @Test
+    void shouldCarryNoPendingReviewNoCommentsAndNoIssueForABarePullRequest() {
+        assertThat(PullRequestView.from(pullRequest()))
+                .usingRecursiveComparison()
+                .isEqualTo(pullRequestView());
     }
 }

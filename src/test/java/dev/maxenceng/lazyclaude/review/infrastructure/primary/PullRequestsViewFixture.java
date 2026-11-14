@@ -1,5 +1,10 @@
 package dev.maxenceng.lazyclaude.review.infrastructure.primary;
 
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.closesIssue;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.closesNoIssue;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.noComments;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.openedAt;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.twoComments;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.bareId;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBranch;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.longerThanTheBranch;
@@ -33,11 +38,23 @@ public final class PullRequestsViewFixture {
                 .title(pullRequestTitle())
                 .head(headBranch())
                 .draft(false)
-                .checks(List.of());
+                .openedAt(openedAt())
+                .checks(List.of())
+                .comments(noComments())
+                .pendingReview(false)
+                .closing(closesNoIssue());
     }
 
     public static PullRequestView pullRequestView() {
         return pullRequestViewBuilder().build();
+    }
+
+    public static PullRequestView discussedPullRequestView() {
+        return pullRequestViewBuilder()
+                .comments(twoComments())
+                .pendingReview(true)
+                .closing(closesIssue())
+                .build();
     }
 
     public static PullRequestView draftPullRequestView() {

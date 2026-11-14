@@ -87,3 +87,51 @@ describe('a ticket card in its three tints', () => {
     expect(contrast(ink, ground)).toBeGreaterThanOrEqual(MARK_CONTRAST);
   });
 });
+
+describe('the list and the review', () => {
+  it.each([
+    ['ci-failed', 'pane'],
+    ['ci-pending', 'pane'],
+    ['ci-passed', 'pane'],
+    ['ci-failed', 'pane-lift'],
+    ['ci-pending', 'pane-lift'],
+    ['ci-passed', 'pane-lift'],
+    ['dim', 'pane-lift'],
+    ['text', 'pane-lift'],
+    ['diff-gutter', 'pane'],
+    ['diff-gutter', 'diff-added'],
+    ['diff-gutter', 'diff-removed'],
+    ['diff-gutter', 'diff-cursor'],
+    ['diff-gutter-hot', 'diff-cursor'],
+    ['text', 'diff-added'],
+    ['text', 'diff-removed'],
+    ['text', 'diff-cursor'],
+    ['dim', 'diff-added'],
+    ['dim', 'diff-removed'],
+    ['dim', 'diff-cursor'],
+    ['ansi-green', 'diff-added'],
+    ['ansi-bright-red', 'diff-removed'],
+    ['edge-open', 'card'],
+    ['edge-pending', 'card'],
+    ['edge-open', 'diff-added'],
+    ['edge-pending', 'diff-added'],
+    ['edge-open', 'pane'],
+    ['card-dim', 'card'],
+    ['text', 'card'],
+    ['badge-pending-ink', 'badge-pending-ground'],
+    ['affirm-ink', 'affirm-ground'],
+    ['affirm-chip-ink', 'affirm-chip-ground'],
+    ['ci-failed-on-light', 'selected'],
+    ['ci-pending-on-light', 'selected'],
+    ['ci-passed-on-light', 'selected'],
+    ['text-on-light', 'selected'],
+    ['text', 'pane-sunk'],
+    ['dim', 'pane-sunk'],
+  ])('%s reaches 4.5:1 on %s', (ink, ground) => {
+    expect(contrast(ink, ground)).toBeGreaterThanOrEqual(MARK_CONTRAST);
+  });
+
+  it('keeps the label of the affirming button and its key chip clear of the chip sitting on the fill', () => {
+    expect(contrast('affirm-chip-ground', 'affirm-ground')).toBeGreaterThanOrEqual(MARK_CONTRAST - 1.5);
+  });
+});

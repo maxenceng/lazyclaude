@@ -63,6 +63,7 @@ export type ReviewDiffLine = ReviewAddedLine | ReviewRemovedLine | ReviewContext
 export type ReviewThreadsView = ReviewLoadingThreadsView | ReviewReadThreadsView | ReviewUnavailableThreadsView;
 export type ReviewThreadPosition = ReviewPlacedThread | ReviewOutdatedThread;
 export type ReviewThreadSide = 'LEFT' | 'RIGHT';
+export type ReviewOriginalPlace = ReviewOriginallyPlaced | ReviewNoOriginalPlace;
 export type ReviewPendingReviewView =
   | ReviewLoadingPendingReviewView
   | ReviewNoPendingReviewView
@@ -70,13 +71,14 @@ export type ReviewPendingReviewView =
   | ReviewUnavailablePendingReviewView;
 export type ReviewPendingAnchorView = ReviewOnDiffAnchorView | ReviewReplyAnchorView;
 export type ReviewHeadMove = ReviewMovedHead | ReviewHeldHead;
-export type ReviewThreadLine = ReviewOnDiffLine | ReviewNoDiffLine;
+export type ReviewThreadLine = ReviewOnDiffLine | ReviewAtFileHead | ReviewOutsideDiff;
 export type ReviewCommentInDiffView = ReviewThreadInDiffView | ReviewPendingInDiffView;
 export type ReviewCommentAnchorView = ReviewOnDiffAnchorView | ReviewRefusedAnchorView;
 export type ReviewSummaryDraftPayload = ReviewTypedSummaryPayload | ReviewUntypedSummaryPayload;
 export type ReviewPullRequestsView =
   ReviewCheckingPullRequestsView | ReviewOpenPullRequestsView | ReviewUnavailablePullRequestsView;
 export type ReviewCheckOutcome = 'FAILED' | 'PENDING' | 'PASSED';
+export type ReviewIssueClosing = ReviewClosesIssue | ReviewClosesNoIssue;
 export type ReviewPullRequestOnView = ReviewHeadedPullRequestView | ReviewNoHeadedPullRequestView;
 export type ReviewPendingReviewWriteView = ReviewWrittenReviewView | ReviewRefusedWriteView;
 export type SessionWatchedPayload = SessionWatchedSessionPayload | SessionNoWatchedSessionPayload;
@@ -624,6 +626,14 @@ export interface ReviewPlacedThread {
 }
 export interface ReviewOutdatedThread {
   kind: 'outdatedThread';
+  was: ReviewOriginalPlace;
+}
+export interface ReviewOriginallyPlaced {
+  kind: 'originallyPlaced';
+  place: ReviewPlacedThread;
+}
+export interface ReviewNoOriginalPlace {
+  kind: 'noOriginalPlace';
 }
 export interface ReviewThreadComment {
   author: string;
@@ -686,9 +696,9 @@ export interface ReviewUnavailablePendingReviewView {
 export interface ReviewCommentsInDiffView {
   threads: ReviewThreadInDiffView[];
   pending: ReviewPendingInDiffView[];
-  underLines: ReviewThreadInDiffView[];
+  shown: ReviewThreadInDiffView[];
   listed: ReviewCommentInDiffView[];
-  lastOnLines: ReviewPendingInDiffView[];
+  lastAtPlaces: ReviewPendingInDiffView[];
 }
 export interface ReviewThreadInDiffView {
   kind: 'threadInDiff';
@@ -699,8 +709,12 @@ export interface ReviewOnDiffLine {
   kind: 'onDiffLine';
   index: number;
 }
-export interface ReviewNoDiffLine {
-  kind: 'noDiffLine';
+export interface ReviewAtFileHead {
+  kind: 'atFileHead';
+  file: number;
+}
+export interface ReviewOutsideDiff {
+  kind: 'outsideDiff';
 }
 export interface ReviewPendingInDiffView {
   kind: 'pendingInDiff';
@@ -743,11 +757,22 @@ export interface ReviewPullRequestView {
   title: string;
   head: string;
   draft: boolean;
+  openedAt: string;
   checks: ReviewCheckView[];
+  comments: number;
+  pendingReview: boolean;
+  closing: ReviewIssueClosing;
 }
 export interface ReviewCheckView {
   name: string;
   outcome: ReviewCheckOutcome;
+}
+export interface ReviewClosesIssue {
+  kind: 'closesIssue';
+  number: number;
+}
+export interface ReviewClosesNoIssue {
+  kind: 'closesNoIssue';
 }
 export interface ReviewUnavailablePullRequestsView {
   kind: 'unavailablePullRequests';

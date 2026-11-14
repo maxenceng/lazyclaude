@@ -6,7 +6,8 @@ import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.modifiedFil
 import static dev.maxenceng.lazyclaude.review.domain.DiffFileFixture.pullRequestDiffOf;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.commentOn;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onDiffLine;
-import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.onNoDiffLine;
+import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pendingAtFileHead;
+import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.pendingOutsideDiff;
 import static dev.maxenceng.lazyclaude.review.domain.PendingReviewFixture.replyCommentOn;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.diffPath;
 import static dev.maxenceng.lazyclaude.review.published.DiffPathFixture.secondDiffPath;
@@ -39,13 +40,13 @@ class PullRequestDiffPendingTest {
     }
 
     @Test
-    void shouldPutOnNoLineAndLastAReplyToAnOutdatedThreadOrAnythingOnALineTheDiffDoesNotHold() {
+    void shouldPutUnderItsFileHeaderAndLastAReplyToAnOutdatedThreadOrAnythingOnALineTheDiffDoesNotHold() {
         PendingComment outdatedReply = replyCommentOn(diffPath(), outdated());
         PendingComment offTheDiff = commentOn(diffPath(), rightOn(99));
         PendingComment placed = commentOn(diffPath(), rightOn(3));
 
         assertThat(pullRequestDiffOf(modifiedFile()).place(List.of(outdatedReply, offTheDiff, placed)).comments())
-                .containsExactly(onDiffLine(placed, 2), onNoDiffLine(outdatedReply), onNoDiffLine(offTheDiff));
+                .containsExactly(onDiffLine(placed, 2), pendingAtFileHead(outdatedReply, 0), pendingAtFileHead(offTheDiff, 0));
     }
 
     @Test
@@ -64,7 +65,14 @@ class PullRequestDiffPendingTest {
         PendingComment inSecond = commentOn(secondDiffPath(), rightOn(3));
 
         assertThat(pullRequestDiffOf(modifiedFile(), addedFile()).place(List.of(inSecond)).comments())
-                .containsExactly(onNoDiffLine(inSecond));
+                .containsExactly(pendingAtFileHead(inSecond, 1));
+    }
+
+    @Test
+    void shouldPutAfterTheDiffAPendingCommentOnAFileTheDiffDoesNotHold() {
+        PendingComment inSecond = commentOn(secondDiffPath(), rightOn(3));
+
+        assertThat(pullRequestDiffOf(modifiedFile()).place(List.of(inSecond)).comments()).containsExactly(pendingOutsideDiff(inSecond));
     }
 
     @Test

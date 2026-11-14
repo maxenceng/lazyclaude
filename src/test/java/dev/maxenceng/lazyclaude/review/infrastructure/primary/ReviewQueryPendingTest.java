@@ -11,7 +11,7 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingRevi
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.onDiffAnchorView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.openPendingView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.pendingOnLineView;
-import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.pendingOnNoLineView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.pendingOutsideDiffView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.replyView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.unavailablePendingView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.loadingDiffView;
@@ -125,9 +125,9 @@ class ReviewQueryPendingTest {
     }
 
     @Test
-    void shouldPutEveryPendingCommentOnNoLineUntilTheDiffIsRead() {
+    void shouldPutEveryPendingCommentOutsideTheDiffUntilTheDiffIsRead() {
         assertThat(query.commentsInDiff(new CommentsInDiffPayload(loadingDiffView(), loadingThreadsView(), openPendingView(), false)).pending())
-                .containsExactly(pendingOnNoLineView(commentOnDiffLineView()), pendingOnNoLineView(replyView()));
+                .containsExactly(pendingOutsideDiffView(commentOnDiffLineView()), pendingOutsideDiffView(replyView()));
     }
 
     @Test
@@ -147,15 +147,15 @@ class ReviewQueryPendingTest {
 
     @Test
     void shouldPickThePendingCommentWrittenLastOnALineAsTheOneItsKeysActOn() {
-        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), loadingThreadsView(), openPendingView(), false)).lastOnLines())
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(twoFileDiffView(), loadingThreadsView(), openPendingView(), false)).lastAtPlaces())
                 .as("enter and x on line 2 act on the reply GitHub lists after the comment")
                 .isEqualTo(List.of(pendingOnLineView(replyView(), 2)));
     }
 
     @Test
-    void shouldPickNoPendingCommentOnALineUntilTheDiffIsRead() {
-        assertThat(query.commentsInDiff(new CommentsInDiffPayload(loadingDiffView(), loadingThreadsView(), openPendingView(), false)).lastOnLines())
-                .isEqualTo(List.of());
+    void shouldPickOnlyTheLastPendingCommentOutsideTheDiffUntilTheDiffIsRead() {
+        assertThat(query.commentsInDiff(new CommentsInDiffPayload(loadingDiffView(), loadingThreadsView(), openPendingView(), false)).lastAtPlaces())
+                .isEqualTo(List.of(pendingOutsideDiffView(replyView())));
     }
 
     @Test

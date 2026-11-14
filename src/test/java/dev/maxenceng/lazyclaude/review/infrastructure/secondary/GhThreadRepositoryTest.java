@@ -7,6 +7,7 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFix
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.ghHanging;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.impatientThreadRepositoryOver;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.missingCommand;
+import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.outdatedThreadJson;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.pendingCommentJson;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.projectAt;
 import static dev.maxenceng.lazyclaude.review.infrastructure.secondary.FakeGhFixture.readThreadsPrinted;
@@ -22,7 +23,9 @@ import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.ans
 import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.comment;
 import static dev.maxenceng.lazyclaude.review.published.ThreadCommentFixture.question;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.leftOn;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.leftRange;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.outdated;
+import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.outdatedFrom;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightOn;
 import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.rightRange;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,17 +78,55 @@ class GhThreadRepositoryTest {
     }
 
     @Test
-    void shouldReadAThreadWithNoLineAsOutdated() throws IOException {
+    void shouldReadAThreadWithNoLineAsOutdatedWithNoOriginalPlaceWhenGitHubNamesNone() throws IOException {
         String output = threadsPageJson(threadJson("src/Board.java", "null", "null", "RIGHT", false, true, QUESTION));
 
         assertThat(readThreadsPrinted(root, output)).containsExactly(threadOn(diffPath(), outdated(), question()));
     }
 
     @Test
-    void shouldReadAThreadGitHubMarksOutdatedAsOutdatedEvenWhenItStillNamesALine() throws IOException {
-        String output = threadsPageJson(threadJson("src/Board.java", "3", "null", "RIGHT", false, true, QUESTION));
+    void shouldReadAnOutdatedThreadAsWrittenOnItsOriginalLine() throws IOException {
+        String output = threadsPageJson(
+                outdatedThreadJson("src/Board.java", "null", "null", "9", "null", "RIGHT", false, true, QUESTION));
 
-        assertThat(readThreadsPrinted(root, output)).containsExactly(threadOn(diffPath(), outdated(), question()));
+        assertThat(readThreadsPrinted(root, output))
+                .containsExactly(threadOn(diffPath(), outdatedFrom(rightOn(9)), question()));
+    }
+
+    @Test
+    void shouldReadAnOutdatedThreadAsWrittenOnItsOriginalRange() throws IOException {
+        String output = threadsPageJson(
+                outdatedThreadJson("src/Board.java", "null", "null", "14", "10", "LEFT", false, true, QUESTION));
+
+        assertThat(readThreadsPrinted(root, output))
+                .containsExactly(threadOn(diffPath(), outdatedFrom(leftRange(10, 14)), question()));
+    }
+
+    @Test
+    void shouldReadAThreadGitHubMarksOutdatedAsOutdatedEvenWhenItStillNamesALine() throws IOException {
+        String output = threadsPageJson(
+                outdatedThreadJson("src/Board.java", "3", "null", "7", "null", "RIGHT", false, true, QUESTION));
+
+        assertThat(readThreadsPrinted(root, output))
+                .as("the line it names now is not where it was written")
+                .containsExactly(threadOn(diffPath(), outdatedFrom(rightOn(7)), question()));
+    }
+
+    @Test
+    void shouldReadAThreadWithNoLineThatIsNotMarkedOutdatedAsOutdatedFromItsOriginalLine() throws IOException {
+        String output = threadsPageJson(
+                outdatedThreadJson("src/Board.java", "null", "null", "6", "null", "RIGHT", false, false, QUESTION));
+
+        assertThat(readThreadsPrinted(root, output))
+                .containsExactly(threadOn(diffPath(), outdatedFrom(rightOn(6)), question()));
+    }
+
+    @Test
+    void shouldKeepTheOriginalLinesOfAThreadStillOnALineOutOfItsPosition() throws IOException {
+        String output = threadsPageJson(
+                outdatedThreadJson("src/Board.java", "3", "null", "7", "null", "RIGHT", false, false, QUESTION));
+
+        assertThat(readThreadsPrinted(root, output)).containsExactly(threadOn(diffPath(), rightOn(3), question()));
     }
 
     @Test
@@ -143,7 +184,8 @@ class GhThreadRepositoryTest {
 
         assertThat(read.getFirst().comments().getFirst().body().value())
                 .startsWith("api graphql --paginate -F owner={owner} -F repo={repo} -F number=23 -f query=query(")
-                .contains("reviewThreads(first: 100, after: $endCursor)");
+                .contains("reviewThreads(first: 100, after: $endCursor)")
+                .contains("originalLine originalStartLine");
     }
 
     @Test

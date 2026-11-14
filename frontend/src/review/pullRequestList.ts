@@ -25,6 +25,22 @@ export const worstFirst = (pullRequests: readonly ReviewPullRequestView[]): Revi
 export const worstResult = (pullRequests: readonly ReviewPullRequestView[]): ReviewCheckOutcome | undefined =>
   WORST_FIRST.find((outcome) => pullRequests.some((pullRequest) => !pullRequest.draft && ciResultOf(pullRequest) === outcome));
 
+/** A CI result's word in the window, the key under `pullRequests.ci` (ADR 0106). */
+enum CiWord {
+  Failed = 'failed',
+  Pending = 'pending',
+  Passed = 'passed',
+  None = 'none',
+}
+
+const CI_WORDS: Readonly<Record<ReviewCheckOutcome, CiWord>> = { FAILED: CiWord.Failed, PENDING: CiWord.Pending, PASSED: CiWord.Passed };
+
+/** The key of a pull request's CI result in words under `pullRequests.ci`: `none` when it has no check. */
+export const ciWordKey = (pullRequest: ReviewPullRequestView): `pullRequests.ci.${CiWord}` => {
+  const result = ciResultOf(pullRequest);
+  return `pullRequests.ci.${result === undefined ? CiWord.None : CI_WORDS[result]}`;
+};
+
 const CI: Record<ReviewCheckOutcome, Ci> = { FAILED: Ci.Failed, PENDING: Ci.Pending, PASSED: Ci.Passed };
 
 /** An outcome as the glyph that draws it. */

@@ -8,6 +8,7 @@ import { Focus, WindowTab } from './layout';
 import { Exited, Ready } from './protocol';
 import { bytesOfText, toBase64 } from './protocol';
 import { folderFixture, readFixture, treeFixture } from './docs/fixtures';
+import { pullRequestFixture } from './review/fixtures';
 import { hostedFixture, pastFixture, sessionFixture, sessionsFixture, ticketSessionsFixture } from './session/fixtures';
 import { Dock } from './session/dock';
 import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './session/recordings';
@@ -920,19 +921,19 @@ const reviewDiff = {
 const summaryAnswered = async (ready: Awaited<ReturnType<typeof readyApp>>, summary = '') => {
   await act(async () => {
     ready.client.answerAll('review/summaryToSubmit', summary);
-    ready.client.answerAll('review/commentsInDiff', { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] });
+    ready.client.answerAll('review/commentsInDiff', { threads: [], pending: [], shown: [], listed: [], lastAtPlaces: [] });
     await settle();
   });
 };
 
-const PULL_REQUEST = { number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] };
+const PULL_REQUEST = pullRequestFixture();
 
 const reviewOpened = async (answers: { pending?: unknown; threads?: unknown; diff?: unknown } = {}) => {
   const ready = await readyApp();
   await act(async () => {
     ready.client.answer('review/watch', {
       kind: 'openPullRequests',
-      pullRequests: [{ number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] }],
+      pullRequests: [pullRequestFixture()],
     });
     await settle();
   });
@@ -948,7 +949,7 @@ const reviewOpened = async (answers: { pending?: unknown; threads?: unknown; dif
     await settle();
   });
   await act(async () => {
-    ready.client.answerAll('review/commentsInDiff', { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] });
+    ready.client.answerAll('review/commentsInDiff', { threads: [], pending: [], shown: [], listed: [], lastAtPlaces: [] });
     ready.client.answerAll('review/summaryToSubmit', '');
     await settle();
   });
@@ -977,14 +978,14 @@ describe('the Review screen', () => {
     expect(ready.app.layout.get().focus).toBe(Focus.Diff);
   });
 
-  it('opens on p for a ticket whose branch heads an open pull request, with Files, Comments and Review beside the diff', async () => {
+  it('opens on p for a ticket whose branch heads an open pull request, with Files carrying the Review, and no Comments, beside the diff', async () => {
     await reviewOpened();
     expect(screen.queryByRole('region', { name: 'Board' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Files' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Comments' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Comments' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Pending review' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Review' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'src/a.ts' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /src\/a\.ts/ })).toBeInTheDocument();
     expect(keyBar()).toHaveTextContent('c comment');
   });
 
@@ -993,7 +994,7 @@ describe('the Review screen', () => {
     await act(async () => {
       ready.client.answer('review/watch', {
         kind: 'openPullRequests',
-        pullRequests: [{ number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] }],
+        pullRequests: [pullRequestFixture()],
       });
       await settle();
     });
@@ -1002,7 +1003,7 @@ describe('the Review screen', () => {
       ready.client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
       await settle();
     });
-    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toHaveTextContent('Reading the diff');
+    expect(screen.getByRole('region', { name: 'Review' })).toHaveTextContent('Reading the diff');
   });
 
   it('does not open for a ticket without an open pull request', async () => {
@@ -1019,7 +1020,7 @@ describe('the Review screen', () => {
 
   it('shows the refusal of a range across hunks on the status line', async () => {
     const ready = await reviewOpened();
-    const lines = screen.getAllByRole('button').filter((button) => button.hasAttribute('data-line'));
+    const lines = [...document.querySelectorAll<HTMLElement>('[data-line]')];
     fireEvent.mouseDown(lines[0]!);
     fireEvent.mouseUp(lines[1]!);
     await act(async () => {
@@ -1047,7 +1048,7 @@ describe('the Review screen', () => {
       await settle();
     });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Review' })).toHaveTextContent('0 pending');
+    expect(screen.getByRole('region', { name: 'Pending review' })).toHaveTextContent('0 comments');
   });
 
   it('shows why a comment was not saved, in the popup', async () => {
@@ -1096,13 +1097,13 @@ describe('the Review screen', () => {
       await settle();
     });
     expect(screen.getByRole('banner')).toHaveTextContent('not submitted (nothing to submit)');
-    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Review' })).toBeInTheDocument();
   });
 
   it('takes j and k, in the diff, as the cursor, and h to Files', async () => {
     const ready = await reviewOpened();
     await ready.user.keyboard('j');
-    const lines = screen.getAllByRole('button').filter((button) => button.hasAttribute('data-line'));
+    const lines = [...document.querySelectorAll<HTMLElement>('[data-line]')];
     expect(lines[1]).toHaveAttribute('aria-current', 'true');
     await ready.user.keyboard('h');
     await ready.user.keyboard('{Escape}');
@@ -1474,7 +1475,7 @@ const currentSessionRow = () => within(screen.getByRole('region', { name: 'Ticke
 describe('the ticket in the main view', () => {
   it('says where it stands: status and the open pull request review matched to its branch', async () => {
     const ready = await readyApp();
-    const pullRequest = { number: 7, title: 'Add the thing', head: 'proj-1-first', draft: false, checks: [] };
+    const pullRequest = pullRequestFixture();
     await answerPullRequests(ready, { kind: 'openPullRequests', pullRequests: [pullRequest] });
     await act(async () => {
       ready.client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest });

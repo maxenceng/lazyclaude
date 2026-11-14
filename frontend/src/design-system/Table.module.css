@@ -1,0 +1,110 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.table th {
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  border-bottom: 1px solid var(--seam);
+  font: 600 var(--size-small) var(--font-read);
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.row {
+  cursor: default;
+  --ci-ink-failed: var(--ci-failed);
+  --ci-ink-pending: var(--ci-pending);
+  --ci-ink-passed: var(--ci-passed);
+}
+
+.row > td:first-child {
+  box-shadow: inset 4px 0 0 transparent;
+}
+
+.row[data-stripe='failed'] > td:first-child {
+  box-shadow: inset 4px 0 0 var(--ci-failed);
+}
+
+.row[data-stripe='pending'] > td:first-child {
+  box-shadow: inset 4px 0 0 var(--ci-pending);
+}
+
+.row[data-stripe='passed'] > td:first-child {
+  box-shadow: inset 4px 0 0 var(--ci-passed);
+}
+
+.cell {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--seam);
+  font-size: var(--size-body);
+  vertical-align: baseline;
+}
+
+.fit {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.trim {
+  max-width: 28ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fill {
+  width: 100%;
+  max-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+th.fit,
+th.trim,
+th.fill {
+  max-width: none;
+}
+
+.dim {
+  color: var(--dim);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.selected {
+  --ci-ink-failed: var(--cursor-ci-failed, var(--ci-failed));
+  --ci-ink-pending: var(--cursor-ci-pending, var(--ci-pending));
+  --ci-ink-passed: var(--cursor-ci-passed, var(--ci-passed));
+  --ci-ink-none: var(--cursor-ink);
+  background: var(--cursor-ground);
+  color: var(--cursor-ink);
+  box-shadow: var(--cursor-edge);
+}
+
+.selected .dim {
+  color: var(--cursor-ink);
+  opacity: 0.75;
+}
+
+.note {
+  margin-left: var(--space-2);
+  font: var(--size-label) var(--font-mono);
+  color: var(--dim);
+}
+
+.cell > * + * {
+  margin-left: var(--space-3);
+}
+
+.selected .note {
+  color: var(--cursor-ink);
+  opacity: 0.75;
+}

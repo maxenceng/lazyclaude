@@ -23,10 +23,16 @@
     "label": "hosted sessions"
   },
   "fileRow": {
-    "openThreads_one": "{{count}} open thread",
-    "openThreads_other": "{{count}} open threads",
-    "pending_one": "{{count}} pending comment",
-    "pending_other": "{{count}} pending comments"
+    "threads_one": "{{count}} thread",
+    "threads_other": "{{count}} threads",
+    "pending_one": "{{count}} pending",
+    "pending_other": "{{count}} pending",
+    "change": {
+      "added": "added",
+      "modified": "modified",
+      "deleted": "deleted",
+      "renamed": "renamed"
+    }
   },
   "ci": {
     "failed": "checks failed",
@@ -48,5 +54,12 @@
   },
   "pullRequestMark": {
     "label": "draft or without checks"
+  },
+  "diffLine": {
+    "comment": "Comment on line {{number}}",
+    "hangs": {
+      "thread": "a thread hangs from this line",
+      "pending": "your pending comment hangs from this line"
+    }
   }
 }

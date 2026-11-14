@@ -8,8 +8,8 @@ import static dev.maxenceng.lazyclaude.review.domain.PullRequestDiffManagerFixtu
 import static dev.maxenceng.lazyclaude.review.domain.PullRequestDiffManagerFixture.unavailableThreads;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewManagerFixture.pullRequestsUnavailable;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.onLine;
-import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.onNoLine;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.outdatedThread;
+import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.outsideDiff;
 import static dev.maxenceng.lazyclaude.review.domain.ReviewThreadFixture.reviewThread;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
@@ -95,7 +95,7 @@ class PullRequestDiffManagerTest {
     void shouldPutEveryThreadOnNoLineUntilTheDiffIsRead() {
         assertThat(manager.threadsInDiff(unavailableDiff(), new ReadThreads(List.of(outdatedThread(), reviewThread()))))
                 .as("the Comments panel lists the threads as soon as they are read, whatever became of the diff")
-                .isEqualTo(new ThreadsInDiff(List.of(onNoLine(reviewThread()), onNoLine(outdatedThread()))));
+                .isEqualTo(new ThreadsInDiff(List.of(outsideDiff(reviewThread()), outsideDiff(outdatedThread()))));
     }
 
     @Test

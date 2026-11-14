@@ -29,6 +29,10 @@ public final class ThreadPositionFixture {
     }
 
     public static OutdatedThread outdated() {
-        return new OutdatedThread();
+        return new OutdatedThread(new NoOriginalPlace());
+    }
+
+    public static OutdatedThread outdatedFrom(PlacedThread place) {
+        return new OutdatedThread(new OriginallyPlaced(place));
     }
 }
