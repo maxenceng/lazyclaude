@@ -22,3 +22,19 @@
 .count[data-lamp='turn'] {
   color: var(--lamp-turn);
 }
+
+.button {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: default;
+}
+
+.button:focus-visible {
+  outline: var(--focus-edge) solid var(--focus);
+  outline-offset: 2px;
+}
+
+.button:disabled b {
+  color: var(--dim);
+}

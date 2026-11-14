@@ -12,6 +12,8 @@ import type { Client } from './protocol';
 import { ReviewController } from './review/reviewController';
 import { Closing } from './session/closing';
 import { Hosting } from './session/hosting';
+import type { LampColour } from './session/markers';
+import { tabOfLive, tabOfNextColour } from './session/statusLineTargets';
 import { SessionsController } from './session/sessionsController';
 import { SessionStore } from './session/sessionStore';
 import { WatchingReporter } from './session/watched';
@@ -163,6 +165,43 @@ export class AppModel {
     this.hosting.select(id);
     this.tabs.choose(WindowTab.Base);
     this.focusOn(Focus.Dock);
+  }
+
+  /** A click on a status line tile: the tab hosting that live session opens and takes focus, as a click on the tab does; nothing where this window does not host it. */
+  goToLive(liveId: string): void {
+    const tab = this.tabOf(liveId);
+    if (tab !== undefined) {
+      this.openDockTab(tab);
+    }
+  }
+
+  /** Whether a click on the tile of live session `liveId` has a dock tab to go to: the tile is a button only then. */
+  canGoToLive(liveId: string): boolean {
+    return this.tabOf(liveId) !== undefined;
+  }
+
+  private tabOf(liveId: string): string | undefined {
+    const view = this.sessionStore.sessions.get();
+    return view === undefined ? undefined : tabOfLive(view, liveId);
+  }
+
+  /** A click on a status line count: the next hosted session of that colour after the selected tab opens and takes focus; nothing where none is hosted. */
+  goToNext(colour: LampColour): void {
+    const tab = this.nextOf(colour);
+    if (tab !== undefined) {
+      this.openDockTab(tab);
+    }
+  }
+
+  /** Whether a click on the count of `colour` has a hosted session to go to. */
+  canGoToNext(colour: LampColour): boolean {
+    return this.nextOf(colour) !== undefined;
+  }
+
+  private nextOf(colour: LampColour): string | undefined {
+    const view = this.sessionStore.sessions.get();
+    const dock = this.hosting.dock.get();
+    return view === undefined ? undefined : tabOfNextColour(view, dock.tabs, dock.selectedTab(), colour);
   }
 
   /** A click on a session's tab in the minimised dock strip: the dock unfolds with that session's pane focused, on whatever the window shows. */

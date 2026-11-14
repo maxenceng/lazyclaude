@@ -336,10 +336,22 @@ export const App = ({ app, packaged }: Props) => {
               />
             }
             tiles={markers.map((marker) => (
-              <Lamp key={marker.session} colour={marker.colour} size={LampSize.Tile} number={marker.ticket} />
+              <Lamp
+                key={marker.session}
+                colour={marker.colour}
+                size={LampSize.Tile}
+                number={marker.ticket}
+                onClick={app.canGoToLive(marker.session) ? () => app.goToLive(marker.session) : undefined}
+              />
             ))}
             counts={COLOURS.map((colour) => (
-              <Count key={colour} colour={colour} count={markers.filter((marker) => marker.colour === colour).length} />
+              <Count
+                key={colour}
+                colour={colour}
+                count={markers.filter((marker) => marker.colour === colour).length}
+                disabled={!app.canGoToNext(colour)}
+                onClick={() => app.goToNext(colour)}
+              />
             ))}
             project={project}
             warning={warning}

@@ -4,6 +4,8 @@ import { readFixture, treeFixture } from './docs/fixtures';
 import { AppModel } from './app';
 import { Action } from './keys/bindings';
 import { Dock } from './session/dock';
+import { hostedFixture, sessionFixture, sessionsFixture } from './session/fixtures';
+import { LampColour } from './session/markers';
 import { Focus, WindowTab } from './layout';
 import { ScrollStep } from './docs/documentScroll';
 import { FaultedConfiguration } from './keys/configurationState';
@@ -294,6 +296,76 @@ describe('the app and the dock\'s zoom button', () => {
     expect(app.layout.get().zoomed).toBe(true);
     app.toggleZoom();
     expect(app.layout.get().zoomed).toBe(false);
+  });
+});
+
+const TURN = { kind: 'yourTurn' } as const;
+
+const twoHosted = async () => {
+  const app = await docsApp();
+  app.hosting.dock.set(new Dock().opened('h1').opened('h2').select('h1'));
+  const first = sessionFixture({ id: 'cleared', state: TURN });
+  const second = sessionFixture({ id: 'h2', state: TURN });
+  app.sessionStore.sessions.set(sessionsFixture([first, second], { hosted: [hostedFixture('h1', { live: first }), hostedFixture('h2', { live: second })] }));
+  return app;
+};
+
+describe('the app and the status line', () => {
+  it('goes from a tile to the tab hosting its live session, even when /clear replaced the launch id, and focuses the dock', () => {
+    return twoHosted().then((app) => {
+      app.focusOn(Focus.Board);
+      app.goToLive('h2');
+      expect(app.hosting.dock.get().selectedTab()).toBe('h2');
+      app.goToLive('cleared');
+      expect(app.hosting.dock.get().selectedTab()).toBe('h1');
+      expect(app.layout.get().focus).toBe(Focus.Dock);
+    });
+  });
+
+  it('does nothing for a live session it does not host', async () => {
+    const app = await twoHosted();
+    app.focusOn(Focus.Board);
+    app.goToLive('elsewhere');
+    expect(app.hosting.dock.get().selectedTab()).toBe('h1');
+    expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+
+  it('lets a tile be clicked only when its live session has a tab here, the /clear-replaced one included', async () => {
+    const app = await twoHosted();
+    expect(app.canGoToLive('cleared')).toBe(true);
+    expect(app.canGoToLive('h2')).toBe(true);
+    expect(app.canGoToLive('elsewhere')).toBe(false);
+  });
+
+  it('goes from a count to the next hosted session of its colour, wrapping, and focuses the dock', async () => {
+    const app = await twoHosted();
+    app.focusOn(Focus.Board);
+    app.goToNext(LampColour.Turn);
+    expect(app.hosting.dock.get().selectedTab()).toBe('h2');
+    app.goToNext(LampColour.Turn);
+    expect(app.hosting.dock.get().selectedTab()).toBe('h1');
+    expect(app.layout.get().focus).toBe(Focus.Dock);
+  });
+
+  it('knows whether a count has anywhere to go', async () => {
+    const app = await twoHosted();
+    expect(app.canGoToNext(LampColour.Turn)).toBe(true);
+    expect(app.canGoToNext(LampColour.Permission)).toBe(false);
+  });
+
+  it('does nothing from a count with no hosted session of its colour', async () => {
+    const app = await twoHosted();
+    app.focusOn(Focus.Board);
+    app.goToNext(LampColour.Permission);
+    expect(app.hosting.dock.get().selectedTab()).toBe('h1');
+    expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+
+  it('leaves the zoom only by its own key and button', async () => {
+    const app = await twoHosted();
+    app.toggleZoom();
+    app.goToNext(LampColour.Turn);
+    expect(app.layout.get().zoomed).toBe(true);
   });
 });
 

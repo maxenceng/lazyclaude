@@ -113,3 +113,4 @@
 - 0109 [Every desktop popup is one pane over a dimmed window, answered by key-chip buttons](0109-every-desktop-popup-is-one-pane-over-a-dimmed-window-answered-by-key-chip-buttons.md) — Accepted.
 - 0110 [A new ticket is created by a `/ticket new` session, not by lazyclaude](0110-a-new-ticket-is-created-by-a-ticket-new-session-not-by-lazyclaude.md) — Accepted.
 - 0111 [Closing a session from the window ends it, and the close chord is reserved by the desktop only](0111-closing-a-session-from-the-window-ends-it-and-the-close-chord-is-reserved-by-the-desktop-only.md) — Accepted.
+- 0112 [A click on a status line lamp or count goes to its session in the desktop window](0112-a-click-on-a-status-line-lamp-or-count-goes-to-its-session-in-the-desktop-window.md) — Accepted.

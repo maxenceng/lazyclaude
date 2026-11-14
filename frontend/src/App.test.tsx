@@ -107,6 +107,32 @@ describe('the window', () => {
     expect(screen.getAllByRole('img', { name: 'PROJ-2: waiting for input' }).length).toBeGreaterThan(0);
   });
 
+  it('goes to a hosted session\'s tab from its lamp tile, and ignores the tile of one it does not host', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    const hosted = sessionFixture({ id: 'cleared', state: { kind: 'yourTurn' }, ticket: 'PROJ-1' });
+    const other = sessionFixture({ id: 'x', state: { kind: 'yourTurn' }, ticket: 'PROJ-2' });
+    act(() => ready.client.push('session/changed', sessionsFixture([hosted, other], { hosted: [hostedFixture('h1', { live: hosted })] })));
+    act(() => ready.app.focusOn(Focus.Board));
+    await ready.user.click(screen.getByRole('button', { name: 'PROJ-1: your turn' }));
+    expect(ready.app.layout.get().focus).toBe(Focus.Dock);
+    act(() => ready.app.focusOn(Focus.Board));
+    expect(screen.getByRole('img', { name: 'PROJ-2: your turn' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'PROJ-2: your turn' })).toBeNull();
+  });
+
+  it('enables a count only while a hosted session has its colour, and goes to it on a click', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    const hosted = sessionFixture({ id: 'h1', state: { kind: 'yourTurn' } });
+    act(() => ready.client.push('session/changed', sessionsFixture([hosted], { hosted: [hostedFixture('h1', { live: hosted })] })));
+    act(() => ready.app.focusOn(Focus.Board));
+    const counts = within(screen.getByLabelText('sessions by state'));
+    expect(counts.getByRole('button', { name: /needs input/ })).toBeDisabled();
+    await ready.user.click(counts.getByRole('button', { name: /your turn/ }));
+    expect(ready.app.layout.get().focus).toBe(Focus.Dock);
+  });
+
   it('shows the connection screen instead of the board while the backend is down', () => {
     const client = fakeClient(new Exited(1, ['boom']));
     render(<App app={new AppModel(client, testPlatform())} packaged={false} />);
