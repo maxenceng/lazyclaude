@@ -136,7 +136,7 @@ class PtyNativeFolderTest {
         Files.delete(folder);
 
         assertThat(natives.loading(() -> true))
-                .as("a folder that cannot be used does not stop sessions from starting (ADR 0112)")
+                .as("a folder that cannot be used does not stop sessions from starting (ADR 0113)")
                 .isTrue();
     }
 
