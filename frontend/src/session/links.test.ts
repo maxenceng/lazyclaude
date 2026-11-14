@@ -1,33 +1,44 @@
 import { Terminal, type ILink } from '@xterm/xterm';
 import { describe, expect, it, vi } from 'vitest';
 import { NoticeStore } from '../shared/noticeStore';
-import { SessionLinks, urlsIn, WebAddressProvider } from './links';
+import { SessionLinks, webAddressesIn, WebAddressProvider } from './links';
 
 describe('the web addresses in a line of output', () => {
   it('finds an http address and where it starts', () => {
-    expect(urlsIn('see http://example.com/a for more')).toEqual([{ url: 'http://example.com/a', start: 4 }]);
+    expect(webAddressesIn('see http://example.com/a for more')).toEqual([{ url: 'http://example.com/a', start: 4 }]);
   });
 
   it('finds an https address at the end of the line', () => {
-    expect(urlsIn('https://example.com/a?b=1')).toEqual([{ url: 'https://example.com/a?b=1', start: 0 }]);
+    expect(webAddressesIn('https://example.com/a?b=1')).toEqual([{ url: 'https://example.com/a?b=1', start: 0 }]);
   });
 
   it('leaves trailing punctuation out of the address', () => {
-    expect(urlsIn('go to https://example.com/a, then https://example.com/b.')).toEqual([
+    expect(webAddressesIn('go to https://example.com/a, then https://example.com/b.')).toEqual([
       { url: 'https://example.com/a', start: 6 },
       { url: 'https://example.com/b', start: 34 },
     ]);
   });
 
   it('leaves the closing parenthesis of a sentence out, and keeps one the address balances', () => {
-    expect(urlsIn('(https://example.com/a) and https://example.com/w_(x)')).toEqual([
+    expect(webAddressesIn('(https://example.com/a) and https://example.com/w_(x)')).toEqual([
       { url: 'https://example.com/a', start: 1 },
       { url: 'https://example.com/w_(x)', start: 28 },
     ]);
   });
 
+  it('keeps the bracket of an IPv6 host and drops one the address never opened', () => {
+    expect(webAddressesIn('[http://[::1]:8080/a] and http://[::1]')).toEqual([
+      { url: 'http://[::1]:8080/a', start: 1 },
+      { url: 'http://[::1]', start: 26 },
+    ]);
+  });
+
+  it('finds no address in a scheme with no host', () => {
+    expect(webAddressesIn('see http://. and https://')).toEqual([]);
+  });
+
   it('finds no address of another scheme', () => {
-    expect(urlsIn('file:///etc/passwd ftp://example.com custom://x')).toEqual([]);
+    expect(webAddressesIn('file:///etc/passwd ftp://example.com custom://x')).toEqual([]);
   });
 });
 
@@ -72,7 +83,29 @@ describe('a link followed in a session pane', () => {
   });
 });
 
+describe('a followed link and the notice', () => {
+  it('clears an earlier notice when a ctrl+click opens a link', () => {
+    const { links, notices } = linked();
+    notices.raise('Did not open file:///etc/passwd: only http and https links are opened.');
+    links.activate(click({ ctrlKey: true }), 'https://example.com/a');
+    expect(notices.notice.get()).toBeUndefined();
+  });
+
+  it('keeps an earlier notice on a plain click', () => {
+    const { links, notices } = linked();
+    notices.raise('Could not open https://example.com/a: no browser');
+    links.activate(click(), 'https://example.com/b');
+    expect(notices.notice.get()).toBe('Could not open https://example.com/a: no browser');
+  });
+});
+
 describe('the link the pointer is on', () => {
+  it.each(['file:///etc/passwd', 'custom://thing'])('is none on %s, a link ctrl+click would refuse', (target) => {
+    const { links } = linked();
+    links.hover(target);
+    expect(links.hovered.get()).toBeUndefined();
+  });
+
   it('is none until the pointer reaches a link', () => {
     expect(linked().links.hovered.get()).toBeUndefined();
   });
@@ -87,8 +120,8 @@ describe('the link the pointer is on', () => {
 });
 
 
-const linksOn = async (output: string, line: number): Promise<ILink[] | undefined> => {
-  const terminal = new Terminal();
+const linksOn = async (output: string, line: number, cols = 80): Promise<ILink[] | undefined> => {
+  const terminal = new Terminal({ cols, rows: 10 });
   await new Promise<void>((done) => terminal.write(output, done));
   const { links } = linked();
   return new Promise((found) => new WebAddressProvider(terminal, links).provideLinks(line, found));
@@ -100,6 +133,29 @@ describe('the provider of web addresses in a pane', () => {
     expect(found?.map((link) => [link.text, link.range])).toEqual([
       ['https://example.com/a', { start: { x: 5, y: 1 }, end: { x: 25, y: 1 } }],
     ]);
+  });
+
+  it('places an address after wide characters in the cells they fill, two each', async () => {
+    const found = await linksOn('漢字 https://example.com/a', 1);
+    expect(found?.map((link) => [link.text, link.range])).toEqual([
+      ['https://example.com/a', { start: { x: 6, y: 1 }, end: { x: 26, y: 1 } }],
+    ]);
+  });
+
+  it('ends an address on a wide character on that character\'s second cell', async () => {
+    const found = await linksOn('https://example.com/漢', 1);
+    expect(found?.map((link) => link.range)).toEqual([{ start: { x: 1, y: 1 }, end: { x: 22, y: 1 } }]);
+  });
+
+  it.each([1, 2])('gives the whole of an address wrapped onto the next row, from row %i', async (row) => {
+    const found = await linksOn('see https://example.com/abcdefghij', row, 20);
+    expect(found?.map((link) => [link.text, link.range])).toEqual([
+      ['https://example.com/abcdefghij', { start: { x: 5, y: 1 }, end: { x: 14, y: 2 } }],
+    ]);
+  });
+
+  it('gives no link on a row the wrapped address does not reach', async () => {
+    expect(await linksOn('nothing\r\n\r\nsee https://example.com/abcdefghij', 2, 20)).toBeUndefined();
   });
 
   it('gives nothing for a line without an address', async () => {

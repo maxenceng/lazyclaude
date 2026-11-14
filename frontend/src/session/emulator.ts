@@ -4,7 +4,7 @@ import { binaryBytes, bytesOfText, type Client, fromBase64, toBase64 } from '../
 import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import type { ModeMemory } from './modeMemory';
-import { SessionLinks, type UrlOpener, WebAddressProvider } from './links';
+import { type LinkOpener, SessionLinks, WebAddressProvider } from './links';
 import { PaneKey, type PaneKeyPress, paneKeyOf } from './paneKeys';
 import { KeptModes, ModeTracker } from './privateModes';
 
@@ -23,7 +23,7 @@ export interface EmulatorDeps {
   /** The status line's notice, which says why the clipboard refused a copy or a paste. */
   notices: NoticeStore;
   /** What opens a link followed with ctrl held, in the system browser. */
-  opener: UrlOpener;
+  opener: LinkOpener;
 }
 
 const reasonOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));

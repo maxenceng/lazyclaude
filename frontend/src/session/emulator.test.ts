@@ -287,6 +287,12 @@ describe('the links of a hosted session\'s pane', () => {
     expect(emulator.hoveredLink.get()).toBeUndefined();
   });
 
+  it('reports no link while the pointer is on an OSC 8 hyperlink of another scheme, which ctrl+click would refuse', () => {
+    const { emulator, term } = emulate();
+    term.options.linkHandler?.hover?.(new MouseEvent('mousemove'), 'file:///etc/passwd', range);
+    expect(emulator.hoveredLink.get()).toBeUndefined();
+  });
+
   it('registers a provider for the plain web addresses in its output', () => {
     const register = vi.spyOn(Terminal.prototype, 'registerLinkProvider');
     emulate();

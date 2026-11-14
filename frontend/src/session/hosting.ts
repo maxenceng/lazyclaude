@@ -4,7 +4,7 @@ import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import { Dock } from './dock';
 import { type Clipboard, Emulator } from './emulator';
-import type { UrlOpener } from './links';
+import type { LinkOpener } from './links';
 import type { ModeMemory } from './modeMemory';
 import type { PaneKeyPress } from './paneKeys';
 
@@ -18,7 +18,7 @@ export interface HostingDeps {
   reserved: (press: PaneKeyPress) => (() => void) | undefined;
   clipboard: Clipboard;
   notices: NoticeStore;
-  opener: UrlOpener;
+  opener: LinkOpener;
 }
 
 /** A start the sidecar could not answer: what it said, and the same start again. */
