@@ -19,6 +19,7 @@ export enum Action {
   ToggleDockMinimised = 'toggleDockMinimised',
   Zoom = 'zoom',
   NextWaiting = 'nextWaiting',
+  Close = 'close',
   Back = 'back',
   HalfPageDown = 'halfPageDown',
   HalfPageUp = 'halfPageUp',

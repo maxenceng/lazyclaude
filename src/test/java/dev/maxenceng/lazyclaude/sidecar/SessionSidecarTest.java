@@ -60,6 +60,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ClosePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NoWatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyInputPayload;
@@ -171,6 +172,13 @@ class SessionSidecarTest {
         assertThat(linesWritten(sessions, hosting, notification("session/repaint", repaintParams()))).containsExactly(ready());
 
         verify(hosting).repaint(new RepaintPayload(sessionId()));
+    }
+
+    @Test
+    void closes_the_session_and_answers_nothing() {
+        assertThat(linesWritten(sessions, hosting, notification("session/close", repaintParams()))).containsExactly(ready());
+
+        verify(hosting).close(new ClosePayload(sessionId()));
     }
 
     @Test

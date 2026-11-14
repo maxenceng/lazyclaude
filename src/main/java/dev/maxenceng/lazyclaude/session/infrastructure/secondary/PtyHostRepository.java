@@ -79,6 +79,11 @@ public final class PtyHostRepository implements HostPort {
         pty(id).ifPresent(HostedPty::end);
     }
 
+    @Override
+    public void close(SessionId id) {
+        pty(id).ifPresent(HostedPty::close);
+    }
+
     private Optional<HostedPty> pty(SessionId id) {
         return Optional.ofNullable(running.get(id));
     }

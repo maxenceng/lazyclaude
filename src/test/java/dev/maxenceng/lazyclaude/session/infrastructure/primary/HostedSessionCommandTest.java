@@ -188,4 +188,15 @@ class HostedSessionCommandTest {
 
         verify(hosts).resize(id, paneSizeOf(100, 29));
     }
+
+    @Test
+    void shouldEndTheClosedSessionOnly() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        HostedSessionCommand command = hostedSessionCommand(hosts, warnings);
+        SessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
+
+        command.close(new ClosePayload(id));
+
+        verify(hosts).close(id);
+    }
 }

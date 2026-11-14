@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ClosePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
@@ -34,8 +35,8 @@ import tools.jackson.databind.JsonNode;
  * The {@code session/} and {@code pty/} methods: one per operation of {@link SessionQuery}, {@link HostedSessionCommand} and
  * {@link WatchedSessionCommand}, named
  * after it, and {@code session/configuration}, which answers the configuration read at start-up, not a second read of the file
- * that would raise its warnings again. The pty's bytes travel as {@code pty/input}, {@code pty/resize} and {@code pty/output} (ADR 0050). There is
- * no method to end a session: closing stdin ends every one.
+ * that would raise its warnings again. The pty's bytes travel as {@code pty/input}, {@code pty/resize} and {@code pty/output} (ADR 0050). Closing
+ * stdin ends every session without an end; {@code session/close} ends one from the window, and {@code session/exited} tells it left.
  */
 final class SessionMethods {
 
@@ -53,7 +54,8 @@ final class SessionMethods {
     private static final List<ServedInput<HostedSessionCommand, ?>> INPUTS = List.of(
             ServedInput.of("pty/input", PtyInputPayload.class, HostedSessionCommand::write),
             ServedInput.of("pty/resize", PtyResizePayload.class, HostedSessionCommand::resizePty),
-            ServedInput.of("session/repaint", RepaintPayload.class, HostedSessionCommand::repaint));
+            ServedInput.of("session/repaint", RepaintPayload.class, HostedSessionCommand::repaint),
+            ServedInput.of("session/close", ClosePayload.class, HostedSessionCommand::close));
     private static final ServedInput<WatchedSessionCommand, WatchedPayload> WATCHING =
             ServedInput.of("session/watching", WatchedPayload.class, WatchedSessionCommand::watching);
     private static final ProtocolNotification<SessionsView> CHANGED = new ProtocolNotification<>("session/changed", SessionsView.class);

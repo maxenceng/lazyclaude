@@ -27,6 +27,12 @@ public interface HostPort {
     /** Gives the session's pty a new size. */
     void resize(SessionId id, PaneSize size);
 
-    /** Ends the session's process. */
+    /** Ends the session's process, returning only once it has, so a quit leaves no {@code claude} behind. */
     void end(SessionId id);
+
+    /**
+     * Asks the session's process to end and returns at once, so whoever asked is not held up for the grace; one still running
+     * once the grace runs out is killed on a thread of the host's own.
+     */
+    void close(SessionId id);
 }

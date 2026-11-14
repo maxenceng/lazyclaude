@@ -86,6 +86,7 @@ const ACTIONS: Readonly<Record<Reserved, Action>> = {
   HIDE_MAIN_VIEW: Action.ToggleMainView,
   ZOOM: Action.Zoom,
   NEXT_WAITING: Action.NextWaiting,
+  CLOSE: Action.Close,
 };
 
 const NAMES: Readonly<Record<string, string>> = {

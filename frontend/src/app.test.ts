@@ -71,6 +71,24 @@ describe('the app', () => {
     expect(app.reserved()).toHaveLength(1);
   });
 
+  it('names the close chord as the configuration binds it, a rebound one too, and none before it is read', async () => {
+    const client = fakeClient(new Ready());
+    const app = new AppModel(client, testPlatform());
+    app.start();
+    expect(app.closeKey()).toBeUndefined();
+    client.answerNext(boardFixture([]));
+    client.answerNext({
+      chords: [{ action: 'CLOSE', chord: { modifiers: ['CTRL', 'ALT'], key: { kind: 'typedCharacter', codePoint: 119 } } }],
+      desktopNotifications: true,
+      ticketPlugin: 'ddd-workflow',
+      statusVerbs: [],
+      mouse: true,
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(app.closeKey()).toBe('ctrl+alt+w');
+  });
+
   it('holds the fault when the configuration cannot be read, reserving no chord', async () => {
     const client = fakeClient(new Ready());
     const app = new AppModel(client, testPlatform());

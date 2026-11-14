@@ -30,6 +30,10 @@ public final class ChordFixture {
         return chord('z', Modifier.ALT);
     }
 
+    public static Chord altX() {
+        return chord('x', Modifier.ALT);
+    }
+
     public static Chord altW() {
         return chord('w', Modifier.ALT);
     }

@@ -151,6 +151,46 @@ class PtyHostRepositoryTest {
     }
 
     @Test
+    void shouldKillAChildThatIgnoresTheRequestToEndOnceTheGraceRunsOut() throws Exception {
+        CompletableFuture<ExitCode> exit = exitOf();
+        PtyHostRepository host = hostRunning("trap '' TERM HUP INT; printf 'armed'; while :; do sleep 1; done");
+        host.spawn(newLaunch(id), output, exit::complete);
+        output.textContaining("armed");
+
+        host.end(id);
+
+        assertThat(awaited(exit))
+                .as("a claude deaf to the termination signal is still killed, so a closed tab never leaves it running")
+                .isEqualTo(new ExitCode(137));
+    }
+
+    @Test
+    void shouldEndTheChildOnAClose() throws Exception {
+        CompletableFuture<ExitCode> exit = exitOf();
+        PtyHostRepository host = hostRunning("exec sleep 60");
+        host.spawn(newLaunch(id), output, exit::complete);
+
+        host.close(id);
+
+        assertThat(awaited(exit).isFailure()).as("a closed child ends on the termination signal").isTrue();
+    }
+
+    @Test
+    void shouldReturnFromACloseBeforeTheGraceRunsOutAndStillKillAChildThatIgnoresIt() throws Exception {
+        CompletableFuture<ExitCode> exit = exitOf();
+        PtyHostRepository host = hostRunning("trap '' TERM HUP INT; printf 'armed'; while :; do sleep 1; done");
+        host.spawn(newLaunch(id), output, exit::complete);
+        output.textContaining("armed");
+
+        host.close(id);
+
+        assertThat(exit)
+                .as("a close runs on the sidecar's one input thread, so waiting out the grace there would hold up typing to every other session")
+                .isNotDone();
+        assertThat(awaited(exit)).as("a claude deaf to the termination signal is still killed after a close").isEqualTo(new ExitCode(137));
+    }
+
+    @Test
     void shouldRunTheChildInTheLaunchDirectory(@TempDir Path directory) throws Exception {
         PtyHostRepository host = hostRunning("pwd; read line");
 

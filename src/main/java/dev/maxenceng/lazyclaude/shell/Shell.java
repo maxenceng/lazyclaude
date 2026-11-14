@@ -666,6 +666,7 @@ public final class Shell extends ToolkitApp {
             case HIDE_MAIN_VIEW -> toggleMainView();
             case ZOOM -> toggleZoom();
             case NEXT_WAITING -> leaveZoom();
+            case CLOSE -> false;
         };
     }
 
@@ -830,6 +831,7 @@ public final class Shell extends ToolkitApp {
                 yield true;
             }
             case FOCUS_DOWN -> true;
+            case CLOSE -> false;
         };
     }
 

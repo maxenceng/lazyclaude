@@ -434,6 +434,16 @@
           "required" : [ "params" ],
           "additionalProperties" : false
         },
+        "session/close" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.ClosePayload"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
+        },
         "session/watching" : {
           "type" : "object",
           "properties" : {
@@ -445,7 +455,7 @@
           "additionalProperties" : false
         }
       },
-      "required" : [ "pty/input", "pty/resize", "session/repaint", "session/watching" ],
+      "required" : [ "pty/input", "pty/resize", "session/repaint", "session/close", "session/watching" ],
       "additionalProperties" : false
     },
     "notifications" : {
@@ -2174,6 +2184,16 @@
         "propertyName" : "kind"
       }
     },
+    "session.ClosePayload" : {
+      "type" : "object",
+      "properties" : {
+        "session" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "session" ],
+      "additionalProperties" : false
+    },
     "session.ConfigurationView" : {
       "type" : "object",
       "properties" : {
@@ -2591,7 +2611,7 @@
     },
     "session.ReservedAction" : {
       "type" : "string",
-      "enum" : [ "FOCUS_LEFT", "FOCUS_DOWN", "FOCUS_UP", "FOCUS_RIGHT", "HIDE_MAIN_VIEW", "ZOOM", "NEXT_WAITING" ]
+      "enum" : [ "FOCUS_LEFT", "FOCUS_DOWN", "FOCUS_UP", "FOCUS_RIGHT", "HIDE_MAIN_VIEW", "ZOOM", "NEXT_WAITING", "CLOSE" ]
     },
     "session.ReservedChordView" : {
       "type" : "object",

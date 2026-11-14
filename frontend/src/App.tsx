@@ -22,6 +22,7 @@ import { cellsOf, ciOf, worstResult } from './review/pullRequestList';
 import { PullRequestsPane } from './review/PullRequestsScreen';
 import { DiffPane, FilesPane, ReviewPopups } from './review/ReviewScreen';
 import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKeyBar';
+import { ClosePopup } from './session/ClosePopup';
 import { DockScreen, DockStrip } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
@@ -81,6 +82,7 @@ export const App = ({ app, packaged }: Props) => {
   const pullRequests = useStore(app.review.pullRequests.state);
   const capturing = useStore(app.board.capture.state).isOpen();
   const quitAsked = useStore(app.quitting.asking);
+  const closeAsked = useStore(app.closing.asking);
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
@@ -288,6 +290,9 @@ export const App = ({ app, packaged }: Props) => {
         onFocus={() => app.focusOn(Focus.Dock)}
         zoomed={layout.zoomed}
         zoomKey={app.zoomKey()}
+        closeKey={app.closeKey()}
+        asking={closeAsked !== undefined}
+        onClose={() => app.closeSession()}
         onMinimise={() => app.toggleDockMinimised()}
         onZoom={() => app.toggleZoom()}
       />
@@ -350,6 +355,7 @@ export const App = ({ app, packaged }: Props) => {
       />
       {review === undefined ? null : <ReviewPopups review={review} />}
       <CapturePopup capture={app.board.capture} />
+      {closeAsked === undefined ? null : <ClosePopup onAnswer={(close) => app.closing.answer(close)} />}
       {quitAsked === undefined ? null : <QuitPopup hosted={quitAsked} onAnswer={(yes) => app.quitting.answer(yes)} />}
     </>
   );

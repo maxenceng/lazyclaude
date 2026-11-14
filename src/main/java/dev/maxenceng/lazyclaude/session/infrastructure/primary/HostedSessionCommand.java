@@ -57,6 +57,11 @@ public final class HostedSessionCommand {
         sessions.repaint(payload.session());
     }
 
+    /** Ends the session's {@code claude} from the window; it is then a past session, ended and not interrupted. Nothing for a session that is gone. */
+    public void close(ClosePayload payload) {
+        sessions.close(payload.session());
+    }
+
     /** Ends every hosted {@code claude}, as lazyclaude quits. */
     public void endAll() {
         sessions.endAll();
