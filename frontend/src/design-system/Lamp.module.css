@@ -30,6 +30,18 @@
   flex: none;
 }
 
+.button {
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.button:focus-visible {
+  outline: var(--focus-edge) solid var(--focus);
+  outline-offset: 2px;
+}
+
 .number {
   font: 600 var(--size-lamp) / var(--lamp-number-row) var(--font-mono);
   white-space: nowrap;
