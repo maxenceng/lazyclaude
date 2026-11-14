@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.domain;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSession;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionBuilder;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.hostedSessionRunning;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.newTicketClaude;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.secondLinkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
@@ -64,6 +65,17 @@ class HostedSessionTest {
     @Test
     void shouldBeNamedForTheTicketAndVerbItWasStartedFor() {
         assertThat(hostedSessionRunning(Verb.START).name()).isEqualTo(new SessionName("1 start"));
+    }
+
+    @Test
+    void shouldBeNamedNewTicketWhenItWasStartedToCreateOne() {
+        assertThat(hostedSessionBuilder().command(newTicketClaude(sessionId())).build().name())
+                .isEqualTo(new SessionName("new ticket"));
+    }
+
+    @Test
+    void shouldBeLinkedToNoTicketWhenItWasStartedToCreateOne() {
+        assertThat(hostedSessionBuilder().command(newTicketClaude(sessionId())).build().ticket()).isEmpty();
     }
 
     @Test

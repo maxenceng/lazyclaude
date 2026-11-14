@@ -3,15 +3,11 @@ package dev.maxenceng.lazyclaude;
 import java.time.Duration;
 
 import dev.maxenceng.lazyclaude.board.application.BoardApplicationService;
-import dev.maxenceng.lazyclaude.board.application.TicketCaptureApplicationService;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.BranchChangesRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.ConfiguredVerbsRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesRepository;
 import dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssuesWatchRepository;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.TicketCaptureRepository;
-import dev.maxenceng.lazyclaude.board.infrastructure.secondary.TicketTemplateRepository;
 import dev.maxenceng.lazyclaude.docs.application.DocsApplicationService;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.docs.infrastructure.secondary.DocsRepository;
@@ -50,7 +46,6 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.WarningRepositor
  */
 public record Contexts(
         BoardQuery board,
-        TicketCaptureCommand capturing,
         DocsQuery docs,
         SessionQuery sessions,
         SessionAgeQuery ages,
@@ -82,7 +77,6 @@ public record Contexts(
                         new IssuesWatchRepository(),
                         warnings,
                         new ConfiguredVerbsRepository(configuration.statusVerbs()))),
-                new TicketCaptureCommand(new TicketCaptureApplicationService(new TicketCaptureRepository(), new TicketTemplateRepository())),
                 new DocsQuery(new DocsApplicationService(new DocsRepository(), new DocsWatchRepository(), warnings)),
                 new SessionQuery(sessions),
                 new SessionAgeQuery(sessions),

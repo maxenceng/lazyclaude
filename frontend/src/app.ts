@@ -43,7 +43,7 @@ export class AppModel {
     readonly client: Client,
     platform: Platform,
   ) {
-    this.board = new BoardController(client);
+    this.board = new BoardController(client, (root, description) => this.startNewTicket(root, description));
     this.sessionStore = new SessionStore(client);
     this.configuration = new ConfigurationStore(client);
     this.warnings = new WarningStore(client);
@@ -112,6 +112,15 @@ export class AppModel {
   /** The status line's Quit button: what `q` does. */
   quit(): void {
     this.quitting.request();
+  }
+
+  /** The new ticket's session starts in the dock, and focus moves into it; why it did not start goes back to the popup. */
+  private async startNewTicket(root: string, description: string): Promise<string | undefined> {
+    const reason = await this.hosting.startNewTicket(root, description);
+    if (reason === undefined) {
+      this.focusOn(Focus.Dock);
+    }
+    return reason;
   }
 
   /** The capture popup's button, in the Board pane's title: the Board takes focus and `c` is done there. */

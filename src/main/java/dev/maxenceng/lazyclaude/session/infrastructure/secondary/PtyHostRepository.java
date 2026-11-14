@@ -13,6 +13,7 @@ import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LaunchCommand;
 import dev.maxenceng.lazyclaude.session.domain.NewClaude;
+import dev.maxenceng.lazyclaude.session.domain.NewTicketClaude;
 import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
 import dev.maxenceng.lazyclaude.session.domain.ResumeClaude;
 import dev.maxenceng.lazyclaude.session.domain.TicketClaude;
@@ -97,6 +98,16 @@ public final class PtyHostRepository implements HostPort {
                                     run.sessionName().value(),
                                     SLASH_COMMAND.formatted(
                                             run.plugin().value(), run.verb().label(), run.ticket().value())))
+                    .toList();
+            case NewTicketClaude creating -> Stream.concat(
+                            claude.stream(),
+                            Stream.of(
+                                    SESSION_ID_FLAG,
+                                    creating.session().value(),
+                                    NAME_FLAG,
+                                    creating.sessionName().value(),
+                                    SLASH_COMMAND.formatted(
+                                            creating.plugin().value(), NewTicketClaude.creatingVerb().value(), creating.description().value())))
                     .toList();
         };
     }

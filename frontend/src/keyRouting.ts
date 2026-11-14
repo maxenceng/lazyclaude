@@ -235,7 +235,7 @@ export class KeyRouter {
     if (action === Action.Back) {
       this.board.capture.cancel();
     } else if (action === Action.Open) {
-      this.board.capture.create();
+      this.board.capture.start();
     }
   }
 

@@ -4,8 +4,8 @@ import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 
-/** What the hosted {@code claude} is asked to do: begin a session, pick one up again, or run the ticket plugin's {@code ticket} skill on a ticket. */
-public sealed interface LaunchCommand permits NewClaude, ResumeClaude, TicketClaude {
+/** What the hosted {@code claude} is asked to do: begin a session, pick one up again, run the ticket plugin's {@code ticket} skill on a ticket, or have it create one. */
+public sealed interface LaunchCommand permits NewClaude, ResumeClaude, TicketClaude, NewTicketClaude {
 
     /** The session the {@code claude} runs as: named when it is begun, the one resumed when it is picked up again. */
     SessionId session();

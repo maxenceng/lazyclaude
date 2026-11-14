@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.newLaunch;
+import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.newTicketLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.idOf;
 import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.ptyBytesOf;
@@ -9,12 +10,15 @@ import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.rep
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.clock;
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.earlierStartedAt;
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
+import static dev.maxenceng.lazyclaude.session.domain.TicketDescriptionFixture.ticketDescription;
+import static dev.maxenceng.lazyclaude.session.published.NotStartedHostFixture.notStartedBecause;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.resizedPaneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.secondProcessId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.secondSessionId;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
+import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.domain.WarningFixture.raisedTexts;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
@@ -50,8 +54,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.session.published.HostStart;
-import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
+import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -106,6 +110,51 @@ class HostedSessionManagerTest {
     }
 
     @Test
+    void shouldStartTheTicketSkillsNewVerbInTheProjectRootAtThePaneSize() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+
+        HostStart start = manager.startNewTicket(project(), ticketDescription(), ticketPlugin(), paneSize());
+
+        verify(hosts).spawn(launched.capture(), any(), any());
+        assertThat(launched.getValue()).isEqualTo(newTicketLaunch(idOf(start)));
+    }
+
+    @Test
+    void shouldListTheSessionThatCreatesATicketAsUnlinkedUnderTheNameNewTicket() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+
+        manager.startNewTicket(project(), ticketDescription(), ticketPlugin(), paneSize());
+
+        assertThat(manager.open().sessions())
+                .extracting(HostedSession::ticket, HostedSession::name)
+                .containsExactly(tuple(Optional.empty(), new SessionName("new ticket")));
+    }
+
+    @Test
+    void shouldOpenNoSessionAndSayWhyWhenTheSessionThatCreatesATicketCannotBeSpawned() {
+        when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("claude is not on the PATH"));
+
+        HostStart start = manager.startNewTicket(project(), ticketDescription(), ticketPlugin(), paneSize());
+
+        assertThat(start).isEqualTo(notStartedBecause("hosted session: claude is not on the PATH."));
+        assertThat(manager.open().sessions()).isEmpty();
+    }
+
+    @Test
+    void shouldSayTheClaudeEndedAtOnceWhenItExitedCleanlyBeforeSpawningReturned() {
+        when(hosts.spawn(any(), any(), any())).thenAnswer(spawn -> {
+            Consumer<ExitCode> onExit = spawn.getArgument(2);
+            onExit.accept(new ExitCode(0));
+            return processId();
+        });
+
+        HostStart start = manager.startUnlinked(project(), paneSize());
+
+        assertThat(start).isEqualTo(notStartedBecause("hosted session: claude ended as soon as it started."));
+        assertThat(raisedTexts(warnings)).isEmpty();
+    }
+
+    @Test
     void shouldListTheStartedSessionByItsPidInStartOrder() {
         when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
 
@@ -125,7 +174,7 @@ class HostedSessionManagerTest {
 
         HostStart start = manager.startUnlinked(project(), paneSize());
 
-        assertThat(start).isEqualTo(new NotStartedHost());
+        assertThat(start).isEqualTo(notStartedBecause("hosted session: claude is not on the PATH."));
         assertThat(manager.open().sessions()).isEmpty();
         assertThat(raisedTexts(warnings)).containsExactly("hosted session: claude is not on the PATH.");
     }
@@ -245,7 +294,7 @@ class HostedSessionManagerTest {
 
         assertThat(second)
                 .as("the shell resumes on background threads, and two claude resuming one session would both write its transcript")
-                .isInstanceOf(NotStartedHost.class);
+                .isEqualTo(notStartedBecause("this session is already starting; give it a moment."));
         assertThat(first.get()).isInstanceOf(StartedHost.class);
         verify(hosts).spawn(any(), any(), any());
     }
@@ -258,7 +307,7 @@ class HostedSessionManagerTest {
 
         assertThat(start)
                 .as("claude --resume finds a transcript under its directory's project folder, so anywhere else it exits")
-                .isEqualTo(new NotStartedHost());
+                .isEqualTo(notStartedBecause("resume: /work/app.worktrees/PROJ-1-ticket is gone; nothing resumed."));
         verify(hosts, never()).spawn(any(), any(), any());
         assertThat(raisedTexts(warnings))
                 .containsExactly("resume: /work/app.worktrees/PROJ-1-ticket is gone; nothing resumed.");
@@ -270,7 +319,7 @@ class HostedSessionManagerTest {
         when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
 
         assertThat(manager.resume(project(), sessionId(), worktreeDirectory(), paneSize()))
-                .isEqualTo(new NotStartedHost());
+                .isEqualTo(notStartedBecause("hosted session: no pty."));
         assertThat(manager.open().sessions()).isEmpty();
         assertThat(raisedTexts(warnings)).containsExactly("hosted session: no pty.");
     }
@@ -357,7 +406,7 @@ class HostedSessionManagerTest {
 
         HostStart start = manager.startUnlinked(project(), paneSize());
 
-        assertThat(start).as("the shell would focus a tab that never opens").isEqualTo(new NotStartedHost());
+        assertThat(start).as("the shell would focus a tab that never opens").isEqualTo(notStartedBecause("hosted session: claude exited with code 127."));
         assertThat(manager.open().sessions())
                 .as("a claude that dies at once never shows up as a tab that nothing will close")
                 .isEmpty();

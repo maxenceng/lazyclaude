@@ -7,6 +7,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostF
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.hostRunning;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.newLaunch;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.newLaunchIn;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.newTicketLaunch;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.ticketLaunch;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.ticketLaunchUnder;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.io.TempDir;
 import dev.maxenceng.lazyclaude.session.domain.ExitCode;
 import dev.maxenceng.lazyclaude.session.domain.HostUnavailableException;
 import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
+import dev.maxenceng.lazyclaude.session.domain.TicketDescription;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -186,6 +188,28 @@ class PtyHostRepositoryTest {
         host.spawn(ticketLaunchUnder(id, otherTicketPlugin()), output, code -> {});
 
         assertThat(output.textContaining("[/my-tools:ticket review 1]")).endsWith("[/my-tools:ticket review 1]");
+        host.end(id);
+    }
+
+    @Test
+    void shouldNameTheSessionNewTicketAndPassTheNewVerbWithTheDescriptionAsOneArgument() throws Exception {
+        PtyHostRepository host = hostRunning("printf 'args:'; printf '[%s]' \"$@\"; read line");
+
+        host.spawn(newTicketLaunch(id, new TicketDescription("add a toggle")), output, code -> {});
+
+        assertThat(output.textContaining("[/ddd-workflow:ticket new add a toggle]"))
+                .contains("args:[--session-id][" + id.value() + "][-n][new ticket][/ddd-workflow:ticket new add a toggle]");
+        host.end(id);
+    }
+
+    @Test
+    void shouldPassADescriptionWithQuotesAndSpacesVerbatimWithNoShellInBetween() throws Exception {
+        String typed = "say \"hi\"  and 'bye' $HOME; echo gone `date`";
+        PtyHostRepository host = hostRunning("printf 'args:'; printf '[%s]' \"$@\"; read line");
+
+        host.spawn(newTicketLaunch(id, new TicketDescription(typed)), output, code -> {});
+
+        assertThat(output.textContaining("gone `date`]")).endsWith("[/ddd-workflow:ticket new " + typed + "]");
         host.end(id);
     }
 

@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.newTicketClaude;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaudeUnder;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
@@ -17,6 +18,14 @@ public final class HostLaunchFixture {
     public static HostLaunch newLaunch(SessionId id) {
         return HostLaunch.builder()
                 .command(new NewClaude(id))
+                .directory(projectRootDirectory())
+                .size(paneSize())
+                .build();
+    }
+
+    public static HostLaunch newTicketLaunch(SessionId id) {
+        return HostLaunch.builder()
+                .command(newTicketClaude(id))
                 .directory(projectRootDirectory())
                 .size(paneSize())
                 .build();

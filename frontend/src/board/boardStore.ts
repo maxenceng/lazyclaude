@@ -23,8 +23,7 @@ export class BoardStore {
     client.subscribe('board/changed', (view) => this.show(view));
   }
 
-  /** Shows a board the sidecar read for another answer, as a capture's. */
-  show(view: BoardBoardLookupView): void {
+  private show(view: BoardBoardLookupView): void {
     this.state.set(stateOf(view));
   }
 
