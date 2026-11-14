@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.PREFERRED_FOLDER;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.TMPDIR;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.bundleProperties;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.lockFileIn;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.lockedInThisProcess;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.nativeFolderUnder;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.noProperties;
@@ -112,6 +113,19 @@ class PtyNativeFolderTest {
         assertThat(natives.loading(() -> lockedInThisProcess(folder)))
                 .as("a load that threw may not have extracted, so the next one still extracts under the lock")
                 .isTrue();
+    }
+
+    @Test
+    void shouldLoadWithoutTheLockAndWarnWhenTheLockCannotBeTaken() throws Exception {
+        Path folder = nativeFolderUnder(cache);
+        PtyNativeFolder natives = PtyNativeFolder.prepared(folder, warnings, properties);
+        Files.delete(lockFileIn(folder));
+        Files.delete(folder);
+
+        assertThat(natives.loading(() -> true))
+                .as("a folder that cannot be used does not stop sessions from starting (ADR 0112)")
+                .isTrue();
+        assertThat(raisedTexts(warnings)).singleElement().asString().contains(folder.toString(), "lock");
     }
 
     @Test

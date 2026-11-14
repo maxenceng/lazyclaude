@@ -38,7 +38,7 @@ public final class SpawnedPtyHost implements AutoCloseable {
     }
 
     public static void main(String[] arguments) throws Exception {
-        PtyHostRepository host = new ConfigurationLoader(Path.of(System.getProperty("user.home")), System.getenv()).host();
+        PtyHostRepository host = new ConfigurationLoader(Path.of(System.getProperty("user.home")), System.getenv(), System.getProperties()).host();
         System.out.println(READY);
         System.out.flush();
         new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)).readLine();

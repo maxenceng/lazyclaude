@@ -36,22 +36,22 @@ public final class PtyHostRepository implements HostPort {
 
     private final List<String> claude;
     private final Map<String, String> environment;
-    private final PtyNativeFolder natives;
+    private final PtyNativeFolder nativeFolder;
     private final Map<SessionId, HostedPty> running = new ConcurrentHashMap<>();
 
     /**
      * {@code claude} is the command and arguments that start Claude Code; {@code environment} is what the child inherits, less
-     * what it must not; {@code natives} is where pty4j extracts on the first spawn.
+     * what it must not; {@code nativeFolder} is where pty4j extracts on the first spawn.
      */
-    public PtyHostRepository(List<String> claude, Map<String, String> environment, PtyNativeFolder natives) {
+    public PtyHostRepository(List<String> claude, Map<String, String> environment, PtyNativeFolder nativeFolder) {
         this.claude = claude;
         this.environment = environment;
-        this.natives = natives;
+        this.nativeFolder = nativeFolder;
     }
 
     @Override
     public ProcessId spawn(HostLaunch launch, Consumer<PtyBytes> onOutput, Consumer<ExitCode> onExit) {
-        HostedPty pty = natives.loading(() -> HostedPty.spawn(
+        HostedPty pty = nativeFolder.loading(() -> HostedPty.spawn(
                 argv(launch.command()), ScrubbedEnvironment.of(environment), launch.directory().path(), launch.size()));
         SessionId id = launch.command().session();
         running.put(id, pty);

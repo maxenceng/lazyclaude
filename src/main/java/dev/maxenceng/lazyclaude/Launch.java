@@ -31,7 +31,7 @@ abstract sealed class Launch permits SchemaLaunch, SidecarLaunch, ShellLaunch {
 
     /** Runs {@code launch} on what the user configured and every context built over it, or prints why the configuration is refused. */
     static int configured(ConfiguredLaunch launch) throws Exception {
-        ConfigurationLoader loader = new ConfigurationLoader(Path.of(System.getProperty(USER_HOME)), System.getenv());
+        ConfigurationLoader loader = new ConfigurationLoader(Path.of(System.getProperty(USER_HOME)), System.getenv(), System.getProperties());
         ConfigurationView configuration;
         try {
             configuration = loader.configuration();

@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.Executors;
 
 import dev.maxenceng.lazyclaude.session.application.ConfigurationApplicationService;
@@ -51,11 +52,14 @@ final class ConfigurationLoader {
 
     private final Path home;
     private final Map<String, String> environment;
+    private final Properties properties;
     private final WarningRepository warnings = new WarningRepository();
 
-    ConfigurationLoader(Path home, Map<String, String> environment) {
+    /** {@code properties} is where pty4j is pointed at its natives: the JVM's own on a launch, a fresh table in a test. */
+    ConfigurationLoader(Path home, Map<String, String> environment, Properties properties) {
         this.home = home;
         this.environment = environment;
+        this.properties = properties;
     }
 
     /** What the user configured; a file that cannot be used is refused with a {@code DomainException} saying where and why. */
@@ -96,7 +100,7 @@ final class ConfigurationLoader {
         return new PtyHostRepository(
                 CLAUDE,
                 environment,
-                PtyNativeFolder.prepared(cacheDirectory().resolve(PTY4J_DIRECTORY), warnings, System.getProperties()));
+                PtyNativeFolder.prepared(cacheDirectory().resolve(PTY4J_DIRECTORY), warnings, properties));
     }
 
     private Path cacheDirectory() {

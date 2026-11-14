@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Supplier;
 
-import dev.maxenceng.lazyclaude.session.domain.HostUnavailableException;
 import dev.maxenceng.lazyclaude.shared.domain.Warning;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
@@ -28,14 +27,18 @@ public final class PtyNativeFolder {
     private static final String LOCK_FILE = "extract.lock";
     private static final String UNUSABLE =
             "sessions: cannot keep pty4j's natives in %s (%s); each run leaves a pty4j folder in the temp folder";
-    private static final String UNLOCKABLE = "pty4j's natives could not be locked in %s: %s";
+    private static final String UNLOCKABLE =
+            "sessions: cannot lock pty4j's natives in %s (%s); two lazyclaude starting a first session at once may not extract them";
+    private static final String UNRELEASED = "sessions: cannot release pty4j's natives lock in %s (%s)";
 
     private final Object lock = new Object();
     private final Optional<Path> lockFile;
+    private final WarningPort warnings;
     private boolean loaded;
 
-    private PtyNativeFolder(Optional<Path> lockFile) {
+    private PtyNativeFolder(Optional<Path> lockFile, WarningPort warnings) {
         this.lockFile = lockFile;
+        this.warnings = warnings;
     }
 
     /**
@@ -45,43 +48,68 @@ public final class PtyNativeFolder {
      */
     public static PtyNativeFolder prepared(Path folder, WarningPort warnings, Properties properties) {
         if (properties.getProperty(PREFERRED_FOLDER) != null) {
-            return new PtyNativeFolder(Optional.empty());
+            return new PtyNativeFolder(Optional.empty(), warnings);
         }
         try {
             Files.createDirectories(folder);
             Path lockFile = folder.resolve(LOCK_FILE);
             opened(lockFile).close();
             properties.setProperty(TMPDIR, folder.toString());
-            return new PtyNativeFolder(Optional.of(lockFile));
+            return new PtyNativeFolder(Optional.of(lockFile), warnings);
         } catch (IOException unusable) {
             warnings.raise(new Warning(UNUSABLE.formatted(folder, reason(unusable))));
-            return new PtyNativeFolder(Optional.empty());
+            return new PtyNativeFolder(Optional.empty(), warnings);
         }
     }
 
     /**
      * Runs {@code load}, under the folder's lock until one load has returned: pty4j extracts once per process, so later spawns
-     * neither wait on another process nor make it wait.
-     *
-     * @throws HostUnavailableException when the lock cannot be taken
+     * neither wait on another process nor make it wait. A lock that cannot be taken is named in a warning and {@code load}
+     * runs without it, so sessions still start.
      */
     <T> T loading(Supplier<T> load) {
         synchronized (lock) {
             if (loaded) {
                 return load.get();
             }
-            T result = lockFile.map(file -> locked(file, load)).orElseGet(load);
+            T result = lockFile.map(file -> locked(file, load, warnings)).orElseGet(load);
             loaded = true;
             return result;
         }
     }
 
-    private static <T> T locked(Path lockFile, Supplier<T> load) {
-        try (FileChannel channel = opened(lockFile)) {
-            channel.lock();
+    private static <T> T locked(Path lockFile, Supplier<T> load, WarningPort warnings) {
+        Optional<FileChannel> held = held(lockFile, warnings);
+        try {
             return load.get();
+        } finally {
+            held.ifPresent(channel -> released(channel, lockFile, warnings));
+        }
+    }
+
+    /** The lock file's channel, holding its exclusive lock, or none when it cannot be taken, which a warning then names. */
+    private static Optional<FileChannel> held(Path lockFile, WarningPort warnings) {
+        try {
+            FileChannel channel = opened(lockFile);
+            try {
+                channel.lock();
+                return Optional.of(channel);
+            } catch (IOException unlockable) {
+                channel.close();
+                throw unlockable;
+            }
         } catch (IOException unlockable) {
-            throw new HostUnavailableException(UNLOCKABLE.formatted(lockFile.getParent(), reason(unlockable)), unlockable);
+            warnings.raise(new Warning(UNLOCKABLE.formatted(lockFile.getParent(), reason(unlockable))));
+            return Optional.empty();
+        }
+    }
+
+    /** Closes {@code channel}, which releases its lock; a close that fails is named, the load it guarded having returned. */
+    private static void released(FileChannel channel, Path lockFile, WarningPort warnings) {
+        try {
+            channel.close();
+        } catch (IOException unclosable) {
+            warnings.raise(new Warning(UNRELEASED.formatted(lockFile.getParent(), reason(unclosable))));
         }
     }
 
