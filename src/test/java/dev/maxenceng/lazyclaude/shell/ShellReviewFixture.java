@@ -40,7 +40,6 @@ import java.util.concurrent.Executor;
 import java.util.stream.IntStream;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.OpenPendingReviewView;
@@ -118,7 +117,6 @@ final class ShellReviewFixture {
                 mock(DocsQuery.class),
                 reviews,
                 writing,
-                mock(TicketCaptureCommand.class),
                 ReservedChords.defaults(), true,
                 background);
         return ShellFixture.pressed(shell, key('j'), ticket.status().ordinal() + 1);

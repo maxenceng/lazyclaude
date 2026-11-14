@@ -21,7 +21,6 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardPayload;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.NoProjectView;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.published.Reason;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
@@ -70,10 +69,6 @@ public final class SidecarFixture {
 
     public static List<String> linesWritten(PendingReviewCommand pendingReview, String... received) {
         return linesWritten(sidecarOver(pendingReview), received);
-    }
-
-    public static List<String> linesWritten(BoardQuery board, TicketCaptureCommand capturing, String... received) {
-        return linesWritten(new Sidecar(sidecarContexts(board, capturing)), received);
     }
 
     public static int exitCodeOf(BoardQuery board, String... received) {

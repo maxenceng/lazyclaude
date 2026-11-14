@@ -5,7 +5,6 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionAge
 import static org.mockito.Mockito.mock;
 
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.docs.infrastructure.primary.DocsQuery;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
@@ -35,7 +34,6 @@ public final class ContextsFixture {
             BoardQuery board, DocsQuery docs, SessionQuery sessions, ReviewQuery review, WarningQuery warnings, HostedEmulatorQuery emulators) {
         return new Contexts(
                 board,
-                mock(TicketCaptureCommand.class),
                 docs,
                 sessions, sessionAgeQuery(),
                 mock(HostedSessionCommand.class),
@@ -71,25 +69,6 @@ public final class ContextsFixture {
             ReviewQuery review,
             PendingReviewCommand pendingReview) {
         return sidecarContexts(defaultConfigurationView(), board, sessions, hosting, warnings, docs, review, pendingReview);
-    }
-
-    public static Contexts sidecarContexts(BoardQuery board, TicketCaptureCommand capturing) {
-        return new Contexts(
-                board,
-                capturing,
-                mock(DocsQuery.class),
-                mock(SessionQuery.class),
-                sessionAgeQuery(),
-                mock(HostedSessionCommand.class),
-                mock(HostedEmulatorCommand.class),
-                mock(HostedEmulatorQuery.class),
-                mock(WatchedSessionCommand.class),
-                mock(TicketWorktreeCommand.class),
-                mock(ReviewQuery.class),
-                mock(PendingReviewCommand.class),
-                mock(WarningQuery.class),
-                mock(WarningCommand.class),
-                defaultConfigurationView());
     }
 
     public static Contexts sidecarContexts(WatchedSessionCommand watching) {
@@ -130,7 +109,6 @@ public final class ContextsFixture {
             PendingReviewCommand pendingReview) {
         return new Contexts(
                 board,
-                mock(TicketCaptureCommand.class),
                 docs,
                 sessions, sessionAgeQuery(),
                 hosting,

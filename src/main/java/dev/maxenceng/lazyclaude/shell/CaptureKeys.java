@@ -3,44 +3,51 @@ package dev.maxenceng.lazyclaude.shell;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.CapturedTicketView;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.RefusedTicketCaptureView;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCapturePayload;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureView;
-import dev.maxenceng.lazyclaude.board.published.TicketId;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewTicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.published.FixedChord;
+import dev.maxenceng.lazyclaude.session.published.HostStart;
+import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
+import dev.maxenceng.lazyclaude.session.published.PaneSize;
+import dev.maxenceng.lazyclaude.session.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 
 /**
- * The keys of the popup a draft ticket is captured in (ADR 0054): {@code enter} creates the issue off the render thread, {@code esc}
- * drops the popup. A refused create keeps the popup with the typed title and says why; nothing retries until {@code enter} is pressed again.
+ * The keys of the popup a new ticket is described in (ADR 0110): {@code enter} starts the session that creates it off the render
+ * thread, {@code esc} drops the popup. A blank description is refused here and starts nothing. A session that did not start keeps
+ * the popup with the typed description and says why; nothing retries until {@code enter} is pressed again.
  */
 final class CaptureKeys {
 
-    private final TicketCaptureCommand capturing;
+    private final HostedSessionCommand hosting;
     private final Path root;
+    private final Supplier<PaneSize> paneSize;
     private final Executor background;
     private final Consumer<Runnable> onRenderThread;
-    private final Consumer<TicketId> captured;
+    private final Consumer<StartedHost> started;
     private Optional<CaptureBox> box = Optional.empty();
 
-    /** {@code captured} is told the number GitHub gave the new ticket, on the render thread, once the popup has closed. */
+    /** {@code started} is told the session that was started, on the render thread, once the popup has closed. */
     CaptureKeys(
-            TicketCaptureCommand capturing,
+            HostedSessionCommand hosting,
             Path root,
+            Supplier<PaneSize> paneSize,
             Executor background,
             Consumer<Runnable> onRenderThread,
-            Consumer<TicketId> captured) {
-        this.capturing = capturing;
+            Consumer<StartedHost> started) {
+        this.hosting = hosting;
         this.root = root;
+        this.paneSize = paneSize;
         this.background = background;
         this.onRenderThread = onRenderThread;
-        this.captured = captured;
+        this.started = started;
     }
 
     Optional<CaptureBox> box() {
@@ -57,35 +64,45 @@ final class CaptureKeys {
     }
 
     private boolean pressIn(CaptureBox open, KeyEvent key) {
-        if (open.creating()) {
+        if (open.starting()) {
             return true;
         }
         if (key.isKey(KeyCode.ESCAPE)) {
             box = Optional.empty();
         } else if (key.isKey(KeyCode.ENTER)) {
-            create(open);
+            start(open);
         } else {
             open.edit(key);
         }
         return true;
     }
 
-    /** Asks GitHub off the render thread; the answer closes the popup, or keeps it with the reason it was refused. */
-    private void create(CaptureBox open) {
-        open.createBegun();
-        TicketCapturePayload payload = new TicketCapturePayload(root, open.content());
-        CompletableFuture.supplyAsync(() -> capturing.capture(payload), background)
-                .exceptionally(TicketCaptureCommand::refusedBecause)
+    private void start(CaptureBox open) {
+        if (open.content().isBlank()) {
+            open.startRefused(new Reason(CaptureText.BLANK));
+            return;
+        }
+        open.startBegun();
+        NewTicketHostedPayload payload = new NewTicketHostedPayload(root, open.content(), paneSize.get());
+        CompletableFuture.supplyAsync(() -> hosting.startNewTicket(payload), background)
+                .exceptionally(CaptureKeys::notStartedBecause)
                 .thenAccept(answer -> onRenderThread.accept(() -> answered(open, answer)));
     }
 
-    private void answered(CaptureBox open, TicketCaptureView answer) {
+    private static HostStart notStartedBecause(Throwable failure) {
+        Throwable cause = failure instanceof CompletionException wrapped && wrapped.getCause() != null ? wrapped.getCause() : failure;
+        return new NotStartedHost(new Reason(Optional.ofNullable(cause.getMessage())
+                .filter(message -> !message.isBlank())
+                .orElseGet(() -> cause.getClass().getSimpleName())));
+    }
+
+    private void answered(CaptureBox open, HostStart answer) {
         switch (answer) {
-            case CapturedTicketView taken -> {
+            case StartedHost taken -> {
                 box = Optional.empty();
-                captured.accept(taken.id());
+                started.accept(taken);
             }
-            case RefusedTicketCaptureView refused -> open.createRefused(refused.reason());
+            case NotStartedHost refused -> open.startRefused(refused.reason());
         }
     }
 }

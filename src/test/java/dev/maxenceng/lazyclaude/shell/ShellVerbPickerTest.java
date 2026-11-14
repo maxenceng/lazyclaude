@@ -11,6 +11,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.hostedSessionIdOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.VerbChoiceViewFixture.designPreselected;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
+import static dev.maxenceng.lazyclaude.session.published.NotStartedHostFixture.notStartedHost;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.blankScreens;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.enter;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.escape;
@@ -38,7 +39,6 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionPayload
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.published.MergeState;
-import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 
 @ExtendWith(MockitoExtension.class)
@@ -144,7 +144,7 @@ class ShellVerbPickerTest {
 
     @Test
     void shouldKeepFocusAndClosePickerWhenNoSessionStarts() {
-        when(hosting.startTicket(any())).thenReturn(new NotStartedHost());
+        when(hosting.startTicket(any())).thenReturn(notStartedHost());
         Shell shell = shellOnTicket(ticketViewIn(Status.IN_REVIEW), hosting);
         shell.press(key('n'));
 
