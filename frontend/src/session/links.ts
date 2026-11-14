@@ -113,9 +113,3 @@ export class WebAddressProvider implements ILinkProvider {
     callback(found.length === 0 ? undefined : found);
   }
 }
-
-const CLIPPED_LENGTH = 20;
-const ELLIPSIS = '…';
-
-/** An address as the key bar shows it: cut to a length that leaves the other keys in view, with an ellipsis where it was cut. */
-export const clipped = (url: string): string => (url.length <= CLIPPED_LENGTH ? url : `${url.slice(0, CLIPPED_LENGTH - 1)}${ELLIPSIS}`);

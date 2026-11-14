@@ -13,10 +13,10 @@ describe('the dock\'s key bar', () => {
     expect(screen.getByRole('contentinfo')).toHaveTextContent('ctrl+click open https://example.comctrl+shift+c copyctrl+shift+v paste');
   });
 
-  it('clips a long address with an ellipsis so the other keys stay', () => {
+  it('shows a long address whole, leaving its clipping to the bar so the other keys stay', () => {
     render(<DockKeyBar mouseReported hoveredLink="https://example.com/a/very/long/path/that/goes/on?q=1" />);
     const bar = screen.getByRole('contentinfo');
-    expect(bar).toHaveTextContent('ctrl+click open https://example.com…ctrl+shift+c copy');
-    expect(bar).not.toHaveTextContent('goes/on');
+    expect(bar).toHaveTextContent('ctrl+click open https://example.com/a/very/long/path/that/goes/on?q=1ctrl+shift+c copy');
+    expect(bar.firstElementChild).toHaveTextContent('ctrl+click open');
   });
 });

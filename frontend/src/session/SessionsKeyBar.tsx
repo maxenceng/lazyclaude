@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { KeyBar } from '../design-system';
-import { clipped } from './links';
 
 /** The keys that work while the ticket's sessions have focus, or over its verb picker while that is open. */
 export const SessionsKeyBar = ({ picking, extra = [] }: { picking: boolean; extra?: readonly string[] }) => {
@@ -14,6 +13,6 @@ export const SessionsKeyBar = ({ picking, extra = [] }: { picking: boolean; extr
 /** The keys that work while a hosted session's pane has focus, led by opening the link the pointer is on; selecting needs shift while `claude` takes the mouse. */
 export const DockKeyBar = ({ mouseReported, hoveredLink }: { mouseReported: boolean; hoveredLink: string | undefined }) => {
   const { t } = useTranslation('session');
-  const open = hoveredLink === undefined ? [] : [t('links.open', { url: clipped(hoveredLink) })];
-  return <KeyBar keys={[...open, t('keyBar.copy'), t('keyBar.paste'), ...(mouseReported ? [t('keyBar.select')] : [])]} />;
+  const open = hoveredLink === undefined ? undefined : t('links.open', { url: hoveredLink });
+  return <KeyBar lead={open} keys={[t('keyBar.copy'), t('keyBar.paste'), ...(mouseReported ? [t('keyBar.select')] : [])]} />;
 };

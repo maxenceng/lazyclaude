@@ -16,3 +16,14 @@
   font-family: var(--font-mono);
   color: var(--text);
 }
+
+.entry {
+  flex-shrink: 0;
+}
+
+.lead {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
