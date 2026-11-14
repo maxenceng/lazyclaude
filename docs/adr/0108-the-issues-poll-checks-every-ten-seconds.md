@@ -4,7 +4,7 @@ Date: 2026-11-14
 
 ## Status
 
-Accepted. Amends ADR 0065: the issues poll's interval is 10 s, not 30 s.
+Accepted. Amends ADR 0065 and ADR 0054: the issues poll's interval is 10 s, not 30 s.
 
 ## Context
 

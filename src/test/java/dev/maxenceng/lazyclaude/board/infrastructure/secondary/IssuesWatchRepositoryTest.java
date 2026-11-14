@@ -228,6 +228,18 @@ class IssuesWatchRepositoryTest {
     }
 
     @Test
+    void shouldReportAChangeOnEveryCheckAtTheSameIntervalWhileGhKeepsFailing() {
+        when(gh.run(eq(project()), any())).thenReturn(failed());
+        watcher = new IssuesWatchRepository(gh, everyFewMillis());
+        Runnable listener = mock(Runnable.class);
+
+        watcher.watch(project(), listener);
+
+        verify(listener, timeout(seconds().toMillis()).atLeast(3).description("no backoff while gh fails, so each check reads the board again (ADR 0108)"))
+                .run();
+    }
+
+    @Test
     void shouldStopCheckingWhenClosed() throws InterruptedException {
         when(gh.run(eq(project()), any())).thenReturn(answeredWith(firstEtag()));
         watcher = new IssuesWatchRepository(gh, everyFewMillis());
