@@ -151,6 +151,20 @@ class PtyHostRepositoryTest {
     }
 
     @Test
+    void shouldKillAChildThatIgnoresTheRequestToEndOnceTheGraceRunsOut() throws Exception {
+        CompletableFuture<ExitCode> exit = exitOf();
+        PtyHostRepository host = hostRunning("trap '' TERM HUP INT; printf 'armed'; while :; do sleep 1; done");
+        host.spawn(newLaunch(id), output, exit::complete);
+        output.textContaining("armed");
+
+        host.end(id);
+
+        assertThat(awaited(exit))
+                .as("a claude deaf to the termination signal is still killed, so a closed tab never leaves it running")
+                .isEqualTo(new ExitCode(137));
+    }
+
+    @Test
     void shouldRunTheChildInTheLaunchDirectory(@TempDir Path directory) throws Exception {
         PtyHostRepository host = hostRunning("pwd; read line");
 
