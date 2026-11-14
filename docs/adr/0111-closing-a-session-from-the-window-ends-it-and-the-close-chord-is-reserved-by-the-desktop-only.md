@@ -16,8 +16,11 @@ that left no end would list the session first as interrupted, with `↺`, althou
 
 ## Decision
 
-- **Closing a session ends its `claude` through the host's existing end path** (terminate, grace period, forced kill), unlike
-  quitting it does not mark the session as ending with lazyclaude. Its exit is then a self-exit as the manager sees it: the
+- **Closing a session ends its `claude` through a host close that does not wait** (terminate now; the grace period and the
+  forced kill on a virtual thread of the host's own), because `session/close` runs on the sidecar's one input thread and
+  waiting there would hold up typing to every other session. A quit keeps the blocking end, so nothing outlives it. Rejected:
+  running `session/close` on the concurrent request executor, the one input method off the input thread. Unlike
+  quitting, a close does not mark the session as ending with lazyclaude. Its exit is then a self-exit as the manager sees it: the
   launch-log entry gets an end, the tab leaves the dock through `session/exited`, and it is listed as a past session that
   `enter` resumes. Only a quit, a crash or a kill leaves an interrupted session. There is no new notification.
 - **The sidecar takes `session/close`, with the session id and no answer.** Closing a session that is no longer open does
@@ -33,5 +36,5 @@ that left no end would list the session first as interrupted, with `↺`, althou
 ## Consequences
 
 - A closed `claude` exits with the signal's code, and no warning is raised for it, unlike a failing exit by itself.
-- A `claude` that ignores the termination signal is killed once the grace period of the end path runs out.
+- A `claude` that ignores the termination signal is killed once the grace period runs out, after the close has returned.
 - `ReservedAction` carries whether only the desktop reserves it. A later desktop-only chord sets that flag and nothing more.

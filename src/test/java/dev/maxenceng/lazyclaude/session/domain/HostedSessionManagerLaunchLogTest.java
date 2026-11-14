@@ -254,7 +254,7 @@ class HostedSessionManagerLaunchLogTest {
         manager.close(session);
         exited.getValue().accept(new ExitCode(143));
 
-        verify(hosts).end(session);
+        verify(hosts).close(session);
         verify(log, times(2)).change(eq(project()), any(), change.capture());
         assertThat(afterChange(change, 1, launchLogOf(launchEntryBuilder().command(new NewClaude(session)).build())).entries())
                 .singleElement()
@@ -313,15 +313,16 @@ class HostedSessionManagerLaunchLogTest {
 
         manager.close(closed);
 
-        verify(hosts).end(closed);
-        verify(hosts, never()).end(other);
+        verify(hosts).close(closed);
+        verify(hosts, never()).close(other);
+        verify(hosts, never()).end(any());
     }
 
     @Test
     void shouldChangeNothingWhenClosingASessionThatIsNotOpen() {
         manager.close(sessionId());
 
-        verify(hosts, never()).end(any());
+        verify(hosts, never()).close(any());
         verifyNoInteractions(warnings);
     }
 

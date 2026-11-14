@@ -197,6 +197,6 @@ class HostedSessionCommandTest {
 
         command.close(new ClosePayload(id));
 
-        verify(hosts).end(id);
+        verify(hosts).close(id);
     }
 }

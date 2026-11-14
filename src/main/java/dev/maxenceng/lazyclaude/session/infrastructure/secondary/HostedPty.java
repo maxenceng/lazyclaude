@@ -25,6 +25,7 @@ import dev.maxenceng.lazyclaude.session.published.ProcessId;
 final class HostedPty {
 
     private static final String READER_NAME = "pty-%d";
+    private static final String CLOSER_NAME = "pty-close-%d";
     private static final String START_FAILURE = "claude could not be started: %s";
     private static final long GRACE_SECONDS = 1;
     private static final int READ_SIZE = 8192;
@@ -119,9 +120,19 @@ final class HostedPty {
         }
     }
 
-    /** Asks the child to end, and makes sure of it when it does not within a moment. */
+    /** Asks the child to end, and makes sure of it when it does not within a moment, returning once it has ended. */
     void end() {
         process.destroy();
+        killAfterGrace();
+    }
+
+    /** Asks the child to end and returns at once; a virtual thread of its own waits out the grace and kills a child still running. */
+    void close() {
+        process.destroy();
+        Thread.ofVirtual().name(CLOSER_NAME.formatted(process.pid())).start(this::killAfterGrace);
+    }
+
+    private void killAfterGrace() {
         try {
             if (!process.waitFor(GRACE_SECONDS, TimeUnit.SECONDS)) {
                 process.destroyForcibly();

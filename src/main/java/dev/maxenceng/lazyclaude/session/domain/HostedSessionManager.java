@@ -238,7 +238,7 @@ public final class HostedSessionManager {
     }
 
     /**
-     * Closes one open session from the window: its {@code claude} is ended through the host, and, unlike {@link #endAll}, its exit is
+     * Closes one open session from the window: its {@code claude} is asked to end through the host, which returns without waiting for it, and, unlike {@link #endAll}, its exit is
      * that of a session that ended by itself, so the launch log records its end and the exit listeners are told, and the signal's exit code is no failure to warn of. Nothing for a session
      * that is not open, as one whose {@code claude} exited between the click and the answer.
      */
@@ -251,7 +251,7 @@ public final class HostedSessionManager {
             }
         }
         if (isOpen) {
-            hosts.end(id);
+            hosts.close(id);
         }
     }
 
