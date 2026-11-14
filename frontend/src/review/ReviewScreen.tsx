@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -131,18 +131,50 @@ const Lines = ({ review, focused, onFocus }: ReviewProps) => {
     const view = root.current?.parentElement?.clientHeight ?? 0;
     review.observeLines(line > 0 ? Math.floor(view / line) : 0);
   });
+  const latestFocus = useRef(onFocus);
+  useLayoutEffect(() => {
+    latestFocus.current = onFocus;
+  });
+  const focus = useCallback(() => latestFocus.current(), []);
+  const at = review.cursorStop();
   return (
     <div ref={root}>
       <Rows>
         {review.rows().all().map((row, index) => (
-          <RowView key={index} row={row} review={review} focused={focused} onFocus={onFocus} />
+          <RowView key={index} row={row} review={review} focused={focused} onFocus={focus} cursor={cursorOn(row, at)} inRange={row.kind === RowKind.Line && review.inRange(row.index)} />
         ))}
       </Rows>
     </div>
   );
 };
 
-const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow }): ReactNode => {
+/** Whether the cursor stands on `row`: its line, or its rule when the rule is a stop. */
+const cursorOn = (row: DiffRow, at: Stop | undefined): boolean => {
+  switch (row.kind) {
+    case RowKind.Line:
+      return at?.kind === StopKind.Line && at.line === row.index;
+    case RowKind.File:
+      return at?.kind === StopKind.Head && at.file === row.index;
+    case RowKind.Outside:
+      return at?.kind === StopKind.Outside;
+    default:
+      return false;
+  }
+};
+
+interface RowProps extends ReviewProps {
+  row: DiffRow;
+  /** Whether the cursor stands on this row. */
+  cursor: boolean;
+  /** Whether this row's line is inside the range being marked. */
+  inRange: boolean;
+}
+
+/**
+ * One row of the diff, drawn again only when what it shows changes: its row, which a rebuild replaces, the cursor or the range
+ * reaching or leaving it, or the pane's focus. A long diff holds thousands of rows, and a keystroke must not draw them all.
+ */
+const RowView = memo(({ row, review, focused, onFocus, cursor, inRange }: RowProps): ReactNode => {
   const { t } = useTranslation('review');
   switch (row.kind) {
     case RowKind.File:
@@ -152,7 +184,7 @@ const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow
           text={labelOf(row.file, (from, to) => t('files.renamed', { from, to }))}
           delta={deltaOf(row.file)}
           change={{ letter: t(`files.letter.${row.file.status.kind}`), kind: CHANGES[row.file.status.kind] }}
-          cursor={atRule(review, StopKind.Head, row.index)}
+          cursor={cursor}
           onPress={
             row.head
               ? () => {
@@ -169,7 +201,7 @@ const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow
         <DiffRule
           kind={RuleKind.File}
           text={t('diff.outside')}
-          cursor={atRule(review, StopKind.Outside, after)}
+          cursor={cursor}
           onPress={() => {
             onFocus();
             review.pressRule(after);
@@ -187,8 +219,8 @@ const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow
           number={line.kind === 'removedLine' ? line.oldNumber : line.newNumber}
           text={line.content}
           index={row.index}
-          cursor={review.cursor() === row.index}
-          inRange={review.inRange(row.index)}
+          cursor={cursor}
+          inRange={inRange}
           hangs={hangsFrom(review, row.index)}
           onPress={(index) => {
             onFocus();
@@ -206,12 +238,7 @@ const RowView = ({ row, review, focused, onFocus }: ReviewProps & { row: DiffRow
     case RowKind.Pending:
       return <PendingCard comment={row.comment} lineless={row.lineless} review={review} />;
   }
-};
-
-const atRule = (review: OpenReview, kind: StopKind, file: number): boolean => {
-  const at = review.cursorStop();
-  return at?.kind === kind && at.file === file;
-};
+});
 
 const hangsFrom = (review: OpenReview, line: number): CommentKind | undefined => {
   if (review.rows().hasThread(line)) {
