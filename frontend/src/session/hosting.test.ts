@@ -51,9 +51,33 @@ describe('the hosted sessions', () => {
   it('opens no tab for a session the sidecar did not start, the refusal being its warning', async () => {
     const { client, hosted } = hosting();
     const starting = hosted.startUnlinked('/p');
-    client.answerNext({ kind: 'notStartedHost' });
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
     await starting;
     expect(hosted.dock.get().tabs).toEqual([]);
+  });
+
+  it('starts a new ticket\'s session with the description as typed, and opens its tab', async () => {
+    const { client, hosted } = hosting();
+    const starting = hosted.startNewTicket('/p', '  a "quoted" idea ');
+    expect(client.calls).toEqual([{ method: 'session/startNewTicket', params: { root: '/p', description: '  a "quoted" idea ', size: { width: 80, height: 24 } } }]);
+    client.answerNext({ kind: 'startedHost', id: 's9' });
+    expect(await starting).toBeUndefined();
+    expect(hosted.dock.get().tabs).toEqual(['s9']);
+  });
+
+  it('answers the reason a new ticket\'s session did not start, opening no tab', async () => {
+    const { client, hosted } = hosting();
+    const starting = hosted.startNewTicket('/p', 'idea');
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
+    expect(await starting).toBe('no claude');
+    expect(hosted.dock.get().tabs).toEqual([]);
+  });
+
+  it('answers the message of a failed call for a new ticket\'s session', async () => {
+    const { client, hosted } = hosting();
+    const starting = hosted.startNewTicket('/p', 'idea');
+    client.failNext(new RpcError(-32000, 'the sidecar is not running'));
+    expect(await starting).toBe('the sidecar is not running');
   });
 
   it('starts a ticket\'s session with its verb', () => {
@@ -205,7 +229,7 @@ describe('the hosted sessions', () => {
   it('says whether a start opened a tab', async () => {
     const { client, hosted } = hosting();
     const refused = hosted.startUnlinked('/p');
-    client.answerNext({ kind: 'notStartedHost' });
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
     expect(await refused).toBe(false);
     const started = hosted.startUnlinked('/p');
     client.answerNext({ kind: 'startedHost', id: 's1' });

@@ -1,7 +1,7 @@
 export enum CaptureStateKind {
   Closed = 'closed',
   Composing = 'composing',
-  Creating = 'creating',
+  Starting = 'starting',
   Refused = 'refused',
 }
 
@@ -14,34 +14,34 @@ export class ClosedCapture {
   }
 }
 
-/** The popup is open and the title is being typed. */
+/** The popup is open and the description is being typed. */
 export class ComposingCapture {
   readonly kind = CaptureStateKind.Composing;
 
-  constructor(readonly title: string) {}
+  constructor(readonly description: string) {}
 
   isOpen(): boolean {
     return true;
   }
 }
 
-/** The title was sent; the popup holds still until GitHub answers. */
-export class CreatingCapture {
-  readonly kind = CaptureStateKind.Creating;
+/** The description was sent; the popup holds still until the launch answers. */
+export class StartingCapture {
+  readonly kind = CaptureStateKind.Starting;
 
-  constructor(readonly title: string) {}
+  constructor(readonly description: string) {}
 
   isOpen(): boolean {
     return true;
   }
 }
 
-/** The create was refused, or the call failed: the popup keeps the title and says why. */
+/** The session did not start, or the call failed: the popup keeps the description and says why. */
 export class RefusedCapture {
   readonly kind = CaptureStateKind.Refused;
 
   constructor(
-    readonly title: string,
+    readonly description: string,
     readonly reason: string,
   ) {}
 
@@ -50,4 +50,4 @@ export class RefusedCapture {
   }
 }
 
-export type CaptureState = ClosedCapture | ComposingCapture | CreatingCapture | RefusedCapture;
+export type CaptureState = ClosedCapture | ComposingCapture | StartingCapture | RefusedCapture;

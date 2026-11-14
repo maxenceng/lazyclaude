@@ -312,7 +312,7 @@ describe('the Board tab with no ticket under the cursor', () => {
     const { user } = await started(undefined, read);
     await user.keyboard('2');
     const keys = screen.getByRole('contentinfo');
-    expect(keys).toHaveTextContent('c new draft');
+    expect(keys).toHaveTextContent('c capture');
     expect(keys).toHaveTextContent('1/2/3 tabs');
     expect(keys).not.toHaveTextContent('move');
     expect(keys).not.toHaveTextContent('go to ticket');

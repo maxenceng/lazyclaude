@@ -4,7 +4,7 @@ import { useStore } from '../shared/useStore';
 import type { CaptureController } from './captureController';
 import { CaptureStateKind } from './captureState';
 
-/** The popup a draft ticket's title is typed in: a native input, then "creating…" or "⚠ reason" under it. */
+/** The popup a new ticket's description is typed in: a native input, then "starting…" or "⚠ reason" under it. */
 export const CapturePopup = ({ capture }: { capture: CaptureController }) => {
   const { t } = useTranslation('board');
   const state = useStore(capture.state);
@@ -19,15 +19,15 @@ export const CapturePopup = ({ capture }: { capture: CaptureController }) => {
     >
       <TextInput
         label={t('capture.label')}
-        value={state.title}
-        readOnly={state.kind === CaptureStateKind.Creating}
-        onChange={(title) => capture.edit(title)}
+        value={state.description}
+        readOnly={state.kind === CaptureStateKind.Starting}
+        onChange={(description) => capture.edit(description)}
         onSubmit={() => capture.create()}
         onCancel={() => capture.cancel()}
       />
-      {state.kind === CaptureStateKind.Creating ? (
+      {state.kind === CaptureStateKind.Starting ? (
         <div role="status">
-          <Text tone={Tone.Dim} tight>{t('capture.creating')}</Text>
+          <Text tone={Tone.Dim} tight>{t('capture.starting')}</Text>
         </div>
       ) : null}
       {state.kind === CaptureStateKind.Refused ? (
