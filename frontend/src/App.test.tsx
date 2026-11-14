@@ -1245,6 +1245,43 @@ describe('capturing a draft ticket', () => {
     expect(screen.getByRole('button', { name: /PROJ-3/ })).toHaveAttribute('aria-current', 'true');
   });
 
+  it('answers with Cancel and Create draft buttons that carry esc and enter', async () => {
+    const { user } = await readyApp();
+    await user.keyboard('c');
+    const dialog = screen.getByRole('dialog', { name: 'New ticket' });
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveAttribute('aria-keyshortcuts', 'esc');
+    expect(within(dialog).getByRole('button', { name: 'Create draft' })).toHaveAttribute('aria-keyshortcuts', 'enter');
+  });
+
+  it('sends the title from Create draft as enter does, keeping the input focused', async () => {
+    const { user, client } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('A title');
+    await user.click(screen.getByRole('button', { name: 'Create draft' }));
+    expect(client.calls.filter((call) => call.method === 'board/capture')).toEqual([{ method: 'board/capture', params: { root: '/p', title: 'A title' } }]);
+    expect(within(screen.getByRole('dialog', { name: 'New ticket' })).getByRole('status')).toHaveTextContent('creating…');
+    expect(captureBox()).toHaveFocus();
+  });
+
+  it('closes on Cancel and on the close action as esc does, sending nothing', async () => {
+    const { user, client } = await readyApp();
+    await user.keyboard('c');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
+    await user.keyboard('c');
+    await user.click(screen.getByRole('button', { name: 'Close (esc)' }));
+    expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
+    expect(client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(0);
+  });
+
+  it('stays open for a press on its scrim, which reaches nothing behind it', async () => {
+    const { user, app } = await readyApp();
+    await user.keyboard('c');
+    await user.pointer({ keys: '[MouseLeft]', target: screen.getByRole('dialog', { name: 'New ticket' }).parentElement! });
+    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+    expect(app.board.selection.selected.get()).toBeUndefined();
+  });
+
   it('answers enter and esc from the window when focus has left the input, and nothing else', async () => {
     const started = await readyApp();
     await started.user.keyboard('c');
@@ -1272,6 +1309,25 @@ describe('quitting the window', () => {
     expect(within(screen.getByRole('dialog', { name: 'Quit lazyclaude?' })).getByText('1 hosted session is open, and quitting ends it.')).toBeInTheDocument();
     expect(platform.closes).toBe(0);
     await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(platform.closes).toBe(0);
+  });
+
+  it('words its answers with their keys: Stay esc, Quit y', async () => {
+    const { client, user } = await readyApp();
+    act(() => client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1')] }));
+    await user.keyboard('q');
+    const dialog = screen.getByRole('dialog', { name: 'Quit lazyclaude?' });
+    expect(within(dialog).getByRole('button', { name: 'Stay' })).toHaveAttribute('aria-keyshortcuts', 'esc');
+    expect(within(dialog).getByRole('button', { name: 'Quit' })).toHaveAttribute('aria-keyshortcuts', 'y');
+    expect(within(dialog).queryByText('y quit · esc stay')).toBeNull();
+  });
+
+  it('stays on a press outside the question, as on esc, and reaches nothing behind it', async () => {
+    const { client, platform, user } = await readyApp();
+    act(() => client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1')] }));
+    await user.keyboard('q');
+    await user.pointer({ keys: '[MouseLeft]', target: screen.getByRole('dialog', { name: 'Quit lazyclaude?' }).parentElement! });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(platform.closes).toBe(0);
   });

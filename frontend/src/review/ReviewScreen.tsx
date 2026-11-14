@@ -9,7 +9,6 @@ import {
   Button,
   ButtonTone,
   CommentKind,
-  Dialog,
   DiffLine,
   DiffRule,
   FileChange,
@@ -23,6 +22,7 @@ import {
   BadgeTone,
   Rows,
   RuleKind,
+  Popup,
   Text,
   TextArea,
   Tone,
@@ -463,7 +463,12 @@ const boxTitle = (box: CommentBox, t: TFunction<'review'>): string => {
 const BoxDialog = ({ review, box }: { review: OpenReview; box: CommentBox }) => {
   const { t } = useTranslation('review');
   return (
-    <Dialog title={boxTitle(box, t)} hint={t('box.hint')} onDismiss={() => review.cancelBox()}>
+    <Popup
+      title={boxTitle(box, t)}
+      main={{ label: t('box.save'), chip: t('box.saveKey'), onClick: () => review.saveBox() }}
+      out={{ label: t('box.cancel'), chip: t('box.cancelKey'), onClick: () => review.cancelBox() }}
+      onDismiss={() => review.cancelBox()}
+    >
       {box.target.kind === TargetKind.Reply
         ? box.target.thread.comments.map((comment, index) => (
             <Text key={index} tight mono>
@@ -481,7 +486,7 @@ const BoxDialog = ({ review, box }: { review: OpenReview; box: CommentBox }) => 
       />
       {box.saving ? <Text tone={Tone.Dim} tight>{t('box.saving')}</Text> : null}
       {box.notSaved === undefined ? null : <Text tone={Tone.Warning} tight>{t('box.notSaved', { reason: box.notSaved })}</Text>}
-    </Dialog>
+    </Popup>
   );
 };
 
@@ -494,9 +499,10 @@ export const ReviewDialogs = ({ review }: { review: OpenReview }) => {
     return <BoxDialog review={review} box={box} />;
   }
   return review.submitPrompt() ? (
-    <Dialog title={t('submit.title')} hint={t('submit.hint')}>
-      <Button onClick={() => review.answerSubmit(true)}>{t('submit.yes')}</Button>
-      <Button onClick={() => review.answerSubmit(false)}>{t('submit.no')}</Button>
-    </Dialog>
+    <Popup
+      title={t('submit.title')}
+      main={{ label: t('submit.yes'), chip: t('submit.yesKey'), onClick: () => review.answerSubmit(true) }}
+      out={{ label: t('submit.no'), chip: t('submit.noKey'), onClick: () => review.answerSubmit(false) }}
+    />
   ) : null;
 };

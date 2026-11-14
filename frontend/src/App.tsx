@@ -10,7 +10,7 @@ import { statusColourOf } from './board/statusColours';
 import { ConnectionScreen } from './connection/ConnectionScreen';
 import { DocsKeyBar, DocumentKeyBar } from './docs/DocsKeyBar';
 import { DocsPane, DocumentPane } from './docs/DocsScreen';
-import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Dialog, Lamp, LampSize, Pane, StatusLine, Text, Tone, WindowMenu, WindowTabBar } from './design-system';
+import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Lamp, LampSize, Pane, Popup, StatusLine, Text, Tone, WindowMenu, WindowTabBar } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { ModalClicks } from './keys/modalClicks';
@@ -359,10 +359,13 @@ export const App = ({ app, packaged }: Props) => {
 const QuitDialog = ({ hosted, onAnswer }: { hosted: number; onAnswer: (yes: boolean) => void }) => {
   const { t } = useTranslation();
   return (
-    <Dialog title={t('quit.title')} hint={t('quit.hint')} onDismiss={() => onAnswer(false)}>
-      <Text>{t('quit.hosted', { count: hosted })}</Text>
-      <Button onClick={() => onAnswer(true)}>{t('quit.yes')}</Button>
-      <Button onClick={() => onAnswer(false)}>{t('quit.no')}</Button>
-    </Dialog>
+    <Popup
+      title={t('quit.title')}
+      main={{ label: t('quit.yes'), chip: t('quit.yesKey'), onClick: () => onAnswer(true) }}
+      out={{ label: t('quit.no'), chip: t('quit.noKey'), onClick: () => onAnswer(false) }}
+      onDismiss={() => onAnswer(false)}
+    >
+      <Text tight>{t('quit.hosted', { count: hosted })}</Text>
+    </Popup>
   );
 };

@@ -590,6 +590,48 @@ describe('the comment box of a review', () => {
     expect(screen.getByRole('textbox', { name: 'Comment text' })).not.toHaveAttribute('readonly');
   });
 
+  it('answers with Cancel and Save buttons that carry esc and ctrl+s', async () => {
+    const harness = new Harness();
+    render(<ReviewDialogs review={harness.review} />);
+    await openedBox(harness);
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveAttribute('aria-keyshortcuts', 'esc');
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-keyshortcuts', 'ctrl+s');
+    expect(screen.queryByText('ctrl+s save · esc cancel')).not.toBeInTheDocument();
+  });
+
+  it('saves from the Save button as ctrl+s does', async () => {
+    const harness = new Harness();
+    render(<ReviewDialogs review={harness.review} />);
+    await openedBox(harness);
+    await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(harness.client.calls.at(-1)?.method).toBe('review/comment');
+    expect(screen.getByRole('textbox', { name: 'Comment text' })).toHaveFocus();
+  });
+
+  it('is thrown away by the Cancel button and by the close action as by escape', async () => {
+    const harness = new Harness();
+    render(<ReviewDialogs review={harness.review} />);
+    await openedBox(harness);
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(harness.review.box()).toBeUndefined();
+    await openedBox(harness);
+    await userEvent.click(screen.getByRole('button', { name: 'Close (esc)' }));
+    expect(harness.review.box()).toBeUndefined();
+  });
+
+  it('leaves an escape that ends an input method composition to the composition, keeping the box', async () => {
+    const harness = new Harness();
+    render(<ReviewDialogs review={harness.review} />);
+    await openedBox(harness);
+    await userEvent.type(screen.getByRole('textbox', { name: 'Comment text' }), 'Rename this');
+    act(() => {
+      screen.getByRole('textbox', { name: 'Comment text' }).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', isComposing: true, bubbles: true, cancelable: true }));
+    });
+    expect(screen.getByRole('dialog', { name: 'Pending comment' })).toBeInTheDocument();
+    expect(harness.review.box()?.text).toBe('Rename this');
+  });
+
   it('is thrown away by escape', async () => {
     const harness = new Harness();
     render(<ReviewDialogs review={harness.review} />);
@@ -653,6 +695,23 @@ describe('the confirm after the summary', () => {
   it('asks whether to submit the review as a Comment', async () => {
     await confirming();
     expect(screen.getByRole('dialog', { name: 'Submit review as Comment?' })).toBeInTheDocument();
+  });
+
+  it('words its answers with their keys and draws no body, nor a hint line', async () => {
+    await confirming();
+    const dialog = screen.getByRole('dialog', { name: 'Submit review as Comment?' });
+    expect(within(dialog).getByRole('button', { name: 'Submit' })).toHaveAttribute('aria-keyshortcuts', 'y');
+    expect(within(dialog).getByRole('button', { name: 'Keep pending' })).toHaveAttribute('aria-keyshortcuts', 'esc');
+    expect(dialog.querySelector('[data-popup-body]')).toBeNull();
+    expect(within(dialog).queryByText('y submit · esc keeps it pending')).toBeNull();
+  });
+
+  it('does nothing for a press outside it', async () => {
+    const harness = await confirming();
+    const calls = harness.client.calls.length;
+    await userEvent.click(screen.getByRole('dialog').parentElement!);
+    expect(screen.getByRole('dialog', { name: 'Submit review as Comment?' })).toBeInTheDocument();
+    expect(harness.client.calls).toHaveLength(calls);
   });
 
   it('submits on Submit', async () => {

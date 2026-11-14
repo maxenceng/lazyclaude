@@ -49,6 +49,10 @@
     "title": "New ticket",
     "label": "Ticket title",
     "creating": "creating…",
+    "create": "Create draft",
+    "createKey": "enter",
+    "cancel": "Cancel",
+    "cancelKey": "esc",
     "refused": "⚠ {{reason}}"
   }
 }

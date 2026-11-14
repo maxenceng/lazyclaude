@@ -13,7 +13,7 @@ interface Props {
   onCancel: () => void;
 }
 
-/** A box the user writes in: it takes focus when it appears and every key typed in it is its own; ctrl+s saves and escape cancels. */
+/** A box the user writes in: it takes focus when it appears and every key typed in it is its own; ctrl+s saves and escape cancels, unless it ends an input method composition. */
 export const TextArea = ({ label, value, readOnly, onChange, onSave, onCancel }: Props) => {
   const area = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -31,6 +31,9 @@ export const TextArea = ({ label, value, readOnly, onChange, onSave, onCancel }:
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
           const key = event.key.toLowerCase();
+          if (event.nativeEvent.isComposing) {
+            return;
+          }
           if (key === CANCEL_KEY) {
             event.preventDefault();
             onCancel();

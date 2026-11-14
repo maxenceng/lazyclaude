@@ -12,7 +12,11 @@ export const CapturePopup = ({ capture }: { capture: CaptureController }) => {
     return null;
   }
   return (
-    <Popup title={t('capture.title')}>
+    <Popup
+      title={t('capture.title')}
+      main={{ label: t('capture.create'), chip: t('capture.createKey'), onClick: () => capture.create() }}
+      out={{ label: t('capture.cancel'), chip: t('capture.cancelKey'), onClick: () => capture.cancel() }}
+    >
       <TextInput
         label={t('capture.label')}
         value={state.title}
