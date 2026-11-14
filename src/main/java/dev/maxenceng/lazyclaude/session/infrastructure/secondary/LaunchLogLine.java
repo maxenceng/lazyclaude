@@ -55,6 +55,7 @@ record LaunchLogLine(
             case NotEnded _ -> null;
         };
         return switch (entry.command()) {
+            // deferred: a launch that created a ticket reads back as a plain new one, its description dropped — a reader that must tell them apart
             case NewClaude _, NewTicketClaude _ -> line(entry, NEW, null, null, null, ended);
             case ResumeClaude _ -> line(entry, RESUME, null, null, null, ended);
             case TicketClaude run -> line(entry, TICKET, run.ticket().value(), run.verb().label(), run.plugin().value(), ended);

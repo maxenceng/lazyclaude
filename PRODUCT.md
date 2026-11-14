@@ -40,8 +40,8 @@ tickets are not a copy: the issues are read through `gh` and the board's words a
 
 - One screen: Board, Sessions and Docs panels on the left; a main view following the selection over a dock of hosted
   session tabs on the right; zoom for the status columns, the main view or the dock (ADR 0008).
-- Read-only except two writes to GitHub: the pending review (ADR 0009) and capturing a draft ticket (ADR 0054). Files
-  are edited in your own editor or through a session.
+- Read-only except one write to GitHub, the pending review (ADR 0009); a new ticket is created by a `/ticket new`
+  session (ADR 0110). Files are edited in your own editor or through a session.
 - Only the project's GitHub Issues, read through `gh`; Claude only through the `claude` CLI.
 - Every failure is shown as a reason on screen (a refused or unavailable View, a warning on the status line), never
   dropped silently and never retried by itself.

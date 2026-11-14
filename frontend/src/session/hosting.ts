@@ -84,6 +84,7 @@ export class Hosting {
     try {
       const started = await this.deps.client.call('session/startNewTicket', { root, description, size: this.paneSize() });
       this.opened(started);
+      this.failure.set(undefined);
       return started.kind === 'startedHost' ? undefined : started.reason;
     } catch (error) {
       return error instanceof Error ? error.message : String(error);

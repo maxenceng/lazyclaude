@@ -85,15 +85,20 @@ final class CaptureKeys {
         open.startBegun();
         NewTicketHostedPayload payload = new NewTicketHostedPayload(root, open.content(), paneSize.get());
         CompletableFuture.supplyAsync(() -> hosting.startNewTicket(payload), background)
-                .exceptionally(CaptureKeys::notStartedBecause)
-                .thenAccept(answer -> onRenderThread.accept(() -> answered(open, answer)));
+                .whenComplete((answer, failure) -> onRenderThread.accept(() -> {
+                    if (failure == null) {
+                        answered(open, answer);
+                    } else {
+                        open.startRefused(failedBecause(failure));
+                    }
+                }));
     }
 
-    private static HostStart notStartedBecause(Throwable failure) {
+    private static Reason failedBecause(Throwable failure) {
         Throwable cause = failure instanceof CompletionException wrapped && wrapped.getCause() != null ? wrapped.getCause() : failure;
-        return new NotStartedHost(new Reason(Optional.ofNullable(cause.getMessage())
+        return new Reason(Optional.ofNullable(cause.getMessage())
                 .filter(message -> !message.isBlank())
-                .orElseGet(() -> cause.getClass().getSimpleName())));
+                .orElseGet(() -> cause.getClass().getSimpleName()));
     }
 
     private void answered(CaptureBox open, HostStart answer) {

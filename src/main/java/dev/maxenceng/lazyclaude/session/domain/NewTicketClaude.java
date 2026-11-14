@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.domain;
 import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
+import dev.maxenceng.lazyclaude.session.published.LinkVerb;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
@@ -15,6 +16,7 @@ public record NewTicketClaude(SessionId session, TicketDescription description, 
         implements LaunchCommand {
 
     private static final String SESSION_NAME = "new ticket";
+    private static final LinkVerb CREATING_VERB = new LinkVerb("new");
 
     public NewTicketClaude {
         Assert.notNull("session", session);
@@ -25,6 +27,11 @@ public record NewTicketClaude(SessionId session, TicketDescription description, 
     @Override
     public Optional<TicketRun> launchRun() {
         return Optional.empty();
+    }
+
+    /** The {@code /ticket} verb that creates a ticket: what follows it is a description, never ticket ids. */
+    public static LinkVerb creatingVerb() {
+        return CREATING_VERB;
     }
 
     /** The name the session is given, which its row shows. */

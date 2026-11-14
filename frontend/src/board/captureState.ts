@@ -1,6 +1,7 @@
 export enum CaptureStateKind {
   Closed = 'closed',
   Composing = 'composing',
+  Blank = 'blank',
   Starting = 'starting',
   Refused = 'refused',
 }
@@ -17,6 +18,17 @@ export class ClosedCapture {
 /** The popup is open and the description is being typed. */
 export class ComposingCapture {
   readonly kind = CaptureStateKind.Composing;
+
+  constructor(readonly description: string) {}
+
+  isOpen(): boolean {
+    return true;
+  }
+}
+
+/** Enter was pressed on a blank description: nothing was sent, and the popup says a description is needed. */
+export class BlankCapture {
+  readonly kind = CaptureStateKind.Blank;
 
   constructor(readonly description: string) {}
 
@@ -50,4 +62,4 @@ export class RefusedCapture {
   }
 }
 
-export type CaptureState = ClosedCapture | ComposingCapture | StartingCapture | RefusedCapture;
+export type CaptureState = ClosedCapture | ComposingCapture | BlankCapture | StartingCapture | RefusedCapture;

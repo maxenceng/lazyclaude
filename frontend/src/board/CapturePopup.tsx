@@ -14,7 +14,7 @@ export const CapturePopup = ({ capture }: { capture: CaptureController }) => {
   return (
     <Popup
       title={t('capture.title')}
-      main={{ label: t('capture.create'), chip: t('capture.createKey'), onClick: () => capture.create() }}
+      main={{ label: t('capture.start'), chip: t('capture.startKey'), onClick: () => capture.start() }}
       out={{ label: t('capture.cancel'), chip: t('capture.cancelKey'), onClick: () => capture.cancel() }}
     >
       <TextInput
@@ -22,12 +22,17 @@ export const CapturePopup = ({ capture }: { capture: CaptureController }) => {
         value={state.description}
         readOnly={state.kind === CaptureStateKind.Starting}
         onChange={(description) => capture.edit(description)}
-        onSubmit={() => capture.create()}
+        onSubmit={() => capture.start()}
         onCancel={() => capture.cancel()}
       />
       {state.kind === CaptureStateKind.Starting ? (
         <div role="status">
           <Text tone={Tone.Dim} tight>{t('capture.starting')}</Text>
+        </div>
+      ) : null}
+      {state.kind === CaptureStateKind.Blank ? (
+        <div role="alert">
+          <Text tone={Tone.Warning} tight>{t('capture.refused', { reason: t('capture.blank') })}</Text>
         </div>
       ) : null}
       {state.kind === CaptureStateKind.Refused ? (

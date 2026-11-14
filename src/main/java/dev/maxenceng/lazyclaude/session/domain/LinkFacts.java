@@ -30,11 +30,12 @@ public record LinkFacts(List<TicketRun> runs) {
 
     /**
      * The tickets the session is linked to: those its runs named that the board has, each with the verb of the last run to
-     * name it.
+     * name it. A run that created a ticket names none, whatever numbers its description holds.
      */
     // deferred: the pr-link rule, a session linked through the head branch of a ticket's pull request — close it when review publishes head branches.
     public List<TicketLink> linksTo(KnownTickets tickets) {
         Map<LinkedTicketId, LinkVerb> lastVerbs = runs.stream()
+                .filter(run -> !run.createsATicket())
                 .flatMap(run -> run.ids().stream()
                         .map(tickets::find)
                         .flatMap(Optional::stream)

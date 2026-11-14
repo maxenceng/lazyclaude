@@ -80,6 +80,17 @@ describe('the hosted sessions', () => {
     expect(await starting).toBe('the sidecar is not running');
   });
 
+  it('withdraws an earlier start\'s failure once a new ticket\'s session answers', async () => {
+    const { client, hosted } = hosting();
+    const failing = hosted.startUnlinked('/p');
+    client.failNext(new RpcError(-32000, 'no java'));
+    await failing;
+    const starting = hosted.startNewTicket('/p', 'idea');
+    client.answerNext({ kind: 'startedHost', id: 's9' });
+    await starting;
+    expect(hosted.failure.get()).toBeUndefined();
+  });
+
   it('starts a ticket\'s session with its verb', () => {
     const { client, hosted } = hosting();
     void hosted.startTicket('/p', 'PROJ-1', 'proj-1', 'START');

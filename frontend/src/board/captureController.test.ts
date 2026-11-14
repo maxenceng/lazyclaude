@@ -53,26 +53,35 @@ describe('starting a new ticket', () => {
     const { calls, controller } = setup();
     controller.open();
     controller.edit('  Fix "the" bug  ');
-    controller.create();
+    controller.start();
     expect(calls).toEqual([{ root: '/p', description: '  Fix "the" bug  ' }]);
     expect(controller.state.get().kind).toBe(CaptureStateKind.Starting);
   });
 
-  it.each(['', '   ', '\n\t'])('calls nothing for the blank description %j and stays open', (blank) => {
+  it.each(['', '   ', '\n\t'])('calls nothing for the blank description %j and says it is blank', (blank) => {
     const { calls, controller } = setup();
     controller.open();
     controller.edit(blank);
-    controller.create();
+    controller.start();
     expect(calls).toEqual([]);
-    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Composing, description: blank });
+    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Blank, description: blank });
+  });
+
+  it('takes typing after a blank refusal and sends the description then', () => {
+    const { calls, controller } = setup();
+    controller.open();
+    controller.start();
+    controller.edit('Fix it');
+    controller.start();
+    expect(calls).toEqual([{ root: '/p', description: 'Fix it' }]);
   });
 
   it('sends nothing for a second enter while starting, and ignores esc and typing', () => {
     const { calls, controller } = setup();
     controller.open();
     controller.edit('Fix');
-    controller.create();
-    controller.create();
+    controller.start();
+    controller.start();
     controller.cancel();
     controller.edit('other');
     expect(calls).toHaveLength(1);
@@ -83,22 +92,22 @@ describe('starting a new ticket', () => {
     const { answers, controller } = setup();
     controller.open();
     controller.edit('Fix');
-    controller.create();
+    controller.start();
     answers[0]?.(undefined);
     await flush();
     expect(controller.state.get().kind).toBe(CaptureStateKind.Closed);
   });
 
-  it('keeps the description and the reason when the session did not start, and sends again only on another create', async () => {
+  it('keeps the description and the reason when the session did not start, and sends again only on another start', async () => {
     const { calls, answers, controller } = setup();
     controller.open();
     controller.edit('Fix');
-    controller.create();
+    controller.start();
     answers[0]?.('claude is not installed');
     await flush();
     expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Refused, description: 'Fix', reason: 'claude is not installed' });
     expect(calls).toHaveLength(1);
-    controller.create();
+    controller.start();
     expect(calls).toHaveLength(2);
   });
 
@@ -106,12 +115,12 @@ describe('starting a new ticket', () => {
     const { answers, controller } = setup();
     controller.open();
     controller.edit('Fix');
-    controller.create();
+    controller.start();
     answers[0]?.('no');
     await flush();
     controller.edit('Fix it');
     expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Composing, description: 'Fix it' });
-    controller.create();
+    controller.start();
     answers[1]?.('again');
     await flush();
     controller.cancel();

@@ -1,5 +1,5 @@
 import { Store } from '../shared/store';
-import { type CaptureState, CaptureStateKind, ClosedCapture, ComposingCapture, RefusedCapture, StartingCapture } from './captureState';
+import { BlankCapture, type CaptureState, CaptureStateKind, ClosedCapture, ComposingCapture, RefusedCapture, StartingCapture } from './captureState';
 
 /** Starts the session that creates a ticket from a description; answers why it did not start, or nothing once it has. */
 export type NewTicketStart = (root: string, description: string) => Promise<string | undefined>;
@@ -25,7 +25,7 @@ export class CaptureController {
   /** Types into the description; held still while a start is in flight. */
   edit(description: string): void {
     const current = this.state.get();
-    if (current.kind === CaptureStateKind.Composing || current.kind === CaptureStateKind.Refused) {
+    if (editable(current)) {
       this.state.set(new ComposingCapture(description));
     }
   }
@@ -33,19 +33,24 @@ export class CaptureController {
   /** Drops the popup and its text; held still while a start is in flight. */
   cancel(): void {
     const current = this.state.get();
-    if (current.kind === CaptureStateKind.Composing || current.kind === CaptureStateKind.Refused) {
+    if (editable(current)) {
       this.state.set(new ClosedCapture());
     }
   }
 
-  /** Sends the description as typed; nothing while blank or while one is in flight, so a second enter never starts a second session. */
-  create(): void {
+  /** Sends the description as typed; a blank one is refused in the popup, and nothing is sent while one is in flight, so a second enter never starts a second session. */
+  start(): void {
     const current = this.state.get();
     const root = this.deps.root();
-    if ((current.kind === CaptureStateKind.Composing || current.kind === CaptureStateKind.Refused) && root !== undefined && current.description.trim() !== '') {
-      this.state.set(new StartingCapture(current.description));
-      void this.send(root, current.description);
+    if (!editable(current) || root === undefined) {
+      return;
     }
+    if (current.description.trim() === '') {
+      this.state.set(new BlankCapture(current.description));
+      return;
+    }
+    this.state.set(new StartingCapture(current.description));
+    void this.send(root, current.description);
   }
 
   private async send(root: string, description: string): Promise<void> {
@@ -53,3 +58,6 @@ export class CaptureController {
     this.state.set(reason === undefined ? new ClosedCapture() : new RefusedCapture(description, reason));
   }
 }
+
+const editable = (state: CaptureState): state is ComposingCapture | BlankCapture | RefusedCapture =>
+  state.kind === CaptureStateKind.Composing || state.kind === CaptureStateKind.Blank || state.kind === CaptureStateKind.Refused;

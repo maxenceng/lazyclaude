@@ -31,6 +31,13 @@ class LinkFactsTest {
     }
 
     @Test
+    void shouldLinkNothingFromARunThatCreatedATicketThoughItsDescriptionHoldsIds() {
+        assertThat(ran(ticketRun("new", "1", "2")).linksTo(boardTickets()))
+                .as("a /ticket new run's words are the description of a ticket that does not exist yet")
+                .isEmpty();
+    }
+
+    @Test
     void shouldLinkToEveryTicketTheArgsNamed() {
         assertThat(ran(ticketRun("review", "1", "2")).linksTo(boardTickets()))
                 .containsExactlyInAnyOrder(ticketLink("1", "review"), ticketLink("2", "review"));

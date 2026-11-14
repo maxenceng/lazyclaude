@@ -1245,12 +1245,13 @@ describe('starting a new ticket', () => {
     expect(started.app.board.selection.selected.get()).toBeUndefined();
   });
 
-  it('calls nothing for a blank description and keeps the popup', async () => {
+  it('calls nothing for a blank description and says why in the popup', async () => {
     const { user, client } = await readyApp();
     await user.keyboard('c');
     await user.keyboard('   {Enter}');
     expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(0);
-    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: 'New ticket' });
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('describe the ticket first');
   });
 
   it('answers with Cancel and Start buttons that carry esc and enter', async () => {
@@ -1479,7 +1480,7 @@ describe('the left column\'s panel tabs', () => {
     expect(screen.getByRole('button', { name: /PROJ-2/ })).toHaveAttribute('aria-current', 'true');
   });
 
-  it('carries the new draft button on the Board tab only', async () => {
+  it('carries the new ticket button on the Board tab only', async () => {
     const started = await readyApp();
     expect(screen.getByRole('button', { name: 'New ticket (c)' })).toBeInTheDocument();
     await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
@@ -1608,7 +1609,7 @@ describe('an empty board', () => {
     expect(ready.app.board.selectedTicket()).toBeUndefined();
   });
 
-  it('keeps on the key bar only the keys that act: the new draft, the panel and the window tabs', async () => {
+  it('keeps on the key bar only the keys that act: the new ticket capture, the panel and the window tabs', async () => {
     await readyApp(false, boardFixture([]));
     expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['c capture', 'o docs', '1/2/3 tabs']);
   });
