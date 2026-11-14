@@ -246,9 +246,11 @@ public final class HostedSessionManager {
         boolean isOpen;
         synchronized (open) {
             isOpen = open.stream().anyMatch(session -> session.id().equals(id));
+            if (isOpen && !closing.contains(id)) {
+                closing.add(id);
+            }
         }
         if (isOpen) {
-            closing.add(id);
             hosts.end(id);
         }
     }
@@ -391,8 +393,8 @@ public final class HostedSessionManager {
         if (dropped.isEmpty()) {
             return;
         }
-        boolean byItself = !endingWithLazyclaude.remove(id);
-        if (byItself) {
+        boolean recordsEnd = !endingWithLazyclaude.remove(id);
+        if (recordsEnd) {
             EndedAt ended = new EndedAt(clock.clock().instant());
             logged(project, entries -> entries.ended(id, ended));
         }
@@ -400,7 +402,7 @@ public final class HostedSessionManager {
             warnOfFailure(code);
         }
         changed();
-        if (byItself) {
+        if (recordsEnd) {
             exitListeners.forEach(listener -> listener.exited(id, code));
         }
         dropped.flatMap(HostedSession::doneTicket).ifPresent(this::doneEnded);

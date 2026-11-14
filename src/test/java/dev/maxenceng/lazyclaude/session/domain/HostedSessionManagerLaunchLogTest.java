@@ -287,6 +287,25 @@ class HostedSessionManagerLaunchLogTest {
     }
 
     @Test
+    void shouldWarnOfTheFailureOfAResumedSessionClosedTwiceBefore() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
+        when(hosts.exists(projectRootDirectory())).thenReturn(true);
+        SessionId session = idOf(manager.startUnlinked(project(), paneSize()));
+        manager.close(session);
+        manager.close(session);
+        verify(hosts).spawn(any(), any(), exited.capture());
+        exited.getValue().accept(new ExitCode(143));
+        manager.resume(project(), session, projectRootDirectory(), paneSize());
+        verify(hosts, times(2)).spawn(any(), any(), exited.capture());
+
+        exited.getValue().accept(new ExitCode(1));
+
+        assertThat(raisedTexts(warnings))
+                .as("a second click on close before the exit must not mute the failure of the session's next run")
+                .isNotEmpty();
+    }
+
+    @Test
     void shouldEndOnlyTheClosedSessionAndLeaveTheOthersOpen() {
         when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
         SessionId closed = idOf(manager.startUnlinked(project(), paneSize()));

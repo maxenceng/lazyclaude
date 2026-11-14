@@ -49,7 +49,7 @@
   },
   "close": {
     "title": "Close this session?",
-    "body": "It is still working or waiting on you, and closing ends it.",
+    "body": "It may still be working or waiting on you, and closing ends it.",
     "yes": "Close",
     "yesKey": "y",
     "no": "Keep",

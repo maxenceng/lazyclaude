@@ -109,7 +109,7 @@ words mean.
 | Merge state | Whether a ticket's branch is among the merged pull requests' heads, as far as the asker has read them: *merged*, *not merged*, or *unknown* before review's merged read lands or where it is not read. Only *merged* preselects `done`. | `session` |
 | Waiting | The session is blocked on you: *waiting for permission* (a permission prompt) or *waiting for input* (any other question). The only state that notifies. | `session` |
 | Unknown (state) | What an unread session shows: its record cannot be used, or reports a `status` lazyclaude does not know, as a newer Claude Code may. Still listed, with a grey `·` and one warning; never notified. | `session` |
-| Reserved chord | A chord lazyclaude takes before `claude` sees it, inside every hosted session: the seven focus, hide, zoom and next-waiting chords, `alt+h/j/k/l/m/z/w`, and an eighth, close (`alt+x`), which only the desktop frontend reserves, unless `config.yml` rebinds them. The same file binds them in the desktop frontend. | `session` |
+| Reserved chord | A chord lazyclaude takes before `claude` sees it, inside every hosted session of a frontend that reserves it: the seven focus, hide, zoom and next-waiting chords, `alt+h/j/k/l/m/z/w`, and close, `alt+x`, unless `config.yml` rebinds them. The terminal frontend does not reserve close. The same file binds them in the desktop frontend. | `session` |
 | Fixed chord | A chord lazyclaude keeps for itself and `config.yml` cannot move — `ctrl+c` quit, `ctrl+d`/`ctrl+u` half page — so no reserved chord may be rebound onto one. | `session` |
 
 ## review

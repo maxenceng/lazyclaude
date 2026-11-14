@@ -9,12 +9,12 @@ export interface ClosingDeps {
   sessions: Store<SessionSessionsView | undefined>;
 }
 
-/** The states a person might lose work in: closing a session in one asks first, while one starting or at its turn closes at once. */
+/** The states a person might lose work in: closing a session Busy, Waiting or Unknown asks first, while one Starting or at Your turn closes at once. */
 const ASKED: readonly LiveState[] = ['busy', 'waitingForPermission', 'waitingForInput', 'unknown'];
 
 /**
  * Closing the selected hosted session, as the dock's close button and the reserved close chord do: at once when the session is
- * starting or waits on you, else once the question is answered Close. Any other answer keeps it running, and so does its own
+ * Starting or at Your turn, else once the question is answered Close. Any other answer keeps it running, and so does its own
  * exit, which takes the question away with the tab.
  */
 export class Closing {
