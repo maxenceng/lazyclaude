@@ -25,7 +25,7 @@ public final class RegistryContractFixture {
     private RegistryContractFixture() {}
 
     public static PtyHostRepository hostOfTheRealClaude() {
-        return new PtyHostRepository(List.of("claude"), System.getenv());
+        return new PtyHostRepository(List.of("claude"), System.getenv(), PtyNativeFolderFixture.testRunNatives());
     }
 
     public static ProcessId spawnedInTheProjectRoot(PtyHostRepository host, SessionId id) {
