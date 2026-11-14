@@ -7,12 +7,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
-import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
-import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
+import dev.maxenceng.lazyclaude.review.published.ThreadLine;
 
 /**
  * What the review screen shows of a pull request's comments, from the threads and the pending comments with their lines: which threads
- * show under their lines, what Comments lists and in what order, and which pending comment a line's keys act on.
+ * show and where, what Comments lists and in what order, and which pending comment the keys act on at each place.
  */
 public record CommentsInDiff(ThreadsInDiff threads, PendingCommentsInDiff pending) {
 
@@ -21,8 +20,8 @@ public record CommentsInDiff(ThreadsInDiff threads, PendingCommentsInDiff pendin
         Assert.notNull("pending", pending);
     }
 
-    /** The threads that show under their diff lines: a resolved one only while resolved threads are shown. */
-    public List<ThreadInDiff> underLines(boolean resolvedShown) {
+    /** The threads that show, each where it shows: a resolved one only while resolved threads are shown. */
+    public List<ThreadInDiff> shown(boolean resolvedShown) {
         return threads.threads().stream().filter(placed -> resolvedShown || !placed.thread().resolved()).toList();
     }
 
@@ -31,11 +30,13 @@ public record CommentsInDiff(ThreadsInDiff threads, PendingCommentsInDiff pendin
         return Stream.<CommentInDiff>concat(pending.comments().stream(), threads.threads().stream()).toList();
     }
 
-    /** Per diff line that has pending comments, in diff order, the one written last: the comment {@code enter} edits and {@code x} deletes there. */
-    public List<PendingInDiff> lastOnLines() {
-        Map<DiffLineIndex, PendingInDiff> last = pending.comments().stream()
-                .flatMap(placed -> placed.line() instanceof OnDiffLine(DiffLineIndex index) ? Stream.of(Map.entry(index, placed)) : Stream.empty())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (_, later) -> later, LinkedHashMap::new));
+    /**
+     * Per place that has pending comments — a diff line, a file's header, or after the diff — in diff order, the one written last: the
+     * comment {@code enter} edits and {@code x} deletes there.
+     */
+    public List<PendingInDiff> lastAtPlaces() {
+        Map<ThreadLine, PendingInDiff> last = pending.comments().stream()
+                .collect(Collectors.toMap(PendingInDiff::line, placed -> placed, (_, later) -> later, LinkedHashMap::new));
         return last.values().stream().toList();
     }
 

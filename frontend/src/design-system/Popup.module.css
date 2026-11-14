@@ -6,7 +6,7 @@
   width: min(560px, calc(100vw - 2 * var(--space-5)));
   border: 1px solid var(--text);
   box-shadow: 0 var(--space-2) var(--space-5) var(--bar);
-  z-index: 1;
+  z-index: 2;
 }
 
 .content {

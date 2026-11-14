@@ -5,6 +5,7 @@ import { AppModel } from './app';
 import { Action } from './keys/bindings';
 import { Dock } from './session/dock';
 import { Focus, WindowTab } from './layout';
+import { ScrollStep } from './docs/documentScroll';
 import { FaultedConfiguration } from './keys/configurationState';
 import { Connecting, Exited, Ready } from './protocol';
 import type { OpenReview } from './review/openReview';
@@ -151,13 +152,84 @@ const hostedApp = async () => {
   return app;
 };
 
+describe('the app and the left column\'s panel tabs', () => {
+  it('switches to the Docs tab on o, focusing it, and back to the Board on o again', async () => {
+    const app = await docsApp();
+    app.press(Action.TogglePanel);
+    expect(app.layout.get().panel).toBe(Focus.Docs);
+    expect(app.layout.get().focus).toBe(Focus.Docs);
+    app.press(Action.TogglePanel);
+    expect(app.layout.get().panel).toBe(Focus.Board);
+    expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+
+  it('keeps each tab\'s selection across switches', async () => {
+    const app = await docsApp();
+    app.focusOn(Focus.Docs);
+    app.docs.move(1);
+    const document = app.docs.selectedKey()?.path;
+    app.press(Action.TogglePanel);
+    app.press(Action.TogglePanel);
+    expect(app.docs.selectedKey()?.path).toBe(document);
+    expect(app.board.selectedTicket()?.id).toBe('PROJ-1');
+  });
+
+  it('shows the Docs tab when focus goes down from the Board, and the Board tab on h', async () => {
+    const app = await docsApp();
+    app.press(Action.FocusDown);
+    expect(app.layout.get().panel).toBe(Focus.Docs);
+    app.press(Action.PanelLeft);
+    expect(app.layout.get().panel).toBe(Focus.Board);
+  });
+});
+
 describe('the app and a shown document', () => {
-  it('closes a shown document on escape, leaving focus on the Docs panel, and goes to the Board on a second escape', async () => {
+  it('moves focus from the Docs panel to the shown document on l, and back on h with the document kept', async () => {
+    const app = await docsApp();
+    app.focusOn(Focus.Docs);
+    app.press(Action.PanelRight);
+    expect(app.layout.get().focus).toBe(Focus.Document);
+    app.press(Action.PanelLeft);
+    expect(app.layout.get().focus).toBe(Focus.Docs);
+    expect(app.layout.get().showsDocument(), 'going back to the Docs panel keeps the document it shows').toBe(true);
+  });
+
+  it('scrolls the focused document a line on j and k and half a page on ctrl+d and ctrl+u, leaving the Docs cursor where it is', async () => {
+    const app = await docsApp();
+    app.focusOn(Focus.Docs);
+    const cursor = app.docs.selectedKey();
+    app.focusOn(Focus.Document);
+    const steps = [Action.MoveDown, Action.MoveUp, Action.HalfPageDown, Action.HalfPageUp].map((action) => {
+      app.press(action);
+      return app.docs.scroll.get().step;
+    });
+    expect(steps).toEqual([ScrollStep.LineDown, ScrollStep.LineUp, ScrollStep.HalfPageDown, ScrollStep.HalfPageUp]);
+    expect(app.docs.selectedKey()).toEqual(cursor);
+  });
+
+  it('closes the focused document on escape and hands focus to the ticket', async () => {
+    const app = await docsApp();
+    app.focusOn(Focus.Docs);
+    app.focusOn(Focus.Document);
+    app.press(Action.Back);
+    expect(app.layout.get().showsDocument()).toBe(false);
+    expect(app.layout.get().focus).toBe(Focus.Sessions);
+  });
+
+  it('goes up from the dock to the document it keeps shown', async () => {
+    const app = await hostedApp();
+    app.focusOn(Focus.Docs);
+    app.focusOn(Focus.Dock);
+    app.press(Action.FocusUp);
+    expect(app.layout.get().focus).toBe(Focus.Document);
+  });
+
+  it('closes a shown document on escape and hands focus to the ticket, and goes to the Board on a second escape', async () => {
     const app = await docsApp();
     app.focusOn(Focus.Docs);
     app.press(Action.Back);
     expect(app.layout.get().showsDocument(), 'the first escape closes the document').toBe(false);
-    expect(app.layout.get().focus).toBe(Focus.Docs);
+    expect(app.layout.get().focus).toBe(Focus.Sessions);
     app.press(Action.Back);
     expect(app.layout.get().focus).toBe(Focus.Board);
   });
@@ -174,6 +246,7 @@ describe('the app and a shown document', () => {
     const app = await docsApp();
     app.focusOn(Focus.Docs);
     app.press(Action.Back);
+    app.focusOn(Focus.Docs);
     app.press(Action.Back);
     app.focusOn(Focus.Board);
     app.press(Action.Back);
@@ -184,11 +257,25 @@ describe('the app and a shown document', () => {
     const app = await docsApp();
     app.focusOn(Focus.Docs);
     app.press(Action.Back);
+    app.focusOn(Focus.Docs);
     app.press(Action.MoveDown);
     expect(app.layout.get().showsDocument()).toBe(true);
     app.press(Action.Back);
+    app.focusOn(Focus.Docs);
     app.press(Action.Open);
     expect(app.layout.get().showsDocument()).toBe(true);
+  });
+});
+
+describe('the app and the dock\'s zoom button', () => {
+  it('focuses the dock from another pane and zooms it, and a second press leaves the zoom', async () => {
+    const app = await hostedApp();
+    app.focusOn(Focus.Board);
+    app.toggleZoom();
+    expect(app.layout.get().focus).toBe(Focus.Dock);
+    expect(app.layout.get().zoomed).toBe(true);
+    app.toggleZoom();
+    expect(app.layout.get().zoomed).toBe(false);
   });
 });
 
@@ -296,12 +383,12 @@ const PULL_REQUEST = { number: 7, title: 'Add the thing', head: 'proj-1-first', 
 
 const opened = async (client: FakeClient, app: AppModel) => {
   app.press(Action.Review);
-  client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+  client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
   await settled();
 };
 
 const placed = async (client: FakeClient) => {
-  client.answerAll('review/commentsInDiff', { threads: [], pending: [], underLines: [], listed: [], lastOnLines: [] });
+  client.answerAll('review/commentsInDiff', { threads: [], pending: [], shown: [], listed: [], lastAtPlaces: [] });
   client.answerAll('review/summaryToSubmit', '');
   await settled();
 };
@@ -350,20 +437,18 @@ describe('the app and a review', () => {
     expect(app.layout.get().focus).toBe(Focus.Board);
   });
 
-  it('moves focus between Files, Comments and the diff with the panel keys', async () => {
+  it('moves focus between Files and the diff with the panel keys, and down from Files goes nowhere', async () => {
     const { client, app } = await reviewing();
     await opened(client, app);
     app.press(Action.PanelLeft);
     expect(app.layout.get().focus).toBe(Focus.Files);
     app.press(Action.FocusDown);
-    expect(app.layout.get().focus).toBe(Focus.Comments);
-    app.press(Action.FocusUp);
     expect(app.layout.get().focus).toBe(Focus.Files);
     app.press(Action.PanelRight);
     expect(app.layout.get().focus).toBe(Focus.Diff);
   });
 
-  it('takes j and k as the cursor of the diff, and of Files and Comments once they have focus', async () => {
+  it('takes j and k as the cursor of the diff, and of Files once it has focus', async () => {
     const { client, app } = await reviewing();
     await opened(client, app);
     const current = app.review.current.get();
@@ -468,7 +553,7 @@ describe('the app and its window tabs', () => {
     await opened(client, app);
     app.press(Action.ShowBase);
     app.press(Action.Review);
-    client.answer('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
+    client.answerAll('review/pullRequestOn', { kind: 'headedPullRequest', pullRequest: PULL_REQUEST });
     await settled();
     app.chooseTab(WindowTab.PullRequests);
     expect(app.review.isOpen()).toBe(false);

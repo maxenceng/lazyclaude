@@ -14,6 +14,7 @@
 }
 
 .selected {
+  --tag-ink: var(--cursor-tag-ink);
   background: var(--cursor-ground);
   color: var(--cursor-ink);
   box-shadow: var(--cursor-edge);
@@ -27,12 +28,6 @@
   color: var(--cursor-ink);
 }
 
-.noLamp {
-  display: inline-block;
-  width: var(--lamp-marker);
-  flex: none;
-}
-
 .id {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -43,4 +38,8 @@
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.row:hover:not(.selected) {
+  background: var(--hover-ground);
 }

@@ -47,3 +47,7 @@
 .selected .count {
   color: var(--cursor-ink);
 }
+
+.row:hover:not(.selected) {
+  background: var(--hover-ground);
+}

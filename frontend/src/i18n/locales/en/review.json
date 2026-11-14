@@ -7,43 +7,38 @@
       "deletedFile": "D",
       "renamedFile": "R"
     },
-    "renamed": "{{from}} → {{to}}"
-  },
-  "comments": {
-    "title": "Comments",
-    "loading": "Reading the threads…",
-    "none": "no threads",
-    "unknown": "threads unknown ({{reason}})",
-    "outdated": "{{file}}  outdated",
-    "placed": "{{file}}:{{lines}}",
-    "replies_one": "{{count}} reply · {{author}}",
-    "replies_other": "{{count}} replies · {{author}}"
+    "renamed": "{{from}} → {{to}}",
+    "count_one": "{{count}} file",
+    "count_other": "{{count}} files",
+    "delta": "+{{added}} −{{removed}}"
   },
   "diff": {
-    "title": "PR #{{number}} {{title}}",
+    "title": "Review",
     "loading": "Reading the diff…",
     "unavailable": "PR unknown ({{reason}})",
     "tooLarge": "diff too large for GitHub ({{reason}})",
     "empty": "no changes",
     "fault": "The diff could not be read",
-    "retry": "Retry"
-  },
-  "annotation": {
-    "lines": "L{{lines}}",
-    "you": "you",
-    "reply": "reply",
-    "replyAction": "Reply",
-    "replyLabel": "Reply to the thread on {{lines}}"
+    "retry": "Retry",
+    "number": "#{{number}}",
+    "close": "Close the review",
+    "closeKey": "esc",
+    "outside": "Not in this diff"
   },
   "panel": {
-    "title": "Review",
+    "title": "Pending review",
     "loading": "Reading the pending review…",
     "none": "no pending review",
-    "noSummary": "no summary",
     "unknown": "pending unknown ({{reason}})",
-    "count": "{{count}} pending",
     "writtenOn": "written on {{commit}},",
-    "headIs": "head is now {{commit}}"
+    "headIs": "head is now {{commit}}",
+    "badge": "pending review",
+    "badgeNone": "no pending review",
+    "count_one": "{{count}} comment",
+    "count_other": "{{count}} comments",
+    "summary": " · “{{summary}}”",
+    "submit": "Submit review",
+    "submitKey": "S"
   },
   "box": {
     "comment": "Pending comment",
@@ -69,22 +64,12 @@
     "diff": [
       "c comment",
       "v range",
-      "enter edit",
+      "enter reply or edit",
       "x delete",
       "S submit",
       "j/k line",
       "J/K file",
       "^d/^u page",
-      "r resolved",
-      "R refresh",
-      "esc back"
-    ],
-    "comments": [
-      "c reply",
-      "enter open",
-      "x delete",
-      "S submit",
-      "j/k move",
       "r resolved",
       "R refresh",
       "esc back"
@@ -105,6 +90,62 @@
     "loading": "Reading the pull requests…",
     "empty": "No open pull requests.",
     "fault": "The pull requests could not be read",
-    "retry": "Retry"
+    "retry": "Retry",
+    "columns": {
+      "ci": "CI",
+      "ticket": "Ticket",
+      "title": "Title",
+      "branch": "Branch",
+      "comments": "Comments",
+      "age": "Age"
+    },
+    "ci": {
+      "failed": "failing",
+      "pending": "running",
+      "passed": "passing",
+      "none": "no checks"
+    },
+    "noTicket": "no ticket",
+    "commentCount_zero": "no comments",
+    "commentCount_one": "{{count}} comment",
+    "commentCount_other": "{{count}} comments",
+    "pendingBadge": "pending",
+    "open": "{{count}} open",
+    "age": {
+      "now": "now",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}h",
+      "days": "{{count}}d"
+    },
+    "label": "Open pull requests"
+  },
+  "thread": {
+    "where": "{{file}}:{{lines}}",
+    "whereOutdated": "{{file}}",
+    "whereReply": "{{file}} reply",
+    "open_one": "open · {{count}} comment",
+    "open_other": "open · {{count}} comments",
+    "resolved": "resolved",
+    "outdated": "outdated",
+    "reply": "Reply",
+    "replyLabel": "Reply to the thread on {{where}}",
+    "replyKey": "enter",
+    "outdatedWasLine": "outdated · was line {{lines}}",
+    "outdatedWasLines": "outdated · was lines {{lines}}",
+    "notInDiffLine": "not in this diff · line {{lines}}",
+    "notInDiffLines": "not in this diff · lines {{lines}}"
+  },
+  "pendingComment": {
+    "you": "you",
+    "tag": "pending · not submitted",
+    "edit": "Edit",
+    "editLabel": "Edit your comment on {{where}}",
+    "editKey": "enter",
+    "delete": "Delete",
+    "deleteLabel": "Delete your comment on {{where}}",
+    "deleteKey": "x",
+    "movedHeadLine": "pending · head moved · line {{lines}}",
+    "movedHeadLines": "pending · head moved · lines {{lines}}",
+    "onOutdatedThread": "pending · on an outdated thread"
   }
 }

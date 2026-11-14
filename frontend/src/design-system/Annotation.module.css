@@ -1,60 +1,99 @@
-.annotation {
-  margin: 0 var(--space-4) var(--space-2) calc(var(--space-4) + 4ch + 4ch + 3ch);
-  padding: var(--space-1) var(--space-3);
-  border-left: 1px solid var(--seam);
-  font: var(--size-body) / 1.5 var(--font-mono);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+.item {
+  padding: var(--space-2) 0 var(--space-3);
 }
 
-.thread .mark {
-  color: var(--ansi-magenta);
+.card {
+  position: relative;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  background: var(--card);
+  border-left: 3px solid var(--edge-open);
+  border-top: 1px solid var(--card-edge);
+  border-bottom: 1px solid var(--card-edge);
+  color: var(--text);
+  font: var(--size-body) / 1.55 var(--font-read);
 }
 
-.pending .mark {
-  color: var(--ansi-bright-blue);
+.card::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--space-2) - 1px);
+  left: var(--space-5);
+  border: var(--space-2) solid transparent;
+  border-top: 0;
+  border-bottom-color: var(--card-edge);
 }
 
 .pending {
-  border-left-color: var(--ansi-bright-blue);
+  border-left-color: var(--edge-pending);
 }
 
-.thread {
-  border-left-color: var(--ansi-magenta);
+.dim .body,
+.dim .author {
+  color: var(--card-dim);
 }
 
-.dim {
-  opacity: 0.6;
+.head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-1);
 }
 
-.heading {
-  color: var(--dim);
+.where {
+  font: 600 var(--size-label) var(--font-mono);
+}
+
+.comment {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--seam);
+}
+
+.comment:first-of-type {
+  border-top: 0;
 }
 
 .author {
   font-weight: 600;
 }
 
-.reply {
-  padding-left: var(--space-4);
+.body {
+  margin-top: var(--space-1);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-.replyAction {
-  display: block;
-  margin-top: var(--space-1);
-  padding: 0;
+.actions {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+.action {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-1) 0;
   border: 0;
   background: transparent;
-  color: var(--dim);
-  font: inherit;
+  color: var(--card-dim);
+  font: var(--size-label) var(--font-read);
   cursor: pointer;
 }
 
-.replyAction:hover {
+.action:hover {
   color: var(--text);
 }
 
-.replyAction:focus-visible {
+.action:focus-visible {
   outline: var(--focus-edge) solid var(--focus);
   outline-offset: 2px;
+}
+
+.chip {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--card-radius);
+  font: var(--size-small) var(--font-mono);
 }

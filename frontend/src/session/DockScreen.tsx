@@ -11,7 +11,11 @@ interface Props {
   sessions: SessionSessionsView | undefined;
   focused: boolean;
   onFocus: () => void;
+  zoomed: boolean;
+  /** The chord that zooms the dock from inside it, which `config.yml` chooses; none while no configuration is read. */
+  zoomKey: string | undefined;
   onMinimise: () => void;
+  onZoom: () => void;
 }
 
 const tabsOf = (ids: readonly string[], sessions: SessionSessionsView | undefined, starting: string): Tab[] =>
@@ -19,13 +23,13 @@ const tabsOf = (ids: readonly string[], sessions: SessionSessionsView | undefine
     const hosted = sessions?.hosted.find((candidate) => candidate.id === id);
     return {
       id,
-      label: hosted?.ticket ?? hosted?.live?.name ?? starting,
+      label: hosted?.live?.name ?? hosted?.ticket ?? starting,
       lamp: hosted?.live == null ? LampColour.Off : colourOf(hosted.live),
     };
   });
 
-/** The dock: a tab per hosted session over the selected one's terminal, `claude`'s own screen filling the pane. */
-export const DockScreen = ({ hosting, sessions, focused, onFocus, onMinimise }: Props) => {
+/** The dock, titled Sessions: a tab per hosted session beside its title, over the selected one's terminal, `claude`'s own screen filling the pane. */
+export const DockScreen = ({ hosting, sessions, focused, zoomed, zoomKey, onFocus, onMinimise, onZoom }: Props) => {
   const { t } = useTranslation('session');
   const dock = useStore(hosting.dock);
   const selected = dock.selectedTab();
@@ -58,16 +62,21 @@ export const DockScreen = ({ hosting, sessions, focused, onFocus, onMinimise }: 
       title={t('dock.title')}
       focused={focused}
       layout={PaneLayout.Fill}
-      action={{ kind: PaneActionKind.Minimise, label: t('dock.minimise'), onClick: onMinimise }}
+      actions={[
+        { kind: PaneActionKind.Zoom, label: zoomed ? t('dock.unzoom') : t('dock.zoom'), shortcut: zoomKey, onClick: onZoom },
+        { kind: PaneActionKind.Minimise, label: t('dock.minimise'), shortcut: t('dock.minimiseKey'), onClick: onMinimise },
+      ]}
+      beside={
+        <DockTabs
+          tabs={tabs}
+          selected={selected}
+          onSelect={(id) => {
+            hosting.select(id);
+            onFocus();
+          }}
+        />
+      }
     >
-      <DockTabs
-        tabs={tabs}
-        selected={selected}
-        onSelect={(id) => {
-          hosting.select(id);
-          onFocus();
-        }}
-      />
       <TerminalSurface ref={surface} label={t('dock.terminal')} onFocus={onFocus} />
     </Pane>
   );
@@ -87,10 +96,11 @@ export const DockStrip = ({ hosting, sessions, onSelect, onRestore }: StripProps
   const dock = useStore(hosting.dock);
   return (
     <DockTabs
+      strip
       tabs={tabsOf(dock.tabs, sessions, t('dock.starting'))}
       selected={dock.selectedTab()}
       onSelect={onSelect}
-      action={onRestore === undefined ? undefined : { kind: PaneActionKind.Restore, label: t('dock.restore'), onClick: onRestore }}
+      action={onRestore === undefined ? undefined : { kind: PaneActionKind.Restore, label: t('dock.restore'), shortcut: t('dock.minimiseKey'), onClick: onRestore }}
     />
   );
 };

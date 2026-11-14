@@ -2,13 +2,13 @@
   "board": {
     "title": "Board",
     "loading": "Reading the board…",
-    "empty": "No tickets on the board.",
     "noProject": "This directory is not a project",
     "unavailableBoard": "The board cannot be read",
     "fault": "The board could not be read",
     "retry": "Retry",
-    "unreadable": "unreadable",
-    "capture": "New ticket"
+    "none": "none",
+    "capture": "New ticket",
+    "captureKey": "c"
   },
   "status": {
     "IN_PROGRESS": "in progress",
@@ -20,16 +20,28 @@
   "ticket": {
     "title": "Ticket",
     "noneSelected": "No ticket selected.",
-    "hide": "Hide ticket"
+    "number": "#{{id}}",
+    "hide": "Hide ticket",
+    "hideKey": "m"
+  },
+  "facts": {
+    "status": "status",
+    "type": "type",
+    "context": "context",
+    "labels": "labels",
+    "pullRequest": "pull request",
+    "pullRequestNumber": "#{{number}}",
+    "noPullRequest": "none open",
+    "pullRequestsUnavailable": "unavailable",
+    "readingPullRequest": "reading…"
   },
   "keyBar": {
     "move": "j/k move",
     "open": "enter open",
-    "new": "n new",
-    "newUnlinked": "N new",
+    "new": "n/N new",
     "columns": "h/j/k/l move",
     "openTicket": "enter go to ticket",
-    "capture": "c capture",
+    "capture": "c new draft",
     "create": "enter create",
     "cancel": "esc cancel"
   },

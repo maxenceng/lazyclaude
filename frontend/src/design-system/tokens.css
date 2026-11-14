@@ -1,12 +1,15 @@
 :root {
-  --ground: #141516;
-  --pane: #1c1d1f;
+  --ground: #0d0e0f;
+  --pane: #18191b;
+  --pane-lift: #202226;
+  --lit: #e6e2d8;
+  --lit-ink: #121314;
   --pane-sunk: #111213;
   --bar: #0c0c0d;
   --seam: #2a2b2e;
 
   --text: #d9d6cf;
-  --dim: #8a8780;
+  --dim: #918e87;
   --dim-done: #87847d;
   --text-on-light: #141516;
 
@@ -17,8 +20,12 @@
   --lamp-turn: #2fa84f;
   --lamp-turn-ink: #08170d;
   --lamp-turn-tile: #1f3d29;
+  --lamp-turn-tile-dim: #b0ada5;
+  --lamp-input-tile: #3a2e0c;
+  --lamp-permission-tile: #3d1b18;
   --lamp-off: #26272a;
-  --lamp-off-ink: #76777a;
+  --lamp-off-ink: #a3a49f;
+  --ended-dot: #8f8c85;
 
   --terminal-ground: #0e0f10;
   --terminal-selection: #2e4560;
@@ -30,7 +37,7 @@
   --ansi-magenta: #a581b0;
   --ansi-cyan: #68a5a5;
   --ansi-white: #c9c6bf;
-  --ansi-bright-black: #6b6c70;
+  --ansi-bright-black: #8a8d92;
   --ansi-bright-red: #cb8179;
   --ansi-bright-green: #8db596;
   --ansi-bright-yellow: #c9b57f;
@@ -39,16 +46,37 @@
   --ansi-bright-cyan: #8cc2c2;
   --ansi-bright-white: #ece9e2;
 
-  --diff-added: color-mix(in srgb, var(--ansi-green) 11%, var(--pane));
-  --diff-removed: color-mix(in srgb, var(--ansi-red) 11%, var(--pane));
+  --diff-added: #222725;
+  --diff-removed: #2a2223;
+  --diff-cursor: #26282b;
+  --diff-gutter: #a19e96;
+  --diff-gutter-hot: #d9d6cf;
   --diff-range: color-mix(in srgb, var(--ansi-blue) 16%, var(--pane));
+
+  --status-in-progress: #8cb7de;
+  --status-in-review: #c19dcb;
+  --status-todo: #c9b57f;
+  --status-draft: #b4b0a6;
+  --status-done: #8db596;
+  --type-feature: #8cc2c2;
+  --type-fix: #e48b81;
+  --type-chore: #d9a066;
 
   --ci-failed: #d9695f;
   --ci-pending: #c9a94c;
   --ci-passed: #6fb27c;
   --ci-failed-on-light: #9c2a22;
-  --ci-pending-on-light: #7a5d00;
+  --ci-pending-on-light: #6b5100;
   --ci-passed-on-light: #1d6b34;
+
+  --edge-open: #8cb7de;
+  --edge-pending: #f2a900;
+  --badge-pending-ground: #f2a900;
+  --badge-pending-ink: #231800;
+  --affirm-ground: #6fb27c;
+  --affirm-ink: #08170d;
+  --affirm-chip-ground: #0d2415;
+  --affirm-chip-ink: #e6f4ea;
 
   --focus: #5aa9e6;
   --selected: #d9d6cf;
@@ -58,7 +86,10 @@
   --cursor-edge: none;
   --card: #232427;
   --card-edge: #2f3034;
-  --card-dim: #908d86;
+  --card-hover: #2a2b2e;
+  --card-lifted: #323234;
+  --cursor-card: var(--card-lifted);
+  --card-dim: #a29f98;
 
   --font-read: Barlow, system-ui, sans-serif;
   --font-stencil: 'Saira Stencil One', Barlow, sans-serif;
@@ -70,7 +101,7 @@
   --size-body: 14px;
   --size-base: 15px;
   --size-terminal: 13px;
-  --size-lamp: 24px;
+  --size-lamp: 16px;
 
   --reading-min: 15px;
   --reading-max: 18px;
@@ -84,6 +115,8 @@
   --reading-code-em: 0.9333em;
   --reading-label-em: 0.8667em;
 
+  --gutter: 8px;
+  --pane-radius: 6px;
   --space-1: 3px;
   --space-2: 6px;
   --space-3: 10px;
@@ -91,10 +124,21 @@
   --space-5: 24px;
 
   --focus-edge: 2px;
-  --lamp-tile-width: 118px;
-  --lamp-tile-height: 46px;
+  --lamp-tile-width: 84px;
+  --lamp-tile-height: 40px;
+  --lamp-number-row: 20px;
+  --lamp-words-row: 13px;
   --lamp-marker: 14px;
+  --session-state-column: 110px;
+  --session-waiting-pad: 14px;
+  --session-name-leading: 1.4;
+  --pane-head: 38px;
   --pane-action: 24px;
   --pane-action-icon: 12px;
   --card-radius: 3px;
+  --card-edge-width: 3px;
+  --pill-radius: 9px;
+  --hover-ground: color-mix(in srgb, currentColor 8%, transparent);
+  --popup-shadow: 0 8px 28px rgb(0 0 0 / 0.5);
+  --popup-shadow-up: 0 -12px 28px rgb(0 0 0 / 0.45);
 }

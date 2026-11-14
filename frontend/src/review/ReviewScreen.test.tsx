@@ -2,8 +2,10 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RpcError } from '../protocol';
-import { added, commentsFixture, diffFixture, fileFixture, hunk, kept, onLine, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
-import { CommentsPane, DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './ReviewScreen';
+import { ruleOf, stylesheet } from '../design-system/stylesheet';
+import { added, atHead, commentsFixture, pullRequestFixture, diffFixture, fileFixture, hunk, kept, onLine, outside, placed, openPending, pendingCommentFixture, pendingInDiff, removed, threadFixture, threadInDiff, threadsFixture } from './fixtures';
+import { DiffPane, FilesPane, ReviewDialogs, ReviewPanel } from './ReviewScreen';
+import { StopKind } from './diffRows';
 import { Harness, settle } from './reviewHarness';
 
 const diff = diffFixture([
@@ -11,11 +13,14 @@ const diff = diffFixture([
   fileFixture('src/b.ts', [hunk('@@ -1 +1 @@', [added(1, 'b')])]),
 ]);
 
+const lineElements = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-line]')];
+
 const renderDiff = (harness: Harness, focused = true) => {
   const onFocus = vi.fn();
   const onRetry = vi.fn();
-  render(<DiffPane review={harness.review} focused={focused} onFocus={onFocus} onRetry={onRetry} />);
-  return { onFocus, onRetry };
+  const onClose = vi.fn();
+  render(<DiffPane review={harness.review} focused={focused} onFocus={onFocus} onRetry={onRetry} onClose={onClose} />);
+  return { onFocus, onRetry, onClose };
 };
 
 describe('the diff of a review', () => {
@@ -59,20 +64,50 @@ describe('the diff of a review', () => {
     expect(onRetry).toHaveBeenCalled();
   });
 
-  it('titles the pane with the pull request', () => {
-    const harness = new Harness();
+  it('titles the pane Review and names beside it the pull request, the ticket it closes, its CI in a word and its branch', () => {
+    const harness = new Harness(pullRequestFixture({ number: 7, head: 'proj-1-first', checks: [{ name: 'build', outcome: 'FAILED' }], closing: { kind: 'closesIssue', number: 12 } }));
     renderDiff(harness);
-    expect(screen.getByRole('region', { name: 'PR #7 Add the thing' })).toBeInTheDocument();
+    const pane = screen.getByRole('region', { name: 'Review' });
+    expect(within(within(pane).getByRole('list', { name: 'Review' })).getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['#7', '12', 'failing', 'proj-1-first']);
   });
 
-  it('shows each file under a rule with its hunks and their lines between two number gutters, a sign saying what changed', async () => {
+  it('names no ticket beside the title of a pull request that closes none', () => {
+    const harness = new Harness(pullRequestFixture({ number: 7, head: 'proj-1-first' }));
+    renderDiff(harness);
+    expect(within(screen.getByRole('list', { name: 'Review' })).getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['#7', 'no checks', 'proj-1-first']);
+  });
+
+  it('closes the review from the button in its title row, as esc does', async () => {
+    const harness = new Harness();
+    const { onClose } = renderDiff(harness);
+    await userEvent.click(screen.getByRole('button', { name: /Close the review/ }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('opens each file rule with the letter of what the diff does to it', async () => {
+    const harness = new Harness();
+    await harness.readAll({ diff: diffFixture([fileFixture('src/new.ts', [hunk('@@ -0,0 +1 @@', [added(1, 'x')])], { kind: 'addedFile' })]) });
+    renderDiff(harness);
+    expect(screen.getByRole('heading', { name: /src\/new\.ts/ })).toHaveTextContent(/^Asrc\/new\.ts/);
+  });
+
+  it('sets inline code of a comment in code type, without its backticks', async () => {
+    const harness = new Harness();
+    const thread = threadFixture({ comments: [{ author: 'ada', body: 'Why `tryLock` here?' }] });
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], shown: [threadInDiff(thread, onLine(0))] }) });
+    renderDiff(harness);
+    expect(screen.getByText('tryLock').tagName).toBe('CODE');
+    expect(screen.queryByText(/`/)).not.toBeInTheDocument();
+  });
+
+  it('shows each file under a rule with its hunks and their lines behind one gutter of numbers, the old number on a removed line and a sign saying what changed', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     renderDiff(harness);
-    expect(screen.getByRole('heading', { name: 'src/a.ts' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /src\/a\.ts/ })).toBeInTheDocument();
     expect(screen.getByText('@@ -1,2 +1,3 @@')).toBeInTheDocument();
-    const lines = screen.getAllByRole('button');
-    expect(lines.map((line) => line.textContent)).toEqual(['11 one', '2-two', '2+deux', '1+b']);
+    const lines = lineElements();
+    expect(lines.map((line) => line.textContent)).toEqual(['1 one', '2-two', '2+deux', '1+b']);
     expect(within(lines[1]!).getByText('-')).toBeInTheDocument();
     expect(within(lines[2]!).getByText('+')).toBeInTheDocument();
   });
@@ -81,9 +116,9 @@ describe('the diff of a review', () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     renderDiff(harness);
-    act(() => harness.review.moveLine(2));
-    expect(screen.getAllByRole('button')[2]).toHaveAttribute('aria-current', 'true');
-    expect(screen.getAllByRole('button')[0]).not.toHaveAttribute('aria-current');
+    act(() => harness.review.moveCursor(2));
+    expect(lineElements()[2]).toHaveAttribute('aria-current', 'true');
+    expect(lineElements()[0]).not.toHaveAttribute('aria-current');
   });
 
   it('sets a thread and a pending comment under their line', async () => {
@@ -94,18 +129,128 @@ describe('the diff of a review', () => {
       diff,
       threads: threadsFixture([thread]),
       pending: openPending([comment]),
-      comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))], pending: [pendingInDiff(comment, onLine(0))] }),
+      comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], shown: [threadInDiff(thread, onLine(0))], pending: [pendingInDiff(comment, onLine(0))] }),
     });
     renderDiff(harness);
     const articles = screen.getAllByRole('article');
-    expect(articles[0]).toHaveTextContent('◆ L1–2');
-    expect(articles[0]).toHaveTextContent('ada Why this?');
-    expect(articles[0]).toHaveTextContent('bob Speed');
-    expect(articles[1]).toHaveTextContent('✎ L1');
-    expect(articles[1]).toHaveTextContent('you Rename this');
+    expect(articles[0]).toHaveTextContent('a.ts:1–2');
+    expect(articles[0]).toHaveTextContent('open · 2 comments');
+    expect(articles[0]).toHaveTextContent('adaWhy this?');
+    expect(articles[0]).toHaveTextContent('bobSpeed');
+    expect(articles[1]).toHaveTextContent('a.ts:1');
+    expect(articles[1]).toHaveTextContent('pending · not submitted');
+    expect(articles[1]).toHaveTextContent('youRename this');
   });
 
-  it('ends a thread with a Reply, and a pending comment with none', async () => {
+  it('marks the line a thread hangs from, by a glyph and not by colour alone', async () => {
+    const harness = new Harness();
+    const thread = threadFixture({ id: 'T1' });
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(1))], shown: [threadInDiff(thread, onLine(1))] }) });
+    renderDiff(harness);
+    expect(within(lineElements()[1]!).getByRole('img', { name: 'a thread hangs from this line' })).toHaveTextContent('◆');
+    expect(within(lineElements()[0]!).queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('shows a thread once, as a card across the diff, and no second list of it', async () => {
+    const harness = new Harness();
+    const thread = threadFixture({ id: 'T1' });
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], shown: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }) });
+    renderDiff(harness);
+    expect(screen.getAllByText('Why this?')).toHaveLength(1);
+  });
+
+  it('shows a thread review places at the head of its file under the file rule and before the first hunk, marked outdated', async () => {
+    const harness = new Harness();
+    const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } }, open: false, comments: [{ author: 'cy', body: 'Old' }] });
+    const entry = threadInDiff(outdated, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    const card = screen.getByRole('article');
+    expect(card).toHaveTextContent('b.ts');
+    expect(card).toHaveTextContent('outdated');
+    expect(card).toHaveTextContent('cyOld');
+    const heading = screen.getByRole('heading', { name: /src\/b\.ts/ }).closest('li')!;
+    expect(heading.nextElementSibling).toContainElement(card);
+    expect(card.closest('li')!.nextElementSibling).toHaveTextContent('@@ -1 +1 @@');
+  });
+
+  it.each([
+    ['one line', { kind: 'originallyPlaced', place: placed(40) }, 'outdated · was line 40'],
+    ['a range', { kind: 'originallyPlaced', place: placed(40, 41) }, 'outdated · was lines 40–41'],
+    ['no place', { kind: 'noOriginalPlace' }, 'outdated'],
+  ] as const)('says where an outdated thread was on %s', async (_name, was, tag) => {
+    const harness = new Harness();
+    const outdated = threadFixture({ id: 'T4', path: 'src/b.ts', position: { kind: 'outdatedThread', was }, open: true });
+    const entry = threadInDiff(outdated, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    expect(within(screen.getByRole('article')).getByText(tag, { exact: true })).toBeInTheDocument();
+  });
+
+  it('says a current thread on a line the diff does not show is not in this diff, and names its line, never outdated', async () => {
+    const harness = new Harness();
+    const moved = threadFixture({ id: 'T5', path: 'src/b.ts', position: placed(40, 41), open: true });
+    const entry = threadInDiff(moved, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([moved]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    expect(screen.getByRole('article')).toHaveTextContent('not in this diff · lines 40–41');
+    expect(screen.getByRole('article')).not.toHaveTextContent('outdated');
+  });
+
+  it('shows a thread on a file the diff does not hold once, under Not in this diff after the last file', async () => {
+    const harness = new Harness();
+    const outdated = threadFixture({ id: 'T3', path: 'src/c.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } }, comments: [{ author: 'cy', body: 'Reverted' }] });
+    const entry = threadInDiff(outdated, outside);
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    const rule = screen.getByRole('heading', { name: 'Not in this diff' }).closest('li')!;
+    expect(rule.nextElementSibling).toContainElement(screen.getByRole('article'));
+    expect(rule.nextElementSibling!.nextElementSibling).toBeNull();
+    expect(screen.getAllByText('Reverted')).toHaveLength(1);
+  });
+
+  it('lifts a file rule the cursor stands on, and moves the cursor there on a press', async () => {
+    const harness = new Harness();
+    const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } });
+    const entry = threadInDiff(outdated, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    const rule = screen.getByRole('heading', { name: /src\/b\.ts/ });
+    expect(rule).not.toHaveAttribute('aria-current');
+    fireEvent.mouseDown(rule, { button: 0 });
+    expect(harness.review.cursorStop()).toEqual({ kind: StopKind.Head, file: 1 });
+    expect(screen.getByRole('heading', { name: /src\/b\.ts/ })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('opens the comment box from a press on a line number', async () => {
+    const harness = new Harness();
+    await harness.readAll({ diff });
+    renderDiff(harness);
+    await userEvent.click(screen.getAllByRole('button', { name: 'Comment on line 2' })[1]!);
+    expect(harness.client.calls.at(-1)).toMatchObject({ method: 'review/anchorOf', params: { first: 2, last: 2 } });
+  });
+
+  it('wraps a long line under a hanging indent and sets code at 14px or more', () => {
+    const sheet = stylesheet('DiffLine.module.css');
+    expect(ruleOf(sheet, '.text')).toContain('text-indent: -4ch');
+    expect(ruleOf(sheet, '.text')).toContain('white-space: pre-wrap');
+    expect(ruleOf(sheet, '.line')).toContain('var(--size-body)');
+  });
+
+  it('keeps a wrapped line\'s number on its first row, and the cursor line clear of the file header held above it', () => {
+    const sheet = stylesheet('DiffLine.module.css');
+    expect(ruleOf(sheet, '.number')).toContain('align-self: flex-start');
+    expect(ruleOf(sheet, '.line')).toContain('scroll-margin-top');
+  });
+
+  it('gives the cursor line a lift and an edge, never the inverse of the focused title row', () => {
+    const rule = ruleOf(stylesheet('DiffLine.module.css'), '.cursor');
+    expect(rule).toContain('background: var(--diff-cursor)');
+    expect(rule).not.toContain('--cursor-ink');
+    expect(rule).not.toContain('--selected');
+  });
+
+  it('ends a thread with a Reply, and a pending comment with an Edit and a Delete', async () => {
     const harness = new Harness();
     const thread = threadFixture({ id: 'T1' });
     const comment = pendingCommentFixture({ body: 'Rename this' });
@@ -113,27 +258,60 @@ describe('the diff of a review', () => {
       diff,
       threads: threadsFixture([thread]),
       pending: openPending([comment]),
-      comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))], pending: [pendingInDiff(comment, onLine(0))] }),
+      comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], shown: [threadInDiff(thread, onLine(0))], pending: [pendingInDiff(comment, onLine(0))] }),
     });
     renderDiff(harness);
     const articles = screen.getAllByRole('article');
-    expect(within(articles[0]!).getByRole('button', { name: 'Reply to the thread on L1' })).toHaveTextContent('Reply');
-    expect(within(articles[1]!).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(articles[0]!).getByRole('button', { name: 'Reply to the thread on a.ts:1' })).toHaveTextContent('Reply');
+    expect(within(articles[1]!).queryByRole('button', { name: /Reply/ })).not.toBeInTheDocument();
+    expect(within(articles[1]!).getByRole('button', { name: 'Edit your comment on a.ts:1' })).toBeInTheDocument();
+    expect(within(articles[1]!).getByRole('button', { name: 'Delete your comment on a.ts:1' })).toBeInTheDocument();
+  });
+
+  it('names a key on a card only where that key acts on it: the pending comment takes enter before the thread on its line', async () => {
+    const harness = new Harness();
+    const thread = threadFixture({ id: 'T1' });
+    const comment = pendingCommentFixture({ body: 'Rename this' });
+    await harness.readAll({
+      diff,
+      threads: threadsFixture([thread]),
+      pending: openPending([comment]),
+      comments: commentsFixture({
+        threads: [threadInDiff(thread, onLine(0))],
+        shown: [threadInDiff(thread, onLine(0))],
+        pending: [pendingInDiff(comment, onLine(0))],
+        lastAtPlaces: [pendingInDiff(comment, onLine(0))],
+      }),
+    });
+    renderDiff(harness);
+    const articles = screen.getAllByRole('article');
+    expect(within(articles[0]!).getByRole('button', { name: /Reply/ }).querySelector('kbd')).toBeNull();
+    expect(within(articles[1]!).getByRole('button', { name: /Edit/ })).toHaveTextContent('Editenter');
+    expect(within(articles[1]!).getByRole('button', { name: /Delete/ })).toHaveTextContent('Deletex');
+  });
+
+  it('names enter on the last thread under a file rule, which the cursor stops on', async () => {
+    const harness = new Harness();
+    const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } });
+    const entry = threadInDiff(outdated, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], shown: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    expect(screen.getByRole('button', { name: /Reply/ })).toHaveTextContent('Replyenter');
   });
 
   it('opens the reply box on a click on Reply, resolved thread included, moving neither the cursor nor the focus', async () => {
     const harness = new Harness();
     const thread = threadFixture({ id: 'T1', resolved: true, open: false, comments: [{ author: 'ada', body: 'Why this?' }] });
-    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], underLines: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }), });
-    harness.review.moveLine(2);
+    await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], shown: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }), });
+    harness.review.moveCursor(2);
     const onFocus = vi.fn();
     render(
       <>
-        <DiffPane review={harness.review} focused={false} onFocus={onFocus} onRetry={() => {}} />
+        <DiffPane review={harness.review} focused={false} onFocus={onFocus} onRetry={() => {}} onClose={() => {}} />
         <ReviewDialogs review={harness.review} />
       </>,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Reply to the thread on L1' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Reply to the thread on a.ts:1' }));
     expect(screen.getByRole('dialog', { name: 'Why this?' })).toBeInTheDocument();
     expect(harness.review.cursor()).toBe(2);
     expect(onFocus).not.toHaveBeenCalled();
@@ -143,8 +321,8 @@ describe('the diff of a review', () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     const { onFocus } = renderDiff(harness, false);
-    fireEvent.mouseDown(screen.getAllByRole('button')[2]!);
-    fireEvent.mouseUp(screen.getAllByRole('button')[2]!);
+    fireEvent.mouseDown(lineElements()[2]!);
+    fireEvent.mouseUp(lineElements()[2]!);
     expect(onFocus).toHaveBeenCalled();
     expect(harness.review.cursor()).toBe(2);
   });
@@ -153,21 +331,21 @@ describe('the diff of a review', () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     renderDiff(harness);
-    fireEvent.mouseDown(screen.getAllByRole('button')[0]!);
-    fireEvent.mouseUp(screen.getAllByRole('button')[2]!);
+    fireEvent.mouseDown(lineElements()[0]!);
+    fireEvent.mouseUp(lineElements()[2]!);
     expect(harness.client.calls.at(-1)).toEqual({ method: 'review/anchorOf', params: { diff, first: 0, last: 2 } });
     await act(async () => {
       harness.client.answerNext({ kind: 'onDiffAnchor', path: 'src/a.ts', position: { kind: 'placedThread', side: 'RIGHT', first: 1, last: 2 } });
       await settle();
     });
-    expect(screen.getAllByRole('button').slice(0, 3).every((line) => line.className.includes('range'))).toBe(true);
+    expect(lineElements().slice(0, 3).every((line) => line.className.includes('range'))).toBe(true);
   });
 
   it('takes no press of a button other than the left one', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     renderDiff(harness);
-    fireEvent.mouseDown(screen.getAllByRole('button')[2]!, { button: 2 });
+    fireEvent.mouseDown(lineElements()[2]!, { button: 2 });
     expect(harness.review.cursor()).toBe(0);
   });
 
@@ -176,9 +354,9 @@ describe('the diff of a review', () => {
     await harness.readAll({ diff });
     renderDiff(harness);
     const callsBefore = harness.client.calls.length;
-    fireEvent.mouseDown(screen.getAllByRole('button')[0]!);
+    fireEvent.mouseDown(lineElements()[0]!);
     fireEvent.mouseDown(document.body);
-    fireEvent.mouseUp(screen.getAllByRole('button')[2]!);
+    fireEvent.mouseUp(lineElements()[2]!);
     expect(harness.client.calls).toHaveLength(callsBefore);
   });
 
@@ -186,8 +364,8 @@ describe('the diff of a review', () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     renderDiff(harness);
-    fireEvent.mouseDown(screen.getAllByRole('button')[3]!);
-    fireEvent.mouseUp(screen.getAllByRole('button')[1]!);
+    fireEvent.mouseDown(lineElements()[3]!);
+    fireEvent.mouseUp(lineElements()[1]!);
     expect(harness.client.calls.at(-1)).toEqual({ method: 'review/anchorOf', params: { diff, first: 1, last: 3 } });
   });
 });
@@ -195,39 +373,57 @@ describe('the diff of a review', () => {
 const withThreads = async (harness: Harness) => {
   const open = threadFixture({ id: 'T1', path: 'src/a.ts', position: { kind: 'placedThread', side: 'RIGHT', first: 1, last: 2 }, comments: [{ author: 'ada', body: 'Why?' }] });
   const left = threadFixture({ id: 'T2', path: 'src/a.ts', position: { kind: 'placedThread', side: 'LEFT', first: 2, last: 2 }, resolved: true, open: false, comments: [{ author: 'bob', body: 'Gone' }] });
-  const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread' }, open: false, comments: [{ author: 'cy', body: 'Old' }] });
+  const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } }, open: false, comments: [{ author: 'cy', body: 'Old' }] });
   const comment = pendingCommentFixture({ id: 'C1', anchor: { kind: 'onDiffAnchor', path: 'src/a.ts', position: { kind: 'placedThread', side: 'RIGHT', first: 2, last: 2 } } });
   await harness.readAll({
     diff,
     threads: threadsFixture([open, left, outdated]),
     pending: openPending([comment]),
     comments: commentsFixture({
-      threads: [threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, { kind: 'noDiffLine' })],
-      underLines: [threadInDiff(open, onLine(0))],
+      threads: [threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, atHead(1))],
+      shown: [threadInDiff(open, onLine(0))],
       pending: [pendingInDiff(comment, onLine(2))],
-      listed: [pendingInDiff(comment, onLine(2)), threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, { kind: 'noDiffLine' })],
-      lastOnLines: [pendingInDiff(comment, onLine(2))],
+      listed: [pendingInDiff(comment, onLine(2)), threadInDiff(open, onLine(0)), threadInDiff(left, onLine(1)), threadInDiff(outdated, atHead(1))],
+      lastAtPlaces: [pendingInDiff(comment, onLine(2))],
     }),
   });
 };
 
+const fileRows = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('[data-row] button')];
+
 describe('the Files of a review', () => {
-  it('lists each file with the letter for what the pull request does to it, its name, and the open threads and pending comments on it', async () => {
+  it('lists each file with its letter, name, directory and line counts, and word badges for its open threads and pending comments', async () => {
     const harness = new Harness();
     await withThreads(harness);
     render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
-    const rows = screen.getAllByRole('button');
-    expect(rows[0]).toHaveTextContent('Ma.ts◆1✎1');
-    expect(rows[1]).toHaveTextContent('Mb.ts');
-    expect(within(rows[0]!).getByLabelText('1 open thread')).toBeInTheDocument();
-    expect(within(rows[0]!).getByLabelText('1 pending comment')).toBeInTheDocument();
+    const rows = fileRows();
+    expect(rows[0]).toHaveTextContent('Ma.ts+1 −1src/1 thread1 pending');
+    expect(rows[1]).toHaveTextContent('Mb.ts+1 −0src/');
+    expect(rows[1]).not.toHaveTextContent('thread');
+    expect(rows[1]).not.toHaveTextContent('pending');
+  });
+
+  it('names beside its title how many files the pull request changes and the lines they add and remove', async () => {
+    const harness = new Harness();
+    await harness.readAll({ diff });
+    render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
+    expect(screen.getByRole('list', { name: 'Files' })).toHaveTextContent('2 files+2 −1');
+  });
+
+  it('counts a thread with no line among the threads of its file', async () => {
+    const harness = new Harness();
+    const outdated = threadFixture({ id: 'T3', path: 'src/b.ts', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } }, open: true });
+    const entry = threadInDiff(outdated, atHead(1));
+    await harness.readAll({ diff, threads: threadsFixture([outdated]), comments: commentsFixture({ threads: [entry], listed: [entry] }) });
+    render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
+    expect(fileRows()[1]).toHaveTextContent('1 thread');
   });
 
   it('names a renamed file by its old and new names', async () => {
     const harness = new Harness();
     await harness.readAll({ diff: diffFixture([fileFixture('src/new.ts', [], { kind: 'renamedFile', from: 'lib/old.ts' })]) });
     render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
-    expect(screen.getByRole('button')).toHaveTextContent('Rold.ts → new.ts');
+    expect(fileRows()[0]).toHaveTextContent('Rold.ts → new.ts');
   });
 
   it('marks the selected file, and a press selects one and goes to its first line', async () => {
@@ -235,8 +431,8 @@ describe('the Files of a review', () => {
     await harness.readAll({ diff });
     const onFocus = vi.fn();
     render(<FilesPane review={harness.review} focused={false} onFocus={onFocus} />);
-    expect(screen.getAllByRole('button')[0]).toHaveAttribute('aria-current', 'true');
-    await userEvent.click(screen.getAllByRole('button')[1]!);
+    expect(fileRows()[0]).toHaveAttribute('aria-current', 'true');
+    await userEvent.click(fileRows()[1]!);
     expect(harness.review.selectedFile()).toBe(1);
     expect(harness.review.cursor(), 'one press goes, even on a pane that had no focus').toBe(3);
     expect(onFocus).toHaveBeenCalled();
@@ -246,115 +442,17 @@ describe('the Files of a review', () => {
     const harness = new Harness();
     harness.review.read();
     render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
-    expect(screen.getByRole('status')).toHaveTextContent('Reading the diff');
-  });
-});
-
-describe('the Comments of a review', () => {
-  it('lists the entries in the order review lists them, each with where it hangs, who spoke last on the right and its first comment under it', async () => {
-    const harness = new Harness();
-    await withThreads(harness);
-    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    expect(screen.getAllByRole('button').map((row) => row.textContent)).toEqual(['✎a.ts:2Rename this', '◆a.ts:1–2adaWhy?', 'a.ts:-2bobGone', 'b.ts  outdatedcyOld']);
+    expect(fileRows()).toHaveLength(0);
+    expect(screen.getAllByRole('status')[0]).toHaveTextContent('Reading the diff');
   });
 
-  it('counts replies after the first comment, in the singular and the plural, beside who spoke last', async () => {
+  it('carries the pending review at its foot, beside a Submit button', async () => {
     const harness = new Harness();
-    const one = threadFixture({ id: 'T1', comments: [{ author: 'ada', body: 'Why?' }, { author: 'bob', body: 'a' }] });
-    const two = threadFixture({ id: 'T2', comments: [{ author: 'ada', body: 'Why?' }, { author: 'bob', body: 'a' }, { author: 'eve', body: 'b' }] });
-    await harness.readAll({ diff, threads: threadsFixture([one, two]), comments: commentsFixture({ listed: [threadInDiff(one, onLine(0)), threadInDiff(two, onLine(0))] }) });
-    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    expect(screen.getByText('1 reply · bob')).toBeInTheDocument();
-    expect(screen.getByText('2 replies · eve')).toBeInTheDocument();
-    expect(screen.queryByText(/0 repl/)).not.toBeInTheDocument();
-  });
-
-  it('keeps only the first line of a multi-line first comment', async () => {
-    const harness = new Harness();
-    const long = threadFixture({ comments: [{ author: 'ada', body: 'First\nSecond' }] });
-    await harness.readAll({ diff, threads: threadsFixture([long]), comments: commentsFixture({ listed: [threadInDiff(long, onLine(0))] }) });
-    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    expect(screen.getByText('First')).toBeInTheDocument();
-    expect(screen.queryByText(/Second/)).not.toBeInTheDocument();
-  });
-
-  it('dims a resolved thread', async () => {
-    const harness = new Harness();
-    await withThreads(harness);
-    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    expect(screen.getAllByRole('button')[2]!.className).toContain('dim');
-    expect(screen.getAllByRole('button')[1]!.className).not.toContain('dim');
-  });
-
-  it('says it is reading while the threads have not answered', () => {
-    const harness = new Harness();
-    harness.review.read();
-    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    expect(screen.getByRole('status')).toHaveTextContent('Reading the threads');
-  });
-
-  it('says why the threads cannot be read', async () => {
-    const harness = new Harness();
-    harness.review.read();
-    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    await harness.answer('review/threadsOf', { kind: 'unavailableThreads', reason: 'rate limited' });
-    expect(screen.getByText('threads unknown (rate limited)')).toBeInTheDocument();
-  });
-
-  it('says there are no threads', async () => {
-    const harness = new Harness();
-    await harness.readAll({ diff });
-    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    expect(screen.getByText('no threads')).toBeInTheDocument();
-  });
-
-  it('selects an entry and goes to its line by one click, the diff unfocused or not', async () => {
-    const harness = new Harness();
-    await withThreads(harness);
-    render(<CommentsPane review={harness.review} focused={false} onFocus={() => {}} />);
-    await userEvent.click(screen.getAllByRole('button')[2]!);
-    expect(harness.review.selectedComment()).toBe(2);
-    expect(harness.review.cursor()).toBe(1);
-  });
-
-  it('opens a pending comment in the box by a second click on its row', async () => {
-    const harness = new Harness();
-    await withThreads(harness);
-    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    await userEvent.click(screen.getAllByRole('button')[1]!);
-    await userEvent.click(screen.getAllByRole('button')[0]!);
-    expect(harness.review.cursor()).toBe(2);
-    expect(harness.review.box()).toBeUndefined();
-    await userEvent.click(screen.getAllByRole('button')[0]!);
-    expect(harness.review.box()).toBeDefined();
-  });
-
-  it('shows the last comment under the line a click goes to, the cursor already on it or not', async () => {
-    const harness = new Harness();
-    const first = threadFixture({ id: 'T1', comments: [{ author: 'ada', body: 'Why?' }] });
-    const second = threadFixture({ id: 'T2', comments: [{ author: 'bob', body: 'And this?' }] });
-    await harness.readAll({
-      diff,
-      threads: threadsFixture([first, second]),
-      comments: commentsFixture({ underLines: [threadInDiff(first, onLine(0)), threadInDiff(second, onLine(0))], listed: [threadInDiff(first, onLine(0))] }),
-    });
-    const scrolled = vi.spyOn(Element.prototype, 'scrollIntoView');
-    render(<DiffPane review={harness.review} focused={false} onFocus={() => {}} onRetry={() => {}} />);
-    const comments = render(<CommentsPane review={harness.review} focused={false} onFocus={() => {}} />);
-    scrolled.mockClear();
-    await userEvent.click(within(comments.container).getAllByRole('button')[0]!);
-    expect(harness.review.cursor(), 'the cursor was already on the line, so only the comment counter moved').toBe(0);
-    expect(scrolled.mock.contexts.at(-1), 'the bottom of the last thread under the line, not the line').toHaveTextContent('bob And this?');
-    scrolled.mockRestore();
-  });
-
-  it('selects an outdated thread and leaves the diff where it was', async () => {
-    const harness = new Harness();
-    await withThreads(harness);
-    render(<CommentsPane review={harness.review} focused onFocus={() => {}} />);
-    await userEvent.click(screen.getAllByRole('button')[3]!);
-    expect(harness.review.selectedComment()).toBe(3);
-    expect(harness.review.cursor()).toBe(0);
+    await harness.readAll({ diff, pending: openPending([pendingCommentFixture()]) });
+    render(<FilesPane review={harness.review} focused onFocus={() => {}} />);
+    const foot = screen.getByRole('region', { name: 'Pending review' });
+    expect(foot).toHaveTextContent('pending review');
+    expect(within(foot).getByRole('button', { name: 'Submit review' })).toBeInTheDocument();
   });
 });
 
@@ -364,13 +462,15 @@ describe('the Review panel', () => {
     harness.review.read();
     render(<ReviewPanel review={harness.review} />);
     expect(screen.getByRole('status')).toHaveTextContent('Reading the pending review');
+    expect(screen.queryByText('no pending review')).not.toBeInTheDocument();
   });
 
-  it('says there is no pending review', async () => {
+  it('says there is no pending review, and still offers to submit', async () => {
     const harness = new Harness();
     await harness.readAll({ diff });
     render(<ReviewPanel review={harness.review} />);
-    expect(screen.getByText('no pending review')).toBeInTheDocument();
+    expect(screen.getAllByText('no pending review').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Submit review' })).toBeInTheDocument();
   });
 
   it('says why the pending review is unknown', async () => {
@@ -379,23 +479,23 @@ describe('the Review panel', () => {
     render(<ReviewPanel review={harness.review} />);
     await harness.answer('review/pendingOf', { kind: 'unavailablePendingReview', reason: 'no scope' });
     expect(screen.getByText('pending unknown (no scope)')).toBeInTheDocument();
+    expect(screen.queryByText('no pending review')).not.toBeInTheDocument();
   });
 
-  it('counts the pending comments under the first line of the summary, or says there is no summary', async () => {
+  it('badges the pending review and counts its comments with the first line of the summary', async () => {
     const harness = new Harness();
     await harness.readAll({ diff, pending: openPending([pendingCommentFixture(), pendingCommentFixture({ id: 'C2' })], { summary: 'Mostly fine\nbut see below' }), summary: 'Mostly fine\nbut see below' });
     render(<ReviewPanel review={harness.review} />);
-    expect(screen.getByText('Mostly fine')).toBeInTheDocument();
-    expect(screen.getByText('2 pending')).toBeInTheDocument();
+    expect(screen.getByText('pending review')).toBeInTheDocument();
+    expect(screen.getByText(/2 comments · “Mostly fine”/)).toBeInTheDocument();
     expect(screen.queryByText(/see below/)).not.toBeInTheDocument();
   });
 
-  it('says there is no summary when review says a submit would send none', async () => {
+  it('counts none and says nothing of a summary when review says a submit would send none', async () => {
     const harness = new Harness();
     await harness.readAll({ diff, pending: openPending([]) });
     render(<ReviewPanel review={harness.review} />);
-    expect(screen.getByText('no summary')).toBeInTheDocument();
-    expect(screen.getByText('0 pending')).toBeInTheDocument();
+    expect(screen.getByText('0 comments')).toBeInTheDocument();
   });
 
   it('warns when the branch moved since the review was written', async () => {
@@ -416,8 +516,26 @@ describe('the Review panel', () => {
       harness.review.saveBox();
     });
     await harness.answerPlacement({ summary: 'Typed first' });
-    expect(screen.getByText('Typed first')).toBeInTheDocument();
-    expect(screen.getByText('0 pending')).toBeInTheDocument();
+    expect(screen.getByText(/0 comments · “Typed first”/)).toBeInTheDocument();
+  });
+
+  it('submits on its button as S does, asking for the summary first', async () => {
+    const harness = new Harness();
+    await harness.readAll({ diff });
+    render(
+      <>
+        <ReviewPanel review={harness.review} />
+        <ReviewDialogs review={harness.review} />
+      </>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Submit review' }));
+    expect(harness.methods().at(-1)).toBe('review/summaryToSubmit');
+    await act(async () => {
+      harness.client.answer('review/summaryToSubmit', '');
+      await settle();
+    });
+    expect(screen.getByRole('dialog', { name: 'Summary' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit review' })).toHaveAttribute('aria-keyshortcuts', 'S');
   });
 });
 
@@ -505,7 +623,7 @@ describe('the comment box of a review', () => {
     const thread = threadFixture({ id: 'T1', comments: [{ author: 'ada', body: 'Why this?\nReally.' }, { author: 'bob', body: 'Speed' }] });
     await harness.readAll({ diff, threads: threadsFixture([thread]), comments: commentsFixture({ threads: [threadInDiff(thread, onLine(0))], listed: [threadInDiff(thread, onLine(0))] }) });
     render(<ReviewDialogs review={harness.review} />);
-    act(() => harness.review.commentOnSelectedComment());
+    act(() => harness.review.replyTo(thread));
     expect(screen.getByRole('dialog', { name: 'Why this?' })).toBeInTheDocument();
     expect(screen.getByText(/ada\s+Why this\?/)).toBeInTheDocument();
     expect(screen.getByText(/bob\s+Speed/)).toBeInTheDocument();
@@ -550,5 +668,37 @@ describe('the confirm after the summary', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Keep pending' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(harness.client.calls).toHaveLength(calls);
+  });
+});
+
+describe('a pending comment with no line', () => {
+  it.each([
+    ['one line', placed(40), 'pending · head moved · line 40'],
+    ['a range', placed(40, 41), 'pending · head moved · lines 40–41'],
+  ] as const)('says the head moved and the line it was written on, for %s', async (_name, position, tag) => {
+    const harness = new Harness();
+    const comment = pendingCommentFixture({ id: 'C7', anchor: { kind: 'onDiffAnchor', path: 'src/b.ts', position } });
+    const entry = pendingInDiff(comment, atHead(1));
+    await harness.readAll({ diff, pending: openPending([comment]), comments: commentsFixture({ pending: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    expect(within(screen.getByRole('article')).getByText(tag, { exact: true })).toBeInTheDocument();
+  });
+
+  it('says a reply is on an outdated thread when its thread went outdated', async () => {
+    const harness = new Harness();
+    const comment = pendingCommentFixture({ id: 'C9', anchor: { kind: 'replyAnchor', path: 'src/b.ts', thread: 'T1', position: { kind: 'outdatedThread', was: { kind: 'originallyPlaced', place: placed(7) } } } });
+    const entry = pendingInDiff(comment, atHead(1));
+    await harness.readAll({ diff, pending: openPending([comment]), comments: commentsFixture({ pending: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    expect(within(screen.getByRole('article')).getByText('pending · on an outdated thread', { exact: true })).toBeInTheDocument();
+  });
+
+  it('says a reply is on an outdated thread when GitHub kept no place for it', async () => {
+    const harness = new Harness();
+    const comment = pendingCommentFixture({ id: 'C8', anchor: { kind: 'replyAnchor', path: 'src/b.ts', thread: 'T1', position: { kind: 'outdatedThread', was: { kind: 'noOriginalPlace' } } } });
+    const entry = pendingInDiff(comment, atHead(1));
+    await harness.readAll({ diff, pending: openPending([comment]), comments: commentsFixture({ pending: [entry], listed: [entry] }) });
+    renderDiff(harness);
+    expect(within(screen.getByRole('article')).getByText('pending · on an outdated thread', { exact: true })).toBeInTheDocument();
   });
 });

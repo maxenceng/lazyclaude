@@ -6,10 +6,14 @@ import { RpcError } from '../protocol';
 import { fakeClient } from '../test/fakeClient';
 import { BoardPane, TicketPane } from './BoardScreen';
 import { BoardStore } from './boardStore';
+import { PullRequestRead, type TicketPullRequest } from './ticketPullRequest';
 import { boardFixture, ticketFixture } from './fixtures';
 import { Selection } from './selection';
 
-const setup = (markerOf: (ticket: string) => LampColour | undefined = () => undefined) => {
+const NO_PULL_REQUEST: TicketPullRequest = { read: PullRequestRead.None, number: undefined };
+const PANELS = { tabs: [{ id: 'board', label: 'Board', count: 3 }, { id: 'docs', label: 'Docs', count: 7 }], selected: 'board', onSelect: () => {} };
+
+const setup = (markerOf: (ticket: string) => LampColour | undefined = () => undefined, pullRequest: TicketPullRequest = NO_PULL_REQUEST) => {
   const client = fakeClient();
   const board = new BoardStore(client);
   const selection = new Selection();
@@ -18,8 +22,8 @@ const setup = (markerOf: (ticket: string) => LampColour | undefined = () => unde
   const loaded = board.load();
   render(
     <>
-      <BoardPane board={board} selection={selection} focused markerOf={markerOf} onOpen={onOpen} onFocus={() => {}} onRetry={() => void board.load()} />
-      <TicketPane board={board} selection={selection} focused={false} onLink={onLink} />
+      <BoardPane board={board} selection={selection} focused markerOf={markerOf} onOpen={onOpen} onFocus={() => {}} onRetry={() => void board.load()} panelTabs={PANELS} />
+      <TicketPane board={board} selection={selection} focused={false} pullRequest={pullRequest} onLink={onLink} onFocus={() => {}} />
     </>,
   );
   return { client, board, selection, onOpen, onLink, loaded };
@@ -44,10 +48,20 @@ describe('the Board', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Reading the board');
   });
 
-  it('says the board has no tickets when it is empty', async () => {
+  it('keeps every status as a group at 0 when it has no ticket, and the ticket\'s view says none is selected', async () => {
     const { client, loaded } = setup();
     await answer(client, loaded, boardFixture([]));
-    expect(screen.getByText('No tickets on the board.')).toBeInTheDocument();
+    const board = screen.getByRole('region', { name: 'Board' });
+    expect(['in progress', 'in review', 'todo', 'draft', 'done'].map((status) => within(board).getByText(status).textContent)).toHaveLength(5);
+    expect(within(board).getAllByText('0')).toHaveLength(5);
+    expect(screen.getByText('No ticket selected.')).toBeInTheDocument();
+  });
+
+  it('shows the panel tabs in its title row with the new-draft button beside them, for as long as the Board is the tab shown', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, tickets);
+    expect(screen.getByRole('tab', { name: 'Board 3' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Docs 7' })).toBeInTheDocument();
   });
 
   it('says why the board is unavailable, by its kind', async () => {
@@ -88,18 +102,11 @@ describe('the Board', () => {
     expect(within(screen.getByRole('region', { name: 'Board' })).getByText('in review').parentElement).toHaveTextContent('in review0');
   });
 
-  it('shows the unreadable tickets with their reasons under their own heading', async () => {
+  it('draws no section and no row for the tickets that could not be read', async () => {
     const { client, loaded } = setup();
     await answer(client, loaded, { ...tickets, unreadable: [{ id: 'PROJ-9', reason: 'no title' }] });
-    const board = within(screen.getByRole('region', { name: 'Board' }));
-    expect(board.getByText('unreadable').parentElement).toHaveTextContent('unreadable1');
-    expect(board.getByText('PROJ-9 — no title')).toBeInTheDocument();
-  });
-
-  it('shows no unreadable heading when none is unreadable', async () => {
-    const { client, loaded } = setup();
-    await answer(client, loaded, tickets);
     expect(screen.queryByText('unreadable')).not.toBeInTheDocument();
+    expect(screen.queryByText(/PROJ-9/)).not.toBeInTheDocument();
   });
 
   it('typesets a ticket\'s body as markdown and hands its links to the page', async () => {
@@ -160,5 +167,96 @@ describe('the Board', () => {
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(client.calls).toHaveLength(2);
     expect(screen.getByRole('status')).toHaveTextContent('Reading the board');
+  });
+});
+
+const richTicket = boardFixture([
+  ticketFixture({
+    id: 'PROJ-1',
+    title: 'A rich ticket',
+    status: 'IN_PROGRESS',
+    branch: 'proj-1-rich',
+    type: { kind: 'typeName', value: 'fix' },
+    context: { kind: 'contextName', value: 'session' },
+    otherLabels: ['ux', 'desktop'],
+  }),
+]);
+
+const factOf = (label: string): string => screen.getByText(label).nextElementSibling?.textContent ?? '';
+
+describe('the ticket\'s facts line', () => {
+  it('says its status, type, context, other labels and open pull request', async () => {
+    const { client, loaded } = setup(() => undefined, { read: PullRequestRead.Open, number: 12 });
+    await answer(client, loaded, richTicket);
+    expect(['status', 'type', 'context', 'labels', 'pull request'].map(factOf)).toEqual([
+      'in progress',
+      'fix',
+      'session',
+      'ux, desktop',
+      '#12',
+    ]);
+  });
+
+  it('says there is no open pull request where it would be', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, richTicket);
+    expect(factOf('pull request')).toBe('none open');
+  });
+
+  it('says the pull requests are unavailable when they could not be read, rather than showing nothing', async () => {
+    const { client, loaded } = setup(() => undefined, { read: PullRequestRead.Unavailable, number: undefined });
+    await answer(client, loaded, richTicket);
+    expect(factOf('pull request')).toBe('unavailable');
+  });
+
+  it('leaves out the branch and the worktree, whose long text would wrap the line', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, richTicket);
+    expect(screen.queryByText('branch')).not.toBeInTheDocument();
+    expect(screen.queryByText('worktree')).not.toBeInTheDocument();
+  });
+
+  it('leaves out the type, context and labels a ticket does not carry', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, tickets);
+    expect(screen.queryByText('type')).not.toBeInTheDocument();
+    expect(screen.queryByText('context')).not.toBeInTheDocument();
+    expect(screen.queryByText('labels')).not.toBeInTheDocument();
+  });
+
+  it('is not drawn when no ticket is under the cursor, which says so alone', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, boardFixture([]));
+    expect(screen.getByText('No ticket selected.')).toBeInTheDocument();
+    expect(screen.queryByText('status')).not.toBeInTheDocument();
+    expect(screen.queryByText('worktree')).not.toBeInTheDocument();
+  });
+});
+
+describe('the ticket pane\'s title row and number', () => {
+  it('names the ticket\'s status, context and type as chips beside its title', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, richTicket);
+    const chips = within(screen.getByRole('region', { name: 'Ticket' })).getByRole('list', { name: 'Ticket' });
+    expect(within(chips).getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['in progress', 'session', 'fix']);
+  });
+
+  it('leaves out the context and type a ticket does not carry', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, tickets);
+    const chips = within(screen.getByRole('region', { name: 'Ticket' })).getByRole('list', { name: 'Ticket' });
+    expect(within(chips).getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['in progress']);
+  });
+
+  it('carries no chip when no ticket is under the cursor', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, boardFixture([]));
+    expect(within(screen.getByRole('region', { name: 'Ticket' })).queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  it('sets a # before the ticket\'s number above its title', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, richTicket);
+    expect(within(screen.getByRole('region', { name: 'Ticket' })).getByText('#PROJ-1')).toBeInTheDocument();
   });
 });

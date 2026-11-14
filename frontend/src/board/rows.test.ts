@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { boardFixture, ticketFixture } from './fixtures';
 import {
   columnsOf,
-  cursorTicketInColumns,
   inProgressCount,
   moveAcross,
   moveInColumn,
@@ -10,8 +9,9 @@ import {
   orderedGroups,
   shownTickets,
   selectedIn,
-  selectedInColumns,
+  statusesInOrder,
   ticketIds,
+  ticketTotal,
 } from './rows';
 
 const view = boardFixture([
@@ -95,9 +95,7 @@ describe('the board rows', () => {
   });
 
   it('keeps the cursor on a done card, which Base lists as well', () => {
-    expect(selectedInColumns(view, 'PROJ-1')).toBe('PROJ-1');
     expect(selectedIn(view, 'PROJ-1')).toBe('PROJ-1');
-    expect(cursorTicketInColumns(view, 'PROJ-1')?.id).toBe('PROJ-1');
   });
 
   it('moves down and up inside one column and stops at its ends', () => {
@@ -131,5 +129,18 @@ describe('the board rows', () => {
   it('counts the tickets in progress, none on a board with none', () => {
     expect(inProgressCount(view)).toBe(1);
     expect(inProgressCount(boardFixture([ticketFixture({ status: 'TODO' })]))).toBe(0);
+  });
+});
+
+describe('the board\'s totals', () => {
+  it('counts every ticket in every status, the finished ones past the ten shown included', () => {
+    const done = Array.from({ length: 12 }, (_, at) => ticketFixture({ id: `PROJ-${at + 10}`, status: 'DONE' }));
+    expect(ticketTotal(view)).toBe(5);
+    expect(ticketTotal(boardFixture([...done, ticketFixture({ id: 'PROJ-1', status: 'TODO' })]))).toBe(13);
+    expect(ticketTotal(boardFixture([]))).toBe(0);
+  });
+
+  it('lists the statuses in the order Base shows them', () => {
+    expect(statusesInOrder()).toEqual(['IN_PROGRESS', 'IN_REVIEW', 'TODO', 'DRAFT', 'DONE']);
   });
 });

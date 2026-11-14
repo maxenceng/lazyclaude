@@ -45,7 +45,7 @@ describe('the board store', () => {
     const loaded = store.load();
     client.answerNext(boardFixture([]));
     await loaded;
-    expect(store.state.get()).toEqual(new EmptyBoard());
+    expect(store.state.get()).toEqual(new EmptyBoard('/p'));
   });
 
   it('is empty when its statuses are all without a ticket', async () => {
@@ -54,16 +54,16 @@ describe('the board store', () => {
     const loaded = store.load();
     client.answerNext({ ...boardFixture([]), groups: [{ status: 'TODO', tickets: [] }] });
     await loaded;
-    expect(store.state.get()).toEqual(new EmptyBoard());
+    expect(store.state.get()).toEqual(new EmptyBoard('/p'));
   });
 
-  it('is not empty when only unreadable tickets are on it', async () => {
+  it('is empty when only unreadable tickets are on it, since the window draws none of them', async () => {
     const client = fakeClient();
     const store = new BoardStore(client);
     const loaded = store.load();
     client.answerNext({ ...boardFixture([]), unreadable: [{ id: 'PROJ-9', reason: 'no title' }] });
     await loaded;
-    expect(store.state.get().kind).toBe('populated');
+    expect(store.state.get()).toEqual(new EmptyBoard('/p'));
   });
 
   it('shows the reason of an unavailable board', async () => {

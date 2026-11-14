@@ -28,6 +28,14 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 public final class FakeGhFixture {
 
+    private static final String CREATED_AT = "2026-11-13T10:21:46Z";
+    private static final String REPOSITORY = "acme/app";
+    private static final String NO_COMMENTS = "{\"totalCount\":0}";
+    private static final String NO_THREADS = "{\"nodes\":[]}";
+    private static final String NO_REVIEWS = "{\"nodes\":[]}";
+    private static final String NO_CLOSING_ISSUES = "{\"nodes\":[]}";
+    private static final String NO_COMMITS = "{\"nodes\":[]}";
+    private static final String CREATED_AT_JSON = "\"%s\"".formatted(CREATED_AT);
     private static final Duration PATIENCE = Duration.ofSeconds(10);
     private static final Duration IMPATIENCE = Duration.ofMillis(300);
     private static final int LINES_OF_A_LARGE_DIFF = 5000;
@@ -87,12 +95,12 @@ public final class FakeGhFixture {
         return script(directory, "exec sleep 30\n");
     }
 
-    public static Path ghTitlingWithItsArguments(Path directory) throws IOException {
-        return script(directory, "printf '[{\"number\":1,\"title\":\"%s\",\"headRefName\":\"b\",\"isDraft\":false,\"statusCheckRollup\":[]}]' \"$*\"\n");
+    public static Path ghRecordingItsDirectory(Path directory, String output) throws IOException {
+        return script(directory, "pwd > '%s'\nprintf '%%s' '%s'\n".formatted(recordedDirectory(directory), output));
     }
 
-    public static Path ghTitlingWithItsDirectory(Path directory) throws IOException {
-        return script(directory, "printf '[{\"number\":1,\"title\":\"%s\",\"headRefName\":\"b\",\"isDraft\":false,\"statusCheckRollup\":[]}]' \"$(pwd)\"\n");
+    public static Path directoryRecordedIn(Path directory) throws IOException {
+        return Path.of(Files.readString(recordedDirectory(directory), StandardCharsets.UTF_8).strip());
     }
 
     public static Path ghMergedWithItsArguments(Path directory) throws IOException {
@@ -188,9 +196,23 @@ public final class FakeGhFixture {
     }
 
     public static String threadJson(String path, String line, String startLine, String side, boolean resolved, boolean outdated, String... comments) {
+        return outdatedThreadJson(path, line, startLine, "null", "null", side, resolved, outdated, comments);
+    }
+
+    public static String outdatedThreadJson(
+            String path, String line, String startLine, String originalLine, String originalStartLine, String side, boolean resolved, boolean outdated, String... comments) {
         return """
-                {"id":"PRRT_1","path":%s,"line":%s,"startLine":%s,"diffSide":"%s","isResolved":%b,"isOutdated":%b,"comments":{"nodes":[%s]},"unknown":"ignored"}"""
-                .formatted(path == null ? "null" : "\"" + path + "\"", line, startLine, side, resolved, outdated, String.join(",", comments));
+                {"id":"PRRT_1","path":%s,"line":%s,"startLine":%s,"originalLine":%s,"originalStartLine":%s,"diffSide":"%s","isResolved":%b,"isOutdated":%b,"comments":{"nodes":[%s]},"unknown":"ignored"}"""
+                .formatted(
+                        path == null ? "null" : "\"" + path + "\"",
+                        line,
+                        startLine,
+                        originalLine,
+                        originalStartLine,
+                        side,
+                        resolved,
+                        outdated,
+                        String.join(",", comments));
     }
 
     public static String commentJson(String login, String body) {
@@ -241,6 +263,10 @@ public final class FakeGhFixture {
         return Arrays.asList(Files.readString(recordedArguments(directory), StandardCharsets.UTF_8).split("\0"));
     }
 
+    private static Path recordedDirectory(Path directory) {
+        return directory.resolve("directory");
+    }
+
     private static Path recordedArguments(Path directory) {
         return directory.resolve("arguments");
     }
@@ -280,6 +306,81 @@ public final class FakeGhFixture {
         return pullRequestJsonFrom(false, number, title, head, draft, checks);
     }
 
+    public static PullRequest readOnePrinted(Path directory, String pullRequestJson) throws IOException {
+        return readPrinted(directory, listOfPullRequests(pullRequestJson)).getFirst();
+    }
+
+    public static String pullRequestJsonWithTime(String createdAt) {
+        return pullRequestJsonOf("\"%s\"".formatted(createdAt), NO_COMMENTS, NO_THREADS, NO_REVIEWS, NO_CLOSING_ISSUES, NO_COMMITS);
+    }
+
+    public static String pullRequestJsonWithComments(String comments, String threads) {
+        return pullRequestJsonOf(CREATED_AT_JSON, comments, threads, NO_REVIEWS, NO_CLOSING_ISSUES, NO_COMMITS);
+    }
+
+    public static String pullRequestJsonWithReviews(String reviews) {
+        return pullRequestJsonOf(CREATED_AT_JSON, NO_COMMENTS, NO_THREADS, reviews, NO_CLOSING_ISSUES, NO_COMMITS);
+    }
+
+    public static String pullRequestJsonWithPendingReviewOf(int pendingComments, int threadComments) {
+        return pullRequestJsonOf(
+                CREATED_AT_JSON, countJson(0), threadsJson(threadComments), pendingReviewsJson(pendingComments), NO_CLOSING_ISSUES, NO_COMMITS);
+    }
+
+    public static String pullRequestJsonClosing(String closingIssues) {
+        return pullRequestJsonOf(CREATED_AT_JSON, NO_COMMENTS, NO_THREADS, NO_REVIEWS, closingIssues, NO_COMMITS);
+    }
+
+    public static String pullRequestJsonWithCommits(String commits) {
+        return pullRequestJsonOf(CREATED_AT_JSON, NO_COMMENTS, NO_THREADS, NO_REVIEWS, NO_CLOSING_ISSUES, commits);
+    }
+
+    public static String pullRequestJsonWithout(String field) {
+        return "{%s}".formatted(String.join(
+                ",",
+                pullRequestFields(CREATED_AT_JSON, NO_COMMENTS, NO_THREADS, NO_REVIEWS, NO_CLOSING_ISSUES, NO_COMMITS).stream()
+                        .filter(fragment -> !fragment.startsWith("\"%s\":".formatted(field)))
+                        .toList()));
+    }
+
+    public static String countJson(int total) {
+        return "{\"totalCount\":%d}".formatted(total);
+    }
+
+    public static String threadsJson(int... commentsPerThread) {
+        return "{\"nodes\":[%s]}".formatted(
+                Arrays.stream(commentsPerThread).mapToObj(total -> "{\"comments\":%s}".formatted(countJson(total))).collect(Collectors.joining(",")));
+    }
+
+    public static String pendingReviewsJson(int comments) {
+        return "{\"nodes\":[{\"comments\":%s}]}".formatted(countJson(comments));
+    }
+
+    public static String commitsOf(String rollup) {
+        return "{\"nodes\":[{\"commit\":{\"statusCheckRollup\":%s}}]}".formatted(rollup);
+    }
+
+    public static String rollupOf(String... checks) {
+        return "{\"contexts\":{\"nodes\":[%s]}}".formatted(String.join(",", checks));
+    }
+
+    public static String closingIssuesJson(String... issues) {
+        return "{\"nodes\":[%s]}".formatted(String.join(",", issues));
+    }
+
+    public static String closingIssueJson(int number, String repository) {
+        return "{\"number\":%d,\"repository\":{\"nameWithOwner\":\"%s\"}}".formatted(number, repository);
+    }
+
+    public static String thisRepositoryName() {
+        return REPOSITORY;
+    }
+
+    public static String pullRequestJsonOf(
+            String createdAt, String comments, String threads, String reviews, String closingIssues, String commits) {
+        return "{%s}".formatted(String.join(",", pullRequestFields(createdAt, comments, threads, reviews, closingIssues, commits)));
+    }
+
     public static String forkPullRequestJson(int number, String title, String head) {
         return pullRequestJsonFrom(true, number, title, head, false);
     }
@@ -302,9 +403,41 @@ public final class FakeGhFixture {
     }
 
     private static String pullRequestJsonFrom(boolean fork, int number, String title, String head, boolean draft, String... checks) {
-        return """
-                {"number":%d,"title":"%s","headRefName":"%s","isDraft":%b,"isCrossRepository":%b,"statusCheckRollup":[%s],"unknown":"ignored"}"""
-                .formatted(number, title, head, draft, fork, String.join(",", checks));
+        return "{%s}".formatted(String.join(
+                ",",
+                pullRequestFields(number, title, head, draft, fork, CREATED_AT_JSON, NO_COMMENTS, NO_THREADS, NO_REVIEWS, NO_CLOSING_ISSUES, commitsOf(rollupOf(checks)))));
+    }
+
+    private static List<String> pullRequestFields(
+            String createdAt, String comments, String threads, String reviews, String closingIssues, String commits) {
+        return pullRequestFields(1, "t", "b", false, false, createdAt, comments, threads, reviews, closingIssues, commits);
+    }
+
+    private static List<String> pullRequestFields(
+            int number,
+            String title,
+            String head,
+            boolean draft,
+            boolean fork,
+            String createdAt,
+            String comments,
+            String threads,
+            String reviews,
+            String closingIssues,
+            String commits) {
+        return List.of(
+                "\"number\":%d".formatted(number),
+                "\"title\":\"%s\"".formatted(title),
+                "\"headRefName\":\"%s\"".formatted(head),
+                "\"isDraft\":%b".formatted(draft),
+                "\"isCrossRepository\":%b".formatted(fork),
+                "\"createdAt\":%s".formatted(createdAt),
+                "\"baseRepository\":{\"nameWithOwner\":\"%s\"}".formatted(REPOSITORY),
+                "\"comments\":%s".formatted(comments),
+                "\"reviewThreads\":%s".formatted(threads),
+                "\"reviews\":%s".formatted(reviews),
+                "\"closingIssuesReferences\":%s".formatted(closingIssues),
+                "\"commits\":%s".formatted(commits));
     }
 
     private static void awaitQuietly(CountDownLatch release) {

@@ -20,11 +20,22 @@ export class LoadingBoard {
   shown(): BoardBoardView | undefined {
     return undefined;
   }
+
+  root(): string | undefined {
+    return undefined;
+  }
 }
 
 /** The board was read and holds no ticket, readable or not. */
 export class EmptyBoard {
   readonly kind = BoardStateKind.Empty;
+
+  constructor(private readonly project: string) {}
+
+  /** The project's root, known though nothing is on its board, so a first draft can be captured into it. */
+  root(): string {
+    return this.project;
+  }
 
   shown(): BoardBoardView | undefined {
     return undefined;
@@ -43,6 +54,10 @@ export class UnavailableBoard {
   shown(): BoardBoardView | undefined {
     return undefined;
   }
+
+  root(): string | undefined {
+    return undefined;
+  }
 }
 
 /** The read itself failed: a JSON-RPC error, or a sidecar that is not there. */
@@ -52,6 +67,10 @@ export class FaultedBoard {
   constructor(readonly message: string) {}
 
   shown(): BoardBoardView | undefined {
+    return undefined;
+  }
+
+  root(): string | undefined {
     return undefined;
   }
 }
@@ -64,6 +83,10 @@ export class PopulatedBoard {
 
   shown(): BoardBoardView | undefined {
     return this.view;
+  }
+
+  root(): string {
+    return this.view.root;
   }
 }
 

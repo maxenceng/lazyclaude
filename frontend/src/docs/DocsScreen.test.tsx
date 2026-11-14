@@ -26,12 +26,14 @@ const setup = () => {
   const loaded = controller.load();
   render(
     <>
-      <DocsPane docs={controller} focused onFocus={onFocus} onRetry={onRetry} />
-      <DocumentPane docs={controller} focused={false} onClose={() => {}} />
+      <DocsPane docs={controller} focused panelTabs={PANELS} onFocus={onFocus} onRetry={onRetry} />
+      <DocumentPane docs={controller} focused={false} onFocus={() => {}} onClose={() => {}} />
     </>,
   );
   return { client, controller, opener, notices, noticeStore, loaded, onFocus, onRetry };
 };
+
+const PANELS = { tabs: [{ id: 'board', label: 'Board', count: 3 }, { id: 'docs', label: 'Docs', count: 7 }], selected: 'docs', onSelect: () => {} };
 
 const answer = async (client: ReturnType<typeof fakeClient>, loaded: Promise<void>, result: unknown) => {
   await act(async () => {
@@ -46,6 +48,13 @@ const tree = treeFixture(
 );
 
 describe('the Docs panel', () => {
+  it('shows the panel tabs in its title row, the Docs tab the one shown, and no new-draft button', async () => {
+    const { client, loaded } = setup();
+    await answer(client, loaded, tree);
+    expect(screen.getByRole('tab', { name: 'Docs 7' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('button', { name: /New ticket/ })).not.toBeInTheDocument();
+  });
+
   it('says it is reading while the watch has not answered', () => {
     setup();
     expect(screen.getByRole('status')).toHaveTextContent('Reading the docs');
@@ -150,7 +159,7 @@ describe('the document in the main view', () => {
     expect(controller.shown().kind).toBe('missing');
     expect(screen.getByRole('heading', { name: 'gone.md' })).toBeInTheDocument();
     expect(screen.getByText('No document at this path in the docs tree.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Close document' }), 'a missing document closes like a found one').toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close document (esc)' }), 'a missing document closes like a found one').toBeInTheDocument();
   });
 
   it('opens a link outside the tree and an http link through the opener', async () => {

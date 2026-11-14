@@ -2,7 +2,7 @@ package dev.maxenceng.lazyclaude.review.domain;
 
 import java.util.List;
 
-import dev.maxenceng.lazyclaude.review.published.NoDiffLine;
+import dev.maxenceng.lazyclaude.review.published.OutsideDiff;
 import dev.maxenceng.lazyclaude.review.published.PullRequestNumber;
 import dev.maxenceng.lazyclaude.review.published.Reason;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
@@ -35,7 +35,7 @@ public record PullRequestDiffManager(PullRequestDiffPort diffs, ThreadPort threa
 
     /**
      * The threads with the diff lines they show under, from whatever each read last answered: none until the threads are read, and every
-     * one on no line until the diff is.
+     * one outside the diff until the diff is.
      */
     public ThreadsInDiff threadsInDiff(DiffReading diff, ThreadsReading threads) {
         if (!(threads instanceof ReadThreads read)) {
@@ -44,7 +44,7 @@ public record PullRequestDiffManager(PullRequestDiffPort diffs, ThreadPort threa
         if (diff instanceof ReadDiff(PullRequestDiff placed)) {
             return placed.place(read);
         }
-        return new ThreadsInDiff(read.byFileAndLine().stream().map(thread -> ThreadInDiff.builder().thread(thread).line(new NoDiffLine()).build()).toList());
+        return new ThreadsInDiff(read.byFileAndLine().stream().map(thread -> ThreadInDiff.builder().thread(thread).line(new OutsideDiff()).build()).toList());
     }
 
     public ThreadsReading threads(Project project, PullRequestNumber number) {

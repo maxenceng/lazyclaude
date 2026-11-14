@@ -1,7 +1,7 @@
 import type { Client, SessionMergeState, SessionNewSessionView, SessionSessionPayload, BoardTicketView } from '../protocol';
 import { Store } from '../shared/store';
 import type { Hosting } from './hosting';
-import { type SessionRow, SessionRowKind, rowsFor } from './sessionRows';
+import { type SessionRow, SessionRowKind, rowKey, rowsFor } from './sessionRows';
 import type { SessionStore } from './sessionStore';
 import { VerbPicker } from './verbPicker';
 
@@ -27,7 +27,13 @@ export class SessionsController {
   readonly picker: Store<VerbPicker | undefined> = new Store<VerbPicker | undefined>(undefined);
   readonly cursor: Store<number> = new Store(0);
 
-  constructor(private readonly deps: SessionsDeps) {}
+  /** The ticket and the row the cursor was last on, so a read that reorders the rows keeps it on the same session. */
+  private under: { ticket: string | undefined; row: string | undefined } = { ticket: undefined, row: undefined };
+
+  constructor(private readonly deps: SessionsDeps) {
+    deps.store.sessions.subscribe(() => this.followRow());
+    this.cursor.subscribe(() => this.remember());
+  }
 
   get hosting(): Hosting {
     return this.deps.hosting;
@@ -35,6 +41,22 @@ export class SessionsController {
 
   rows(): SessionRow[] {
     return rowsFor(this.deps.store.sessions.get(), this.deps.ticket()?.id);
+  }
+
+  private remember(): void {
+    const row = this.rows()[this.cursor.get()];
+    this.under = { ticket: this.deps.ticket()?.id, row: row === undefined ? undefined : rowKey(row) };
+  }
+
+  /** Sessions were read again: the cursor goes to where its row now is, if it is still listed under the same ticket. */
+  private followRow(): void {
+    const { ticket, row } = this.under;
+    const at = ticket === this.deps.ticket()?.id ? this.rows().findIndex((listed) => rowKey(listed) === row) : -1;
+    if (at >= 0 && at !== this.cursor.get()) {
+      this.cursor.set(at);
+    } else {
+      this.remember();
+    }
   }
 
   move(delta: number): void {
@@ -69,10 +91,10 @@ export class SessionsController {
     }
   }
 
-  /** `N`: a session in the project root, linked to no ticket. */
+  /** `N`: a session in the project root, linked to no ticket; nothing while no ticket is under the cursor, as on an empty board, whose key bar does not offer it. */
   async newUnlinked(): Promise<void> {
     const project = this.deps.project();
-    if (project !== undefined) {
+    if (project !== undefined && this.deps.ticket() !== undefined) {
       await this.opened(this.hosting.startUnlinked(project.root));
     }
   }
@@ -122,10 +144,8 @@ export class SessionsController {
         this.deps.onOpened();
         break;
       case SessionRowKind.Past:
-      case SessionRowKind.Unlinked:
-        if (project !== undefined) {
-          const listing = ticket === undefined ? { kind: 'noTicketListingPayload' as const } : { kind: 'ticketListingPayload' as const, branch: ticket.branch };
-          void this.opened(this.hosting.resumePast(project, row.session.id, row.session.directory, listing));
+        if (project !== undefined && ticket !== undefined) {
+          void this.opened(this.hosting.resumePast(project, row.session.id, row.session.directory, { kind: 'ticketListingPayload', branch: ticket.branch }));
         }
         break;
       case SessionRowKind.New:

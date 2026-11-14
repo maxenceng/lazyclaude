@@ -42,3 +42,6 @@ const documentsIn = (documents: DocsDocumentView[], folders: DocsFolderView[]): 
 /** The document the tree lists at `path`, at any depth. */
 export const documentIn = (tree: DocsTreeView, path: string): DocsDocumentView | undefined =>
   documentsIn(tree.documents, tree.folders).find((document) => document.path === path);
+
+/** How many documents the tree lists in all, at any depth, which the Docs panel tab counts. */
+export const documentCount = (tree: DocsTreeView): number => documentsIn(tree.documents, tree.folders).length;

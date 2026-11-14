@@ -5,6 +5,11 @@ import static dev.maxenceng.lazyclaude.review.domain.CheckFixture.failedBuild;
 import static dev.maxenceng.lazyclaude.review.domain.CheckFixture.noChecks;
 import static dev.maxenceng.lazyclaude.review.domain.CheckFixture.passedLint;
 import static dev.maxenceng.lazyclaude.review.domain.CheckFixture.pendingContract;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.closesIssue;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.closesNoIssue;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.noComments;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.openedAt;
+import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.twoComments;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.bareId;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBranch;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.longerThanTheBranch;
@@ -27,11 +32,23 @@ public final class PullRequestFixture {
                 .title(pullRequestTitle())
                 .head(headBranch())
                 .draft(false)
-                .checks(noChecks());
+                .openedAt(openedAt())
+                .checks(noChecks())
+                .comments(noComments())
+                .pendingReview(false)
+                .closing(closesNoIssue());
     }
 
     public static PullRequest pullRequest() {
         return pullRequestBuilder().build();
+    }
+
+    public static PullRequest discussedPullRequest() {
+        return pullRequestBuilder()
+                .comments(twoComments())
+                .pendingReview(true)
+                .closing(closesIssue())
+                .build();
     }
 
     public static PullRequest draftPullRequest() {

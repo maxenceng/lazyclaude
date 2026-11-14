@@ -1,5 +1,5 @@
 import type { BoardController } from './board/boardController';
-import { cursorTicketInColumns } from './board/rows';
+import { selectedIn } from './board/rows';
 import { Action } from './keys/bindings';
 import { Focus, type Layout, WindowTab } from './layout';
 import type { BoardTicketView, ReviewPullRequestView } from './protocol';
@@ -11,13 +11,13 @@ interface Deps {
   board: BoardController;
   review: ReviewController;
   layout: Store<Layout>;
+  /** Base's click on a row of the ticket's sessions: the cursor goes to it and it opens. */
+  pressRow: (index: number) => void;
 }
 
 /** Which tab the window shows, and the keys of the Board and Pull requests tabs. The window opens on Base, and remembers no tab. */
 export class WindowTabs {
   readonly selected: Store<WindowTab> = new Store<WindowTab>(WindowTab.Base);
-  /** Whether the Board tab shows its preview: a click on no ticket closes it, a card chosen by click or key opens it again. */
-  readonly previewShown: Store<boolean> = new Store<boolean>(true);
 
   constructor(private readonly deps: Deps) {}
 
@@ -41,26 +41,29 @@ export class WindowTabs {
     return state.kind === 'openPullRequests' ? worstFirst(state.pullRequests) : [];
   }
 
-  /** The Board tab draws each ticket's pull request, so it asks `review` for them when it is shown and whenever they or the tickets change. */
+  /** The Board tab draws each ticket's pull request and Base names the selected one's, so either asks `review` for them when it is shown and whenever they or the tickets change. */
   pullRequestsChanged(): void {
-    if (this.selected.get() === WindowTab.Board) {
+    if (this.selected.get() !== WindowTab.PullRequests) {
       void this.deps.review.ticketPullRequests.join(this.deps.board.branches());
     }
   }
 
   /** A click on a card of the Board tab: the card selected and previewed, or, already selected, gone to on Base. */
   pressTicket(ticket: BoardTicketView, cursor: string | undefined): void {
-    if (ticket.id === cursor && this.previewShown.get()) {
+    if (ticket.id === cursor) {
       this.openTicket(ticket.id);
     } else {
       this.deps.board.selection.select(ticket.id);
-      this.previewShown.set(true);
     }
   }
 
-  /** A click on the Board tab where no card is: the preview closes and the columns take its height. */
-  closePreview(): void {
-    this.previewShown.set(false);
+  /** A click on a session row of the Board tab's preview: the cursor's ticket gone to on Base, then the row's action run as Base runs it. Nothing without a ticket under the cursor. */
+  pressSessionRow(index: number): void {
+    const id = this.cursorTicket();
+    if (id !== undefined) {
+      this.openTicket(id);
+      this.deps.pressRow(index);
+    }
   }
 
   /** Enter, or a click on the card already selected, on the Board tab: back to Base with that ticket selected. */
@@ -90,10 +93,12 @@ export class WindowTabs {
   private pressOnBoard(action: Action): void {
     const view = this.deps.board.shown();
     const selection = this.deps.board.selection;
+    if (action === Action.Capture) {
+      return this.deps.board.capture.open();
+    }
     if (view === undefined) {
       return;
     }
-    this.previewShown.set(action === Action.Open ? this.previewShown.get() : true);
     switch (action) {
       case Action.MoveDown:
         return selection.moveInColumn(view, 1);
@@ -111,13 +116,16 @@ export class WindowTabs {
   }
 
   private openCursorTicket(): void {
-    const view = this.deps.board.shown();
-    const ticket = view === undefined ? undefined : cursorTicketInColumns(view, this.deps.board.selection.selected.get());
-    if (ticket !== undefined) {
-      this.openTicket(ticket.id);
+    const id = this.cursorTicket();
+    if (id !== undefined) {
+      this.openTicket(id);
     }
   }
 
+  private cursorTicket(): string | undefined {
+    const view = this.deps.board.shown();
+    return view === undefined ? undefined : selectedIn(view, this.deps.board.selection.selected.get());
+  }
 
   private pressOnPullRequests(action: Action): void {
     const list = this.pullRequests();

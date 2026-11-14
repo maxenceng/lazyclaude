@@ -61,6 +61,7 @@ none are to be invented.
 
 1. The TUI is the spec: a desktop screen that differs from it needs a reason.
 2. A session is never hidden by the board, and the board never by a session.
-3. Absence and failure are shown, with their reason, not papered over.
+3. Absence and failure are shown, with their reason, not papered over. The desktop window leaves unreadable tickets to
+   the TUI and `/ticket board` (ADR 0105).
 4. Every write is one the user asked for, and few writes exist.
 5. Density over decoration: a tool used all day, by one person who knows it.

@@ -80,11 +80,11 @@ final class DiffRows {
                 .boxed()
                 .flatMap(file -> fileRows(file, files.get(file)))
                 .toList();
-        return new DiffRows(files, withThreads(lineRows, inlineThreads(comments.underLines()), inlinePending(comments.pending()), box));
+        return new DiffRows(files, withThreads(lineRows, inlineThreads(comments.shown()), inlinePending(comments.pending()), box));
     }
 
-    private static Map<Integer, List<ReviewThreadView>> inlineThreads(List<ThreadInDiffView> underLines) {
-        return underLines.stream()
+    private static Map<Integer, List<ReviewThreadView>> inlineThreads(List<ThreadInDiffView> shown) {
+        return shown.stream()
                 .filter(placed -> placed.line() instanceof OnDiffLine)
                 .collect(Collectors.groupingBy(
                         placed -> ((OnDiffLine) placed.line()).index().value(),

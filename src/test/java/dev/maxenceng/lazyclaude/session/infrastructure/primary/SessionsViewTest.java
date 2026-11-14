@@ -138,6 +138,21 @@ class SessionsViewTest {
     }
 
     @Test
+    void shouldListUnderATicketTheTabResumingASessionLinkedToIt() {
+        LiveSessionView resumed = linkedSessionView(sessionIdOf(2), new YourTurn(), ticketLink("1", "start"));
+        HostedSessionView resuming = liveHostedSessionView(resumed);
+        SessionsView view = SessionsView.builder()
+                .live(List.of(resumed))
+                .past(List.of())
+                .hosted(List.of(resuming, liveHostedSessionView(linkedSessionView(sessionIdOf(3), new YourTurn(), ticketLink("2", "start")))))
+                .build();
+
+        assertThat(view.sessionsOf(linkedTicketId("1")).hosted())
+                .as("a resumed tab was started for no ticket, but the session it runs is linked to this one, so it is listed here")
+                .containsExactly(resuming);
+    }
+
+    @Test
     void shouldListNoSessionUnderATicketNoSessionIsLinkedTo() {
         SessionsView view = sessionsViewOf(List.of(linkedSessionView(sessionIdOf(1), new YourTurn())), List.of(linkedPastSessionView(1)));
 

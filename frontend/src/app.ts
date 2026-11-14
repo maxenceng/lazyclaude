@@ -1,11 +1,11 @@
 import { BoardController } from './board/boardController';
 import { i18n } from './i18n/i18n';
 import { DocsController } from './docs/docsController';
-import type { Action, KeyPress } from './keys/bindings';
+import { Action, type KeyPress } from './keys/bindings';
 import type { Binding } from './keys/chords';
 import { ConfigurationStore } from './keys/configurationStore';
 import { KeyRouter } from './keyRouting';
-import { Focus, Layout, WindowTab } from './layout';
+import { Focus, Layout, type Panel, WindowTab } from './layout';
 import { WindowTabs } from './windowTabs';
 import type { Platform } from './platform';
 import type { Client } from './protocol';
@@ -73,9 +73,9 @@ export class AppModel {
       project: () => this.project(),
       ticket: () => this.board.selectedTicket(),
       onOpened: () => this.focusOn(Focus.Dock),
-      onPicking: () => this.layout.set(this.layout.get().leaveZoom()),
+      onPicking: () => this.layout.set(this.layout.get().showTicket()),
     });
-    this.tabs = new WindowTabs({ board: this.board, review: this.review, layout: this.layout });
+    this.tabs = new WindowTabs({ board: this.board, review: this.review, layout: this.layout, pressRow: (index) => this.pressRow(index) });
     this.quitting = new Quitting({
       hosted: () => hostedOf(this.sessionStore.sessions.get(), this.hosting.dock.get().tabs.length),
       closeWindow: () => platform.closeWindow(),
@@ -95,6 +95,13 @@ export class AppModel {
 
   reserved(): readonly Binding[] {
     return this.configuration.reserved();
+  }
+
+  /** The chord that zooms the dock from inside it, as `config.yml` binds it, for the dock's zoom button; none while no configuration is read. */
+  zoomKey(): string | undefined {
+    return this.reserved()
+      .find((binding) => binding.action === Action.Zoom)
+      ?.label();
   }
 
   /** Whether a popup is open that takes every key and click, so nothing behind it answers either. */
@@ -138,17 +145,22 @@ export class AppModel {
     this.focusOn(Focus.Dock);
   }
 
+  /** The dock's zoom button: the reserved zoom chord's, the dock taking focus first from any other pane; zoomed already, the zoom ends. */
+  toggleZoom(): void {
+    this.layout.set(this.layout.get().zoomDock());
+  }
+
   /** The dock's minimise or restore button: the dock folds to its strip, or unfolds. */
   toggleDockMinimised(): void {
     this.keys.toggleDockMinimised();
   }
 
-  /** The close button of a shown document: the main view goes back to the selected ticket, focus staying where it was. */
+  /** The close button of a shown document: the main view goes back to the selected ticket and focus goes to it. */
   closeDocument(): void {
     this.layout.set(this.layout.get().closeDocument());
   }
 
-  /** The ticket's close button: the main view hides and the dock takes the column, as `m` does; `m` shows it again. */
+  /** The ticket's hide button: the main view hides and the dock takes the column, as `m` does; `m` shows it again. */
   hideMainView(): void {
     this.layout.set(this.layout.get().hideMainView());
   }
@@ -159,6 +171,11 @@ export class AppModel {
     if (root !== undefined) {
       void this.review.pullRequests.watch(root);
     }
+  }
+
+  /** A click on a panel tab of the left column: that tab is shown and takes focus. */
+  showPanel(panel: Panel): void {
+    this.layout.set(this.layout.get().showPanel(panel));
   }
 
   focusOn(focus: Focus): void {

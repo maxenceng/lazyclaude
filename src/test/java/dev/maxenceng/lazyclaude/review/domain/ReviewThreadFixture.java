@@ -11,10 +11,11 @@ import static dev.maxenceng.lazyclaude.review.published.ThreadPositionFixture.ri
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.review.domain.ReviewThread.ReviewThreadBuilder;
+import dev.maxenceng.lazyclaude.review.published.AtFileHead;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
-import dev.maxenceng.lazyclaude.review.published.NoDiffLine;
 import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
+import dev.maxenceng.lazyclaude.review.published.OutsideDiff;
 import dev.maxenceng.lazyclaude.review.published.ThreadComment;
 import dev.maxenceng.lazyclaude.review.published.ThreadPosition;
 
@@ -63,7 +64,11 @@ public final class ReviewThreadFixture {
         return ThreadInDiff.builder().thread(thread).line(new OnDiffLine(new DiffLineIndex(index))).build();
     }
 
-    public static ThreadInDiff onNoLine(ReviewThread thread) {
-        return ThreadInDiff.builder().thread(thread).line(new NoDiffLine()).build();
+    public static ThreadInDiff outsideDiff(ReviewThread thread) {
+        return ThreadInDiff.builder().thread(thread).line(new OutsideDiff()).build();
+    }
+
+    public static ThreadInDiff atFileHead(ReviewThread thread, int file) {
+        return ThreadInDiff.builder().thread(thread).line(new AtFileHead(file)).build();
     }
 }

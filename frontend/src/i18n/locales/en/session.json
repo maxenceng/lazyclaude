@@ -1,14 +1,25 @@
 {
   "sessions": {
-    "title": "sessions",
-    "older": "older sessions"
+    "title": "sessions"
   },
   "row": {
-    "hosted": "hosted",
+    "attach": "attach",
+    "resume": "resume",
+    "enterKey": "enter",
     "live": "hosted in another window",
     "new": "new session",
+    "newKey": "n",
     "starting": "starting",
     "untitled": "session {{id}}"
+  },
+  "state": {
+    "permission": "permission",
+    "input": "needs input",
+    "turn": "your turn",
+    "busy": "busy",
+    "unknown": "unknown",
+    "starting": "starting",
+    "ended": "ended"
   },
   "picker": {
     "title": "start with"
@@ -26,17 +37,20 @@
     "retry": "Retry"
   },
   "dock": {
-    "title": "Dock",
+    "title": "Sessions",
     "terminal": "session terminal",
     "starting": "starting",
     "minimise": "Minimise dock",
-    "restore": "Restore dock"
+    "minimiseKey": "M",
+    "restore": "Restore dock",
+    "zoom": "Zoom dock",
+    "unzoom": "Leave zoom"
   },
   "keyBar": {
     "move": "j/k move",
     "open": "enter open",
     "back": "esc back",
-    "new": "n new session",
+    "new": "n new",
     "start": "enter start",
     "cancel": "esc cancel",
     "copy": "ctrl+shift+c copy",

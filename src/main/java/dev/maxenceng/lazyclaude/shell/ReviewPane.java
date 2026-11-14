@@ -379,7 +379,7 @@ final class ReviewPane {
 
     /** The pending comment {@code enter} and {@code x} act on at the cursor's line, as {@code review} picks it, if the line has one. */
     Optional<PendingCommentView> pendingOnCursorLine() {
-        return comments.lastOnLines().stream()
+        return comments.lastAtPlaces().stream()
                 .filter(placed -> placed.line() instanceof OnDiffLine(DiffLineIndex index) && index.value() == cursor)
                 .map(PendingInDiffView::comment)
                 .findFirst();

@@ -104,3 +104,8 @@
 - 0100 [A done ticket offers `done`, and the desktop's Base lists the ten latest closed](0100-a-done-ticket-offers-done-and-base-lists-the-ten-latest-closed.md) — Accepted.
 - 0101 [Markdown type and measure scale with the pane, by container queries](0101-markdown-type-and-measure-scale-with-the-pane-by-container-queries.md) — Accepted.
 - 0102 [The bundle job caches the Temurin download and tauri's AppImage tools, keyed on their pins](0102-the-bundle-job-caches-the-temurin-download-and-tauris-appimage-tools-keyed-on-their-pins.md) — Accepted.
+- 0103 [The desktop window has one visual system and one rule for pane actions](0103-the-desktop-window-has-one-visual-system-and-one-rule-for-pane-actions.md) — Accepted.
+- 0104 [The Base tab shares its left column between Board and Docs and leads its ticket with where it stands](0104-the-base-tab-shares-its-left-column-between-board-and-docs-and-leads-its-ticket-with-where-it-stands.md) — Accepted.
+- 0105 [The desktop window does not show unreadable tickets, and the Board tab previews beside its columns](0105-the-desktop-window-does-not-show-unreadable-tickets-and-the-board-tab-previews-beside-its-columns.md) — Accepted.
+- 0106 [The desktop review shows each thread once under its line and drops its Comments pane](0106-the-desktop-review-shows-each-thread-once-under-its-line-and-drops-its-comments-pane.md) — Accepted.
+- 0107 [A View may hold a value of its own context's domain](0107-a-view-may-hold-a-value-of-its-own-contexts-domain.md) — Accepted.

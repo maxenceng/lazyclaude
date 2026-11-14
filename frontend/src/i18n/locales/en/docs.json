@@ -12,7 +12,8 @@
     "noneSelected": "No document selected.",
     "emptyDocument": "Empty document.",
     "missing": "No document at this path in the docs tree.",
-    "close": "Close document"
+    "close": "Close document",
+    "closeKey": "esc"
   },
   "links": {
     "fragmentNotFound": "No heading \"{{fragment}}\" in {{path}}; opened at its top.",
@@ -22,7 +23,11 @@
   },
   "keyBar": {
     "move": "j/k move",
-    "open": "enter open or fold",
-    "close": "esc close"
+    "open": "enter open",
+    "close": "esc close",
+    "toDocument": "l read",
+    "scroll": "j/k scroll",
+    "halfPage": "ctrl+d/u half page",
+    "toDocs": "h docs"
   }
 }

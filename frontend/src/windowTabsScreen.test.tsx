@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
@@ -8,6 +8,7 @@ import { Focus } from './layout';
 import { Ready } from './protocol';
 import { treeFixture } from './docs/fixtures';
 import { pullRequestFixture } from './review/fixtures';
+import { hostedFixture, sessionFixture, sessionsFixture, ticketSessionsFixture } from './session/fixtures';
 import { fakeClient } from './test/fakeClient';
 import { testPlatform } from './testPlatform';
 
@@ -28,12 +29,23 @@ const board = boardFixture(
   [{ id: 'PROJ-9', reason: 'no status label' }],
 );
 
-const failing = pullRequestFixture({ number: 12, title: 'Break it', head: 'proj-2-second', checks: [{ name: 'build', outcome: 'FAILED' }] });
-const passing = pullRequestFixture({ number: 10, title: 'Fix it', head: 'proj-1-first', checks: [{ name: 'build', outcome: 'PASSED' }] });
+const HOUR_MS = 3_600_000;
+const hoursAgo = (hours: number): string => new Date(Date.now() - hours * HOUR_MS).toISOString();
+const failing = pullRequestFixture({
+  number: 12,
+  title: 'Break it',
+  head: 'proj-2-second',
+  checks: [{ name: 'build', outcome: 'FAILED' }],
+  comments: 3,
+  pendingReview: true,
+  closing: { kind: 'closesIssue', number: 145 },
+  openedAt: hoursAgo(2),
+});
+const passing = pullRequestFixture({ number: 10, title: 'Fix it', head: 'proj-1-first', checks: [{ name: 'build', outcome: 'PASSED' }], comments: 1 });
 const pending = pullRequestFixture({ number: 11, title: 'Wait for it', head: 'chore-tidy', checks: [{ name: 'build', outcome: 'PENDING' }] });
 const draft = pullRequestFixture({ number: 13, title: 'Not yet', head: 'proj-3-third', draft: true, checks: [] });
 
-const started = async (watch: unknown = { kind: 'openPullRequests', pullRequests: [passing, draft, failing, pending] }, read = board) => {
+const started = async (watch: unknown = { kind: 'openPullRequests', pullRequests: [passing, draft, failing, pending] }, read: unknown = board) => {
   const client = fakeClient(new Ready());
   const app = new AppModel(client, testPlatform());
   app.start();
@@ -67,23 +79,29 @@ const hostSession = async ({ client, user }: Awaited<ReturnType<typeof started>>
   await settle();
 };
 
-const tab = (name: RegExp | string) => screen.getByRole('tab', { name });
+const tab = (name: RegExp | string) => within(screen.getByRole('tablist', { name: 'window tabs' })).getByRole('tab', { name });
 
 describe('the window tabs', () => {
   it('begin the status line with Base, Board and Pull requests, and open on Base', async () => {
     await started();
-    expect(screen.getAllByRole('tab').map((each) => each.textContent)).toEqual(['Base', 'Board1', 'Pull requests4✗']);
+    expect(within(screen.getByRole('tablist', { name: 'window tabs' })).getAllByRole('tab').map((each) => each.textContent)).toEqual(['Base', 'Board1 in progress', 'Pull requests4 open✗']);
     expect(tab('Base')).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Board' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Ticket' })).toBeInTheDocument();
   });
 
   it('carry no finding on Base, the in-progress count on Board, and the open count and worst result on Pull requests', async () => {
     await started();
     expect(within(tab('Base')).queryByText(/\d/)).not.toBeInTheDocument();
-    expect(within(tab(/^Board/)).getByText('1')).toBeInTheDocument();
-    expect(within(tab(/^Pull requests/)).getByText('4')).toBeInTheDocument();
+    expect(tab(/^Board/)).toHaveTextContent('1 in progress');
+    expect(tab(/^Pull requests/)).toHaveTextContent('4 open');
     expect(within(tab(/^Pull requests/)).getByRole('img', { name: 'checks failed' })).toBeInTheDocument();
+  });
+
+  it('name what their count counts, a zero included', async () => {
+    await started({ kind: 'openPullRequests', pullRequests: [] });
+    expect(tab(/^Pull requests/)).toHaveTextContent('0 open');
+    expect(within(tab(/^Pull requests/)).getByText('open').nextElementSibling, 'no empty check slot widens the badge').toBeNull();
   });
 
   it('show a pending result on the tab when none failed', async () => {
@@ -110,9 +128,9 @@ describe('the Board tab', () => {
     const columns = ['IN PROGRESS', 'IN REVIEW', 'TODO', 'DRAFT', 'DONE'].map((name) => screen.getByRole('group', { name: new RegExp(name, 'i') }));
     expect(columns.map((column) => column.textContent)).toEqual([
       'in progress1FirstPROJ-1',
-      'in review0',
+      'in review0none',
       'todo2SecondPROJ-2ThirdPROJ-3',
-      'draft0',
+      'draft0none',
       'done1FourthPROJ-4',
     ]);
   });
@@ -149,10 +167,17 @@ describe('the Board tab', () => {
     );
   });
 
-  it('shows the tickets that could not be read, with their reasons', async () => {
+  it('draws no section and no row for the tickets that could not be read', async () => {
     const { user } = await started();
     await user.keyboard('2');
-    expect(screen.getByText('PROJ-9 — no status label')).toBeInTheDocument();
+    expect(screen.queryByText(/PROJ-9/)).not.toBeInTheDocument();
+    expect(screen.queryByText('unreadable')).not.toBeInTheDocument();
+  });
+
+  it('draws the Base tab\'s Board without the tickets that could not be read either', async () => {
+    await started();
+    expect(screen.queryByText(/PROJ-9/)).not.toBeInTheDocument();
+    expect(screen.queryByText('unreadable')).not.toBeInTheDocument();
   });
 
   it('moves the cursor with j, k, h and l, and enter goes to Base with that ticket selected', async () => {
@@ -171,7 +196,7 @@ describe('the Board tab', () => {
     expect(screen.getByRole('button', { name: /PROJ-2/ })).toHaveAttribute('aria-current', 'true');
   });
 
-  it('selects a card on a click and previews it beneath, staying on the Board', async () => {
+  it('selects a card on a click and previews it beside the columns, staying on the Board', async () => {
     const { user } = await started();
     await user.keyboard('2');
     await user.click(screen.getByRole('button', { name: /PROJ-3/ }));
@@ -189,18 +214,22 @@ describe('the Board tab', () => {
     expect(screen.getByRole('button', { name: /PROJ-3/ })).toHaveAttribute('aria-current', 'true');
   });
 
-  it('closes the preview on a click where no card is, and a card clicked or a key moving the cursor opens it again', async () => {
+  it('keeps the preview when a click lands where no card is', async () => {
     const { user } = await started();
     await user.keyboard('2');
-    expect(screen.getByRole('heading', { name: 'First' })).toBeInTheDocument();
     await user.click(screen.getByRole('group', { name: /draft/i }));
-    expect(screen.queryByRole('heading', { name: 'First' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /PROJ-1/ }));
     expect(screen.getByRole('heading', { name: 'First' })).toBeInTheDocument();
     expect(tab(/^Board/)).toHaveAttribute('aria-selected', 'true');
-    await user.click(screen.getByRole('group', { name: /draft/i }));
-    await user.keyboard('h');
-    expect(screen.getByRole('heading', { name: 'Second' })).toBeInTheDocument();
+  });
+
+  it('previews the cursor\'s ticket in a pane of its own beside the Board pane, as Base lays a ticket out', async () => {
+    const { user } = await started();
+    await user.keyboard('2');
+    const preview = within(screen.getByRole('region', { name: 'Ticket' }));
+    expect(preview.getByRole('heading', { name: 'First' })).toBeInTheDocument();
+    expect(preview.getByText('status')).toBeInTheDocument();
+    expect(preview.getByText('pull request')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Board' })).queryByRole('heading', { name: 'First' })).not.toBeInTheDocument();
   });
 
   it('goes to a done card on Base, by click or enter, as Base lists it', async () => {
@@ -221,18 +250,135 @@ describe('the Board tab', () => {
   });
 });
 
+const pushSessions = (ready: Awaited<ReturnType<typeof started>>, ...live: ReturnType<typeof sessionFixture>[]) => {
+  const hosted = live.map((session) => hostedFixture(`h-${session.id}`, { ticket: 'PROJ-1', live: session }));
+  act(() => ready.client.push('session/changed', { ...sessionsFixture(live, { tickets: [ticketSessionsFixture('PROJ-1', { live, hosted })] }), hosted }));
+};
+
+describe('a card on the Board tab and the sessions waiting on its ticket', () => {
+  it('carries the worded pill of the strongest waiting session and is tinted in its colour', async () => {
+    const ready = await started();
+    await ready.user.keyboard('2');
+    pushSessions(ready, sessionFixture({ id: 'turn', ticket: 'PROJ-1', state: { kind: 'yourTurn' } }), sessionFixture({ id: 'ask', ticket: 'PROJ-1', state: { kind: 'waitingForInput', reason: { kind: 'noWaitingReason' } } }));
+    const card = screen.getByRole('button', { name: /First/ });
+    expect(within(card).getByRole('img')).toHaveTextContent('needs input');
+    expect(card, 'the card is tinted in the lamp of the strongest session').toHaveAttribute('data-lamp', 'input');
+  });
+
+  it('carries no pill and no tint when its sessions are busy or ended', async () => {
+    const ready = await started();
+    await ready.user.keyboard('2');
+    pushSessions(ready, sessionFixture({ id: 'busy', ticket: 'PROJ-1', state: { kind: 'busy' } }));
+    const card = screen.getByRole('button', { name: /First/ });
+    expect(within(card).queryByRole('img')).not.toBeInTheDocument();
+    expect(card).not.toHaveAttribute('data-lamp');
+  });
+
+  it('is the only card tinted, the other tickets\' cards keeping the same look in every column', async () => {
+    const ready = await started();
+    await ready.user.keyboard('2');
+    pushSessions(ready, sessionFixture({ id: 'turn', ticket: 'PROJ-1', state: { kind: 'yourTurn' } }));
+    ['PROJ-2', 'PROJ-3', 'PROJ-4'].forEach((id) => expect(screen.getByRole('button', { name: new RegExp(id) })).not.toHaveAttribute('data-lamp'));
+  });
+
+  it('lists the sessions of the ticket under the cursor in the preview', async () => {
+    const ready = await started();
+    await ready.user.keyboard('2');
+    pushSessions(ready, sessionFixture({ id: 'turn', ticket: 'PROJ-1', state: { kind: 'yourTurn' } }));
+    expect(within(screen.getByRole('region', { name: 'Ticket' })).getByRole('button', { name: /attach/ })).toBeInTheDocument();
+  });
+});
+
+describe('the Board tab with no ticket under the cursor', () => {
+  const emptied = [
+    ['has none', { kind: 'board', root: '/p', unreadable: [], groups: [] }],
+    ['has only tickets that could not be read', boardFixture([], [{ id: 'PROJ-9', reason: 'no status label' }])],
+  ] as const;
+
+  it.each(emptied)('keeps five equal columns at 0 and none when the board %s', async (_name, read) => {
+    const { user } = await started(undefined, read);
+    await user.keyboard('2');
+    const columns = ['DRAFT', 'TODO', 'IN PROGRESS', 'IN REVIEW', 'DONE'].map((name) => screen.getByRole('group', { name: new RegExp(name, 'i') }));
+    expect(columns.map((column) => column.textContent)).toEqual(['draft0none', 'todo0none', 'in progress0none', 'in review0none', 'done0none']);
+  });
+
+  it.each(emptied)('keeps the preview pane saying no ticket is selected when the board %s', async (_name, read) => {
+    const { user } = await started(undefined, read);
+    await user.keyboard('2');
+    expect(within(screen.getByRole('region', { name: 'Ticket' })).getByText('No ticket selected.')).toBeInTheDocument();
+  });
+
+  it.each(emptied)('keeps only the keys that act in the key bar when the board %s', async (_name, read) => {
+    const { user } = await started(undefined, read);
+    await user.keyboard('2');
+    const keys = screen.getByRole('contentinfo');
+    expect(keys).toHaveTextContent('c new draft');
+    expect(keys).toHaveTextContent('1/2/3 tabs');
+    expect(keys).not.toHaveTextContent('move');
+    expect(keys).not.toHaveTextContent('go to ticket');
+  });
+
+  it('keeps the columns at 0 and none and says why while the issues cannot be read', async () => {
+    const { user } = await started(undefined, { kind: 'unavailableBoard', reason: 'gh is not signed in' });
+    await user.keyboard('2');
+    expect(screen.getByText('gh is not signed in')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /todo/i })).toHaveTextContent('todo0none');
+    expect(screen.getByRole('region', { name: 'Board' }).className, 'the reason stands above the columns, which take the height left rather than overflow').toContain('fill');
+    expect(within(screen.getByRole('region', { name: 'Ticket' })).getByText('No ticket selected.')).toBeInTheDocument();
+  });
+});
+
+const rowsOf = () => screen.getAllByRole('row').slice(1);
+
 describe('the Pull requests tab', () => {
-  it('lists every open pull request with its CI glyph, number, title and head, failed first and drafts last', async () => {
+  it('lists every open pull request as a row, failed first and drafts last', async () => {
     const { user } = await started();
     await user.keyboard('3');
-    const rows = screen.getAllByRole('button').filter((button) => /#\d+/.test(button.textContent));
-    expect(rows.map((row) => row.textContent)).toEqual(['✗#12Break itproj-2-second', '◌#11Wait for itchore-tidy', '✓#10Fix itproj-1-first', '#13Not yetproj-3-third']);
+    expect(rowsOf().map((row) => within(row).getAllByRole('cell')[2]!.textContent)).toEqual(['Break it#12', 'Wait for it#11', 'Fix it#10', 'Not yet#13']);
+  });
+
+  it('says in each row its CI in a glyph and a word, its ticket, branch, comments in words, pending badge and age', async () => {
+    const { user } = await started();
+    await user.keyboard('3');
+    const [failed, running, passed, none] = rowsOf().map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+    expect(failed).toEqual(['✗failing', '145', 'Break it#12', 'proj-2-second', '3 commentspending', '2h']);
+    expect(running?.[0]).toBe('◌running');
+    expect(passed?.[0]).toBe('✓passing');
+    expect(none?.[0]).toBe('–no checks');
+    expect(running?.[4]).toBe('no comments');
+    expect(passed?.[4]).toBe('1 comment');
+    expect(screen.getAllByText('pending')).toHaveLength(1);
+  });
+
+  it('shows an explicit mark for a pull request that closes no ticket', async () => {
+    const { user } = await started();
+    await user.keyboard('3');
+    expect(within(rowsOf()[2]!).getByRole('img', { name: 'no ticket' })).toHaveTextContent('–');
+  });
+
+  it('names its columns', async () => {
+    const { user } = await started();
+    await user.keyboard('3');
+    expect(screen.getAllByRole('columnheader').map((head) => head.textContent)).toEqual(['CI', 'Ticket', 'Title', 'Branch', 'Comments', 'Age']);
   });
 
   it('says there is no open pull request', async () => {
     const { user } = await started({ kind: 'openPullRequests', pullRequests: [] });
     await user.keyboard('3');
     expect(screen.getByText('No open pull requests.')).toBeInTheDocument();
+  });
+
+  it('offers no move or review key while no pull request is open, and the keys come back with one', async () => {
+    const empty = await started({ kind: 'openPullRequests', pullRequests: [] });
+    await empty.user.keyboard('3');
+    expect(screen.getByRole('contentinfo')).not.toHaveTextContent('j/k move');
+    expect(screen.getByRole('contentinfo')).not.toHaveTextContent('enter review');
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('1/2/3 tabs');
+    cleanup();
+    const open = await started();
+    await open.user.keyboard('3');
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('j/k move');
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('enter review');
   });
 
   it('says it is checking while review/watch has not answered', async () => {
@@ -254,7 +400,7 @@ describe('the Pull requests tab', () => {
     const { client, user } = await started();
     await user.keyboard('3');
     await user.keyboard('j');
-    expect(screen.getByRole('button', { name: /#11/ })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('row', { name: /#11/ })).toHaveAttribute('aria-current', 'true');
     await user.keyboard('{Enter}');
     await act(async () => {
       client.answerAll('review/pendingOf', { kind: 'noPendingReview' });
@@ -263,16 +409,16 @@ describe('the Pull requests tab', () => {
       await Promise.resolve();
     });
     await settle();
-    expect(screen.getByRole('region', { name: 'PR #11 Wait for it' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Review' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
     expect(tab(/^Pull requests/)).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('button', { name: /#11/ })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('row', { name: /#11/ })).toHaveAttribute('aria-current', 'true');
   });
 
   it('ends a review opened from it when another tab is clicked or keyed, the AZERTY digit row included', async () => {
     const { client, user } = await started();
     await user.keyboard('3');
-    await user.click(screen.getByRole('button', { name: /#11/ }));
+    await user.click(screen.getByRole('row', { name: /#11/ }));
     await act(async () => {
       client.answerAll('review/pendingOf', { kind: 'noPendingReview' });
       client.answerAll('review/threadsOf', { kind: 'readThreads', threads: [] });
@@ -281,7 +427,7 @@ describe('the Pull requests tab', () => {
     });
     await settle();
     await user.click(tab(/^Board/));
-    expect(screen.queryByRole('region', { name: 'PR #11 Wait for it' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Review' })).not.toBeInTheDocument();
     expect(tab(/^Board/)).toHaveAttribute('aria-selected', 'true');
     fireEvent.keyDown(window, { key: '&', code: 'Digit1' });
     expect(tab(/^Base/)).toHaveAttribute('aria-selected', 'true');
@@ -290,7 +436,7 @@ describe('the Pull requests tab', () => {
   it('opens the review of a pull request whose head is no ticket\'s branch when it is clicked', async () => {
     const { client, user } = await started();
     await user.keyboard('3');
-    await user.click(screen.getByRole('button', { name: /#11/ }));
+    await user.click(screen.getByRole('row', { name: /#11/ }));
     expect(client.calls.map((call) => call.method)).toContain('review/diffOf');
   });
 });
@@ -310,7 +456,7 @@ describe('the window tabs and a hosted session', () => {
     const ready = await started();
     await hostSession(ready);
     await ready.user.click(tab(/^Pull requests/));
-    await ready.user.click(screen.getByRole('button', { name: /#11/ }));
+    await ready.user.click(screen.getByRole('row', { name: /#11/ }));
     await act(async () => {
       ready.client.answerAll('review/pendingOf', { kind: 'noPendingReview' });
       ready.client.answerAll('review/threadsOf', { kind: 'readThreads', threads: [] });

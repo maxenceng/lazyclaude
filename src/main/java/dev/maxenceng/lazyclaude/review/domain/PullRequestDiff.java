@@ -10,13 +10,14 @@ import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.review.published.AddedLine;
+import dev.maxenceng.lazyclaude.review.published.AtFileHead;
 import dev.maxenceng.lazyclaude.review.published.ContextLine;
 import dev.maxenceng.lazyclaude.review.published.DiffLine;
 import dev.maxenceng.lazyclaude.review.published.DiffLineIndex;
 import dev.maxenceng.lazyclaude.review.published.DiffLineNumber;
 import dev.maxenceng.lazyclaude.review.published.DiffPath;
-import dev.maxenceng.lazyclaude.review.published.NoDiffLine;
 import dev.maxenceng.lazyclaude.review.published.OnDiffLine;
+import dev.maxenceng.lazyclaude.review.published.OutsideDiff;
 import dev.maxenceng.lazyclaude.review.published.PlacedThread;
 import dev.maxenceng.lazyclaude.review.published.RemovedLine;
 import dev.maxenceng.lazyclaude.review.published.ThreadLine;
@@ -29,25 +30,28 @@ import dev.maxenceng.lazyclaude.review.published.ThreadSide;
  */
 public record PullRequestDiff(List<DiffFile> files) {
 
-    private static final Comparator<ThreadInDiff> IN_DIFF_ORDER = Comparator.comparing((ThreadInDiff placed) -> placed.line() instanceof NoDiffLine)
+    private static final Comparator<ThreadInDiff> IN_DIFF_ORDER = Comparator.comparing((ThreadInDiff placed) -> !(placed.line() instanceof OnDiffLine))
             .thenComparingInt(PullRequestDiff::indexOf);
-    private static final Comparator<PendingInDiff> PENDING_IN_DIFF_ORDER = Comparator.comparing((PendingInDiff placed) -> placed.line() instanceof NoDiffLine)
+    private static final Comparator<PendingInDiff> PENDING_IN_DIFF_ORDER = Comparator.comparing((PendingInDiff placed) -> !(placed.line() instanceof OnDiffLine))
             .thenComparingInt(placed -> indexOf(placed.line()));
 
     public PullRequestDiff {
         Assert.notNull("files", files);
     }
 
-    /** Each of {@code threads} with the diff line it shows under, in diff order; one on a line this diff does not hold shows under none. */
+    /**
+     * Each of {@code threads} with where it shows, in diff order: under its line; under its file's header when this diff holds the file but
+     * not the line; after the diff when this diff does not hold the file.
+     */
     public ThreadsInDiff place(ReadThreads threads) {
         Map<LineAnchor, DiffLineIndex> lineOfAnchor = lineOfAnchor();
         return new ThreadsInDiff(threads.byFileAndLine().stream()
-                .map(thread -> ThreadInDiff.builder().thread(thread).line(lineOf(thread, lineOfAnchor)).build())
+                .map(thread -> ThreadInDiff.builder().thread(thread).line(lineOf(thread.path(), thread.position(), lineOfAnchor)).build())
                 .sorted(IN_DIFF_ORDER)
                 .toList());
     }
 
-    /** Each of the pending {@code comments} with the diff line it shows under, in diff order; one on a line this diff does not hold shows under none. */
+    /** Each of the pending {@code comments} with where it shows, in diff order, placed as {@link #place(ReadThreads)} places a thread. */
     public PendingCommentsInDiff place(List<PendingComment> comments) {
         Map<LineAnchor, DiffLineIndex> lineOfAnchor = lineOfAnchor();
         return new PendingCommentsInDiff(comments.stream()
@@ -131,17 +135,20 @@ public record PullRequestDiff(List<DiffFile> files) {
         return line instanceof OnDiffLine(DiffLineIndex index) ? index.value() : 0;
     }
 
-    private static ThreadLine lineOf(ReviewThread thread, Map<LineAnchor, DiffLineIndex> lineOfAnchor) {
-        return lineOf(thread.path(), thread.position(), lineOfAnchor);
+    private ThreadLine lineOf(DiffPath path, ThreadPosition position, Map<LineAnchor, DiffLineIndex> lineOfAnchor) {
+        Optional<ThreadLine> onLine = position instanceof PlacedThread(ThreadSide side, _, DiffLineNumber last)
+                ? Optional.ofNullable(lineOfAnchor.get(LineAnchor.builder().path(path).side(side).number(last).build())).map(OnDiffLine::new)
+                : Optional.empty();
+        return onLine.orElseGet(() -> headOf(path));
     }
 
-    private static ThreadLine lineOf(DiffPath path, ThreadPosition position, Map<LineAnchor, DiffLineIndex> lineOfAnchor) {
-        if (!(position instanceof PlacedThread(ThreadSide side, _, DiffLineNumber last))) {
-            return new NoDiffLine();
-        }
-        return Optional.ofNullable(lineOfAnchor.get(LineAnchor.builder().path(path).side(side).number(last).build()))
-                .<ThreadLine>map(OnDiffLine::new)
-                .orElseGet(NoDiffLine::new);
+    /** Under the header of the file at {@code path}, or after the diff when this diff does not hold it. */
+    private ThreadLine headOf(DiffPath path) {
+        return IntStream.range(0, files.size())
+                .filter(index -> files.get(index).path().equals(path))
+                .<ThreadLine>mapToObj(index -> new AtFileHead(index))
+                .findFirst()
+                .orElseGet(OutsideDiff::new);
     }
 
     private Map<LineAnchor, DiffLineIndex> lineOfAnchor() {

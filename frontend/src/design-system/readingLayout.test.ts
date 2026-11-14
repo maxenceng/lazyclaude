@@ -46,4 +46,11 @@ describe('the frame of a main view', () => {
     expect(ruleOf(detail, '.detail')).toContain('grid-template-columns: var(--reading-columns)');
     expect(ruleOf(detail, '.detail > *')).toContain('grid-column: column-start / column-end');
   });
+
+  it('centres the body at the reading measure, and lets the summary and the lead run across the pane', () => {
+    const body = ruleOf(detail, '.detail > .body');
+    expect(body).toContain('justify-self: center');
+    expect(body).toContain('width: min(100%, var(--reading-measure))');
+    expect(ruleOf(detail, '.detail > .across')).toContain('grid-column: full-start / full-end');
+  });
 });

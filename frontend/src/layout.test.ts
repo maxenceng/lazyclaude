@@ -77,14 +77,40 @@ describe('the window\'s layout', () => {
 
   it('shows no document while a review panel has focus', () => {
     expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Files).showsDocument()).toBe(false);
-    expect(new Layout().focusOn(Focus.Comments).showsDocument()).toBe(false);
+    expect(new Layout().focusOn(Focus.Diff).showsDocument()).toBe(false);
   });
 
-  it('closes a shown document back to the ticket with focus staying on the Docs panel, and shows one again', () => {
+  it('closes a shown document back to the ticket and hands focus to it, and shows one again', () => {
     const closed = new Layout().focusOn(Focus.Docs).closeDocument();
     expect(closed.showsDocument()).toBe(false);
-    expect(closed.focus).toBe(Focus.Docs);
+    expect(closed.focus).toBe(Focus.Sessions);
     expect(closed.showDocument().showsDocument()).toBe(true);
+  });
+
+  it('hands focus to the ticket when the document is closed from the dock', () => {
+    const closed = new Layout().focusOn(Focus.Docs).focusOn(Focus.Dock).closeDocument();
+    expect(closed.showsDocument()).toBe(false);
+    expect(closed.focus).toBe(Focus.Sessions);
+  });
+
+  it('focuses the shown document and keeps it shown, and gives the ticket the focus when no document is shown', () => {
+    const reading = new Layout().focusOn(Focus.Docs).focusOn(Focus.Document);
+    expect(reading.focus).toBe(Focus.Document);
+    expect(reading.showsDocument()).toBe(true);
+    expect(reading.focusOn(Focus.Docs).showsDocument()).toBe(true);
+    expect(new Layout().focusOn(Focus.Document).focus).toBe(Focus.Sessions);
+  });
+
+  it('closes a focused document back to the ticket and hands focus to it', () => {
+    const closed = new Layout().focusOn(Focus.Docs).focusOn(Focus.Document).closeDocument();
+    expect(closed.focus).toBe(Focus.Sessions);
+    expect(closed.showsDocument()).toBe(false);
+  });
+
+  it('moves focus off a focused document to the dock when the main view is hidden, keeping the document', () => {
+    const hidden = new Layout().focusOn(Focus.Docs).focusOn(Focus.Document).toggleMainView();
+    expect(hidden.focus).toBe(Focus.Dock);
+    expect(hidden.showsDocument()).toBe(true);
   });
 
   it('keeps a closed document closed through a move of focus into the dock', () => {
@@ -134,5 +160,66 @@ describe('the window\'s layout', () => {
 
   it('keeps the document through the dock being minimised and restored', () => {
     expect(new Layout().focusOn(Focus.Docs).toggleDockMinimised(Focus.Sessions).restoreDock().showsDocument()).toBe(true);
+  });
+
+  it('names the shown document as the main view pane, and the ticket once none is shown', () => {
+    expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Dock).mainViewFocus()).toBe(Focus.Document);
+    expect(new Layout().focusOn(Focus.Dock).mainViewFocus()).toBe(Focus.Sessions);
+  });
+
+  it('reads a document while it or the Docs panel showing it has focus, and not from the dock', () => {
+    expect(new Layout().focusOn(Focus.Docs).reading()).toBe(true);
+    expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Document).reading()).toBe(true);
+    expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Dock).reading()).toBe(false);
+    expect(new Layout().focusOn(Focus.Docs).toggleMainView().reading()).toBe(false);
+  });
+
+  it('shows the ticket for its picker, closing the document, showing a hidden main view and ending the zoom, focus staying put', () => {
+    const shown = new Layout().focusOn(Focus.Docs).toggleMainView().showTicket();
+    expect(shown.showsDocument()).toBe(false);
+    expect(shown.mainHidden).toBe(false);
+    expect(shown.focus).toBe(Focus.Docs);
+    expect(new Layout().focusOn(Focus.Dock).toggleZoom().showTicket().zoomed).toBe(false);
+  });
+
+  it('moves focus off a focused document to the ticket when the ticket is shown for its picker', () => {
+    expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Document).showTicket().focus).toBe(Focus.Sessions);
+  });
+
+  it('zooms the dock from any pane, giving it focus, and ends a zoom already on', () => {
+    const zoomed = new Layout().zoomDock();
+    expect(zoomed.focus).toBe(Focus.Dock);
+    expect(zoomed.zoomed).toBe(true);
+    expect(zoomed.zoomDock().zoomed).toBe(false);
+  });
+  it('shows the Board in the left column to begin with', () => {
+    expect(new Layout().panel).toBe(Focus.Board);
+  });
+
+  it('shows the Docs tab on any move that focuses Docs, and the Board again on moving back to it', () => {
+    const docs = new Layout().focusOn(Focus.Docs);
+    expect(docs.panel).toBe(Focus.Docs);
+    expect(docs.focusOn(Focus.Board).panel).toBe(Focus.Board);
+  });
+
+  it('keeps the tab shown while focus is on the main view or the dock', () => {
+    expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Sessions).panel).toBe(Focus.Docs);
+    expect(new Layout().focusOn(Focus.Docs).focusOn(Focus.Dock).panel).toBe(Focus.Docs);
+    expect(new Layout().focusOn(Focus.Sessions).panel).toBe(Focus.Board);
+  });
+
+  it('switches the tab and focuses it, whichever is shown', () => {
+    const docs = new Layout().togglePanel();
+    expect(docs.panel).toBe(Focus.Docs);
+    expect(docs.focus).toBe(Focus.Docs);
+    expect(docs.showsDocument()).toBe(true);
+    const board = docs.togglePanel();
+    expect(board.panel).toBe(Focus.Board);
+    expect(board.focus).toBe(Focus.Board);
+  });
+
+  it('switches to a named tab, and stays on it when it is the one shown', () => {
+    expect(new Layout().showPanel(Focus.Docs).panel).toBe(Focus.Docs);
+    expect(new Layout().showPanel(Focus.Board).focus).toBe(Focus.Board);
   });
 });
