@@ -9,6 +9,7 @@ import type { WindowTabs } from './windowTabs';
 import type { SessionsController } from './session/sessionsController';
 import type { Store } from './shared/store';
 import type { Quitting } from './quitting';
+import type { Closing } from './session/closing';
 
 /** The keys a pane takes while it has focus and claude has the keyboard: only these move out of it. */
 const FOCUS_KEYS: readonly Action[] = [
@@ -19,6 +20,7 @@ const FOCUS_KEYS: readonly Action[] = [
   Action.ToggleMainView,
   Action.Zoom,
   Action.NextWaiting,
+  Action.Close,
 ];
 
 const TABS: ReadonlyMap<Action, WindowTab> = new Map([
@@ -37,12 +39,13 @@ export class KeyRouter {
     private readonly review: ReviewController,
     private readonly tabs: WindowTabs,
     private readonly quitting: Quitting,
+    private readonly closing: Closing,
   ) {
   }
 
   /** Whether a popup holds the keys and the mouse alone (ADR 0051): the one answer both the keys here and the window's clicks read. */
   isModal(): boolean {
-    return this.quitting.isAsking() || this.board.capture.state.get().isOpen();
+    return this.quitting.isAsking() || this.closing.isAsking() || this.board.capture.state.get().isOpen();
   }
 
   /** A key the window-level handler took: whatever the focused pane does with it. */
@@ -50,6 +53,8 @@ export class KeyRouter {
     const current = this.review.current.get();
     if (this.quitting.isAsking()) {
       this.quitting.answer(action === Action.Yes);
+    } else if (this.closing.isAsking()) {
+      this.closing.answer(action === Action.Yes);
     } else if (this.isModal()) {
       this.pressInCapture(action);
     } else if (this.sessions.isPicking()) {
@@ -101,6 +106,9 @@ export class KeyRouter {
         break;
       case Action.NextWaiting:
         this.change((current) => current.leaveZoom());
+        break;
+      case Action.Close:
+        this.closing.request();
         break;
       default:
         break;

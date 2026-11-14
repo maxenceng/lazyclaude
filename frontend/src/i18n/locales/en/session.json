@@ -44,7 +44,16 @@
     "minimiseKey": "M",
     "restore": "Restore dock",
     "zoom": "Zoom dock",
-    "unzoom": "Leave zoom"
+    "unzoom": "Leave zoom",
+    "close": "Close session"
+  },
+  "close": {
+    "title": "Close this session?",
+    "body": "It is still working or waiting on you, and closing ends it.",
+    "yes": "Close",
+    "yesKey": "y",
+    "no": "Keep",
+    "noKey": "esc"
   },
   "keyBar": {
     "move": "j/k move",

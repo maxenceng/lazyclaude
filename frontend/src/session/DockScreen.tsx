@@ -14,8 +14,13 @@ interface Props {
   zoomed: boolean;
   /** The chord that zooms the dock from inside it, which `config.yml` chooses; none while no configuration is read. */
   zoomKey: string | undefined;
+  /** The chord that closes the selected session from inside the dock, which `config.yml` chooses; none while no configuration is read. */
+  closeKey: string | undefined;
+  /** Whether the question about closing a session is open, so the terminal gives up the keyboard to it. */
+  asking: boolean;
   onMinimise: () => void;
   onZoom: () => void;
+  onClose: () => void;
 }
 
 const tabsOf = (ids: readonly string[], sessions: SessionSessionsView | undefined, starting: string): Tab[] =>
@@ -29,7 +34,7 @@ const tabsOf = (ids: readonly string[], sessions: SessionSessionsView | undefine
   });
 
 /** The dock, titled Sessions: a tab per hosted session beside its title, over the selected one's terminal, `claude`'s own screen filling the pane. */
-export const DockScreen = ({ hosting, sessions, focused, zoomed, zoomKey, onFocus, onMinimise, onZoom }: Props) => {
+export const DockScreen = ({ hosting, sessions, focused, zoomed, zoomKey, closeKey, asking, onFocus, onMinimise, onZoom, onClose }: Props) => {
   const { t } = useTranslation('session');
   const dock = useStore(hosting.dock);
   const selected = dock.selectedTab();
@@ -50,12 +55,12 @@ export const DockScreen = ({ hosting, sessions, focused, zoomed, zoomKey, onFocu
   }, [emulator]);
 
   useEffect(() => {
-    if (focused) {
+    if (focused && !asking) {
       emulator?.terminal.focus();
     } else {
       emulator?.terminal.blur();
     }
-  }, [focused, emulator]);
+  }, [focused, asking, emulator]);
 
   return (
     <Pane
@@ -65,6 +70,7 @@ export const DockScreen = ({ hosting, sessions, focused, zoomed, zoomKey, onFocu
       actions={[
         { kind: PaneActionKind.Zoom, label: zoomed ? t('dock.unzoom') : t('dock.zoom'), shortcut: zoomKey, onClick: onZoom },
         { kind: PaneActionKind.Minimise, label: t('dock.minimise'), shortcut: t('dock.minimiseKey'), onClick: onMinimise },
+        { kind: PaneActionKind.Close, label: t('dock.close'), shortcut: closeKey, onClick: onClose },
       ]}
       beside={
         <DockTabs

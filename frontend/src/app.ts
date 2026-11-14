@@ -10,6 +10,7 @@ import { WindowTabs } from './windowTabs';
 import type { Platform } from './platform';
 import type { Client } from './protocol';
 import { ReviewController } from './review/reviewController';
+import { Closing } from './session/closing';
 import { Hosting } from './session/hosting';
 import { SessionsController } from './session/sessionsController';
 import { SessionStore } from './session/sessionStore';
@@ -35,6 +36,7 @@ export class AppModel {
   readonly windowFocus: WindowFocus;
   readonly tabs: WindowTabs;
   readonly quitting: Quitting;
+  readonly closing: Closing;
   private readonly keys: KeyRouter;
   private readonly watching: WatchingReporter;
   private watched = false;
@@ -81,7 +83,8 @@ export class AppModel {
       closeWindow: () => platform.closeWindow(),
       refused: (reason) => this.notices.raise(i18n.t('common:quit.refused', { reason })),
     });
-    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review, this.tabs, this.quitting);
+    this.closing = new Closing({ client, hosting: this.hosting, sessions: this.sessionStore.sessions });
+    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review, this.tabs, this.quitting, this.closing);
     this.hosting.dock.subscribe(() => this.dockChanged());
     this.layout.subscribe(() => this.tellWatching());
     this.hosting.dock.subscribe(() => this.tellWatching());
@@ -99,8 +102,22 @@ export class AppModel {
 
   /** The chord that zooms the dock from inside it, as `config.yml` binds it, for the dock's zoom button; none while no configuration is read. */
   zoomKey(): string | undefined {
+    return this.chordOf(Action.Zoom);
+  }
+
+  /** The chord that closes the focused session, as `config.yml` binds it, for the dock's close button; none while no configuration is read. */
+  closeKey(): string | undefined {
+    return this.chordOf(Action.Close);
+  }
+
+  /** The dock's close button: what the reserved close chord does in the dock. */
+  closeSession(): void {
+    this.closing.request();
+  }
+
+  private chordOf(action: Action): string | undefined {
     return this.reserved()
-      .find((binding) => binding.action === Action.Zoom)
+      .find((binding) => binding.action === action)
       ?.label();
   }
 

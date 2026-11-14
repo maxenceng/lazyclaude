@@ -9,6 +9,7 @@ import { Exited, Ready } from './protocol';
 import { bytesOfText, toBase64 } from './protocol';
 import { folderFixture, readFixture, treeFixture } from './docs/fixtures';
 import { pullRequestFixture } from './review/fixtures';
+import type { SessionLiveSessionView } from './protocol';
 import { hostedFixture, pastFixture, sessionFixture, sessionsFixture, ticketSessionsFixture } from './session/fixtures';
 import { Dock } from './session/dock';
 import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './session/recordings';
@@ -25,6 +26,7 @@ const configuration = {
     { action: 'FOCUS_LEFT', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 104 } } },
     { action: 'FOCUS_RIGHT', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 108 } } },
     { action: 'ZOOM', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 122 } } },
+    { action: 'CLOSE', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 120 } } },
   ],
   desktopNotifications: true,
   ticketPlugin: 'ddd-workflow',
@@ -889,6 +891,91 @@ describe('the dock\'s layout', () => {
   });
 });
 
+
+type HostedState = 'busy' | 'yourTurn' | 'waitingForInput' | 'unknown' | 'starting';
+
+const hostedIn = (state: HostedState) =>
+  sessionsFixture([], { hosted: [hostedFixture('h1', state === 'starting' ? {} : { live: sessionFixture({ id: 'h1', state: { kind: state } as SessionLiveSessionView['state'] }) })] });
+
+const closes = (client: Started['client']) => client.sent.filter((sent) => sent.input === 'session/close');
+
+const hostedSession = async (state: HostedState) => {
+  const ready = await readyApp();
+  await startedSession(ready);
+  act(() => ready.client.push('session/changed', hostedIn(state)));
+  return ready;
+};
+
+describe('closing a hosted session', () => {
+  it('names the bound chord on the dock\'s close button', async () => {
+    await hostedSession('busy');
+    expect(screen.getByRole('button', { name: 'Close session (alt+x)' })).toBeInTheDocument();
+  });
+
+  it('closes a session at its turn at once from the button', async () => {
+    const ready = await hostedSession('yourTurn');
+    await ready.user.click(screen.getByRole('button', { name: 'Close session (alt+x)' }));
+    expect(closes(ready.client)).toEqual([{ input: 'session/close', params: { session: 'h1' } }]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('closes a session still starting at once', async () => {
+    const ready = await hostedSession('starting');
+    await ready.user.click(screen.getByRole('button', { name: 'Close session (alt+x)' }));
+    expect(closes(ready.client)).toHaveLength(1);
+  });
+
+  it('closes from the reserved chord pressed in the pane', async () => {
+    const ready = await hostedSession('yourTurn');
+    act(() => void pressInPane('x', { altKey: true }));
+    expect(closes(ready.client)).toHaveLength(1);
+  });
+
+  it.each(['busy', 'waitingForInput', 'unknown'] as const)('asks first about a %s session, closing on Close', async (state) => {
+    const ready = await hostedSession(state);
+    await ready.user.click(screen.getByRole('button', { name: 'Close session (alt+x)' }));
+    const dialog = screen.getByRole('dialog', { name: 'Close this session?' });
+    expect(closes(ready.client)).toEqual([]);
+    expect(within(dialog).getByRole('button', { name: 'Keep' })).toHaveAttribute('aria-keyshortcuts', 'esc');
+    await ready.user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(closes(ready.client)).toHaveLength(1);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('asks on the chord too, and keeps the session on esc, Keep or a press outside', async () => {
+    const ready = await hostedSession('busy');
+    act(() => void pressInPane('x', { altKey: true }));
+    await ready.user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    act(() => void pressInPane('x', { altKey: true }));
+    await ready.user.click(screen.getByRole('button', { name: 'Keep' }));
+    act(() => void pressInPane('x', { altKey: true }));
+    await ready.user.pointer({ keys: '[MouseLeft]', target: screen.getByRole('dialog').parentElement! });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(closes(ready.client)).toEqual([]);
+  });
+
+  it('closes on y answering the question', async () => {
+    const ready = await hostedSession('busy');
+    act(() => void pressInPane('x', { altKey: true }));
+    await ready.user.keyboard('y');
+    expect(closes(ready.client)).toHaveLength(1);
+  });
+
+  it('drops the question when the session exits meanwhile, sending nothing', async () => {
+    const ready = await hostedSession('busy');
+    await ready.user.click(screen.getByRole('button', { name: 'Close session (alt+x)' }));
+    act(() => ready.client.push('session/exited', { session: 'h1', code: 0 }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(closes(ready.client)).toEqual([]);
+  });
+
+  it('leaves the minimised dock strip without a close button', async () => {
+    const ready = await hostedSession('busy');
+    act(() => ready.app.toggleDockMinimised());
+    expect(screen.queryByRole('button', { name: /^Close session/ })).toBeNull();
+  });
+});
 
 describe('a packaged build', () => {
   it('swallows F5 and Ctrl+R in a pane, where xterm.js sends them to claude', async () => {
