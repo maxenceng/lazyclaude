@@ -14,7 +14,7 @@ export type SessionListingPayload = SessionTicketListingPayload | SessionNoTicke
 export type SessionMergeState = 'MERGED' | 'NOT_MERGED' | 'UNKNOWN';
 export type SessionNewSessionView = SessionVerbChoiceView | SessionUnlinkedStartView;
 export type SessionReservedAction =
-  'FOCUS_LEFT' | 'FOCUS_DOWN' | 'FOCUS_UP' | 'FOCUS_RIGHT' | 'HIDE_MAIN_VIEW' | 'ZOOM' | 'NEXT_WAITING';
+  'FOCUS_LEFT' | 'FOCUS_DOWN' | 'FOCUS_UP' | 'FOCUS_RIGHT' | 'HIDE_MAIN_VIEW' | 'ZOOM' | 'NEXT_WAITING' | 'CLOSE';
 export type SessionModifier = 'CTRL' | 'ALT' | 'SHIFT';
 export type SessionKeyInput = SessionTypedCharacter | SessionPressedKey;
 export type SessionNamedKey =
@@ -216,6 +216,9 @@ export interface LazyclaudeProtocol {
     };
     'session/repaint': {
       params: SessionRepaintPayload;
+    };
+    'session/close': {
+      params: SessionClosePayload;
     };
     'session/watching': {
       params: SessionWatchedPayload;
@@ -823,6 +826,9 @@ export interface SessionPtyResizePayload {
   rows: number;
 }
 export interface SessionRepaintPayload {
+  session: string;
+}
+export interface SessionClosePayload {
   session: string;
 }
 export interface SessionWatchedSessionPayload {

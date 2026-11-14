@@ -201,6 +201,10 @@ public final class SessionApplicationService {
         hosted.repaint(id);
     }
 
+    public void close(SessionId id) {
+        hosted.close(id);
+    }
+
     public void onExit(SessionExitListener listener) {
         hosted.onExit(listener);
     }

@@ -7,8 +7,8 @@ import java.util.stream.Stream;
 public final class ConfigurationSidecarFixture {
 
     private static final Map<String, String> DEFAULT_KEYS = Map.of(
-            "FOCUS_LEFT", "h", "FOCUS_DOWN", "j", "FOCUS_UP", "k", "FOCUS_RIGHT", "l", "HIDE_MAIN_VIEW", "m", "ZOOM", "z", "NEXT_WAITING", "w");
-    private static final String ACTIONS = "FOCUS_LEFT,FOCUS_DOWN,FOCUS_UP,FOCUS_RIGHT,HIDE_MAIN_VIEW,ZOOM,NEXT_WAITING";
+            "FOCUS_LEFT", "h", "FOCUS_DOWN", "j", "FOCUS_UP", "k", "FOCUS_RIGHT", "l", "HIDE_MAIN_VIEW", "m", "ZOOM", "z", "NEXT_WAITING", "w", "CLOSE", "x");
+    private static final String ACTIONS = "FOCUS_LEFT,FOCUS_DOWN,FOCUS_UP,FOCUS_RIGHT,HIDE_MAIN_VIEW,ZOOM,NEXT_WAITING,CLOSE";
 
     private ConfigurationSidecarFixture() {}
 

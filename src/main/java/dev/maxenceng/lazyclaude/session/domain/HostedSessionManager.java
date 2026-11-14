@@ -31,8 +31,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * Holds the hosted sessions that are open, in start order, and decides where each runs: a new unlinked session in the
  * project root, a resumed one in the directory it was launched in, and none with a warning when that directory is
  * gone, since {@code claude --resume} anywhere else would not find the transcript. Each session that starts is appended to the
- * project's launch log, and one whose {@code claude} exits by itself has its end recorded there; a quit that ends it records
- * none. A launch log that cannot be changed is said once and never stops a session. A session whose {@code claude} exits is
+ * project's launch log, and one whose {@code claude} exits by itself, or that is closed from the window, has its end recorded there; a quit that ends
+ * it records none. A launch log that cannot be changed is said once and never stops a session. A session whose {@code claude} exits is
  * dropped, with a warning when the exit was not clean; one that could not be started is never held, and says why.
  */
 public final class HostedSessionManager {
@@ -57,6 +57,7 @@ public final class HostedSessionManager {
     private final List<HostedSession> open = new ArrayList<>();
     private final List<SessionId> spawning = new ArrayList<>();
     private final List<SessionId> endingWithLazyclaude = new CopyOnWriteArrayList<>();
+    private final List<SessionId> closing = new CopyOnWriteArrayList<>();
     private final Map<SessionId, ExitCode> earlyExits = new HashMap<>();
     private final Map<SessionId, PaneSize> sizes = new ConcurrentHashMap<>();
     private final List<OpenSessionsListener> changeListeners = new CopyOnWriteArrayList<>();
@@ -236,6 +237,22 @@ public final class HostedSessionManager {
         ending.forEach(hosts::end);
     }
 
+    /**
+     * Closes one open session from the window: its {@code claude} is ended through the host, and, unlike {@link #endAll}, its exit is
+     * that of a session that ended by itself, so the launch log records its end and the exit listeners are told, and the signal's exit code is no failure to warn of. Nothing for a session
+     * that is not open, as one whose {@code claude} exited between the click and the answer.
+     */
+    public void close(SessionId id) {
+        boolean isOpen;
+        synchronized (open) {
+            isOpen = open.stream().anyMatch(session -> session.id().equals(id));
+        }
+        if (isOpen) {
+            closing.add(id);
+            hosts.end(id);
+        }
+    }
+
     /** Tells {@code listener} whenever a session opens or closes. */
     public void onChange(OpenSessionsListener listener) {
         changeListeners.add(listener);
@@ -246,7 +263,7 @@ public final class HostedSessionManager {
         doneEndedListeners.add(listener);
     }
 
-    /** Tells {@code listener} the code of each session whose {@code claude} exits by itself; a session ended with lazyclaude tells nothing. */
+    /** Tells {@code listener} the code of each session whose {@code claude} exits by itself or is closed from the window; a session ended with lazyclaude tells nothing. */
     public void onExit(SessionExitListener listener) {
         exitListeners.add(listener);
     }
@@ -379,7 +396,9 @@ public final class HostedSessionManager {
             EndedAt ended = new EndedAt(clock.clock().instant());
             logged(project, entries -> entries.ended(id, ended));
         }
-        warnOfFailure(code);
+        if (!closing.remove(id)) {
+            warnOfFailure(code);
+        }
         changed();
         if (byItself) {
             exitListeners.forEach(listener -> listener.exited(id, code));

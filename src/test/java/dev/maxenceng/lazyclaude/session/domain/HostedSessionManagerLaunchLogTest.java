@@ -246,6 +246,67 @@ class HostedSessionManagerLaunchLogTest {
     }
 
     @Test
+    void shouldRecordTheEndOfASessionClosedFromTheWindow() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        SessionId session = idOf(manager.startUnlinked(project(), paneSize()));
+        verify(hosts).spawn(any(), any(), exited.capture());
+
+        manager.close(session);
+        exited.getValue().accept(new ExitCode(143));
+
+        verify(hosts).end(session);
+        verify(log, times(2)).change(eq(project()), any(), change.capture());
+        assertThat(afterChange(change, 1, launchLogOf(launchEntryBuilder().command(new NewClaude(session)).build())).entries())
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.end()).isEqualTo(endedAt()));
+    }
+
+    @Test
+    void shouldTellTheExitListenerOfASessionClosedFromTheWindow() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        manager.onExit(exitListener);
+        SessionId session = idOf(manager.startUnlinked(project(), paneSize()));
+        verify(hosts).spawn(any(), any(), exited.capture());
+
+        manager.close(session);
+        exited.getValue().accept(new ExitCode(143));
+
+        verify(exitListener).exited(session, new ExitCode(143));
+    }
+
+    @Test
+    void shouldRaiseNoWarningForTheTerminationOfASessionClosedFromTheWindow() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        SessionId session = idOf(manager.startUnlinked(project(), paneSize()));
+        verify(hosts).spawn(any(), any(), exited.capture());
+
+        manager.close(session);
+        exited.getValue().accept(new ExitCode(143));
+
+        assertThat(raisedTexts(warnings)).isEmpty();
+    }
+
+    @Test
+    void shouldEndOnlyTheClosedSessionAndLeaveTheOthersOpen() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
+        SessionId closed = idOf(manager.startUnlinked(project(), paneSize()));
+        SessionId other = idOf(manager.startUnlinked(project(), paneSize()));
+
+        manager.close(closed);
+
+        verify(hosts).end(closed);
+        verify(hosts, never()).end(other);
+    }
+
+    @Test
+    void shouldChangeNothingWhenClosingASessionThatIsNotOpen() {
+        manager.close(sessionId());
+
+        verify(hosts, never()).end(any());
+        verifyNoInteractions(warnings);
+    }
+
+    @Test
     void shouldTellTheExitListenerTheCodeOfASessionWhoseClaudeExitedByItself() {
         when(hosts.spawn(any(), any(), any())).thenReturn(processId());
         manager.onExit(exitListener);
