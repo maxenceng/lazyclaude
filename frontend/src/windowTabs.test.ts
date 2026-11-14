@@ -21,7 +21,7 @@ const board = boardFixture([
 const setup = async () => {
   const client = fakeClient();
   const layout = new Store(new Layout());
-  const boardController = new BoardController(client);
+  const boardController = new BoardController(client, () => Promise.resolve(undefined));
   const loading = boardController.load();
   client.answerNext(board);
   await loading;

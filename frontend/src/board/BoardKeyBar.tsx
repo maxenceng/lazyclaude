@@ -26,5 +26,5 @@ export const BoardTabKeyBar = ({ ticket, capture, extra = [] }: Props) => {
 /** The keys that work while the capture popup is open: nothing else does. */
 export const CaptureKeyBar = () => {
   const { t } = useTranslation('board');
-  return <KeyBar keys={[t('keyBar.create'), t('keyBar.cancel')]} />;
+  return <KeyBar keys={[t('keyBar.start'), t('keyBar.cancel')]} />;
 };

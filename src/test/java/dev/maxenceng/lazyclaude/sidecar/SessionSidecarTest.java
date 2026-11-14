@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.sidecar;
 
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newSessionPayload;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newTicketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyInputPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyOutputView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyResizePayload;
@@ -18,6 +19,7 @@ import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.designPrese
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.exitingAtOnce;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.newHostedParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.newSessionParams;
+import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.newTicketHostedParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.noSessions;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.noWatchedSessionParams;
 import static dev.maxenceng.lazyclaude.sidecar.SessionSidecarFixture.notStartedHost;
@@ -66,7 +68,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WatchedSessionPayload;
 import dev.maxenceng.lazyclaude.session.published.MergeState;
-import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
+import dev.maxenceng.lazyclaude.session.published.NotStartedHostFixture;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 
 @ExtendWith(MockitoExtension.class)
@@ -91,9 +93,25 @@ class SessionSidecarTest {
 
     @Test
     void answers_a_start_the_host_could_not_make_as_a_result() {
-        when(hosting.startUnlinked(newHostedPayload())).thenReturn(new NotStartedHost());
+        when(hosting.startUnlinked(newHostedPayload())).thenReturn(NotStartedHostFixture.notStartedHost());
 
         assertThat(linesWritten(sessions, hosting, request(1, "session/startUnlinked", newHostedParams())))
+                .containsExactly(ready(), resultOf(1, notStartedHost()));
+    }
+
+    @Test
+    void answers_a_new_ticket_start_with_the_started_session() {
+        when(hosting.startNewTicket(newTicketHostedPayload())).thenReturn(new StartedHost(sessionId()));
+
+        assertThat(linesWritten(sessions, hosting, request(1, "session/startNewTicket", newTicketHostedParams())))
+                .containsExactly(ready(), resultOf(1, startedHost()));
+    }
+
+    @Test
+    void answers_a_new_ticket_start_the_host_could_not_make_with_its_reason() {
+        when(hosting.startNewTicket(newTicketHostedPayload())).thenReturn(NotStartedHostFixture.notStartedHost());
+
+        assertThat(linesWritten(sessions, hosting, request(1, "session/startNewTicket", newTicketHostedParams())))
                 .containsExactly(ready(), resultOf(1, notStartedHost()));
     }
 

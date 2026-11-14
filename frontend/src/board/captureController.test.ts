@@ -1,23 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { RpcError } from '../protocol';
-import { fakeClient } from '../test/fakeClient';
 import { CaptureController } from './captureController';
 import { CaptureStateKind } from './captureState';
 
-const setup = (root: () => string | undefined = () => '/p') => {
-  const client = fakeClient();
-  const captured: string[] = [];
-  const controller = new CaptureController({ client, root, onCaptured: (id) => captured.push(id) });
-  return { client, controller, captured };
+const flush = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
 };
 
-describe('capturing a draft ticket', () => {
+class FakeStart {
+  readonly calls: { root: string; description: string }[] = [];
+  readonly answers: ((reason: string | undefined) => void)[] = [];
+
+  start(root: string, description: string): Promise<string | undefined> {
+    this.calls.push({ root, description });
+    return new Promise((resolve) => this.answers.push(resolve));
+  }
+}
+
+const setup = (root: () => string | undefined = () => '/p') => {
+  const fake = new FakeStart();
+  const controller = new CaptureController({ root, start: (startRoot, description) => fake.start(startRoot, description) });
+  return { calls: fake.calls, answers: fake.answers, controller };
+};
+
+describe('starting a new ticket', () => {
   it('is closed until it is opened', () => {
     const { controller } = setup();
     expect(controller.state.get().kind).toBe(CaptureStateKind.Closed);
   });
 
-  it('does not open while there is no project to capture into', () => {
+  it('does not open while there is no project to start in', () => {
     const { controller } = setup(() => undefined);
     controller.open();
     expect(controller.state.get().kind).toBe(CaptureStateKind.Closed);
@@ -27,7 +39,7 @@ describe('capturing a draft ticket', () => {
     const { controller } = setup();
     controller.open();
     controller.edit('Fix the bug');
-    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Composing, title: 'Fix the bug' });
+    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Composing, description: 'Fix the bug' });
   });
 
   it('cancels back to closed', () => {
@@ -37,78 +49,80 @@ describe('capturing a draft ticket', () => {
     expect(controller.state.get().kind).toBe(CaptureStateKind.Closed);
   });
 
-  it('sends the title with the project root and shows it creating', () => {
-    const { client, controller } = setup();
+  it('sends the description as typed with the project root and shows it starting', () => {
+    const { calls, controller } = setup();
     controller.open();
-    controller.edit('Fix the bug');
-    controller.create();
-    expect(client.calls).toEqual([{ method: 'board/capture', params: { root: '/p', title: 'Fix the bug' } }]);
-    expect(controller.state.get().kind).toBe(CaptureStateKind.Creating);
+    controller.edit('  Fix "the" bug  ');
+    controller.start();
+    expect(calls).toEqual([{ root: '/p', description: '  Fix "the" bug  ' }]);
+    expect(controller.state.get().kind).toBe(CaptureStateKind.Starting);
   });
 
-  it('sends nothing for a second enter while creating, and ignores esc and typing', () => {
-    const { client, controller } = setup();
+  it.each(['', '   ', '\n\t'])('calls nothing for the blank description %j and says it is blank', (blank) => {
+    const { calls, controller } = setup();
+    controller.open();
+    controller.edit(blank);
+    controller.start();
+    expect(calls).toEqual([]);
+    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Blank, description: blank });
+  });
+
+  it('takes typing after a blank refusal and sends the description then', () => {
+    const { calls, controller } = setup();
+    controller.open();
+    controller.start();
+    controller.edit('Fix it');
+    controller.start();
+    expect(calls).toEqual([{ root: '/p', description: 'Fix it' }]);
+  });
+
+  it('sends nothing for a second enter while starting, and ignores esc and typing', () => {
+    const { calls, controller } = setup();
     controller.open();
     controller.edit('Fix');
-    controller.create();
-    controller.create();
+    controller.start();
+    controller.start();
     controller.cancel();
     controller.edit('other');
-    expect(client.calls).toHaveLength(1);
-    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Creating, title: 'Fix' });
+    expect(calls).toHaveLength(1);
+    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Starting, description: 'Fix' });
   });
 
-  it('closes on a captured answer and tells which ticket was made', async () => {
-    const { client, controller, captured } = setup();
+  it('closes once the session has started', async () => {
+    const { answers, controller } = setup();
     controller.open();
     controller.edit('Fix');
-    controller.create();
-    client.answerNext({ kind: 'capturedOnBoard', id: 'PROJ-9', board: { kind: 'noBoardAfterCapture' } });
-    await Promise.resolve();
-    await Promise.resolve();
+    controller.start();
+    answers[0]?.(undefined);
+    await flush();
     expect(controller.state.get().kind).toBe(CaptureStateKind.Closed);
-    expect(captured).toEqual(['PROJ-9']);
   });
 
-  it('keeps the title and the reason on a refusal, and sends again only on another create', async () => {
-    const { client, controller, captured } = setup();
+  it('keeps the description and the reason when the session did not start, and sends again only on another start', async () => {
+    const { calls, answers, controller } = setup();
     controller.open();
     controller.edit('Fix');
-    controller.create();
-    client.answerNext({ kind: 'refusedTicketCapture', reason: 'gh is not signed in' });
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Refused, title: 'Fix', reason: 'gh is not signed in' });
-    expect(client.calls).toHaveLength(1);
-    expect(captured).toEqual([]);
-    controller.create();
-    expect(client.calls).toHaveLength(2);
-  });
-
-  it('keeps the title and says why when the call itself fails', async () => {
-    const { client, controller } = setup();
-    controller.open();
-    controller.edit('Fix');
-    controller.create();
-    client.failNext(new RpcError(-32000, 'the sidecar is not running'));
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Refused, title: 'Fix', reason: 'the sidecar is not running' });
+    controller.start();
+    answers[0]?.('claude is not installed');
+    await flush();
+    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Refused, description: 'Fix', reason: 'claude is not installed' });
+    expect(calls).toHaveLength(1);
+    controller.start();
+    expect(calls).toHaveLength(2);
   });
 
   it('drops a refusal with esc, and editing after one goes back to composing', async () => {
-    const { client, controller } = setup();
+    const { answers, controller } = setup();
     controller.open();
-    controller.create();
-    client.answerNext({ kind: 'refusedTicketCapture', reason: 'no title' });
-    await Promise.resolve();
-    await Promise.resolve();
-    controller.edit('x');
-    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Composing, title: 'x' });
-    controller.create();
-    client.answerNext({ kind: 'refusedTicketCapture', reason: 'again' });
-    await Promise.resolve();
-    await Promise.resolve();
+    controller.edit('Fix');
+    controller.start();
+    answers[0]?.('no');
+    await flush();
+    controller.edit('Fix it');
+    expect(controller.state.get()).toMatchObject({ kind: CaptureStateKind.Composing, description: 'Fix it' });
+    controller.start();
+    answers[1]?.('again');
+    await flush();
     controller.cancel();
     expect(controller.state.get().kind).toBe(CaptureStateKind.Closed);
   });

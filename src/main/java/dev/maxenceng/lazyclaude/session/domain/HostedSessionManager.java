@@ -43,6 +43,8 @@ public final class HostedSessionManager {
     private static final String GONE_WARNING = "resume: %s is gone; nothing resumed.";
     private static final String WORKTREE_WARNING = "ticket worktree: %s; nothing started.";
     private static final String NOT_A_WORKTREE = "%s exists but is not a worktree of %s";
+    private static final String ALREADY_STARTING = "this session is already starting; give it a moment.";
+    private static final String ENDED_AT_ONCE = "hosted session: claude ended as soon as it started.";
     private static final String NO_PLACE = "%s has no folder beside it to keep worktrees in";
 
     private final HostPort hosts;
@@ -82,6 +84,20 @@ public final class HostedSessionManager {
     /** A plain {@code claude} in the project root. */
     public HostStart startUnlinked(Project project, PaneSize size) {
         return start(project, new NewClaude(SessionId.random()), new WorkingDirectory(project.root()), size);
+    }
+
+    /** {@code /<plugin>:ticket new <description>} in the project root: a session that creates a ticket, linked to none yet. */
+    public HostStart startNewTicket(
+            Project project, TicketDescription description, TicketPlugin ticketPlugin, PaneSize size) {
+        return start(
+                project,
+                NewTicketClaude.builder()
+                        .session(SessionId.random())
+                        .description(description)
+                        .plugin(ticketPlugin)
+                        .build(),
+                new WorkingDirectory(project.root()),
+                size);
     }
 
     /**
@@ -164,8 +180,7 @@ public final class HostedSessionManager {
 
     private HostStart resumeAt(Project project, SessionId session, WorkingDirectory recorded, PaneSize size) {
         if (!hosts.exists(recorded)) {
-            warnings.raise(new Warning(GONE_WARNING.formatted(recorded.path())));
-            return new NotStartedHost();
+            return refused(new Warning(GONE_WARNING.formatted(recorded.path())));
         }
         return start(project, new ResumeClaude(session), recorded, size);
     }
@@ -264,8 +279,7 @@ public final class HostedSessionManager {
     }
 
     private HostStart notStartedFor(String reason) {
-        warnings.raise(new Warning(WORKTREE_WARNING.formatted(reason)));
-        return new NotStartedHost();
+        return refused(new Warning(WORKTREE_WARNING.formatted(reason)));
     }
 
     /**
@@ -283,7 +297,7 @@ public final class HostedSessionManager {
                 .build();
         synchronized (open) {
             if (spawning.contains(id)) {
-                return new NotStartedHost();
+                return new NotStartedHost(new Reason(ALREADY_STARTING));
             }
             if (open.stream().anyMatch(session -> session.id().equals(id))) {
                 return new StartedHost(id);
@@ -307,8 +321,7 @@ public final class HostedSessionManager {
             synchronized (open) {
                 spawning.remove(id);
             }
-            warnings.raise(new Warning(START_WARNING.formatted(unavailable.getMessage())));
-            return new NotStartedHost();
+            return refused(new Warning(START_WARNING.formatted(unavailable.getMessage())));
         }
     }
 
@@ -333,7 +346,14 @@ public final class HostedSessionManager {
 
     private HostStart notStartedAfter(ExitCode exit) {
         warnOfFailure(exit);
-        return new NotStartedHost();
+        return new NotStartedHost(
+                new Reason(exit.isFailure() ? EXIT_WARNING.formatted(exit.value()) : ENDED_AT_ONCE));
+    }
+
+    /** Raises {@code warning} so the status line says it, and answers with its text for a caller that shows it where it asked. */
+    private HostStart refused(Warning warning) {
+        warnings.raise(warning);
+        return new NotStartedHost(new Reason(warning.text()));
     }
 
     private HostStart startedAs(HostedSession session) {

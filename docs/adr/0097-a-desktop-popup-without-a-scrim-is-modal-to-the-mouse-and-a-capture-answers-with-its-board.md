@@ -4,7 +4,8 @@ Date: 2026-11-07
 
 ## Status
 
-Accepted. Amended by ADR 0109: every popup, the capture one included, now has a scrim. Carries ADR 0051's modal popups into the desktop window, which that ADR left to the browser.
+Accepted. Amended by ADR 0109: every popup, the capture one included, now has a scrim. Superseded in part by ADR 0110:
+`board/capture` is gone, a capture starts a `/ticket new` session instead. Carries ADR 0051's modal popups into the desktop window, which that ADR left to the browser.
 
 ## Context
 

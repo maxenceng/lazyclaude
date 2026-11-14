@@ -13,6 +13,11 @@ public record TicketRun(LinkVerb verb, List<NamedTicketId> ids) {
         Assert.notEmpty("ids", ids);
     }
 
+    /** Whether this run created a ticket, its words after the verb a description that only looks like ids. */
+    public boolean createsATicket() {
+        return verb.equals(NewTicketClaude.creatingVerb());
+    }
+
     public static TicketRunBuilder builder() {
         return new TicketRunBuilder();
     }

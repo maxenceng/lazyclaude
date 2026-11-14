@@ -1111,21 +1111,21 @@ describe('the Review screen', () => {
   });
 });
 
-const captureBox = () => screen.getByRole('textbox', { name: 'Ticket title' });
+const captureBox = () => screen.getByRole('textbox', { name: 'Ticket description' });
 
 const answerCapture = (started: Started, result: unknown) =>
   act(async () => {
-    started.client.answer('board/capture', result);
+    started.client.answer('session/startNewTicket', result);
     await settle();
   });
 
-describe('capturing a draft ticket', () => {
+describe('starting a new ticket', () => {
   it('opens a titled popup on c with the focus on its input and only its own keys on the key bar', async () => {
     const { user } = await readyApp();
     await user.keyboard('c');
     expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
     expect(captureBox()).toHaveFocus();
-    expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['enter create', 'esc cancel']);
+    expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['enter start', 'esc cancel']);
   });
 
   it("opens on the Board pane's New ticket button, with the focus on its input", async () => {
@@ -1199,15 +1199,15 @@ describe('capturing a draft ticket', () => {
     await user.keyboard('c');
     await user.keyboard('A title{Escape}');
     expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
-    expect(client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(0);
+    expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(0);
   });
 
-  it('sends the title once on enter, says it is creating, and ignores a second enter and esc', async () => {
+  it('sends the description once on enter, says it is starting, and ignores a second enter and esc', async () => {
     const { user, client } = await readyApp();
     await user.keyboard('c');
     await user.keyboard('A title{Enter}{Enter}{Escape}');
-    expect(client.calls.filter((call) => call.method === 'board/capture')).toEqual([{ method: 'board/capture', params: { root: '/p', title: 'A title' } }]);
-    expect(within(screen.getByRole('dialog', { name: 'New ticket' })).getByRole('status')).toHaveTextContent('creating…');
+    expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toEqual([{ method: 'session/startNewTicket', params: { root: '/p', description: 'A title', size: { width: 80, height: 24 } } }]);
+    expect(within(screen.getByRole('dialog', { name: 'New ticket' })).getByRole('status')).toHaveTextContent('starting…');
     expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
   });
 
@@ -1215,12 +1215,12 @@ describe('capturing a draft ticket', () => {
     const started = await readyApp();
     await started.user.keyboard('c');
     await started.user.keyboard('A title{Enter}');
-    await answerCapture(started, { kind: 'refusedTicketCapture', reason: 'gh is not signed in' });
-    expect(screen.getByRole('alert')).toHaveTextContent('⚠ gh is not signed in');
+    await answerCapture(started, { kind: 'notStartedHost', reason: 'claude is not installed' });
+    expect(screen.getByRole('alert')).toHaveTextContent('⚠ claude is not installed');
     expect(captureBox()).toHaveValue('A title');
-    expect(started.client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(1);
+    expect(started.client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(1);
     await started.user.keyboard('{Enter}');
-    expect(started.client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(2);
+    expect(started.client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(2);
   });
 
   it('keeps the popup and says why when the call itself fails', async () => {
@@ -1228,38 +1228,47 @@ describe('capturing a draft ticket', () => {
     await started.user.keyboard('c');
     await started.user.keyboard('A title{Enter}');
     await act(async () => {
-      started.client.fail('board/capture', new Error('the sidecar is not running'));
+      started.client.fail('session/startNewTicket', new Error('the sidecar is not running'));
       await settle();
     });
     expect(screen.getByRole('alert')).toHaveTextContent('⚠ the sidecar is not running');
     expect(captureBox()).toHaveValue('A title');
   });
 
-  it('closes on a captured answer and selects the new ticket on the board the answer carries', async () => {
+  it('closes on a started session and puts the focus in the dock, selecting nothing on the board', async () => {
     const started = await readyApp();
     await started.user.keyboard('c');
     await started.user.keyboard('A title{Enter}');
-    const read = boardFixture([...board.groups.flatMap((group) => group.tickets), ticketFixture({ id: 'PROJ-3', title: 'A title' })]);
-    await answerCapture(started, { kind: 'capturedOnBoard', id: 'PROJ-3', board: read });
+    await answerCapture(started, { kind: 'startedHost', id: 'h9' });
     expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
-    expect(screen.getByRole('button', { name: /PROJ-3/ })).toHaveAttribute('aria-current', 'true');
+    expect(started.app.layout.get().focus).toBe(Focus.Dock);
+    expect(started.app.board.selection.selected.get()).toBeUndefined();
   });
 
-  it('answers with Cancel and Create draft buttons that carry esc and enter', async () => {
+  it('calls nothing for a blank description and says why in the popup', async () => {
+    const { user, client } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('   {Enter}');
+    expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(0);
+    const dialog = screen.getByRole('dialog', { name: 'New ticket' });
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('describe the ticket first');
+  });
+
+  it('answers with Cancel and Start buttons that carry esc and enter', async () => {
     const { user } = await readyApp();
     await user.keyboard('c');
     const dialog = screen.getByRole('dialog', { name: 'New ticket' });
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveAttribute('aria-keyshortcuts', 'esc');
-    expect(within(dialog).getByRole('button', { name: 'Create draft' })).toHaveAttribute('aria-keyshortcuts', 'enter');
+    expect(within(dialog).getByRole('button', { name: 'Start' })).toHaveAttribute('aria-keyshortcuts', 'enter');
   });
 
-  it('sends the title from Create draft as enter does, keeping the input focused', async () => {
+  it('sends the title from Start as enter does, keeping the input focused', async () => {
     const { user, client } = await readyApp();
     await user.keyboard('c');
     await user.keyboard('A title');
-    await user.click(screen.getByRole('button', { name: 'Create draft' }));
-    expect(client.calls.filter((call) => call.method === 'board/capture')).toEqual([{ method: 'board/capture', params: { root: '/p', title: 'A title' } }]);
-    expect(within(screen.getByRole('dialog', { name: 'New ticket' })).getByRole('status')).toHaveTextContent('creating…');
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toEqual([{ method: 'session/startNewTicket', params: { root: '/p', description: 'A title', size: { width: 80, height: 24 } } }]);
+    expect(within(screen.getByRole('dialog', { name: 'New ticket' })).getByRole('status')).toHaveTextContent('starting…');
     expect(captureBox()).toHaveFocus();
   });
 
@@ -1271,7 +1280,7 @@ describe('capturing a draft ticket', () => {
     await user.keyboard('c');
     await user.click(screen.getByRole('button', { name: 'Close (esc)' }));
     expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
-    expect(client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(0);
+    expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(0);
   });
 
   it('stays open for a press on its scrim, which reaches nothing behind it', async () => {
@@ -1471,7 +1480,7 @@ describe('the left column\'s panel tabs', () => {
     expect(screen.getByRole('button', { name: /PROJ-2/ })).toHaveAttribute('aria-current', 'true');
   });
 
-  it('carries the new draft button on the Board tab only', async () => {
+  it('carries the new ticket button on the Board tab only', async () => {
     const started = await readyApp();
     expect(screen.getByRole('button', { name: 'New ticket (c)' })).toBeInTheDocument();
     await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
@@ -1600,9 +1609,9 @@ describe('an empty board', () => {
     expect(ready.app.board.selectedTicket()).toBeUndefined();
   });
 
-  it('keeps on the key bar only the keys that act: the new draft, the panel and the window tabs', async () => {
+  it('keeps on the key bar only the keys that act: the new ticket capture, the panel and the window tabs', async () => {
     await readyApp(false, boardFixture([]));
-    expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['c new draft', 'o docs', '1/2/3 tabs']);
+    expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['c capture', 'o docs', '1/2/3 tabs']);
   });
 
   it('starts no session on N, which its key bar does not offer', async () => {

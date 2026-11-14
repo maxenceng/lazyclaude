@@ -15,7 +15,9 @@ import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.ExitCode;
 import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.NewClaude;
+import dev.maxenceng.lazyclaude.session.domain.NewTicketClaude;
 import dev.maxenceng.lazyclaude.session.domain.ResumeClaude;
+import dev.maxenceng.lazyclaude.session.domain.TicketDescription;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
@@ -66,6 +68,18 @@ public final class PtyHostFixture {
     public static HostLaunch ticketLaunchUnder(SessionId id, TicketPlugin plugin) {
         return HostLaunch.builder()
                 .command(ticketClaudeUnder(id, Verb.REVIEW, plugin))
+                .directory(new WorkingDirectory(Path.of("/tmp")))
+                .size(paneSizeOf(100, 30))
+                .build();
+    }
+
+    public static HostLaunch newTicketLaunch(SessionId id, TicketDescription description) {
+        return HostLaunch.builder()
+                .command(NewTicketClaude.builder()
+                        .session(id)
+                        .description(description)
+                        .plugin(ticketPlugin())
+                        .build())
                 .directory(new WorkingDirectory(Path.of("/tmp")))
                 .size(paneSizeOf(100, 30))
                 .build();

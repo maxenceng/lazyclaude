@@ -6,6 +6,7 @@ Date: 2026-10-27
 
 Accepted. Amends ADR 0009 ("the one write") and the read-only charter in CLAUDE.md, once the board reads GitHub Issues
 (ADR 0052); until then they stand. Amended by ADR 0108: the Issues poll checks every 10 s, not 30 s.
+Capture superseded by ADR 0110: `c` starts a `/ticket new` session, and lazyclaude no longer creates issues.
 
 ## Context
 

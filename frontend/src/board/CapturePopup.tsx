@@ -4,7 +4,7 @@ import { useStore } from '../shared/useStore';
 import type { CaptureController } from './captureController';
 import { CaptureStateKind } from './captureState';
 
-/** The popup a draft ticket's title is typed in: a native input, then "creating…" or "⚠ reason" under it. */
+/** The popup a new ticket's description is typed in: a native input, then "starting…" or "⚠ reason" under it. */
 export const CapturePopup = ({ capture }: { capture: CaptureController }) => {
   const { t } = useTranslation('board');
   const state = useStore(capture.state);
@@ -14,20 +14,25 @@ export const CapturePopup = ({ capture }: { capture: CaptureController }) => {
   return (
     <Popup
       title={t('capture.title')}
-      main={{ label: t('capture.create'), chip: t('capture.createKey'), onClick: () => capture.create() }}
+      main={{ label: t('capture.start'), chip: t('capture.startKey'), onClick: () => capture.start() }}
       out={{ label: t('capture.cancel'), chip: t('capture.cancelKey'), onClick: () => capture.cancel() }}
     >
       <TextInput
         label={t('capture.label')}
-        value={state.title}
-        readOnly={state.kind === CaptureStateKind.Creating}
-        onChange={(title) => capture.edit(title)}
-        onSubmit={() => capture.create()}
+        value={state.description}
+        readOnly={state.kind === CaptureStateKind.Starting}
+        onChange={(description) => capture.edit(description)}
+        onSubmit={() => capture.start()}
         onCancel={() => capture.cancel()}
       />
-      {state.kind === CaptureStateKind.Creating ? (
+      {state.kind === CaptureStateKind.Starting ? (
         <div role="status">
-          <Text tone={Tone.Dim} tight>{t('capture.creating')}</Text>
+          <Text tone={Tone.Dim} tight>{t('capture.starting')}</Text>
+        </div>
+      ) : null}
+      {state.kind === CaptureStateKind.Blank ? (
+        <div role="alert">
+          <Text tone={Tone.Warning} tight>{t('capture.refused', { reason: t('capture.blank') })}</Text>
         </div>
       ) : null}
       {state.kind === CaptureStateKind.Refused ? (

@@ -4,7 +4,8 @@ Date: 2026-10-10
 
 ## Status
 
-Accepted. Amended by ADR 0042: the summary travels with the submit and is not saved before it.
+Accepted. Amended by ADR 0042: the summary travels with the submit and is not saved before it. ADR 0054 added a
+second write, capturing a draft ticket, which ADR 0110 removed: this is lazyclaude's one write to GitHub again.
 
 ## Context
 

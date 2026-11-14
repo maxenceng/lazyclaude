@@ -12,6 +12,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.sessionsViewWithTabs;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionsViewFixture.startingTabNumbered;
+import static dev.maxenceng.lazyclaude.session.published.NotStartedHostFixture.notStartedHost;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.primary.WarningViewFixture.warningViewOf;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.alt;
@@ -53,7 +54,6 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.ResumePastPayload
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.published.Busy;
 import dev.maxenceng.lazyclaude.session.published.MouseAction;
-import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.PointerButton;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.session.published.YourTurn;
@@ -132,7 +132,7 @@ class ShellHostingTest {
 
     @Test
     void shouldOpenNoTabAndKeepFocusWhenSpawningFails() {
-        when(hosting.startUnlinked(any())).thenReturn(new NotStartedHost());
+        when(hosting.startUnlinked(any())).thenReturn(notStartedHost());
         Shell shell = shellHosting(sessionsViewWithTabs(), hosting, emulating, screens);
 
         shell.press(key('N'));
@@ -206,7 +206,7 @@ class ShellHostingTest {
 
     @Test
     void shouldKeepFocusWhenResumingFails() {
-        when(hosting.resumePast(any())).thenReturn(new NotStartedHost());
+        when(hosting.resumePast(any())).thenReturn(notStartedHost());
         Shell shell = shellHosting(sessionsViewOf(List.of(), List.of(pastSessionView())), hosting, emulating, screens);
         shell.press(alt('j'));
 

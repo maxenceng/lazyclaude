@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.newTicketClaude;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaude;
 import static dev.maxenceng.lazyclaude.session.domain.LinkFactsFixture.ticketRun;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
@@ -19,6 +20,11 @@ class LaunchCommandTest {
     @Test
     void shouldRunNothingWhenItBeginsAPlainSession() {
         assertThat(new NewClaude(sessionId()).launchRun()).isEmpty();
+    }
+
+    @Test
+    void shouldRunNoTicketWhenItBeginsANewTicket() {
+        assertThat(newTicketClaude(sessionId()).launchRun()).isEmpty();
     }
 
     @Test

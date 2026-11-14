@@ -1,11 +1,13 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.newLaunch;
+import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.newTicketLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.HostLaunchFixture.ticketLaunch;
 import static dev.maxenceng.lazyclaude.session.domain.PastSessionFixture.pastSessionId;
 import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.escapeBytes;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newHostedPayload;
+import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.newTicketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyInputPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyResizePayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.resumePastUnderNoTicket;
@@ -13,6 +15,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSess
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ticketHostedPayload;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.hostedSessionCommand;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQueryFixture.hostedSessionCommandOverALinkedPastSession;
+import static dev.maxenceng.lazyclaude.session.published.NotStartedHostFixture.notStartedBecause;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSizeOf;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.resizedPaneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
@@ -40,7 +43,6 @@ import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.HostUnavailableException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.published.HostStart;
-import dev.maxenceng.lazyclaude.session.published.NotStartedHost;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.StartedHost;
 import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
@@ -66,6 +68,25 @@ class HostedSessionCommandTest {
         ArgumentCaptor<HostLaunch> launched = ArgumentCaptor.forClass(HostLaunch.class);
         verify(hosts).spawn(launched.capture(), any(), any());
         assertThat(launched.getValue()).isEqualTo(newLaunch(((StartedHost) start).id()));
+    }
+
+    @Test
+    void shouldStartTheTicketSkillsNewVerbWithTheDescriptionInTheProjectRoot() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+
+        HostStart start = hostedSessionCommand(hosts, warnings).startNewTicket(newTicketHostedPayload());
+
+        ArgumentCaptor<HostLaunch> launched = ArgumentCaptor.forClass(HostLaunch.class);
+        verify(hosts).spawn(launched.capture(), any(), any());
+        assertThat(launched.getValue()).isEqualTo(newTicketLaunch(((StartedHost) start).id()));
+    }
+
+    @Test
+    void shouldSayWhyWhenTheHostCannotStartTheSessionThatCreatesATicket() {
+        when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
+
+        assertThat(hostedSessionCommand(hosts, warnings).startNewTicket(newTicketHostedPayload()))
+                .isEqualTo(notStartedBecause("hosted session: no pty."));
     }
 
     @Test
@@ -113,7 +134,7 @@ class HostedSessionCommandTest {
 
         HostStart start = hostedSessionCommand(hosts, warnings, worktrees).resumePast(resumePastUnderTicket(sessionId()));
 
-        assertThat(start).isEqualTo(new NotStartedHost());
+        assertThat(start).isEqualTo(notStartedBecause("resume: /work/app.worktrees/PROJ-1-ticket is gone; nothing resumed."));
         verifyNoInteractions(worktrees);
     }
 
@@ -121,7 +142,7 @@ class HostedSessionCommandTest {
     void shouldSayNoneStartedWhenTheHostCannotStartOne() {
         when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
 
-        assertThat(hostedSessionCommand(hosts, warnings).startUnlinked(newHostedPayload())).isEqualTo(new NotStartedHost());
+        assertThat(hostedSessionCommand(hosts, warnings).startUnlinked(newHostedPayload())).isEqualTo(notStartedBecause("hosted session: no pty."));
     }
 
     @Test

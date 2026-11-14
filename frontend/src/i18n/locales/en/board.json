@@ -41,16 +41,17 @@
     "new": "n/N new",
     "columns": "h/j/k/l move",
     "openTicket": "enter go to ticket",
-    "capture": "c new draft",
-    "create": "enter create",
+    "capture": "c capture",
+    "start": "enter start",
     "cancel": "esc cancel"
   },
   "capture": {
     "title": "New ticket",
-    "label": "Ticket title",
-    "creating": "creating…",
-    "create": "Create draft",
-    "createKey": "enter",
+    "label": "Ticket description",
+    "starting": "starting…",
+    "blank": "describe the ticket first",
+    "start": "Start",
+    "startKey": "enter",
     "cancel": "Cancel",
     "cancelKey": "esc",
     "refused": "⚠ {{reason}}"

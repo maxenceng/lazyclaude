@@ -13,6 +13,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionComm
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewTicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyOutputView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyResizePayload;
@@ -40,6 +41,7 @@ final class SessionMethods {
 
     private static final List<ServedMethod<HostedSessionCommand, ?, ?>> STARTS = List.of(
             ServedMethod.of("session/startUnlinked", NewHostedPayload.class, HostStart.class, HostedSessionCommand::startUnlinked),
+            ServedMethod.of("session/startNewTicket", NewTicketHostedPayload.class, HostStart.class, HostedSessionCommand::startNewTicket),
             ServedMethod.of("session/startTicket", TicketHostedPayload.class, HostStart.class, HostedSessionCommand::startTicket),
             ServedMethod.of("session/resumePast", ResumePastPayload.class, HostStart.class, HostedSessionCommand::resumePast));
     private static final ServedMethod<SessionQuery, NewSessionPayload, NewSessionView> NEW_SESSION =

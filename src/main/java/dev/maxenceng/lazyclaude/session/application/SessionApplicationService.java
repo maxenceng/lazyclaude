@@ -27,6 +27,7 @@ import dev.maxenceng.lazyclaude.session.domain.SessionAge;
 import dev.maxenceng.lazyclaude.session.domain.SessionExitListener;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
+import dev.maxenceng.lazyclaude.session.domain.TicketDescription;
 import dev.maxenceng.lazyclaude.session.domain.TicketDoneEndedListener;
 import dev.maxenceng.lazyclaude.session.domain.TicketStart;
 import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
@@ -121,6 +122,11 @@ public final class SessionApplicationService {
 
     public HostStart startUnlinked(Project project, PaneSize size) {
         return hosted.startUnlinked(project, size);
+    }
+
+    /** A session running the configured plugin's {@code ticket new} on {@code description}, in the project root, linked to no ticket. */
+    public HostStart startNewTicket(Project project, TicketDescription description, PaneSize size) {
+        return hosted.startNewTicket(project, description, ticketPlugin, size);
     }
 
     /** A session running {@code verb} on a ticket, in the ticket's worktree, added first when it is missing. */

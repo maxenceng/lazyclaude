@@ -79,6 +79,18 @@ export class Hosting {
     return this.start(() => this.deps.client.call('session/startUnlinked', { root, size: this.paneSize() }));
   }
 
+  /** Starts the session that creates a ticket from `description`, as typed; why it did not start, or nothing once it has, for the popup that asked. */
+  async startNewTicket(root: string, description: string): Promise<string | undefined> {
+    try {
+      const started = await this.deps.client.call('session/startNewTicket', { root, description, size: this.paneSize() });
+      this.opened(started);
+      this.failure.set(undefined);
+      return started.kind === 'startedHost' ? undefined : started.reason;
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+  }
+
   startTicket(root: string, ticket: string, branch: string, verb: BoardVerb): Promise<boolean> {
     return this.start(() => this.deps.client.call('session/startTicket', { root, ticket, branch, verb, size: this.paneSize() }));
   }

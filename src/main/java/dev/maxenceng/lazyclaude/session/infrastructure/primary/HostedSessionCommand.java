@@ -17,6 +17,11 @@ public final class HostedSessionCommand {
         return sessions.startUnlinked(payload.toDomain(), payload.size());
     }
 
+    /** {@code /<plugin>:ticket new <description>} in the project root, the description as one argument; a failure to start it is already a warning, and the result says why. */
+    public HostStart startNewTicket(NewTicketHostedPayload payload) {
+        return sessions.startNewTicket(payload.project(), payload.toDomain(), payload.size());
+    }
+
     /** {@code /<plugin>:ticket <verb> <ID>} in the ticket's worktree, added first when it is missing; a failure to start it is already a warning. */
     public HostStart startTicket(TicketHostedPayload payload) {
         return sessions.startTicket(payload.toDomain(), payload.size());

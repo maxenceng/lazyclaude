@@ -29,7 +29,6 @@ import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardAfterChangePay
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardQuery;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardReadingView;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardView;
-import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketCaptureCommand;
 import dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketView;
 import dev.maxenceng.lazyclaude.board.published.TicketId;
 import dev.maxenceng.lazyclaude.board.published.Verb;
@@ -193,7 +192,6 @@ public final class Shell extends ToolkitApp {
     private final AtomicReference<SessionsView> pendingSessions = new AtomicReference<>();
     private final AtomicReference<PullRequestsView> pendingPullRequests = new AtomicReference<>();
     private final AtomicReference<BoardReadingView> pendingBoard = new AtomicReference<>();
-    private final AtomicReference<TicketId> selectOnNextBoard = new AtomicReference<>();
     private final AtomicReference<Optional<WarningView>> pendingWarning = new AtomicReference<>();
     private final MainViewScroll mainViewScroll = new MainViewScroll();
     private final HostedSessionCommand hosting;
@@ -272,7 +270,6 @@ public final class Shell extends ToolkitApp {
                 contexts.docs(),
                 contexts.review(),
                 contexts.pendingReview(),
-                contexts.capturing(),
                 chords,
                 mouseCapture,
                 Executors.newVirtualThreadPerTaskExecutor());
@@ -295,7 +292,6 @@ public final class Shell extends ToolkitApp {
             DocsQuery docsQuery,
             ReviewQuery reviews,
             PendingReviewCommand writing,
-            TicketCaptureCommand capturing,
             ReservedChords chords,
             boolean mouseCapture,
             Executor background) {
@@ -314,7 +310,7 @@ public final class Shell extends ToolkitApp {
         this.emulators = emulators;
         this.watching = watching;
         this.removing = removing;
-        this.captureKeys = new CaptureKeys(capturing, board.root().value(), background, this::onRenderThread, this::captured);
+        this.captureKeys = new CaptureKeys(hosting, board.root().value(), this::paneSize, background, this::onRenderThread, this::opened);
         this.screens = screens;
         this.ages = ages;
         this.boards = boards;
@@ -428,22 +424,9 @@ public final class Shell extends ToolkitApp {
         reread();
     }
 
-    /** GitHub numbered a captured ticket: the board is read at once, and its selection goes to the new draft by that number. No row is added before the read. */
-    private void captured(TicketId id) {
-        background.execute(() -> reread(Optional.of(id)));
-    }
-
-    private void reread() {
-        reread(Optional.empty());
-    }
-
-    /**
-     * One read at a time, so a slow read that started first never lands after a newer one. {@code selecting} goes with this read
-     * alone: a read that fails drops it, and the board it lands with is the only one it is looked for in.
-     */
-    private synchronized void reread(Optional<TicketId> selecting) {
+    /** One read at a time, so a slow read that started first never lands after a newer one. */
+    private synchronized void reread() {
         boards.boardAfterChange(new BoardAfterChangePayload(root, lastRead instanceof BoardView)).ifPresent(read -> {
-            selecting.ifPresent(selectOnNextBoard::set);
             lastRead = read;
             pendingBoard.set(read);
             ToolkitRunner running = runner();
@@ -490,9 +473,6 @@ public final class Shell extends ToolkitApp {
             } else {
                 board.replace(next);
             }
-            Optional.ofNullable(selectOnNextBoard.getAndSet(null))
-                    .flatMap(board::ticketNumbered)
-                    .ifPresent(board::selectTicket);
             if (!board.selected().key().equals(before) && mainViewOwner == Focus.BOARD) {
                 mainViewScroll.reset();
             }
