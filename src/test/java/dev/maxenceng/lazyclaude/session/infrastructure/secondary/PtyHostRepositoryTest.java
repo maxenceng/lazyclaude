@@ -329,14 +329,14 @@ class PtyHostRepositoryTest {
     }
 
     @Test
-    void shouldBringTheChildToItsSpawnSizeEvenWhenItsFirstReadIsZero() throws Exception {
+    void shouldReadOnlyZeroOrItsSpawnSizeAndEndAtItsSpawnSize() throws Exception {
         PtyHostRepository host = hostRunning("trap 'stty size' WINCH; stty size; while true; do sleep 0.05; done");
         host.spawn(newLaunchIn(id, Path.of("/tmp"), 100, 30), output, code -> {});
 
         List<String> reads = output.textContaining("30 100").lines().map(String::strip).toList();
 
         assertThat(reads)
-                .as("pty4j sizes the pty only after exec returns, so a first read of 0 0 is corrected by the WINCH that follows (ADR 0113)")
+                .as("pty4j sizes the pty only after exec returns, so the child may first read 0 0 and must then reach its spawn size through the WINCH; a warm JVM usually wins the race and reads the spawn size at once (ADR 0113)")
                 .isNotEmpty()
                 .allMatch(read -> read.equals("0 0") || read.equals("30 100"))
                 .endsWith("30 100");

@@ -26,7 +26,9 @@ What was measured, with a child that prints `stty size` at start and on every WI
 
 - **lazyclaude accepts the race and does not work around it.** The WINCH that pty4j's late `setWindowSize` raises corrects
   the size, and `claude` redraws when it is resized. So a hosted session that starts at `0 0` draws at its pane's size a
-  moment later. `PtyHostRepositoryTest` checks that a child ends up at its spawn size even when its first read was `0 0`.
+  moment later. `PtyHostRepositoryTest` checks that a child spawned at 100×30 reads no size but `0 0` or `30 100`, and ends
+  at `30 100`. It cannot force the race: in the warm JVM of a test run the spawn usually wins it, so the `0 0` read is
+  seen mostly in a fresh JVM.
 - Rejected: setting the size before exec through an `sh -c 'stty rows R cols C; exec "$@"'` wrapper. It changes how
   sessions are launched, to fix a race that a real `claude` has not been seen to lose.
 - Rejected: patching or forking pty4j, which would put the fix on a timeline lazyclaude does not control.
