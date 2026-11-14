@@ -20,7 +20,7 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
  */
 public final class IssuesWatchRepository implements BoardWatchPort, AutoCloseable {
 
-    static final Duration INTERVAL = Duration.ofSeconds(30);
+    static final Duration INTERVAL = Duration.ofSeconds(10);
 
     private static final String WORKER_NAME = "board-watch";
     private static final String NEWEST_UPDATED =
