@@ -15,10 +15,10 @@ const emulate = (overrides: Partial<EmulatorDeps> = {}) => {
   const client = fakeClient();
   const memory = new StorageModeMemory(sessionStorage);
   const fit = { fit: vi.fn() };
-  const deps: EmulatorDeps = { client, memory, fit, reserved: () => undefined, clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.resolve() }, notices: new NoticeStore(), ...overrides };
+  const deps: EmulatorDeps = { client, memory, fit, reserved: () => undefined, clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.resolve() }, notices: new NoticeStore(), opener: { openUrl: vi.fn(() => Promise.resolve()) }, ...overrides };
   const emulator = new Emulator('s1', new Terminal(), deps);
   emulator.terminal.open(document.body.appendChild(document.createElement('div')));
-  return { client, memory, fit, emulator, term: emulator.terminal, notices: deps.notices };
+  return { client, memory, fit, emulator, term: emulator.terminal, notices: deps.notices, opener: deps.opener };
 };
 
 const encoded = (text: string) => toBase64(bytesOfText(text));
@@ -253,5 +253,44 @@ describe('the keys of a hosted session\'s pane', () => {
     expect(emulator.handleKey(keydown('C', { ctrlKey: true, shiftKey: true }))).toBe(false);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(notices.notice.get()).toBe('Could not copy: denied');
+  });
+});
+
+describe('the links of a hosted session\'s pane', () => {
+  const range = { start: { x: 1, y: 1 }, end: { x: 2, y: 1 } };
+
+  it('opens an OSC 8 hyperlink\'s target, not its visible text, on ctrl+click', () => {
+    const { term, opener } = emulate();
+    term.options.linkHandler?.activate(new MouseEvent('click', { ctrlKey: true }), 'https://example.com/target', range);
+    expect(opener.openUrl).toHaveBeenCalledWith('https://example.com/target');
+  });
+
+  it('opens nothing on a plain click on an OSC 8 hyperlink', () => {
+    const { term, opener } = emulate();
+    term.options.linkHandler?.activate(new MouseEvent('click'), 'https://example.com/target', range);
+    expect(opener.openUrl).not.toHaveBeenCalled();
+  });
+
+  it('is handed an OSC 8 hyperlink of another scheme, to refuse it with a notice', () => {
+    const { term, opener, notices } = emulate();
+    expect(term.options.linkHandler?.allowNonHttpProtocols).toBe(true);
+    term.options.linkHandler?.activate(new MouseEvent('click', { ctrlKey: true }), 'file:///etc/passwd', range);
+    expect(opener.openUrl).not.toHaveBeenCalled();
+    expect(notices.notice.get()).toContain('file:///etc/passwd');
+  });
+
+  it('reports the link the pointer is on, an OSC 8 hyperlink\'s target, until it leaves', () => {
+    const { emulator, term } = emulate();
+    term.options.linkHandler?.hover?.(new MouseEvent('mousemove'), 'https://example.com/target', range);
+    expect(emulator.hoveredLink.get()).toBe('https://example.com/target');
+    term.options.linkHandler?.leave?.(new MouseEvent('mousemove'), 'https://example.com/target', range);
+    expect(emulator.hoveredLink.get()).toBeUndefined();
+  });
+
+  it('registers a provider for the plain web addresses in its output', () => {
+    const register = vi.spyOn(Terminal.prototype, 'registerLinkProvider');
+    emulate();
+    expect(register).toHaveBeenCalledTimes(1);
+    register.mockRestore();
   });
 });

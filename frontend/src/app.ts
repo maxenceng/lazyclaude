@@ -68,6 +68,7 @@ export class AppModel {
       newTerminal: () => platform.newTerminal(),
       clipboard: platform.clipboard,
       notices: this.notices,
+      opener: platform.opener,
       reserved: (press) => this.reservedInPane(press),
     });
     this.sessions = new SessionsController({

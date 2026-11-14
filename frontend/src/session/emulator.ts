@@ -4,6 +4,7 @@ import { binaryBytes, bytesOfText, type Client, fromBase64, toBase64 } from '../
 import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import type { ModeMemory } from './modeMemory';
+import { SessionLinks, type UrlOpener, WebAddressProvider } from './links';
 import { PaneKey, type PaneKeyPress, paneKeyOf } from './paneKeys';
 import { KeptModes, ModeTracker } from './privateModes';
 
@@ -21,6 +22,8 @@ export interface EmulatorDeps {
   clipboard: Clipboard;
   /** The status line's notice, which says why the clipboard refused a copy or a paste. */
   notices: NoticeStore;
+  /** What opens a link followed with ctrl held, in the system browser. */
+  opener: UrlOpener;
 }
 
 const reasonOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
@@ -35,6 +38,8 @@ enum Repaint {
 /** One hosted session's xterm.js: fed by its `pty/output`, sending its keys, pastes and mouse reports as `pty/input`, and keeping its private modes for a reload. */
 export class Emulator {
   readonly mouseReported: Store<boolean> = new Store(false);
+  /** The link the pointer is on, for the key bar to name. */
+  readonly hoveredLink: Store<string | undefined>;
   private readonly kept = new KeptModes();
   private repaint = Repaint.None;
   private fitted = false;
@@ -45,6 +50,15 @@ export class Emulator {
     readonly terminal: Terminal,
     private readonly deps: EmulatorDeps,
   ) {
+    const links = new SessionLinks({ opener: deps.opener, notices: deps.notices });
+    this.hoveredLink = links.hovered;
+    terminal.options.linkHandler = {
+      activate: (event, url) => links.activate(event, url),
+      hover: (_event, url) => links.hover(url),
+      leave: () => links.leave(),
+      allowNonHttpProtocols: true,
+    };
+    this.subscriptions.push(terminal.registerLinkProvider(new WebAddressProvider(terminal, links)));
     const recalled = deps.memory.recall(session);
     this.subscriptions.push(
       new ModeTracker(terminal, this.kept, () => this.modesChanged()),

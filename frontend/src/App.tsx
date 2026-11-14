@@ -77,6 +77,7 @@ export const App = ({ app, packaged }: Props) => {
   const warning = useStore(app.warnings.warning);
   const notice = useStore(app.notices.notice);
   const mouseReported = useStore(app.hosting.mouseReported);
+  const hoveredLink = useStore(app.hosting.hoveredLink);
   const review = useStore(app.review.current);
   const tab = useStore(app.tabs.selected);
   const pullRequests = useStore(app.review.pullRequests.state);
@@ -122,7 +123,7 @@ export const App = ({ app, packaged }: Props) => {
     [Focus.Sessions]: <SessionsKeyBar picking={false} extra={panelKeys} />,
     [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
     [Focus.Diff]: <ReviewKeyBar panel={ReviewFocus.Diff} />,
-    [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} />,
+    [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} hoveredLink={hoveredLink} />,
   }[layout.focus];
 
   const unready =
