@@ -1,0 +1,13 @@
+/* PROTOTYPE: throwaway. */
+.sl-window { display: flex; flex-direction: column; height: 100vh; background: var(--ground); }
+.sl-pane { flex: 1; display: flex; flex-direction: column; margin: 6px; background: var(--pane); border: 1px solid var(--seam); min-height: 0; }
+.sl-title { display: flex; gap: 2ch; padding: 3px 1ch; font-family: var(--font-mono, monospace); font-size: 13px; color: var(--dim); border-bottom: 1px solid var(--seam); }
+.sl-tab-on { color: var(--lit-ink); background: var(--lit); padding: 0 1ch; }
+.sl-tab { padding: 0 1ch; }
+.sl-term-wrap { position: relative; flex: 1; min-height: 0; background: var(--terminal-ground); padding: 4px; }
+.sl-term { width: 100%; height: 100%; }
+.sl-url { color: var(--ansi-bright-blue); }
+.sl-tip, .sl-foot { font-family: var(--font-mono, monospace); font-size: 12px; color: var(--text); background: var(--pane-lift); border: 1px solid var(--seam); padding: 2px 1ch; white-space: nowrap; pointer-events: none; }
+.sl-tip { position: absolute; transform: translate(-8px, calc(-100% - 14px)); box-shadow: 0 4px 12px rgb(0 0 0 / 0.45); z-index: 5; }
+.sl-foot { position: absolute; left: 4px; bottom: 4px; z-index: 5; }
+.sl-tip kbd, .sl-foot kbd { font-family: inherit; color: var(--lit-ink); background: var(--lit); padding: 0 0.6ch; }
