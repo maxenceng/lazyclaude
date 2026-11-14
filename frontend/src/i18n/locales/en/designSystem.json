@@ -49,6 +49,9 @@
     "title": "Window menu",
     "item": "{{action}} ({{key}})"
   },
+  "popup": {
+    "close": "Close"
+  },
   "paneAction": {
     "label": "{{action}} ({{key}})"
   },

@@ -12,7 +12,11 @@ export const CapturePopup = ({ capture }: { capture: CaptureController }) => {
     return null;
   }
   return (
-    <Popup title={t('capture.title')}>
+    <Popup
+      title={t('capture.title')}
+      main={{ label: t('capture.create'), chip: t('capture.createKey'), onClick: () => capture.create() }}
+      out={{ label: t('capture.cancel'), chip: t('capture.cancelKey'), onClick: () => capture.cancel() }}
+    >
       <TextInput
         label={t('capture.label')}
         value={state.title}
@@ -23,12 +27,12 @@ export const CapturePopup = ({ capture }: { capture: CaptureController }) => {
       />
       {state.kind === CaptureStateKind.Creating ? (
         <div role="status">
-          <Text tone={Tone.Dim}>{t('capture.creating')}</Text>
+          <Text tone={Tone.Dim} tight>{t('capture.creating')}</Text>
         </div>
       ) : null}
       {state.kind === CaptureStateKind.Refused ? (
         <div role="alert">
-          <Text tone={Tone.Warning}>{t('capture.refused', { reason: state.reason })}</Text>
+          <Text tone={Tone.Warning} tight>{t('capture.refused', { reason: state.reason })}</Text>
         </div>
       ) : null}
     </Popup>

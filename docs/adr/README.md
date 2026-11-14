@@ -110,3 +110,4 @@
 - 0106 [The desktop review shows each thread once under its line and drops its Comments pane](0106-the-desktop-review-shows-each-thread-once-under-its-line-and-drops-its-comments-pane.md) — Accepted.
 - 0107 [A View may hold a value of its own context's domain](0107-a-view-may-hold-a-value-of-its-own-contexts-domain.md) — Accepted.
 - 0108 [The issues poll checks every ten seconds](0108-the-issues-poll-checks-every-ten-seconds.md) — Accepted.
+- 0109 [Every desktop popup is one pane over a dimmed window, answered by key-chip buttons](0109-every-desktop-popup-is-one-pane-over-a-dimmed-window-answered-by-key-chip-buttons.md) — Accepted.

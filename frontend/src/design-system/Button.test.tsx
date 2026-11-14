@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Button, ButtonTone } from './Button';
@@ -29,5 +29,22 @@ describe('a button', () => {
     expect(ruleOf(sheet, '.affirm')).toContain('color: var(--affirm-ink)');
     expect(ruleOf(sheet, '.chip')).toContain('background: var(--affirm-chip-ground)');
     expect(ruleOf(sheet, '.chip')).toContain('color: var(--affirm-chip-ink)');
+  });
+
+  it('is quiet when it is a way out: a seam border on no fill, its chip on the card ground', () => {
+    render(
+      <Button onClick={() => {}} tone={ButtonTone.Quiet} chip="esc">
+        Cancel
+      </Button>,
+    );
+    expect(screen.getByText('esc').tagName).toBe('KBD');
+    expect(ruleOf(sheet, '.quiet')).toContain('background: transparent');
+    expect(ruleOf(sheet, '.quiet')).toContain('border: 1px solid var(--seam)');
+    expect(ruleOf(sheet, '.quiet .chip')).toContain('background: var(--card)');
+  });
+
+  it('keeps the focus where it was when it is pressed, so a popup keeps its input', () => {
+    render(<Button onClick={() => {}}>Cancel</Button>);
+    expect(fireEvent.mouseDown(screen.getByRole('button', { name: 'Cancel' }))).toBe(false);
   });
 });
