@@ -27,6 +27,7 @@ import dev.maxenceng.lazyclaude.session.domain.SessionAge;
 import dev.maxenceng.lazyclaude.session.domain.SessionExitListener;
 import dev.maxenceng.lazyclaude.session.domain.SessionManager;
 import dev.maxenceng.lazyclaude.session.domain.SessionWatchPort;
+import dev.maxenceng.lazyclaude.session.domain.TicketDescription;
 import dev.maxenceng.lazyclaude.session.domain.TicketDoneEndedListener;
 import dev.maxenceng.lazyclaude.session.domain.TicketStart;
 import dev.maxenceng.lazyclaude.session.domain.TicketWorktree;
@@ -124,6 +125,10 @@ public final class SessionApplicationService {
     }
 
     /** A session running {@code verb} on a ticket, in the ticket's worktree, added first when it is missing. */
+    public HostStart startNewTicket(Project project, TicketDescription description, PaneSize size) {
+        return hosted.startNewTicket(project, description, ticketPlugin, size);
+    }
+
     public HostStart startTicket(TicketStart ticket, PaneSize size) {
         return hosted.startTicket(ticket, ticketPlugin, size);
     }

@@ -12,6 +12,7 @@ import dev.maxenceng.lazyclaude.session.domain.EndedAt;
 import dev.maxenceng.lazyclaude.session.domain.LaunchCommand;
 import dev.maxenceng.lazyclaude.session.domain.LaunchEntry;
 import dev.maxenceng.lazyclaude.session.domain.NewClaude;
+import dev.maxenceng.lazyclaude.session.domain.NewTicketClaude;
 import dev.maxenceng.lazyclaude.session.domain.NotEnded;
 import dev.maxenceng.lazyclaude.session.domain.ResumeClaude;
 import dev.maxenceng.lazyclaude.session.domain.StartedAt;
@@ -54,7 +55,7 @@ record LaunchLogLine(
             case NotEnded _ -> null;
         };
         return switch (entry.command()) {
-            case NewClaude _ -> line(entry, NEW, null, null, null, ended);
+            case NewClaude _, NewTicketClaude _ -> line(entry, NEW, null, null, null, ended);
             case ResumeClaude _ -> line(entry, RESUME, null, null, null, ended);
             case TicketClaude run -> line(entry, TICKET, run.ticket().value(), run.verb().label(), run.plugin().value(), ended);
         };

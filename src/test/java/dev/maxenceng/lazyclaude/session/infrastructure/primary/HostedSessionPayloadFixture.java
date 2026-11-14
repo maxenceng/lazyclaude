@@ -25,6 +25,10 @@ public final class HostedSessionPayloadFixture {
         return new NewHostedPayload(project().root(), paneSize());
     }
 
+    public static NewTicketHostedPayload newTicketHostedPayload() {
+        return new NewTicketHostedPayload(project().root(), "add a \"dark mode\" toggle", paneSize());
+    }
+
     public static ResumePastPayload resumePastUnderTicket(SessionId id) {
         return new ResumePastPayload(
                 new SessionPayload(project().root(), List.of(linkedTicketId())),

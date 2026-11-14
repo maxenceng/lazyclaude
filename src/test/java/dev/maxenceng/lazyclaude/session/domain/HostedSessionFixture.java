@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.earlierStartedAt;
+import static dev.maxenceng.lazyclaude.session.domain.TicketDescriptionFixture.ticketDescription;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.resizedPaneSize;
@@ -83,6 +84,14 @@ public final class HostedSessionFixture {
 
     public static TicketClaude ticketClaudeUnder(SessionId session, Verb verb, TicketPlugin plugin) {
         return TicketClaude.builder().session(session).ticket(linkedTicketId()).verb(verb).plugin(plugin).build();
+    }
+
+    public static NewTicketClaude newTicketClaude(SessionId session) {
+        return NewTicketClaude.builder()
+                .session(session)
+                .description(ticketDescription())
+                .plugin(ticketPlugin())
+                .build();
     }
 
     public static HostedSession hostedSessionRunning(Verb verb) {

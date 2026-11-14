@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.idOf;
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.newTicketClaude;
 import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.afterChange;
 import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.emptyLaunchLog;
 import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.endedAt;
@@ -11,6 +12,7 @@ import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.launchLog
 import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.logUnavailable;
 import static dev.maxenceng.lazyclaude.session.domain.SessionsFixture.clock;
 import static dev.maxenceng.lazyclaude.session.domain.StartedAtFixture.now;
+import static dev.maxenceng.lazyclaude.session.domain.TicketDescriptionFixture.ticketDescription;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketStart;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSize;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
@@ -99,6 +101,21 @@ class HostedSessionManagerLaunchLogTest {
                 .usingRecursiveComparison()
                 .isEqualTo(launchLogOf(launchEntryBuilder()
                         .command(new NewClaude(started))
+                        .startedAt(new StartedAt(now()))
+                        .build()));
+    }
+
+    @Test
+    void shouldLogTheLaunchThatCreatesATicketWithTheCommandItRan() {
+        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+
+        SessionId started = idOf(manager.startNewTicket(project(), ticketDescription(), ticketPlugin(), paneSize()));
+
+        verify(log).change(eq(project()), any(), change.capture());
+        assertThat(afterChange(change, 0, emptyLaunchLog()))
+                .usingRecursiveComparison()
+                .isEqualTo(launchLogOf(launchEntryBuilder()
+                        .command(newTicketClaude(started))
                         .startedAt(new StartedAt(now()))
                         .build()));
     }

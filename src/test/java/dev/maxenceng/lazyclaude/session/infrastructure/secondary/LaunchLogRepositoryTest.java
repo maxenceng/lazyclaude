@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.newTicketClaude;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaude;
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaudeUnder;
 import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.emptyLaunchLog;
@@ -38,7 +39,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.maxenceng.lazyclaude.board.published.Verb;
+import dev.maxenceng.lazyclaude.session.domain.LaunchEntry;
 import dev.maxenceng.lazyclaude.session.domain.LaunchLogFallback;
+import dev.maxenceng.lazyclaude.session.domain.NewClaude;
 import dev.maxenceng.lazyclaude.session.domain.ResumeClaude;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
@@ -81,6 +84,16 @@ class LaunchLogRepositoryTest {
                         launchEntryBuilder()
                                 .command(ticketClaudeUnder(thirdSessionId(), Verb.DESIGN, otherTicketPlugin()))
                                 .build()));
+    }
+
+    @Test
+    void shouldReadBackALaunchThatCreatedATicketAsAPlainNewOne() {
+        repository.change(project(), fallback, _ -> launchLogOf(
+                launchEntryBuilder().command(newTicketClaude(sessionId())).build()));
+
+        assertThat(repository.read(project(), fallback).entries())
+                .extracting(LaunchEntry::command)
+                .containsExactly(new NewClaude(sessionId()));
     }
 
     @Test
