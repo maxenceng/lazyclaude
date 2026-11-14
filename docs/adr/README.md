@@ -109,3 +109,4 @@
 - 0105 [The desktop window does not show unreadable tickets, and the Board tab previews beside its columns](0105-the-desktop-window-does-not-show-unreadable-tickets-and-the-board-tab-previews-beside-its-columns.md) — Accepted.
 - 0106 [The desktop review shows each thread once under its line and drops its Comments pane](0106-the-desktop-review-shows-each-thread-once-under-its-line-and-drops-its-comments-pane.md) — Accepted.
 - 0107 [A View may hold a value of its own context's domain](0107-a-view-may-hold-a-value-of-its-own-contexts-domain.md) — Accepted.
+- 0108 [The issues poll checks every ten seconds](0108-the-issues-poll-checks-every-ten-seconds.md) — Accepted.

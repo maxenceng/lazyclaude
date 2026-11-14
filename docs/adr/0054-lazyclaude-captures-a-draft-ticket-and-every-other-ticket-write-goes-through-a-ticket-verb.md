@@ -5,7 +5,7 @@ Date: 2026-10-27
 ## Status
 
 Accepted. Amends ADR 0009 ("the one write") and the read-only charter in CLAUDE.md, once the board reads GitHub Issues
-(ADR 0052); until then they stand.
+(ADR 0052); until then they stand. Amended by ADR 0108: the Issues poll checks every 10 s, not 30 s.
 
 ## Context
 
@@ -33,7 +33,7 @@ keeps the board on screen with a warning when a read fails.
   is inserted before that read.
 - **The board reads Issues through `gh`**, the same process and authentication `review` uses. Rejected: `java.net.http`
   with a token taken from `gh`, a second auth path for no gain.
-- **A 30 s ETag-conditional poll, plus `R`, replaces the file watch.** A 304 costs no rate limit. Rejected: reading only
+- **An ETag-conditional poll, every 10 s since ADR 0108, plus `R`, replaces the file watch.** A 304 costs no rate limit. Rejected: reading only
   on `R` and at start, which leaves the board stale; and re-reading on focus, which terminals report unreliably.
 - **No read is cached.** At start, an unreachable GitHub, or `gh` not logged in, shows on the Board as the reason, the
   latter naming `gh auth login`. A later failed read keeps the board on screen under the existing warning, cleared by
