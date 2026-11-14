@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import '../../src/design-system/global.css';
 import '../ux-system/switcher.css';
 import { VariantR4 } from '../ux-system/VariantLayouts';
+import { VariantP1, VariantP2, VariantP3 } from './Frame';
 import { VariantP0 } from './VariantP0';
 
 export const POPUPS = ['capture', 'capture-creating', 'capture-refused', 'quit', 'comment', 'comment-refused', 'reply', 'submit'] as const;
@@ -12,7 +13,12 @@ export interface PopupProps {
   popup: PopupKind;
 }
 
-const VARIANTS = [{ key: 'P0', name: 'Popups: today', Component: VariantP0 }];
+const VARIANTS = [
+  { key: 'P0', name: 'Popups: today', Component: VariantP0 },
+  { key: 'P1', name: 'Lit pane, high, no scrim', Component: VariantP1 },
+  { key: 'P2', name: 'Lit pane, centred, dimmed window', Component: VariantP2 },
+  { key: 'P3', name: 'Lifted card, focus edge, no scrim', Component: VariantP3 },
+];
 
 const ON_REVIEW = new Set<PopupKind>(['comment', 'comment-refused', 'reply', 'submit']);
 

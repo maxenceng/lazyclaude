@@ -1,0 +1,98 @@
+/* PROTOTYPE: the popup frame's three looks. Not shipped. */
+.pf {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, calc(100vw - 2 * var(--space-5)));
+  max-height: calc(100vh - 2 * var(--space-5));
+  background: var(--pane);
+  color: var(--text);
+  border: 1px solid var(--seam);
+  border-radius: var(--pane-radius);
+  box-shadow: var(--popup-shadow);
+  overflow: hidden;
+  --pane-action-ink: var(--dim);
+  --pane-action-hover: var(--seam);
+}
+.pf-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--pane-head);
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border-bottom: 1px solid var(--seam);
+}
+.pf-title {
+  font: 600 var(--size-label) var(--font-read);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pf-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  overflow: auto;
+}
+.pf-body > p { padding-inline: 0; }
+.pf-foot {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--seam);
+  background: var(--pane-sunk);
+}
+.pf-quiet {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--seam);
+  font-weight: 600;
+  cursor: pointer;
+}
+.pf-quiet:hover { background: var(--hover-ground); }
+.pf-chip {
+  padding: 0 var(--space-2);
+  border-radius: var(--card-radius);
+  background: var(--card);
+  color: var(--text);
+  font: 600 var(--size-small) var(--font-mono);
+}
+
+/* P1: a focused pane floating high, no scrim (ADR 0097) — its title row lit like any focused pane. */
+.pf-p1 { top: 72px; }
+.pf-p1 .pf-head { background: var(--lit); color: var(--lit-ink); --pane-action-ink: var(--lit-ink); --pane-action-hover: color-mix(in srgb, var(--lit-ink) 14%, transparent); }
+
+/* P2: the same pane, centred over a dimmed window. */
+.pf-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--ground) 55%, transparent);
+}
+.pf-p2 { top: 50%; transform: translate(-50%, -50%); }
+.pf-p2 .pf-head { background: var(--lit); color: var(--lit-ink); --pane-action-ink: var(--lit-ink); --pane-action-hover: color-mix(in srgb, var(--lit-ink) 14%, transparent); }
+
+/* P3: a lifted card, no lit row: a sentence-case heading, a focus-blue top edge, no scrim. */
+.pf-p3 {
+  top: 72px;
+  background: var(--pane-lift);
+  border-color: var(--card-edge);
+  border-top: var(--focus-edge) solid var(--focus);
+}
+.pf-p3 .pf-head { border-bottom: 0; height: auto; padding-top: var(--space-4); }
+.pf-p3 .pf-title { font: 600 var(--size-base) var(--font-read); letter-spacing: 0; text-transform: none; }
+.pf-p3 .pf-body { padding-top: var(--space-3); }
+.pf-p3 .pf-foot { border-top: 0; background: transparent; padding-top: 0; }
