@@ -116,7 +116,20 @@ class PtyNativeFolderTest {
     }
 
     @Test
-    void shouldLoadWithoutTheLockAndWarnWhenTheLockCannotBeTaken() throws Exception {
+    void shouldWarnAndLeaveTheTmpdirUnsetWhenTheLockCannotBeTaken() throws Exception {
+        Path folder = nativeFolderUnder(cache);
+        Files.createDirectories(lockFileIn(folder));
+
+        PtyNativeFolder.prepared(folder, warnings, properties);
+
+        assertThat(properties.getProperty(TMPDIR))
+                .as("a folder whose lock cannot be taken would let two processes extract into it at once")
+                .isNull();
+        assertThat(raisedTexts(warnings)).singleElement().asString().contains(folder.toString());
+    }
+
+    @Test
+    void shouldStillLoadWhenTheFolderWentAwayAfterItWasPrepared() throws Exception {
         Path folder = nativeFolderUnder(cache);
         PtyNativeFolder natives = PtyNativeFolder.prepared(folder, warnings, properties);
         Files.delete(lockFileIn(folder));
@@ -125,7 +138,6 @@ class PtyNativeFolderTest {
         assertThat(natives.loading(() -> true))
                 .as("a folder that cannot be used does not stop sessions from starting (ADR 0112)")
                 .isTrue();
-        assertThat(raisedTexts(warnings)).singleElement().asString().contains(folder.toString(), "lock");
     }
 
     @Test

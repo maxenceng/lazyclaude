@@ -29,8 +29,9 @@ the extraction, and in 13 of 30 such pairs one of them failed with `Cannot extra
 - **When `pty4j.preferred.native.folder` is already set, `pty4j.tmpdir` is left unset** and nothing is locked. The bundle's
   pre-extracted `natives/` and its `-D` flags stay with ADR 0059.
 - **A folder that cannot be created leaves `pty4j.tmpdir` unset and raises a warning** naming the folder and the reason.
-  Sessions still start, and the temp-folder leak comes back for that run. A lock that cannot be taken (a cache on NFS without
-  lock support, the folder removed while running) is named in a warning too, and that spawn runs unlocked. A folder that
+  Sessions still start, and the temp-folder leak comes back for that run. lazyclaude takes the lock once while preparing the
+  folder, so a lock that cannot be taken (a cache on NFS without lock support) takes the same path. A folder removed while
+  running makes the spawn run unlocked, unwarned: pty4j then extracts into a temp folder of its own, so nothing is shared. A folder that
   cannot be used should not stop sessions from starting.
 - **The composition root hands the adapter the JVM's properties, and a test a fresh table**, so building contexts in a test
   never repoints the whole test JVM's pty4j at a folder JUnit then deletes.
