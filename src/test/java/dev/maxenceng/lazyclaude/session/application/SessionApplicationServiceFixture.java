@@ -95,7 +95,7 @@ public final class SessionApplicationServiceFixture {
     }
 
     public static SessionApplicationService hostingTheRegisteredSession(SessionApplicationService service, HostPort hosts) {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         service.startUnlinked(project(), paneSize());
         return service;
     }
@@ -103,7 +103,7 @@ public final class SessionApplicationServiceFixture {
     public static SessionApplicationService hostingATicketSessionInTheWorktree(
             SessionApplicationService service, HostPort hosts, WorktreePort worktrees) {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         service.startTicket(ticketStart(Verb.DESIGN), paneSize());
         return service;
     }
