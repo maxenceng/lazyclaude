@@ -16,7 +16,7 @@ import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
 
 /**
  * Where pty4j extracts its natives, kept across runs: pty4j's own default is a new temp folder per process that its
- * {@code deleteOnExit} cannot remove once it holds a file (ADR 0113). pty4j extracts on the first spawn of a process and checks
+ * {@code deleteOnExit} cannot remove once it holds a file (ADR 0114). pty4j extracts on the first spawn of a process and checks
  * an existing extraction against its own, deleting and rewriting it on a mismatch, so that first spawn runs under an exclusive
  * file lock that another lazyclaude starting its first session waits on.
  */
