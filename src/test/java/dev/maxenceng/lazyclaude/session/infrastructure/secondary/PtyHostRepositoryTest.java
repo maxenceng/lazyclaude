@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -324,6 +325,21 @@ class PtyHostRepositoryTest {
         host.resize(id, paneSizeOf(120, 40));
 
         assertThat(output.textContaining("40 120")).contains("40 120");
+        host.end(id);
+    }
+
+    @Test
+    void shouldReadOnlyZeroOrItsSpawnSizeAndEndAtItsSpawnSize() throws Exception {
+        PtyHostRepository host = hostRunning("trap 'stty size' WINCH; stty size; while true; do sleep 0.05; done");
+        host.spawn(newLaunchIn(id, Path.of("/tmp"), 100, 30), output, code -> {});
+
+        List<String> reads = output.textContaining("30 100").lines().map(String::strip).toList();
+
+        assertThat(reads)
+                .as("pty4j sizes the pty only after exec returns, so the child may first read 0 0 and must then reach its spawn size through the WINCH; a warm JVM usually wins the race and reads the spawn size at once (ADR 0113)")
+                .isNotEmpty()
+                .allMatch(read -> read.equals("0 0") || read.equals("30 100"))
+                .endsWith("30 100");
         host.end(id);
     }
 

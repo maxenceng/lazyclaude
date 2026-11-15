@@ -48,6 +48,7 @@ final class HostedPty {
 
     private static PtyProcess started(List<String> argv, Map<String, String> environment, Path directory, PaneSize size) {
         try {
+            // deferred: pty4j sizes the pty only after exec returns, so a child that reads its size once and ignores WINCH starts at 0 0 (ADR 0113) — close it when a hosted claude draws its first frame at the wrong width, or pty4j sizes before exec.
             return new PtyProcessBuilder(argv.toArray(String[]::new))
                     .setEnvironment(environment)
                     .setDirectory(directory.toString())
