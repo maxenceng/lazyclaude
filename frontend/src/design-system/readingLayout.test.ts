@@ -61,6 +61,7 @@ describe('a drawn diagram', () => {
     const panel = ruleOf(markdown, '.diagram');
     expect(panel).toContain('background: var(--pane-sunk)');
     expect(panel).toContain('overflow-x: auto');
+    expect(ruleOf(markdown, '.markdown > .diagram')).toContain('width: calc(var(--natural) + 2 * var(--space-4))');
   });
 
   it('shrinks to the area but never below 85% of its natural width, and is never enlarged past it', () => {

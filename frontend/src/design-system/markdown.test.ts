@@ -32,6 +32,10 @@ describe('a fenced block', () => {
     expect(blocksOf('~~~java title="A"\nint x;\n~~~')).toEqual([{ kind: BlockKind.Code, language: 'java', text: 'int x;' }]);
   });
 
+  it('keeps the language of a fence longer than three backticks', () => {
+    expect(blocksOf('````mermaid\ngraph TD\n````')).toEqual([{ kind: BlockKind.Code, language: 'mermaid', text: 'graph TD' }]);
+  });
+
   it('has an empty language when its fence names none', () => {
     expect(blocksOf('```\nplain\n```')).toEqual([{ kind: BlockKind.Code, language: '', text: 'plain' }]);
   });

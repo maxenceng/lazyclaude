@@ -82,7 +82,7 @@ export interface LinkRun {
 export type Inline = TextRun | CodeRun | Styled | LinkRun;
 
 const FENCE = /^\s{0,3}(```|~~~)/;
-const FENCE_LANGUAGE = /^\s{0,3}(?:```|~~~)\s*([^\s`]*)/;
+const FENCE_LANGUAGE = /^\s{0,3}(?:`{3,}|~{3,})\s*([^\s`]*)/;
 const HEADING = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/;
 const RULE = /^\s{0,3}([-*_])(\s*\1){2,}\s*$/;
 const BULLET = /^\s*[-*+]\s+(.*)$/;

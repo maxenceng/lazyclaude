@@ -150,6 +150,10 @@
   padding: var(--space-3) var(--space-4);
 }
 
+.markdown > .diagram {
+  width: calc(var(--natural) + 2 * var(--space-4));
+}
+
 .diagramSvg svg {
   display: block;
   width: clamp(calc(var(--natural) * 0.85), 100%, var(--natural));

@@ -17,26 +17,38 @@ any diagram kind GitHub draws may turn up (#179). The window's CSP is off, and a
 
 - **The parser keeps a fence's language.** `Markdown` draws a block whose language is `mermaid` through mermaid.js and any
   other block, with another language or none, as the code block it always was. One rule for every place `Markdown` renders:
-  a document in the Docs panel and a ticket's body alike, as GitHub does.
+  a document in the main view and a ticket's body alike, as GitHub does. A review comment is set by `InlineText`, not
+  `Markdown`, so a mermaid block in a comment still shows its source, under `InlineText`'s deferred note on fenced blocks.
+- **The renderer stays our own** (ADR 0087 kept `react-markdown` and `marked` out as a tree of packages): mermaid.js draws only
+  the inside of a `mermaid` block, which no small renderer of ours could.
 - **mermaid.js, not a lighter flowchart-only renderer,** so every diagram kind GitHub draws is drawn. **Not pre-rendered in
   the sidecar:** mermaid-cli needs Node and Chromium at runtime, against the self-contained bundle of ADR 0059.
-- **It is imported on demand,** from the one component that draws a diagram, so Vite splits it into its own chunk. A
+- **It is imported on demand,** from one loader only `Diagram` calls, so Vite splits it into its own chunk. A
   document without a mermaid block never loads it, and the window's main chunk does not hold it.
 - **It runs at `securityLevel: 'strict'`:** a `click` directive, or an HTML label carrying a script or a handler, runs
   nothing.
 - **Until the drawing is ready the block shows its source as the code block, which the drawing then replaces.** Drawing waits
   on the reading faces (regular, semibold, italic) being loaded, so a label's width is measured in the face it is drawn in.
-- **A block that does not parse keeps its source as a code block under one line:** "Diagram not drawn", through i18n, then
+- **A block that is not drawn keeps its source as a code block under one line,** whether its source does not parse or
+  mermaid.js or a reading face could not be loaded: "Diagram not drawn", through i18n, then
   Mermaid's message as Mermaid gives it, its first two lines (PRODUCT.md: absence and failure are shown with their reason).
   The rest of the document is unaffected.
 - **The look is the code block's sunk panel,** mermaid's `base` theme fed from the design tokens read at runtime. A diagram
   wider than the reading area shrinks to fit, never below 85% of its natural size, then scrolls sideways; a narrower one is
-  not enlarged.
-- **The TUI is unchanged:** its Docs view still shows a mermaid block's source.
+  not enlarged. The natural size is the width the root `<svg>` names (its view box, else its `width` or `max-width`), and the
+  panel is sized from it, since mermaid gives most diagram kinds no intrinsic width.
+- **Mermaid's look is pinned to the one the approved prototype was drawn in:** `look: 'classic'` and `layout: 'dagre'`, with
+  no minimum node width. mermaid 12 defaults to its `neo` look (drop shadows), the ELK layout (right-angled edges) and
+  120-pixel nodes; mermaid 11, which the prototype ran, had none of them.
+- **The TUI is unchanged:** its main view still shows a mermaid block's source.
 
 ## Consequences
 
 - The production bundle carries a large lazy chunk set (mermaid and one chunk per diagram kind). The window fetches
   them from its own assets, so nothing waits on a network, but the deb and AppImage grow.
-- The diagram's colours are read when it is drawn, so a diagram already drawn keeps its theme until its document is read again.
+- A diagram's colours are read once, when it is drawn; a runtime theme change would not reach a drawn diagram. The window has
+  no theme switch today.
+- The italic reading face is now bundled, so emphasis everywhere in the window is set in it rather than slanted.
+- A document's `%%{init}%%` directive may still change a diagram's look or layout; it cannot loosen `securityLevel`, which
+  mermaid keeps out of a directive's reach.
 - jsdom cannot lay out SVG: tests mock the loader, and the drawing itself is checked in the window.

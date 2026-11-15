@@ -77,11 +77,56 @@ describe('a mermaid block that does not parse', () => {
   });
 });
 
+describe('a mermaid block that cannot be drawn', () => {
+  it('says so with the reason when mermaid.js fails to load', async () => {
+    vi.mocked(loadMermaid).mockRejectedValue(new Error('Failed to fetch dynamically imported module'));
+    read(block('mermaid', 'graph TD'));
+    expect(await screen.findByRole('status')).toHaveTextContent('Diagram not drawn Failed to fetch dynamically imported module');
+    expect(screen.getByText('graph TD').closest('pre')).not.toBeNull();
+  });
+
+  it('says so with the reason when a reading face fails to load', async () => {
+    fonts.load.mockRejectedValue(new Error('bad font'));
+    read(block('mermaid', 'graph TD'));
+    expect(await screen.findByRole('status')).toHaveTextContent('Diagram not drawn bad font');
+  });
+});
+
+describe('the natural width of a drawing', () => {
+  it('is read off the root svg, not off a marker drawn inside it', async () => {
+    mermaid.render.mockResolvedValue({ svg: '<svg width="100%" style="max-width: 812px;"><marker viewBox="0 0 10 10"></marker><text>drawn</text></svg>' });
+    const { container } = read(block('mermaid', 'classDiagram'));
+    await screen.findByText('drawn');
+    expect((container.querySelector('svg')?.parentElement?.parentElement as HTMLElement).style.getPropertyValue('--natural')).toBe('812px');
+  });
+
+  it('is the root view box width when there is one', async () => {
+    const { container } = read(block('mermaid', 'graph TD'));
+    await screen.findByText('drawn');
+    expect((container.querySelector('svg')?.parentElement?.parentElement as HTMLElement).style.getPropertyValue('--natural')).toBe('400px');
+  });
+
+  it('is left unset when the drawing names none, so the drawing keeps its own size', async () => {
+    mermaid.render.mockResolvedValue({ svg: '<svg><text>drawn</text></svg>' });
+    const { container } = read(block('mermaid', 'pie'));
+    await screen.findByText('drawn');
+    expect((container.querySelector('svg')?.parentElement?.parentElement as HTMLElement).style.getPropertyValue('--natural')).toBe('');
+  });
+});
+
 describe('how mermaid is set up', () => {
   it('renders at strict security, so a click directive or an HTML label runs nothing', async () => {
     read(block('mermaid', 'graph TD'));
     await waitFor(() => expect(mermaid.render).toHaveBeenCalled());
     expect(mermaid.initialize).toHaveBeenCalledWith(expect.objectContaining({ securityLevel: 'strict', startOnLoad: false }));
+  });
+
+  it('draws in the classic look and dagre layout the approved prototype was drawn in, not mermaid 12\'s neo look and ELK layout', async () => {
+    read(block('mermaid', 'graph TD'));
+    await waitFor(() => expect(mermaid.render).toHaveBeenCalled());
+    expect(mermaid.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({ look: 'classic', layout: 'dagre', flowchart: { useMaxWidth: false, minNodeWidth: 0 } }),
+    );
   });
 
   it('reads its theme from the design tokens', async () => {
