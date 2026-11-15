@@ -4,6 +4,7 @@ import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import { Dock } from './dock';
 import { type Clipboard, Emulator } from './emulator';
+import type { LinkOpener } from './links';
 import type { ModeMemory } from './modeMemory';
 import type { PaneKeyPress } from './paneKeys';
 
@@ -17,6 +18,7 @@ export interface HostingDeps {
   reserved: (press: PaneKeyPress) => (() => void) | undefined;
   clipboard: Clipboard;
   notices: NoticeStore;
+  opener: LinkOpener;
 }
 
 /** A start the sidecar could not answer: what it said, and the same start again. */
@@ -30,6 +32,8 @@ export class Hosting {
   readonly dock: Store<Dock> = new Store(new Dock());
   readonly failure: Store<StartFailure | undefined> = new Store<StartFailure | undefined>(undefined);
   readonly mouseReported: Store<boolean> = new Store(false);
+  /** The link the pointer is on in the selected tab. */
+  readonly hoveredLink: Store<string | undefined> = new Store<string | undefined>(undefined);
   private readonly emulators = new Map<string, Emulator>();
   private readonly ended = new Set<string>();
 
@@ -52,14 +56,14 @@ export class Hosting {
 
   select(session: string): void {
     this.dock.set(this.dock.get().select(session));
-    this.refreshMouse();
+    this.refreshSelected();
   }
 
   selectPrevious(): boolean {
     const previous = this.dock.get().previous();
     if (previous !== undefined) {
       this.dock.set(previous);
-      this.refreshMouse();
+      this.refreshSelected();
     }
     return previous !== undefined;
   }
@@ -67,7 +71,7 @@ export class Hosting {
   selectNext(): boolean {
     const before = this.dock.get().selectedTab();
     this.dock.set(this.dock.get().next());
-    this.refreshMouse();
+    this.refreshSelected();
     return this.dock.get().selectedTab() !== before;
   }
 
@@ -111,16 +115,19 @@ export class Hosting {
       return existing;
     }
     const { terminal, fit } = this.deps.newTerminal();
-    const { client, memory, reserved, clipboard, notices } = this.deps;
-    const emulator = new Emulator(session, terminal, { client, memory, fit, reserved, clipboard, notices });
+    const { client, memory, reserved, clipboard, notices, opener } = this.deps;
+    const emulator = new Emulator(session, terminal, { client, memory, fit, reserved, clipboard, notices, opener });
     this.emulators.set(session, emulator);
-    emulator.mouseReported.subscribe(() => this.refreshMouse());
+    emulator.mouseReported.subscribe(() => this.refreshSelected());
+    emulator.hoveredLink.subscribe(() => this.refreshSelected());
     return emulator;
   }
 
-  private refreshMouse(): void {
+  private refreshSelected(): void {
     const selected = this.dock.get().selectedTab();
-    this.mouseReported.set(selected !== undefined && this.emulators.get(selected)?.mouseReported.get() === true);
+    const emulator = selected === undefined ? undefined : this.emulators.get(selected);
+    this.mouseReported.set(emulator?.mouseReported.get() === true);
+    this.hoveredLink.set(emulator?.hoveredLink.get());
   }
 
   private listed(): void {
@@ -140,7 +147,7 @@ export class Hosting {
         this.emulators.get(session)?.end();
         this.emulators.delete(session);
       });
-    this.refreshMouse();
+    this.refreshSelected();
   }
 
   private paneSize(): SessionPaneSize {

@@ -46,7 +46,7 @@ export type { PopupAnswer } from './Popup';
 export { TextArea } from './TextArea';
 export { TextInput } from './TextInput';
 export { TerminalSurface } from './TerminalSurface';
-export { terminalLook } from './terminalTheme';
+export { terminalLinkUnderline, terminalLook } from './terminalTheme';
 export type { TerminalLook, TerminalTheme } from './terminalTheme';
 export { Text, Tone } from './Text';
 export { ReadingSection } from './ReadingSection';

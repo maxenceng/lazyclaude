@@ -14,3 +14,13 @@
 .surface :global(.xterm-viewport) {
   background-color: var(--terminal-ground);
 }
+
+/* A web address's underline, one mark per row it fills, so a hard-wrapped one reads as one link. */
+.linkUnderline {
+  position: absolute;
+  height: 1px;
+  margin-top: -2px;
+  background: var(--text);
+  pointer-events: none;
+  z-index: 6;
+}

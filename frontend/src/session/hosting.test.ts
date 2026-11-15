@@ -30,6 +30,7 @@ const hosting = (overrides: Partial<HostingDeps> = {}) => {
     reserved: () => undefined,
     clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.resolve() },
     notices: new NoticeStore(),
+    opener: { openUrl: () => Promise.resolve() },
     ...overrides,
   };
   return { client, sessions, memory, hosted: new Hosting(deps) };
@@ -226,6 +227,21 @@ describe('the hosted sessions', () => {
     client.push('pty/output', { session: 's1', data: encoded(CLAUDE_STOPS_REPORTING_THE_MOUSE) });
     await written(hosted.emulatorOf('s1')!.terminal);
     expect(hosted.mouseReported.get()).toBe(false);
+  });
+
+  it('tells the link the pointer is on in the selected tab, for the key bar', () => {
+    const { sessions, hosted } = hosting();
+    sessions.set(hostedIn('s1', 's2'));
+    const handler = hosted.emulatorOf('s1')!.terminal.options.linkHandler!;
+    const range = { start: { x: 1, y: 1 }, end: { x: 2, y: 1 } };
+    handler.hover?.(new MouseEvent('mousemove'), 'https://example.com/a', range);
+    expect(hosted.hoveredLink.get()).toBe('https://example.com/a');
+    hosted.select('s2');
+    expect(hosted.hoveredLink.get()).toBeUndefined();
+    hosted.select('s1');
+    expect(hosted.hoveredLink.get()).toBe('https://example.com/a');
+    handler.leave?.(new MouseEvent('mousemove'), 'https://example.com/a', range);
+    expect(hosted.hoveredLink.get()).toBeUndefined();
   });
 
   it('tells no mouse is reported once the tab closes', async () => {
