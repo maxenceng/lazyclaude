@@ -120,11 +120,16 @@ describe('the link the pointer is on', () => {
 });
 
 
+const noUnderlines = () => {
+  const drawn = { dispose: vi.fn() };
+  return { drawn, draw: vi.fn(() => drawn) };
+};
+
 const linksOn = async (output: string, line: number, cols = 80): Promise<ILink[] | undefined> => {
   const terminal = new Terminal({ cols, rows: 10 });
   await new Promise<void>((done) => terminal.write(output, done));
   const { links } = linked();
-  return new Promise((found) => new WebAddressProvider(terminal, links).provideLinks(line, found));
+  return new Promise((found) => new WebAddressProvider(terminal, noUnderlines(), links).provideLinks(line, found));
 };
 
 describe('the provider of web addresses in a pane', () => {
@@ -142,6 +147,11 @@ describe('the provider of web addresses in a pane', () => {
     ]);
   });
 
+  it('keeps an address with a wide character inside it one link', async () => {
+    const found = await linksOn('https://example.com/漢a', 1);
+    expect(found?.map((link) => link.range)).toEqual([{ start: { x: 1, y: 1 }, end: { x: 23, y: 1 } }]);
+  });
+
   it('ends an address on a wide character on that character\'s second cell', async () => {
     const found = await linksOn('https://example.com/漢', 1);
     expect(found?.map((link) => link.range)).toEqual([{ start: { x: 1, y: 1 }, end: { x: 22, y: 1 } }]);
@@ -154,6 +164,29 @@ describe('the provider of web addresses in a pane', () => {
     ]);
   });
 
+  it.each([
+    [1, { start: { x: 7, y: 1 }, end: { x: 20, y: 1 } }],
+    [2, { start: { x: 7, y: 2 }, end: { x: 20, y: 2 } }],
+    [3, { start: { x: 7, y: 3 }, end: { x: 12, y: 3 } }],
+  ])('gives the whole of an address the program cut at the edge and carried on after an indent, over row %i\'s part alone', async (row, range) => {
+    const found = await linksOn('  see https://exampl\r\n      e.com/abcdefgh\r\n      ijkl/x', row, 20);
+    expect(found?.map((link) => [link.text, link.range]), 'the indent between parts is not underlined').toEqual([['https://example.com/abcdefghijkl/x', range]]);
+  });
+
+  it('carries on an address that stops just short of the edge, as a boxed line leaves its last columns empty', async () => {
+    const found = await linksOn('  see https://exam\r\n  ple.com/a', 2, 20);
+    expect(found?.map((link) => link.text)).toEqual(['https://example.com/a']);
+  });
+
+  it('keeps an address ending well before the edge apart from the next row', async () => {
+    const found = await linksOn('see https://example.com\r\n  and more', 1, 40);
+    expect(found?.map((link) => link.text)).toEqual(['https://example.com']);
+  });
+
+  it('gives no link on the row after an address ending well before the edge', async () => {
+    expect(await linksOn('see https://example.com\r\n  and more', 2, 40)).toBeUndefined();
+  });
+
   it('gives no link on a row the wrapped address does not reach', async () => {
     expect(await linksOn('nothing\r\n\r\nsee https://example.com/abcdefghij', 2, 20)).toBeUndefined();
   });
@@ -162,11 +195,40 @@ describe('the provider of web addresses in a pane', () => {
     expect(await linksOn('see https://example.com/a.\r\nnothing here', 2)).toBeUndefined();
   });
 
+  it('underlines every part of a hard-wrapped address, without its indent, while the pointer is on one, and none once it leaves', async () => {
+    const terminal = new Terminal({ cols: 20, rows: 10 });
+    await new Promise<void>((done) => terminal.write('  see https://exampl\r\n      e.com/abcdefgh\r\n      ijkl/x', done));
+    const underlines = noUnderlines();
+    const { links } = linked();
+    const [link] = await new Promise<ILink[]>((found) => new WebAddressProvider(terminal, underlines, links).provideLinks(2, (each) => found(each ?? [])));
+    link?.hover?.(click(), 'https://example.com/abcdefghijkl/x');
+    expect(link?.decorations?.underline, 'xterm would underline the hovered part alone').toBe(false);
+    expect(underlines.draw).toHaveBeenCalledWith([
+      { start: { x: 7, y: 1 }, end: { x: 20, y: 1 } },
+      { start: { x: 7, y: 2 }, end: { x: 20, y: 2 } },
+      { start: { x: 7, y: 3 }, end: { x: 12, y: 3 } },
+    ]);
+    link?.leave?.(click(), 'https://example.com/abcdefghijkl/x');
+    expect(underlines.drawn.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('underlines a soft-wrapped address over each row it fills', async () => {
+    const underlines = noUnderlines();
+    const terminal = new Terminal({ cols: 20, rows: 10 });
+    await new Promise<void>((done) => terminal.write('see https://example.com/abcdefghij', done));
+    const [link] = await new Promise<ILink[]>((found) => new WebAddressProvider(terminal, underlines, linked().links).provideLinks(1, (each) => found(each ?? [])));
+    link?.hover?.(click(), 'https://example.com/abcdefghij');
+    expect(underlines.draw).toHaveBeenCalledWith([
+      { start: { x: 5, y: 1 }, end: { x: 20, y: 1 } },
+      { start: { x: 1, y: 2 }, end: { x: 14, y: 2 } },
+    ]);
+  });
+
   it('opens the address on ctrl+click and shows it as hovered while the pointer is on it', async () => {
     const terminal = new Terminal();
     await new Promise<void>((done) => terminal.write('https://example.com/a', done));
     const { links, opener } = linked();
-    const [link] = await new Promise<ILink[]>((found) => new WebAddressProvider(terminal, links).provideLinks(1, (each) => found(each ?? [])));
+    const [link] = await new Promise<ILink[]>((found) => new WebAddressProvider(terminal, noUnderlines(), links).provideLinks(1, (each) => found(each ?? [])));
     link?.hover?.(click(), 'https://example.com/a');
     expect(links.hovered.get()).toBe('https://example.com/a');
     link?.leave?.(click(), 'https://example.com/a');

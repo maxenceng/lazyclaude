@@ -21,6 +21,12 @@ folder import another context's, which the frontend forbids (ADR 0057).
   pane's output, across soft-wrapped rows and in the cells wide characters fill; xterm's `linkHandler` takes OSC 8 links,
   of any scheme, so a refused one can say so. Both hand the address to the same opener `docs` uses, passed in at the
   composition root. The http(s) check is the session folder's own copy of ADR 0087's rule.
+- **An address Claude Code wrapped itself is still one link.** Claude Code breaks a long line with a newline and an indent,
+  not a soft wrap, so xterm sees two lines. A row whose address character stops at most two columns short of the right edge
+  (its boxed input leaves two empty) is joined to the next row's text after its indent. Each row's part is its own link, so
+  the indent is in none, and hovering any part underlines every part. That underline is drawn by the pane as one thin mark
+  per row, placed by cell size: xterm's own marks the hovered part alone, and its decorations are refused on the alternate
+  screen, where Claude Code draws.
 - **A link opens only with ctrl held.** A plain click on it does what a click on the pane always did. A followed link clears
   the notice, as ADR 0087's does; a refused scheme and a failed opener each raise a notice with the address.
 - **The hovered link is named first in the key bar, `ctrl+click open <url>`, and only while the pointer is on it.** An OSC 8
@@ -35,4 +41,7 @@ folder import another context's, which the frontend forbids (ADR 0057).
 - The http(s) rule lives in two folders, `docs` and `session`. A scheme opened by one must be added to both.
 - A link hovered in a tab that is then hidden by a key may stay named in the key bar until the pointer next moves over the
   pane.
+- An address that ends at the right edge by chance takes in the first word of the next row. Only a wrong link opened would
+  show it; the join keys on the edge rather than on Claude Code's indent so that any program's hard wrap is caught.
+- The pane's underline for a plain address is its own mark, not xterm's; an OSC 8 link keeps xterm's.
 - The TUI follows no link: in a terminal frontend, the host terminal's own link handling applies.

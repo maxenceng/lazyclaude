@@ -1,3 +1,5 @@
+import styles from './TerminalSurface.module.css';
+
 const COLOURS = [
   'black',
   'red',
@@ -82,3 +84,6 @@ export const terminalLook = (element: Element): TerminalLook => {
     fontSize: Number.parseInt(tokenOf(style, 'size-terminal'), 10),
   };
 };
+
+/** The class of a web address's underline in a terminal, drawn by the session pane over each row the address fills. */
+export const terminalLinkUnderline: string = styles.linkUnderline ?? 'linkUnderline';

@@ -5,6 +5,7 @@ import type { NoticeStore } from '../shared/noticeStore';
 import { Store } from '../shared/store';
 import type { ModeMemory } from './modeMemory';
 import { type LinkOpener, SessionLinks, WebAddressProvider } from './links';
+import { ScreenUnderlines } from './underlines';
 import { PaneKey, type PaneKeyPress, paneKeyOf } from './paneKeys';
 import { KeptModes, ModeTracker } from './privateModes';
 
@@ -58,7 +59,7 @@ export class Emulator {
       leave: () => links.leave(),
       allowNonHttpProtocols: true,
     };
-    this.subscriptions.push(terminal.registerLinkProvider(new WebAddressProvider(terminal, links)));
+    this.subscriptions.push(terminal.registerLinkProvider(new WebAddressProvider(terminal, new ScreenUnderlines(terminal), links)));
     const recalled = deps.memory.recall(session);
     this.subscriptions.push(
       new ModeTracker(terminal, this.kept, () => this.modesChanged()),
