@@ -37,9 +37,10 @@ any diagram kind GitHub draws may turn up (#179). The window's CSP is off, and a
   wider than the reading area shrinks to fit, never below 85% of its natural size, then scrolls sideways; a narrower one is
   not enlarged. The natural size is the width the root `<svg>` names (its view box, else its `width` or `max-width`), and the
   panel is sized from it, since mermaid gives most diagram kinds no intrinsic width.
-- **Mermaid's look is pinned to the one the approved prototype was drawn in:** `look: 'classic'` and `layout: 'dagre'`, with
-  no minimum node width. mermaid 12 defaults to its `neo` look (drop shadows), the ELK layout (right-angled edges) and
-  120-pixel nodes; mermaid 11, which the prototype ran, had none of them.
+- **Mermaid's look is pinned:** `look: 'classic'` and `layout: 'elk'`, with no minimum node width. ELK draws a graph's
+  edges at right angles, as the project's Zensical docs site draws them; the approved prototype, on mermaid 11, had dagre's curves,
+  and the window looked at side by side with the docs site was judged better straight. `classic` keeps mermaid 12's `neo`
+  look (drop shadows) out of the sunk panel, and no minimum keeps a short label's node from growing to 120 pixels.
 - **The TUI is unchanged:** its main view still shows a mermaid block's source.
 
 ## Consequences

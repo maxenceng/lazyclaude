@@ -40,3 +40,47 @@ describe('a fenced block', () => {
     expect(blocksOf('```\nplain\n```')).toEqual([{ kind: BlockKind.Code, language: '', text: 'plain' }]);
   });
 });
+
+describe('a table', () => {
+  it('splits a row into cells at each pipe', () => {
+    expect(blocksOf('| a | b |\n|---|---|\n| 1 | 2 |')).toEqual([{ kind: BlockKind.Table, header: ['a', 'b'], rows: [['1', '2']] }]);
+  });
+
+  it('reads an escaped pipe as a pipe inside its cell, code spans included', () => {
+    expect(blocksOf('| a | b |\n|---|---|\n| x | `A \\| B` and C \\| D |')).toEqual([
+      { kind: BlockKind.Table, header: ['a', 'b'], rows: [['x', '`A | B` and C | D']] },
+    ]);
+  });
+
+  it('drops the cells of a row beyond its header, as GitHub does', () => {
+    expect(blocksOf('| a | b |\n|---|---|\n| 1 | `2 | 3` |')).toEqual([{ kind: BlockKind.Table, header: ['a', 'b'], rows: [['1', '`2']] }]);
+  });
+
+  it('fills a row shorter than its header with empty cells', () => {
+    expect(blocksOf('| a | b | c |\n|---|---|---|\n| 1 |')).toEqual([{ kind: BlockKind.Table, header: ['a', 'b', 'c'], rows: [['1', '', '']] }]);
+  });
+});
+
+describe('a list', () => {
+  it('joins an indented continuation line to its item', () => {
+    expect(blocksOf('- first line\n  goes on\n- second')).toEqual([{ kind: BlockKind.List, ordered: false, items: ['first line goes on', 'second'] }]);
+  });
+
+  it('joins an unindented continuation line to its item, as GitHub does', () => {
+    expect(blocksOf('1. first line\ngoes on\n2. second')).toEqual([{ kind: BlockKind.List, ordered: true, items: ['first line goes on', 'second'] }]);
+  });
+
+  it('ends at a blank line', () => {
+    expect(blocksOf('- item\n\nafter')).toEqual([
+      { kind: BlockKind.List, ordered: false, items: ['item'] },
+      { kind: BlockKind.Paragraph, text: 'after' },
+    ]);
+  });
+
+  it('ends where another block starts', () => {
+    expect(blocksOf('- item\n## Next')).toEqual([
+      { kind: BlockKind.List, ordered: false, items: ['item'] },
+      { kind: BlockKind.Heading, level: 2, text: 'Next', slug: 'next' },
+    ]);
+  });
+});

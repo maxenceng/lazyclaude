@@ -91,7 +91,11 @@ const QUOTE = /^\s{0,3}>\s?(.*)$/;
 const TABLE_RULE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 const TABLE_ROW = /^(.*\|.*)$/;
 const LEADING_PIPE = /^\|/;
-const TRAILING_PIPE = /\|$/;
+/** A row's closing pipe, unless escaped. */
+const TRAILING_PIPE = /(?<!\\)\|$/;
+/** A pipe that separates two cells: any not escaped as `\|`, even inside a code span, as GitHub reads a table. */
+const CELL_SEPARATOR = /(?<!\\)\|/;
+const ESCAPED_PIPE = /\\\|/g;
 const LINE_BREAK = /\r\n?/g;
 /** What GitHub drops from a heading to make its slug: anything but a letter, digit, combining mark, `_`, `-` or a space. */
 const NOT_IN_SLUG = /[^\p{L}\p{N}\p{M}_\s-]/gu;
@@ -139,8 +143,14 @@ const cells = (line: string): string[] => {
     .trim()
     .replace(LEADING_PIPE, '')
     .replace(TRAILING_PIPE, '')
-    .split('|')
-    .map((cell) => cell.trim());
+    .split(CELL_SEPARATOR)
+    .map((cell) => cell.trim().replace(ESCAPED_PIPE, '|'));
+};
+
+/** A body row's cells cut or padded to the header's count, as GitHub draws them. */
+const rowCells = (line: string, width: number): string[] => {
+  const row = cells(line);
+  return Array.from({ length: width }, (_, index) => row[index] ?? '');
 };
 
 interface Reading {
@@ -157,6 +167,20 @@ const readFence = (lines: string[], start: number): Reading => {
 const readRun = (lines: string[], start: number, pattern: RegExp): string[] => {
   const end = lines.findIndex((line, index) => index >= start && !pattern.test(line));
   return lines.slice(start, end === -1 ? lines.length : end).map((line) => pattern.exec(line)?.[1] ?? '');
+};
+
+/** A line that goes on the list item above it: not blank, and not the start of another item or block. */
+const continuesItem = (line: string, following: string | undefined): boolean => line.trim() !== '' && !startsBlock(line, following);
+
+const readList = (lines: string[], start: number, ordered: boolean): Reading => {
+  const item = ordered ? NUMBERED : BULLET;
+  const end = lines.findIndex((line, index) => index > start && !item.test(line) && !continuesItem(line, lines[index + 1]));
+  const next = end === -1 ? lines.length : end;
+  const items = lines.slice(start, next).reduce<string[]>((read, line) => {
+    const opened = item.exec(line);
+    return opened === null ? [...read.slice(0, -1), `${read.at(-1) ?? ''} ${line.trim()}`] : [...read, opened[1] ?? ''];
+  }, []);
+  return { blocks: [{ kind: BlockKind.List, ordered, items }], next };
 };
 
 const startsBlock = (line: string, following: string | undefined): boolean => {
@@ -185,8 +209,7 @@ const readBlock = (lines: string[], start: number): Reading => {
   }
   if (BULLET.test(line) || NUMBERED.test(line)) {
     const ordered = !BULLET.test(line);
-    const items = readRun(lines, start, ordered ? NUMBERED : BULLET);
-    return { blocks: [{ kind: BlockKind.List, ordered, items }], next: start + items.length };
+    return readList(lines, start, ordered);
   }
   if (QUOTE.test(line)) {
     const quoted = readRun(lines, start, QUOTE);
@@ -195,7 +218,11 @@ const readBlock = (lines: string[], start: number): Reading => {
   const following = lines[start + 1];
   if (line.includes('|') && following !== undefined && TABLE_RULE.test(following)) {
     const rows = readRun(lines, start + 2, TABLE_ROW);
-    return { blocks: [{ kind: BlockKind.Table, header: cells(line), rows: rows.map(cells) }], next: start + 2 + rows.length };
+    const header = cells(line);
+    return {
+      blocks: [{ kind: BlockKind.Table, header, rows: rows.map((row) => rowCells(row, header.length)) }],
+      next: start + 2 + rows.length,
+    };
   }
   const end = lines.findIndex((candidate, index) => index > start && (candidate.trim() === '' || startsBlock(candidate, lines[index + 1])));
   const last = end === -1 ? lines.length : end;

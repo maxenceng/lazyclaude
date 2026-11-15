@@ -121,11 +121,11 @@ describe('how mermaid is set up', () => {
     expect(mermaid.initialize).toHaveBeenCalledWith(expect.objectContaining({ securityLevel: 'strict', startOnLoad: false }));
   });
 
-  it('draws in the classic look and dagre layout the approved prototype was drawn in, not mermaid 12\'s neo look and ELK layout', async () => {
+  it('draws right-angled edges with the ELK layout, in the classic look without mermaid 12\'s drop shadows', async () => {
     read(block('mermaid', 'graph TD'));
     await waitFor(() => expect(mermaid.render).toHaveBeenCalled());
     expect(mermaid.initialize).toHaveBeenCalledWith(
-      expect.objectContaining({ look: 'classic', layout: 'dagre', flowchart: { useMaxWidth: false, minNodeWidth: 0 } }),
+      expect.objectContaining({ look: 'classic', layout: 'elk', flowchart: { useMaxWidth: false, minNodeWidth: 0 } }),
     );
   });
 

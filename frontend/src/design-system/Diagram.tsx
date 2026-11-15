@@ -43,7 +43,7 @@ const draw = async (source: string, id: string): Promise<Drawn> => {
       securityLevel: 'strict',
       suppressErrorRendering: true,
       look: 'classic',
-      layout: 'dagre',
+      layout: 'elk',
       theme: 'base',
       themeVariables: themeOf(),
       flowchart: { useMaxWidth: false, minNodeWidth: 0 },
