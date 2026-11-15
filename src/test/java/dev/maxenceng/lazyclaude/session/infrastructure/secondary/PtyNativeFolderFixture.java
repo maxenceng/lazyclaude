@@ -1,6 +1,8 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
-import static org.mockito.Mockito.mock;
+
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -9,9 +11,14 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.List;
 import java.util.Properties;
 
-import dev.maxenceng.lazyclaude.shared.domain.WarningPort;
+import org.mockito.ArgumentCaptor;
+
+import dev.maxenceng.lazyclaude.session.domain.HostFallback;
+import dev.maxenceng.lazyclaude.session.published.Reason;
+
 
 public final class PtyNativeFolderFixture {
 
@@ -19,7 +26,7 @@ public final class PtyNativeFolderFixture {
     public static final String PREFERRED_FOLDER = "pty4j.preferred.native.folder";
 
     private static final PtyNativeFolder TEST_RUN_NATIVES = PtyNativeFolder.prepared(
-            Path.of("target", "pty4j").toAbsolutePath(), mock(WarningPort.class), System.getProperties());
+            Path.of("target", "pty4j").toAbsolutePath(), System.getProperties());
 
     private PtyNativeFolderFixture() {}
 
@@ -55,5 +62,11 @@ public final class PtyNativeFolderFixture {
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }
+    }
+
+    public static List<String> toldReasons(HostFallback fallback) {
+        ArgumentCaptor<Reason> told = ArgumentCaptor.forClass(Reason.class);
+        verify(fallback, atLeast(0)).leaking(told.capture());
+        return told.getAllValues().stream().map(Reason::value).toList();
     }
 }

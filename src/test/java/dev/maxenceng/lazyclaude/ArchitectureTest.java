@@ -40,6 +40,7 @@ import com.tngtech.archunit.lang.SimpleConditionEvent;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.error.domain.AssertionException;
 import dev.maxenceng.lazyclaude.error.domain.DomainException;
+import dev.maxenceng.lazyclaude.shared.domain.Warning;
 
 /*
  * The architecture, as rules that fail the build. Each direct subpackage of
@@ -472,6 +473,14 @@ class ArchitectureTest {
             .beDeclaredInClassesThat()
             .resideInAPackage("..domain..")
             .allowEmptyShould(true);
+
+    // A degraded mode is worded once, by its context's domain; an adapter reports only the reason, through a fallback.
+    @ArchTest
+    static final ArchRule warnings_are_worded_only_in_the_domain = noClasses()
+            .that()
+            .resideOutsideOfPackage("..domain..")
+            .should()
+            .callConstructor(Warning.class, String.class);
 
     // A repository is a port's implementation (ADR 0011); a helper an adapter keeps for itself takes another name.
     @ArchTest

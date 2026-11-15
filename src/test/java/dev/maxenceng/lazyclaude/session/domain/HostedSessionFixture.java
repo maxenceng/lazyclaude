@@ -51,7 +51,7 @@ public final class HostedSessionFixture {
     }
 
     public static SessionId startedSession(HostedSessionManager manager, HostPort hosts) {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         return idOf(manager.startUnlinked(project(), paneSize()));
     }
 

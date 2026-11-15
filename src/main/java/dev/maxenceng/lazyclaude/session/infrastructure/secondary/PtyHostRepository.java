@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.ExitCode;
+import dev.maxenceng.lazyclaude.session.domain.HostFallback;
 import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LaunchCommand;
@@ -50,9 +51,12 @@ public final class PtyHostRepository implements HostPort {
     }
 
     @Override
-    public ProcessId spawn(HostLaunch launch, Consumer<PtyBytes> onOutput, Consumer<ExitCode> onExit) {
-        HostedPty pty = nativeFolder.loading(() -> HostedPty.spawn(
-                argv(launch.command()), ScrubbedEnvironment.of(environment), launch.directory().path(), launch.size()));
+    public ProcessId spawn(
+            HostLaunch launch, Consumer<PtyBytes> onOutput, Consumer<ExitCode> onExit, HostFallback fallback) {
+        HostedPty pty = nativeFolder.loading(
+                () -> HostedPty.spawn(
+                        argv(launch.command()), ScrubbedEnvironment.of(environment), launch.directory().path(), launch.size()),
+                fallback);
         SessionId id = launch.command().session();
         running.put(id, pty);
         pty.listen(

@@ -100,7 +100,7 @@ final class ConfigurationLoader {
         return new PtyHostRepository(
                 CLAUDE,
                 environment,
-                PtyNativeFolder.prepared(cacheDirectory().resolve(PTY4J_DIRECTORY), warnings, properties));
+                PtyNativeFolder.prepared(cacheDirectory().resolve(PTY4J_DIRECTORY), properties));
     }
 
     private Path cacheDirectory() {

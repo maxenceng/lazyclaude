@@ -45,6 +45,7 @@ public final class HostedSessionManager {
     private static final String NOT_A_WORKTREE = "%s exists but is not a worktree of %s";
     private static final String ALREADY_STARTING = "this session is already starting; give it a moment.";
     private static final String ENDED_AT_ONCE = "hosted session: claude ended as soon as it started.";
+    private static final String LEAKING_WARNING = "hosted session: %s; each run leaves a copy in the temp folder.";
     private static final String NO_PLACE = "%s has no folder beside it to keep worktrees in";
 
     private final HostPort hosts;
@@ -328,7 +329,10 @@ public final class HostedSessionManager {
         try {
             ptyListeners.forEach(listener -> listener.launching(id, size));
             ProcessId pid = hosts.spawn(
-                    launch, bytes -> ptyListeners.forEach(listener -> listener.output(id, bytes)), code -> exited(project, id, code));
+                    launch,
+                    bytes -> ptyListeners.forEach(listener -> listener.output(id, bytes)),
+                    code -> exited(project, id, code),
+                    this::warnOfLeak);
             return registered(project, HostedSession.builder()
                     .pid(pid)
                     .directory(directory)
@@ -427,6 +431,10 @@ public final class HostedSessionManager {
 
     private void warnOfLog(Reason cause) {
         warnings.raise(LaunchLogWarning.of(cause));
+    }
+
+    private void warnOfLeak(Reason cause) {
+        warnings.raise(new Warning(LEAKING_WARNING.formatted(cause.value())));
     }
 
     private void doneEnded(LinkedTicketId ticket) {

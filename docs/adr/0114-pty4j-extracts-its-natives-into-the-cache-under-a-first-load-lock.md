@@ -31,8 +31,13 @@ the extraction, and in 13 of 30 such pairs one of them failed with `Cannot extra
 - **A folder that cannot be created leaves `pty4j.tmpdir` unset and raises a warning** naming the folder and the reason.
   Sessions still start, and the temp-folder leak comes back for that run. lazyclaude takes the lock once while preparing the
   folder, so a lock that cannot be taken (a cache on NFS without lock support) takes the same path. A folder removed while
-  running makes the spawn run unlocked, unwarned: pty4j then extracts into a temp folder of its own, so nothing is shared. A folder that
-  cannot be used should not stop sessions from starting.
+  running makes the spawn run unlocked and is warned the same way: pty4j then extracts into a temp folder of its own, so nothing
+  is shared. A folder that cannot be used should not stop sessions from starting.
+- **The adapter says only the reason; `HostedSessionManager` words the warning.** `HostPort.spawn` takes a `HostFallback`,
+  which the adapter tells once per run, on the first spawn that succeeds, as `LaunchLogFallback` does for the launch log. The
+  glossary's *Warning* names each degraded mode once, by its context's manager. `ArchitectureTest` holds it: no class
+  outside a `domain` package constructs a `Warning`. Rejected: the adapter raising the warning itself at wiring time. That
+  is earlier, but it would be the one degraded mode worded outside its context's domain.
 - **The composition root hands the adapter the JVM's properties, and a test a fresh table**, so building contexts in a test
   never repoints the whole test JVM's pty4j at a folder JUnit then deletes.
 - **lazyclaude deletes none of the `pty4j-*` folders already in `/tmp`.** It did not create them all, and other pty4j users

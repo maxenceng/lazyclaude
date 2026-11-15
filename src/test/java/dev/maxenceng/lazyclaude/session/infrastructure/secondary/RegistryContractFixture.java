@@ -1,5 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.session.domain.HostFallbackFixture.unheeded;
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,7 +32,7 @@ public final class RegistryContractFixture {
 
     public static ProcessId spawnedInTheProjectRoot(PtyHostRepository host, SessionId id) {
         return host.spawn(
-                PtyHostFixture.newLaunchIn(id, Path.of(System.getProperty("user.dir")), 120, 40), bytes -> {}, code -> {});
+                PtyHostFixture.newLaunchIn(id, Path.of(System.getProperty("user.dir")), 120, 40), bytes -> {}, code -> {}, unheeded());
     }
 
     public static Optional<ReportedSession> recordOnceWritten(ProcessId pid) throws InterruptedException {

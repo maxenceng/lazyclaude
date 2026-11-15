@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude;
 
+import static dev.maxenceng.lazyclaude.session.domain.HostFallbackFixture.unheeded;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.awaited;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.exitOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.newLaunch;
@@ -43,7 +44,7 @@ public final class SpawnedPtyHost implements AutoCloseable {
         System.out.flush();
         new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)).readLine();
         CompletableFuture<ExitCode> exit = exitOf();
-        host.spawn(newLaunch(sessionId()), bytes -> {}, exit::complete);
+        host.spawn(newLaunch(sessionId()), bytes -> {}, exit::complete, unheeded());
         System.exit(awaited(exit).value());
     }
 

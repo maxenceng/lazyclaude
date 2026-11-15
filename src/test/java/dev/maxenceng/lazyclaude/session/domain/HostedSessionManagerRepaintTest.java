@@ -106,7 +106,7 @@ class HostedSessionManagerRepaintTest {
     @Test
     void shouldNotRestoreASessionThatEndedDuringTheGap() {
         SessionId started = startedSession(manager, hosts);
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
         manager.repaint(started);
         verify(timer).after(eq(repaintGap()), restore.capture());
 

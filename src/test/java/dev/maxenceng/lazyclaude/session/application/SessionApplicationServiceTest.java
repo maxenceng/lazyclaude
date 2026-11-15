@@ -201,7 +201,7 @@ class SessionApplicationServiceTest {
 
     @Test
     void shouldStartAnUnlinkedSessionThroughTheHost() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts)
                 .startUnlinked(project(), paneSize());
@@ -211,12 +211,12 @@ class SessionApplicationServiceTest {
 
     @Test
     void shouldLaunchANewSessionUnderTheIdItsTabCarries() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         ArgumentCaptor<HostLaunch> launched = ArgumentCaptor.forClass(HostLaunch.class);
 
         HostStart start = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts)
                 .startUnlinked(project(), paneSize());
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
 
         assertThat(launched.getValue().command().session())
                 .as("claude --session-id is given the id the row, the tab and the notification are named by")
@@ -226,7 +226,7 @@ class SessionApplicationServiceTest {
     @Test
     void shouldStartATicketSessionThroughTheHostInTheWorktreeOfItsBranch() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).startTicket(ticketStart(Verb.REVIEW), paneSize());
 
@@ -236,7 +236,7 @@ class SessionApplicationServiceTest {
     @Test
     void shouldResumeATicketSessionThroughTheHostUnderTheIdItResumes() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts, worktrees).resumePast(project(), boardTickets(), sessionId(), worktreeDirectory(), Optional.of(ticketWorktree()), paneSize());
 
@@ -304,7 +304,7 @@ class SessionApplicationServiceTest {
 
     @Test
     void shouldHandTheListenerTheSessionsAgainWhenAHostedSessionOpens() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         List<AvailableSessions> received = new ArrayList<>();
         SessionApplicationService service = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         service.subscribe(project(), noTickets(), received::add);
@@ -341,7 +341,7 @@ class SessionApplicationServiceTest {
 
     @Test
     void shouldEndEveryHostedSessionOnQuit() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         SessionApplicationService service = sessionApplicationService(sessions, past, launchLog, watch, transcriptWatch, warnings, hosts);
         SessionId id = ((StartedHost) service.startUnlinked(project(), paneSize())).id();
 

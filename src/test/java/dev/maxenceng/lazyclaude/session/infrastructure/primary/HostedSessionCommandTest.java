@@ -61,29 +61,29 @@ class HostedSessionCommandTest {
 
     @Test
     void shouldStartAPlainClaudeInTheProjectRoot() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = hostedSessionCommand(hosts, warnings).startUnlinked(newHostedPayload());
 
         ArgumentCaptor<HostLaunch> launched = ArgumentCaptor.forClass(HostLaunch.class);
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue()).isEqualTo(newLaunch(((StartedHost) start).id()));
     }
 
     @Test
     void shouldStartTheTicketSkillsNewVerbWithTheDescriptionInTheProjectRoot() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = hostedSessionCommand(hosts, warnings).startNewTicket(newTicketHostedPayload());
 
         ArgumentCaptor<HostLaunch> launched = ArgumentCaptor.forClass(HostLaunch.class);
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue()).isEqualTo(newTicketLaunch(((StartedHost) start).id()));
     }
 
     @Test
     void shouldSayWhyWhenTheHostCannotStartTheSessionThatCreatesATicket() {
-        when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
+        when(hosts.spawn(any(), any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
 
         assertThat(hostedSessionCommand(hosts, warnings).startNewTicket(newTicketHostedPayload()))
                 .isEqualTo(notStartedBecause("hosted session: no pty."));
@@ -92,24 +92,24 @@ class HostedSessionCommandTest {
     @Test
     void shouldResumeInTheDirectoryTheTranscriptRecorded() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = hostedSessionCommand(hosts, warnings).resumePast(resumePastUnderNoTicket(sessionId()));
 
         ArgumentCaptor<HostLaunch> launched = ArgumentCaptor.forClass(HostLaunch.class);
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue()).isEqualTo(resumeLaunch(((StartedHost) start).id(), worktreeDirectory()));
     }
 
     @Test
     void shouldStartTheVerbInTheWorktreeOfTheTicketBranch() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = hostedSessionCommand(hosts, warnings, worktrees).startTicket(ticketHostedPayload(Verb.REVIEW));
 
         ArgumentCaptor<HostLaunch> launched = ArgumentCaptor.forClass(HostLaunch.class);
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue()).isEqualTo(ticketLaunch(((StartedHost) start).id(), worktreeDirectory(), Verb.REVIEW));
     }
 
@@ -117,14 +117,14 @@ class HostedSessionCommandTest {
     void shouldResumeInTheTicketWorktreeAddedBackWhenGone() {
         when(hosts.exists(worktreeDirectory())).thenReturn(false, true);
         when(worktrees.branchExists(project(), branchName())).thenReturn(true);
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = hostedSessionCommandOverALinkedPastSession(hosts, warnings, worktrees)
                 .resumePast(resumePastUnderTicket(pastSessionId(1)));
 
         verify(worktrees).addOnBranch(project(), branchName(), worktreeDirectory());
         ArgumentCaptor<HostLaunch> launched = ArgumentCaptor.forClass(HostLaunch.class);
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue()).isEqualTo(resumeLaunch(((StartedHost) start).id(), worktreeDirectory()));
     }
 
@@ -140,14 +140,14 @@ class HostedSessionCommandTest {
 
     @Test
     void shouldSayNoneStartedWhenTheHostCannotStartOne() {
-        when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
+        when(hosts.spawn(any(), any(), any(), any())).thenThrow(new HostUnavailableException("no pty"));
 
         assertThat(hostedSessionCommand(hosts, warnings).startUnlinked(newHostedPayload())).isEqualTo(notStartedBecause("hosted session: no pty."));
     }
 
     @Test
     void shouldEndEveryHostedSession() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         HostedSessionCommand command = hostedSessionCommand(hosts, warnings);
         SessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
 
@@ -158,7 +158,7 @@ class HostedSessionCommandTest {
 
     @Test
     void shouldWriteTheBytesToThePtyUnchanged() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         HostedSessionCommand command = hostedSessionCommand(hosts, warnings);
         SessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
 
@@ -169,7 +169,7 @@ class HostedSessionCommandTest {
 
     @Test
     void shouldResizeThePtyToTheColumnsAndRows() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         HostedSessionCommand command = hostedSessionCommand(hosts, warnings);
         SessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
 
@@ -180,7 +180,7 @@ class HostedSessionCommandTest {
 
     @Test
     void shouldShrinkThePtyByOneRowToHaveItRepainted() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         HostedSessionCommand command = hostedSessionCommand(hosts, warnings);
         SessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
 
@@ -191,7 +191,7 @@ class HostedSessionCommandTest {
 
     @Test
     void shouldEndTheClosedSessionOnly() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         HostedSessionCommand command = hostedSessionCommand(hosts, warnings);
         SessionId id = ((StartedHost) command.startUnlinked(newHostedPayload())).id();
 

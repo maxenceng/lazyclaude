@@ -92,7 +92,7 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldLogAPlainLaunchWithItsDirectoryCommandAndStart() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         SessionId started = idOf(manager.startUnlinked(project(), paneSize()));
 
@@ -107,7 +107,7 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldLogTheLaunchThatCreatesATicketWithTheCommandItRan() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         SessionId started = idOf(manager.startNewTicket(project(), ticketDescription(), ticketPlugin(), paneSize()));
 
@@ -122,7 +122,7 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldLogATicketLaunchWithTheTicketAndVerbItRuns() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         when(worktrees.checkedOutAt(any(), any())).thenReturn(Optional.of(worktreeDirectory()));
 
         SessionId started = idOf(manager.startTicket(ticketStart(Verb.DESIGN), ticketPlugin(), paneSize()));
@@ -139,7 +139,7 @@ class HostedSessionManagerLaunchLogTest {
     @Test
     void shouldLogAResumeWithoutAddingASecondEntryForAnIdAlreadyLogged() {
         when(hosts.exists(projectRootDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         manager.resume(project(), sessionId(), projectRootDirectory(), paneSize());
 
@@ -152,7 +152,7 @@ class HostedSessionManagerLaunchLogTest {
     @Test
     void shouldLogAResumeOfAnIdNotLoggedAsAnEntryOfItsOwn() {
         when(hosts.exists(projectRootDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         manager.resume(project(), sessionId(), projectRootDirectory(), paneSize());
 
@@ -164,7 +164,7 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldRecordTheEndOfAClaudeThatExitsWhileItsLaunchIsBeingLogged() throws InterruptedException {
-        when(hosts.spawn(any(), any(), exited.capture())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), exited.capture(), any())).thenReturn(processId());
         List<UnaryOperator<LaunchLog>> applied = new CopyOnWriteArrayList<>();
         AtomicReference<Thread> exiting = new AtomicReference<>();
         doAnswer(invocation -> {
@@ -188,7 +188,7 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldLogNothingWhenNothingStarted() {
-        when(hosts.spawn(any(), any(), any())).thenThrow(new HostUnavailableException("claude is not on the PATH"));
+        when(hosts.spawn(any(), any(), any(), any())).thenThrow(new HostUnavailableException("claude is not on the PATH"));
 
         manager.startUnlinked(project(), paneSize());
 
@@ -197,7 +197,7 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldLogNothingForAClaudeThatExitedBeforeSpawningReturned() {
-        when(hosts.spawn(any(), any(), any())).thenAnswer(call -> {
+        when(hosts.spawn(any(), any(), any(), any())).thenAnswer(call -> {
             Consumer<ExitCode> onExit = call.getArgument(2);
             onExit.accept(new ExitCode(1));
             return processId();
@@ -210,9 +210,9 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldRecordTheEndOfASessionWhoseClaudeExitedByItself() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         SessionId session = idOf(manager.startUnlinked(project(), paneSize()));
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         exited.getValue().accept(new ExitCode(0));
 
@@ -224,9 +224,9 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldRecordTheEndOfASessionWhoseClaudeFailed() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.startUnlinked(project(), paneSize());
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         exited.getValue().accept(new ExitCode(2));
 
@@ -235,9 +235,9 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldRecordNoEndForASessionLazyclaudeEndedOnQuit() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.startUnlinked(project(), paneSize());
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         manager.endAll();
         exited.getValue().accept(new ExitCode(143));
@@ -247,9 +247,9 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldRecordTheEndOfASessionClosedFromTheWindow() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         SessionId session = idOf(manager.startUnlinked(project(), paneSize()));
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         manager.close(session);
         exited.getValue().accept(new ExitCode(143));
@@ -263,10 +263,10 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldTellTheExitListenerOfASessionClosedFromTheWindow() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.onExit(exitListener);
         SessionId session = idOf(manager.startUnlinked(project(), paneSize()));
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         manager.close(session);
         exited.getValue().accept(new ExitCode(143));
@@ -276,9 +276,9 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldRaiseNoWarningForTheTerminationOfASessionClosedFromTheWindow() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         SessionId session = idOf(manager.startUnlinked(project(), paneSize()));
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         manager.close(session);
         exited.getValue().accept(new ExitCode(143));
@@ -288,15 +288,15 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldWarnOfTheFailureOfAResumedSessionClosedTwiceBefore() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId(), secondProcessId());
         when(hosts.exists(projectRootDirectory())).thenReturn(true);
         SessionId session = idOf(manager.startUnlinked(project(), paneSize()));
         manager.close(session);
         manager.close(session);
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
         exited.getValue().accept(new ExitCode(143));
         manager.resume(project(), session, projectRootDirectory(), paneSize());
-        verify(hosts, times(2)).spawn(any(), any(), exited.capture());
+        verify(hosts, times(2)).spawn(any(), any(), exited.capture(), any());
 
         exited.getValue().accept(new ExitCode(1));
 
@@ -307,7 +307,7 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldEndOnlyTheClosedSessionAndLeaveTheOthersOpen() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId(), secondProcessId());
         SessionId closed = idOf(manager.startUnlinked(project(), paneSize()));
         SessionId other = idOf(manager.startUnlinked(project(), paneSize()));
 
@@ -328,10 +328,10 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldTellTheExitListenerTheCodeOfASessionWhoseClaudeExitedByItself() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.onExit(exitListener);
         SessionId started = idOf(manager.startUnlinked(project(), paneSize()));
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         exited.getValue().accept(new ExitCode(3));
 
@@ -340,10 +340,10 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldTellTheExitListenerNothingOfASessionLazyclaudeEnded() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.onExit(exitListener);
         manager.startUnlinked(project(), paneSize());
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         manager.endAll();
         exited.getValue().accept(new ExitCode(143));
@@ -353,9 +353,9 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldRecordNoEndForAnExitOfASessionItNoLongerHolds() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.startUnlinked(project(), paneSize());
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
         exited.getValue().accept(new ExitCode(0));
 
         exited.getValue().accept(new ExitCode(0));
@@ -365,7 +365,7 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldStartTheSessionWhateverTheLogDoes() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId(), secondProcessId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId(), secondProcessId());
 
         HostStart first = manager.startUnlinked(project(), paneSize());
         HostStart second = manager.startUnlinked(project(), paneSize());
@@ -378,7 +378,7 @@ class HostedSessionManagerLaunchLogTest {
 
     @Test
     void shouldRaiseAWarningNamingWhyWhenTheLogCannotBeWritten() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.startUnlinked(project(), paneSize());
         ArgumentCaptor<LaunchLogFallback> fallback = ArgumentCaptor.captor();
         verify(log).change(eq(project()), fallback.capture(), any());
