@@ -23,8 +23,12 @@ const pixelsOf = (value: string | null | undefined): number | undefined => {
 };
 
 /** The drawing's natural width, read off its root `<svg>`: its view box, else a pixel `width`, else the `max-width` mermaid sets; none when it names none. */
+/** Parsed as HTML, not XML: mermaid writes a label's line break as `<br>`, which an XML parse rejects outright. */
 const widthOf = (svg: string): number | undefined => {
-  const root = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
+  const root = new DOMParser().parseFromString(svg, 'text/html').querySelector('svg');
+  if (root === null) {
+    return undefined;
+  }
   const box = root.getAttribute('viewBox')?.trim().split(VIEW_BOX_SEPARATOR)[VIEW_BOX_WIDTH];
   return pixelsOf(box) ?? pixelsOf(root.getAttribute('width')) ?? pixelsOf(MAX_WIDTH.exec(root.getAttribute('style') ?? '')?.[1]);
 };

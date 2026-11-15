@@ -106,6 +106,18 @@ describe('the natural width of a drawing', () => {
     expect((container.querySelector('svg')?.parentElement?.parentElement as HTMLElement).style.getPropertyValue('--natural')).toBe('400px');
   });
 
+  it('is read off a drawing whose labels hold HTML that is not well-formed XML, as mermaid writes a line break', async () => {
+    mermaid.render.mockResolvedValue({
+      svg: '<svg viewBox="4 4 548 484" width="548"><foreignObject><div><span>shell<br><i>TamboUI</i></span></div></foreignObject><text>drawn</text></svg>',
+    });
+    const { container } = read(block('mermaid', 'graph TD'));
+    await screen.findByText('drawn');
+    expect(
+      (container.querySelector('svg')?.parentElement?.parentElement as HTMLElement).style.getPropertyValue('--natural'),
+      'a label with <br> must not lose the width the shrink-to-fit rule is computed from',
+    ).toBe('548px');
+  });
+
   it('is left unset when the drawing names none, so the drawing keeps its own size', async () => {
     mermaid.render.mockResolvedValue({ svg: '<svg><text>drawn</text></svg>' });
     const { container } = read(block('mermaid', 'pie'));
