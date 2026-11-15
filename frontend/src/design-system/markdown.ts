@@ -22,6 +22,8 @@ export interface Paragraph {
 
 export interface Code {
   kind: BlockKind.Code;
+  /** The first word of the opening fence's info string, or `''` when it names none. */
+  language: string;
   text: string;
 }
 
@@ -80,6 +82,7 @@ export interface LinkRun {
 export type Inline = TextRun | CodeRun | Styled | LinkRun;
 
 const FENCE = /^\s{0,3}(```|~~~)/;
+const FENCE_LANGUAGE = /^\s{0,3}(?:```|~~~)\s*([^\s`]*)/;
 const HEADING = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/;
 const RULE = /^\s{0,3}([-*_])(\s*\1){2,}\s*$/;
 const BULLET = /^\s*[-*+]\s+(.*)$/;
@@ -148,7 +151,7 @@ interface Reading {
 const readFence = (lines: string[], start: number): Reading => {
   const close = lines.findIndex((line, index) => index > start && FENCE.test(line));
   const end = close === -1 ? lines.length : close;
-  return { blocks: [{ kind: BlockKind.Code, text: lines.slice(start + 1, end).join('\n') }], next: end + 1 };
+  return { blocks: [{ kind: BlockKind.Code, language: FENCE_LANGUAGE.exec(lines[start] ?? '')?.[1] ?? '', text: lines.slice(start + 1, end).join('\n') }], next: end + 1 };
 };
 
 const readRun = (lines: string[], start: number, pattern: RegExp): string[] => {

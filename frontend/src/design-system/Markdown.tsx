@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode, useEffect, useMemo, useRef } from 'react';
+import { Diagram } from './Diagram';
 import styles from './Markdown.module.css';
 import { runs } from './inlineRuns';
 import { type Block, BlockKind, blocksOf, inlineOf } from './markdown';
@@ -15,6 +16,7 @@ interface Props {
   target?: Target;
 }
 
+const MERMAID = 'mermaid';
 const HEADINGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
 
 const text = (source: string, onLink: (href: string) => void): ReactNode => runs(inlineOf(source), onLink);
@@ -28,6 +30,9 @@ const blockElement = (block: Block, onLink: (href: string) => void): ReactNode =
     case BlockKind.Paragraph:
       return <p>{text(block.text, onLink)}</p>;
     case BlockKind.Code:
+      if (block.language === MERMAID) {
+        return <Diagram source={block.text} />;
+      }
       return (
         <pre>
           <code>{block.text}</code>

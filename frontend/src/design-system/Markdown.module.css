@@ -10,7 +10,7 @@
   grid-column: column-start / column-end;
 }
 
-.markdown > :is(pre, .tableScroll) {
+.markdown > :is(pre, .tableScroll, .diagram, .diagramFallback) {
   grid-column: column-start / full-end;
   justify-self: start;
   width: fit-content;
@@ -142,4 +142,34 @@
 
 .markdown tbody tr:last-child td {
   border-bottom: 0;
+}
+
+.diagram {
+  overflow-x: auto;
+  background: var(--pane-sunk);
+  padding: var(--space-3) var(--space-4);
+}
+
+.diagramSvg svg {
+  display: block;
+  width: clamp(calc(var(--natural) * 0.85), 100%, var(--natural));
+  max-width: none;
+  height: auto;
+}
+
+.diagramFallback pre {
+  margin: 0;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.diagramFailure {
+  margin: 0 0 var(--space-2);
+  font-size: var(--reading-label-em);
+  color: var(--dim);
+}
+
+.diagramFailureHead {
+  color: var(--ci-failed);
+  font-weight: 600;
 }
