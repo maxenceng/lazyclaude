@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.Executors;
 
 import dev.maxenceng.lazyclaude.session.application.ConfigurationApplicationService;
@@ -17,6 +18,7 @@ import dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigurationRe
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.LaunchLogRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.NotifySendRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostRepository;
+import dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolder;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionRegistryRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.SessionWatchRepository;
 import dev.maxenceng.lazyclaude.session.infrastructure.secondary.TimerRepository;
@@ -41,6 +43,7 @@ final class ConfigurationLoader {
     private static final String DEFAULT_STATE_HOME = ".local/state";
     private static final String CACHE_DIRECTORY = "lazyclaude";
     private static final String CACHE_FILE = "past-sessions.json";
+    private static final String PTY4J_DIRECTORY = "pty4j";
     private static final List<String> CLAUDE = List.of("claude");
     private static final List<String> NOTIFY_SEND = List.of("notify-send");
     private static final List<String> GDBUS = List.of("gdbus");
@@ -49,11 +52,14 @@ final class ConfigurationLoader {
 
     private final Path home;
     private final Map<String, String> environment;
+    private final Properties properties;
     private final WarningRepository warnings = new WarningRepository();
 
-    ConfigurationLoader(Path home, Map<String, String> environment) {
+    /** {@code properties} is where pty4j is pointed at its natives: the JVM's own on a launch, a fresh table in a test. */
+    ConfigurationLoader(Path home, Map<String, String> environment, Properties properties) {
         this.home = home;
         this.environment = environment;
+        this.properties = properties;
     }
 
     /** What the user configured; a file that cannot be used is refused with a {@code DomainException} saying where and why. */
@@ -72,9 +78,7 @@ final class ConfigurationLoader {
         Path registry = home.resolve(REGISTRY);
         TranscriptRepository transcripts = new TranscriptRepository(
                 home.resolve(TRANSCRIPTS),
-                new TranscriptCacheFile(cacheHome(home, environment.get(XDG_CACHE_HOME))
-                        .resolve(CACHE_DIRECTORY)
-                        .resolve(CACHE_FILE)));
+                new TranscriptCacheFile(cacheDirectory().resolve(CACHE_FILE)));
         return new SessionApplicationService(
                 new SessionRegistryRepository(registry),
                 transcripts,
@@ -82,13 +86,25 @@ final class ConfigurationLoader {
                 new SessionWatchRepository(registry),
                 new TranscriptWatchRepository(home.resolve(TRANSCRIPTS), transcripts),
                 warnings,
-                new PtyHostRepository(CLAUDE, environment),
+                host(),
                 new WorktreeRepository(),
                 new NotifySendRepository(NOTIFY_SEND, GDBUS, NOTIFY_PATIENCE),
                 desktopNotifications,
                 new TimerRepository(Executors.newSingleThreadScheduledExecutor(task -> Thread.ofPlatform().name(REPAINT_THREAD).daemon().unstarted(task))),
                 ticketPlugin,
                 Clock.systemDefaultZone());
+    }
+
+    /** The pty host every hosted session runs on, with pty4j's natives kept in the cache rather than a temp folder per run. */
+    PtyHostRepository host() {
+        return new PtyHostRepository(
+                CLAUDE,
+                environment,
+                PtyNativeFolder.prepared(cacheDirectory().resolve(PTY4J_DIRECTORY), properties));
+    }
+
+    private Path cacheDirectory() {
+        return cacheHome(home, environment.get(XDG_CACHE_HOME)).resolve(CACHE_DIRECTORY);
     }
 
     /** {@code $XDG_CACHE_HOME} when it is set to an absolute path, else {@code ~/.cache}, as the XDG base directory spec has it. */

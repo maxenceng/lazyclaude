@@ -3,11 +3,14 @@ package dev.maxenceng.lazyclaude;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationViewFixture.defaultConfigurationView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigYmlFixture.configYml;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.ConfigYmlFixture.keybindingsJson;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.TMPDIR;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.noProperties;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Properties;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,11 +26,21 @@ class ConfigurationLoaderTest {
     @TempDir
     Path home;
 
+    private final Properties properties = noProperties();
     private ConfigurationLoader loader;
 
     @BeforeEach
     void setUp() {
-        loader = new ConfigurationLoader(home, Map.of());
+        loader = new ConfigurationLoader(home, Map.of(), properties);
+    }
+
+    @Test
+    void shouldPointPty4jAtTheCacheThroughThePropertiesItWasGiven() {
+        loader.host();
+
+        assertThat(properties.getProperty(TMPDIR))
+                .as("a test building contexts must not repoint the whole test JVM's pty4j at a folder JUnit deletes")
+                .isEqualTo(home.resolve(".cache").resolve("lazyclaude").resolve("pty4j").toString());
     }
 
     @Test

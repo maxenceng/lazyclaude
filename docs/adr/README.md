@@ -114,4 +114,6 @@
 - 0110 [A new ticket is created by a `/ticket new` session, not by lazyclaude](0110-a-new-ticket-is-created-by-a-ticket-new-session-not-by-lazyclaude.md) — Accepted.
 - 0111 [Closing a session from the window ends it, and the close chord is reserved by the desktop only](0111-closing-a-session-from-the-window-ends-it-and-the-close-chord-is-reserved-by-the-desktop-only.md) — Accepted.
 - 0112 [A click on a status line lamp or count goes to its session in the desktop window](0112-a-click-on-a-status-line-lamp-or-count-goes-to-its-session-in-the-desktop-window.md) — Accepted.
-- 0113 [A session pane follows its own links with ctrl held, and names the hovered one in the key bar](0113-a-session-pane-follows-its-own-links-with-ctrl-held-and-names-the-hovered-one-in-the-key-bar.md) — Accepted.
+- 0113 [A hosted session may start at `0 0` and is sized by the WINCH that follows](0113-a-hosted-session-starts-at-0-0-and-is-sized-by-the-winch-that-follows.md) — Accepted.
+- 0114 [pty4j extracts its natives into the cache, under a first-load lock](0114-pty4j-extracts-its-natives-into-the-cache-under-a-first-load-lock.md) — Accepted.
+- 0115 [A session pane follows its own links with ctrl held, and names the hovered one in the key bar](0115-a-session-pane-follows-its-own-links-with-ctrl-held-and-names-the-hovered-one-in-the-key-bar.md) — Accepted.

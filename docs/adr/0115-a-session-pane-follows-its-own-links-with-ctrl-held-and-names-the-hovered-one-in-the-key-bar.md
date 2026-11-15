@@ -1,4 +1,4 @@
-# 113. A session pane follows its own links with ctrl held, and names the hovered one in the key bar
+# 115. A session pane follows its own links with ctrl held, and names the hovered one in the key bar
 
 Date: 2026-11-14
 

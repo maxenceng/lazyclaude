@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaudeUnder;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.testRunNatives;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSizeOf;
 import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
 
@@ -34,11 +35,11 @@ public final class PtyHostFixture {
     }
 
     public static PtyHostRepository hostRunning(String script, Map<String, String> environment) {
-        return new PtyHostRepository(List.of("/bin/sh", "-c", script, "sh"), environment);
+        return new PtyHostRepository(List.of("/bin/sh", "-c", script, "sh"), environment, testRunNatives());
     }
 
     public static PtyHostRepository hostOfCommand(String... command) {
-        return new PtyHostRepository(List.of(command), Map.of());
+        return new PtyHostRepository(List.of(command), Map.of(), testRunNatives());
     }
 
     public static HostLaunch newLaunchIn(SessionId id, Path directory, int columns, int rows) {

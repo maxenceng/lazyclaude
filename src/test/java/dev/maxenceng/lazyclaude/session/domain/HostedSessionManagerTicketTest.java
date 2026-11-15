@@ -90,22 +90,22 @@ class HostedSessionManagerTicketTest {
     @Test
     void shouldLaunchATicketSessionUnderTheIdItsTabCarries() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = manager.startTicket(ticketStart(Verb.REVIEW), ticketPlugin(), paneSize());
 
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue().command().session()).isEqualTo(idOf(start));
     }
 
     @Test
     void shouldRunTheVerbInTheWorktreeWhereTheBranchIsCheckedOut() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = manager.startTicket(ticketStart(Verb.REVIEW), ticketPlugin(), paneSize());
 
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue()).isEqualTo(ticketLaunch(idOf(start), worktreeDirectory(), Verb.REVIEW));
         verify(worktrees, never()).addOnBranch(any(), any(), any());
         verify(worktrees, never()).addOnNewBranch(any(), any(), any());
@@ -114,11 +114,11 @@ class HostedSessionManagerTicketTest {
     @Test
     void shouldRunTheVerbUnderThePluginItIsGiven() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = manager.startTicket(ticketStart(Verb.REVIEW), otherTicketPlugin(), paneSize());
 
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue())
                 .isEqualTo(ticketLaunchUnder(idOf(start), worktreeDirectory(), Verb.REVIEW, otherTicketPlugin()));
     }
@@ -126,11 +126,11 @@ class HostedSessionManagerTicketTest {
     @Test
     void shouldRunTheVerbInTheRootCheckoutWhenTheBranchIsCheckedOutThere() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(projectRootDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = manager.startTicket(ticketStart(Verb.REVIEW), ticketPlugin(), paneSize());
 
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue())
                 .as("a branch cannot be checked out twice, so the session runs where it already is")
                 .isEqualTo(ticketLaunch(idOf(start), projectRootDirectory(), Verb.REVIEW));
@@ -142,13 +142,13 @@ class HostedSessionManagerTicketTest {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.empty());
         when(hosts.exists(worktreeDirectory())).thenReturn(false);
         when(worktrees.branchExists(project(), branchName())).thenReturn(true);
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = manager.startTicket(ticketStart(Verb.START), ticketPlugin(), paneSize());
 
         verify(worktrees).addOnBranch(project(), branchName(), worktreeDirectory());
         verify(worktrees, never()).addOnNewBranch(any(), any(), any());
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue()).isEqualTo(ticketLaunch(idOf(start), worktreeDirectory(), Verb.START));
     }
 
@@ -157,7 +157,7 @@ class HostedSessionManagerTicketTest {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.empty());
         when(hosts.exists(worktreeDirectory())).thenReturn(false);
         when(worktrees.branchExists(project(), branchName())).thenReturn(false);
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         manager.startTicket(ticketStart(Verb.START), ticketPlugin(), paneSize());
 
@@ -168,7 +168,7 @@ class HostedSessionManagerTicketTest {
     @Test
     void shouldListTheStartedSessionUnderItsTicket() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         manager.startTicket(ticketStart(Verb.REVIEW), ticketPlugin(), paneSize());
 
@@ -185,7 +185,7 @@ class HostedSessionManagerTicketTest {
         HostStart start = manager.startTicket(ticketStart(Verb.REVIEW), ticketPlugin(), paneSize());
 
         assertThat(start).isEqualTo(notStartedBecause("ticket worktree: /work/app.worktrees/PROJ-1-ticket exists but is not a worktree of PROJ-1-ticket; nothing started."));
-        verify(hosts, never()).spawn(any(), any(), any());
+        verify(hosts, never()).spawn(any(), any(), any(), any());
         verify(worktrees, never()).addOnBranch(any(), any(), any());
         verify(worktrees, never()).addOnNewBranch(any(), any(), any());
         assertThat(raisedTexts(warnings))
@@ -205,7 +205,7 @@ class HostedSessionManagerTicketTest {
         HostStart start = manager.startTicket(ticketStart(Verb.REVIEW), ticketPlugin(), paneSize());
 
         assertThat(start).isEqualTo(notStartedBecause("ticket worktree: fatal: 'PROJ-1-ticket' is already used; nothing started."));
-        verify(hosts, never()).spawn(any(), any(), any());
+        verify(hosts, never()).spawn(any(), any(), any(), any());
         assertThat(raisedTexts(warnings))
                 .containsExactly("ticket worktree: fatal: 'PROJ-1-ticket' is already used; nothing started.");
     }
@@ -238,19 +238,19 @@ class HostedSessionManagerTicketTest {
     void shouldRecreateAGoneTicketWorktreeBeforeResumingInIt() {
         when(hosts.exists(worktreeDirectory())).thenReturn(false, true);
         when(worktrees.branchExists(project(), branchName())).thenReturn(true);
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         HostStart start = manager.resumeInTicketWorktree(sessionId(), worktreeDirectory(), ticketWorktree(), paneSize());
 
         verify(worktrees).addOnBranch(project(), branchName(), worktreeDirectory());
-        verify(hosts).spawn(launched.capture(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue()).isEqualTo(resumeLaunch(idOf(start), worktreeDirectory()));
     }
 
     @Test
     void shouldResumeWithoutTouchingWorktreesWhenTheTicketWorktreeIsThere() {
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         manager.resumeInTicketWorktree(sessionId(), worktreeDirectory(), ticketWorktree(), paneSize());
 
@@ -279,7 +279,7 @@ class HostedSessionManagerTicketTest {
         HostStart start = manager.resumeInTicketWorktree(sessionId(), worktreeDirectory(), ticketWorktree(), paneSize());
 
         assertThat(start).isEqualTo(notStartedBecause("ticket worktree: fatal: already checked out; nothing started."));
-        verify(hosts, never()).spawn(any(), any(), any());
+        verify(hosts, never()).spawn(any(), any(), any(), any());
         assertThat(raisedTexts(warnings)).containsExactly("ticket worktree: fatal: already checked out; nothing started.");
     }
 
@@ -287,7 +287,7 @@ class HostedSessionManagerTicketTest {
     void shouldResumeALinkedPastSessionListedUnderItsTicketInTheTicketWorktree() {
         when(hosts.exists(worktreeDirectory())).thenReturn(false, true);
         when(worktrees.branchExists(project(), branchName())).thenReturn(true);
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         manager.resumePast(linkedPastSessionListed(), project(), sessionId(), worktreeDirectory(), Optional.of(ticketWorktree()), paneSize());
 
@@ -319,10 +319,10 @@ class HostedSessionManagerTicketTest {
     @Test
     void shouldTellListenersWhichTicketsDoneSessionEnded() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.onTicketDoneEnded(doneEnded);
         manager.startTicket(ticketStart(Verb.DONE), ticketPlugin(), paneSize());
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         exited.getValue().accept(new ExitCode(0));
 
@@ -332,11 +332,11 @@ class HostedSessionManagerTicketTest {
     @Test
     void shouldTellOfTheChangedSessionsBeforeTellingWhichTicketsDoneSessionEnded() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.onTicketDoneEnded(doneEnded);
         manager.startTicket(ticketStart(Verb.DONE), ticketPlugin(), paneSize());
         manager.onChange(openChanged);
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         exited.getValue().accept(new ExitCode(0));
 
@@ -348,10 +348,10 @@ class HostedSessionManagerTicketTest {
     @Test
     void shouldTellListenersEvenWhenTheDoneSessionExitedWithAFailure() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.onTicketDoneEnded(doneEnded);
         manager.startTicket(ticketStart(Verb.DONE), ticketPlugin(), paneSize());
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         exited.getValue().accept(new ExitCode(1));
 
@@ -361,10 +361,10 @@ class HostedSessionManagerTicketTest {
     @Test
     void shouldNotTellListenersWhenASessionRunningAnotherVerbEnds() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.onTicketDoneEnded(doneEnded);
         manager.startTicket(ticketStart(Verb.RESPOND), ticketPlugin(), paneSize());
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         exited.getValue().accept(new ExitCode(0));
 
@@ -373,10 +373,10 @@ class HostedSessionManagerTicketTest {
 
     @Test
     void shouldNotTellListenersWhenASessionNotStartedForATicketEnds() {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.onTicketDoneEnded(doneEnded);
         manager.startUnlinked(project(), paneSize());
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
 
         exited.getValue().accept(new ExitCode(0));
 
@@ -386,10 +386,10 @@ class HostedSessionManagerTicketTest {
     @Test
     void shouldTellListenersOnceWhenTheDoneSessionReportsItsExitTwice() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(worktreeDirectory()));
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         manager.onTicketDoneEnded(doneEnded);
         manager.startTicket(ticketStart(Verb.DONE), ticketPlugin(), paneSize());
-        verify(hosts).spawn(any(), any(), exited.capture());
+        verify(hosts).spawn(any(), any(), exited.capture(), any());
         exited.getValue().accept(new ExitCode(0));
 
         exited.getValue().accept(new ExitCode(0));
