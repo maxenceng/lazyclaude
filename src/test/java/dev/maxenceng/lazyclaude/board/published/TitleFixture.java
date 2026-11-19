@@ -8,6 +8,10 @@ public final class TitleFixture {
         return new Title("A board from the backlog");
     }
 
+    public static Title possessiveTitle() {
+        return new Title("The ticket's branch");
+    }
+
     public static Title secondTitle() {
         return new Title("Plan the next slice");
     }
