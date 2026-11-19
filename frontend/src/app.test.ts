@@ -227,6 +227,32 @@ describe('the app and a shown document', () => {
     expect(app.docs.selectedKey()).toEqual(cursor);
   });
 
+  it('scrolls the focused document to its top on g and its bottom on G, and asks again on a repeated press', async () => {
+    const app = await docsApp();
+    app.focusOn(Focus.Docs);
+    app.focusOn(Focus.Document);
+    const requests = [Action.Top, Action.Bottom, Action.Bottom].map((action) => {
+      app.press(action);
+      return app.docs.scroll.get();
+    });
+    expect(requests.map((request) => request.step)).toEqual([ScrollStep.Top, ScrollStep.Bottom, ScrollStep.Bottom]);
+    expect(new Set(requests.map((request) => request.at)).size, 'a repeated G is a new request, so it scrolls back down after a mouse scroll').toBe(3);
+  });
+
+  it.each([Focus.Board, Focus.Docs, Focus.Sessions])('does nothing on g and G while %s has focus', async (focus) => {
+    const app = await docsApp();
+    app.focusOn(Focus.Docs);
+    app.focusOn(focus);
+    const layout = app.layout.get();
+    const scroll = app.docs.scroll.get();
+    const cursors = [app.board.selectedTicket(), app.docs.selectedKey(), app.sessions.cursor.get()];
+    app.press(Action.Top);
+    app.press(Action.Bottom);
+    expect(app.layout.get()).toBe(layout);
+    expect(app.docs.scroll.get()).toBe(scroll);
+    expect([app.board.selectedTicket(), app.docs.selectedKey(), app.sessions.cursor.get()]).toEqual(cursors);
+  });
+
   it('closes the focused document on escape and hands focus to the ticket', async () => {
     const app = await docsApp();
     app.focusOn(Focus.Docs);
@@ -560,6 +586,30 @@ describe('the app and a review', () => {
     expect(current?.cursor()).toBe(2);
   });
 
+  it('moves neither the diff\'s cursor nor Files\' selection on g and G', async () => {
+    const { client, app } = await reviewing();
+    await opened(client, app);
+    const current = app.review.current.get();
+    client.answer('review/diffOf', {
+      kind: 'readDiff',
+      files: [
+        { path: 'a.ts', status: { kind: 'modifiedFile' }, hunks: [{ header: '@@', lines: [{ kind: 'addedLine', content: 'a', newNumber: 1 }, { kind: 'addedLine', content: 'b', newNumber: 2 }] }] },
+        { path: 'b.ts', status: { kind: 'modifiedFile' }, hunks: [{ header: '@@', lines: [{ kind: 'addedLine', content: 'c', newNumber: 1 }] }] },
+      ],
+    });
+    await settled();
+    await placed(client);
+    app.press(Action.MoveDown);
+    app.press(Action.Top);
+    app.press(Action.Bottom);
+    expect(current?.cursor()).toBe(1);
+    app.press(Action.PanelLeft);
+    app.press(Action.Bottom);
+    app.press(Action.Top);
+    expect(current?.selectedFile()).toBe(0);
+    expect(app.layout.get().focus).toBe(Focus.Files);
+  });
+
   it('asks where a comment would hang on c in the diff, and toggles resolved threads on r', async () => {
     const { client, app } = await reviewing();
     await opened(client, app);
@@ -677,6 +727,22 @@ describe('the app and its window tabs', () => {
     expect(app.tabs.selected.get()).toBe(WindowTab.Base);
     expect(app.board.selection.selected.get()).toBe('PROJ-2');
     expect(app.layout.get().focus).toBe(Focus.Board);
+  });
+
+  it('moves neither the Board tab\'s selection nor the Pull requests tab\'s row on g and G', async () => {
+    const { app } = await reviewing();
+    app.press(Action.ShowBoard);
+    app.press(Action.MoveDown);
+    app.press(Action.Top);
+    app.press(Action.Bottom);
+    expect(app.board.selection.selected.get()).toBe('PROJ-2');
+    app.press(Action.ShowPullRequests);
+    const row = app.review.cursor.selected.get();
+    app.press(Action.Bottom);
+    app.press(Action.Top);
+    expect(app.review.cursor.selected.get()).toBe(row);
+    expect(app.tabs.selected.get()).toBe(WindowTab.PullRequests);
+    expect(app.review.isOpen()).toBe(false);
   });
 
   it('returns to the Pull requests tab and its row when the review opened from it ends', async () => {

@@ -28,6 +28,7 @@
     "toDocument": "l read",
     "scroll": "j/k scroll",
     "halfPage": "ctrl+d/u half page",
+    "ends": "g/G top/bottom",
     "toDocs": "h docs"
   }
 }

@@ -48,8 +48,8 @@ export class DocsController {
     });
   }
 
-  /** Asks the shown document to scroll by `step`; the tree's cursor stays where it is. */
-  scrollBy(step: ScrollStep): void {
+  /** Asks the shown document to scroll a `step`, by a distance or to an end; the tree's cursor stays where it is. */
+  requestScroll(step: ScrollStep): void {
     this.scroll.set(this.scroll.get().next(step));
   }
 

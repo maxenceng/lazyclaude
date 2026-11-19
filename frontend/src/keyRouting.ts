@@ -282,6 +282,10 @@ export class KeyRouter {
         return this.scrollDocument(ScrollStep.HalfPageDown);
       case Action.HalfPageUp:
         return this.scrollDocument(ScrollStep.HalfPageUp);
+      case Action.Top:
+        return this.scrollDocument(ScrollStep.Top);
+      case Action.Bottom:
+        return this.scrollDocument(ScrollStep.Bottom);
       case Action.Back:
         return this.change((current) => this.back(current));
       case Action.PanelLeft:
@@ -337,10 +341,10 @@ export class KeyRouter {
     return current.focusOn(current.focus === Focus.Docs && current.showsDocumentInView() ? Focus.Document : Focus.Sessions);
   }
 
-  /** `j`/`k` and `ctrl+d`/`ctrl+u` on the focused document scroll it; on any other pane `ctrl+d` and `ctrl+u` do nothing outside a review. */
+  /** `j`/`k`, `ctrl+d`/`ctrl+u` and `g`/`G` on the focused document scroll it; on any other pane `g` and `G` do nothing, and `ctrl+d`/`ctrl+u` act only in a review. */
   private scrollDocument(step: ScrollStep): void {
     if (this.focus() === Focus.Document) {
-      this.docs.scrollBy(step);
+      this.docs.requestScroll(step);
     }
   }
 
