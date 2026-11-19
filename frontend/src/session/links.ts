@@ -44,9 +44,14 @@ export interface LinkOpener {
 export interface SessionLinksDeps {
   opener: LinkOpener;
   notices: NoticeStore;
+  /** Whether the program in the pane asked for mouse reports, and so sees a click on a link the pane does not open. */
+  reportsMouse: () => boolean;
 }
 
-/** The links of one session pane: followed with ctrl held, and the web address the pointer is on. */
+/**
+ * The links of one session pane: followed with ctrl held, and the web address the pointer is on. A web address is the
+ * pane's alone; a link of another scheme is the program's while it reports the mouse, and refused otherwise.
+ */
 export class SessionLinks {
   readonly hovered: Store<string | undefined> = new Store<string | undefined>(undefined);
 
@@ -61,8 +66,13 @@ export class SessionLinks {
     this.hovered.set(undefined);
   }
 
+  /** Whether a press is one the pane acts on, so the program must not see it: ctrl held on a web address it opens. */
+  keepsFromProgram(event: MouseEvent): boolean {
+    return event.ctrlKey && this.hovered.get() !== undefined;
+  }
+
   activate(event: MouseEvent, url: string): void {
-    if (!event.ctrlKey) {
+    if (!event.ctrlKey || (!isWeb(url) && this.deps.reportsMouse())) {
       return;
     }
     this.deps.notices.clear();

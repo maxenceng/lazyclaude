@@ -5,7 +5,8 @@ Date: 2026-11-14
 ## Status
 
 Accepted. Amends ADR 0087: `docs` owns every link the window follows except a session pane's, which the session folder owns.
-ADR 0087's opener, and its http(s)-only rule for a web address, stand.
+ADR 0087's opener, and its http(s)-only rule for a web address, stand. Amended by ADR 0118: a ctrl+click the pane acts on is
+kept from the program, and a link it would refuse is the program's while the program reports the mouse.
 
 ## Context
 

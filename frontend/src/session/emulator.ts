@@ -42,8 +42,10 @@ export class Emulator {
   /** The link the pointer is on, for the key bar to name. */
   readonly hoveredLink: Store<string | undefined>;
   private readonly kept = new KeptModes();
+  private readonly links: SessionLinks;
   private repaint = Repaint.None;
   private fitted = false;
+  private keepingLinkPresses = false;
   private readonly subscriptions: IDisposable[] = [];
 
   constructor(
@@ -51,15 +53,15 @@ export class Emulator {
     readonly terminal: Terminal,
     private readonly deps: EmulatorDeps,
   ) {
-    const links = new SessionLinks({ opener: deps.opener, notices: deps.notices });
-    this.hoveredLink = links.hovered;
+    this.links = new SessionLinks({ opener: deps.opener, notices: deps.notices, reportsMouse: () => this.mouseReported.get() });
+    this.hoveredLink = this.links.hovered;
     terminal.options.linkHandler = {
-      activate: (event, url) => links.activate(event, url),
-      hover: (_event, url) => links.hover(url),
-      leave: () => links.leave(),
+      activate: (event, url) => this.links.activate(event, url),
+      hover: (_event, url) => this.links.hover(url),
+      leave: () => this.links.leave(),
       allowNonHttpProtocols: true,
     };
-    this.subscriptions.push(terminal.registerLinkProvider(new WebAddressProvider(terminal, new ScreenUnderlines(terminal), links)));
+    this.subscriptions.push(terminal.registerLinkProvider(new WebAddressProvider(terminal, new ScreenUnderlines(terminal), this.links)));
     const recalled = deps.memory.recall(session);
     this.subscriptions.push(
       new ModeTracker(terminal, this.kept, () => this.modesChanged()),
@@ -89,6 +91,7 @@ export class Emulator {
     if (this.terminal.element !== undefined) {
       container.replaceChildren(this.terminal.element);
     }
+    this.keepLinkPressesFromClaude();
     this.resize();
     this.fitted = true;
     this.repaintWhenFitted();
@@ -117,6 +120,29 @@ export class Emulator {
     }
     return false;
   }
+
+  /**
+   * A press the pane acts on stops at xterm's screen: its link detector, which listens there, still sees it and opens the link
+   * on release, but the terminal element above, which reports the press to `claude` and then its release, never does.
+   * Claude Code opens a link clicked with ctrl held itself, so a reported press would open it twice.
+   */
+  private keepLinkPressesFromClaude(): void {
+    const screen = this.terminal.element?.querySelector('.xterm-screen');
+    if (this.keepingLinkPresses || !(screen instanceof HTMLElement)) {
+      return;
+    }
+    this.keepingLinkPresses = true;
+    screen.addEventListener('mousedown', this.pressOnScreen);
+    this.subscriptions.push({ dispose: () => screen.removeEventListener('mousedown', this.pressOnScreen) });
+  }
+
+  private readonly pressOnScreen = (event: MouseEvent): void => {
+    if (this.links.keepsFromProgram(event)) {
+      event.stopPropagation();
+      event.preventDefault();
+      this.terminal.focus();
+    }
+  };
 
   private modesChanged(): void {
     this.deps.memory.remember(this.session, this.kept);
