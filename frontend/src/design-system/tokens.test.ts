@@ -99,6 +99,7 @@ describe('the inks for a failure and a destructive action', () => {
   it.each([
     ['failed', 'pane'],
     ['failed', 'pane-lift'],
+    ['failed', 'pane-sunk'],
     ['danger', 'pane-lift'],
     ['danger', 'seam'],
   ])('%s reaches 4.5:1 on %s', (ink, ground) => {
