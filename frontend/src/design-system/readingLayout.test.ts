@@ -71,7 +71,7 @@ describe('a drawn diagram', () => {
   });
 
   it('names a failure in the failed ink, semibold, then the message dimmed', () => {
-    expect(ruleOf(markdown, '.diagramFailureHead')).toContain('color: var(--ci-failed)');
+    expect(ruleOf(markdown, '.diagramFailureHead')).toContain('color: var(--failed)');
     expect(ruleOf(markdown, '.diagramFailureHead')).toContain('font-weight: 600');
     expect(ruleOf(markdown, '.diagramFailure')).toContain('color: var(--dim)');
   });
