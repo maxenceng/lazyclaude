@@ -5,7 +5,7 @@ Date: 2026-11-19
 ## Status
 
 Accepted. Supersedes the ticket branch bullet of ADR 0065 ("derived, not read back"), its deferred consequence about it, and the
-`gh issue list` call that bullet's board read made; the rest of ADR 0065 stands. Builds on ADR 0052.
+`gh issue list` call of its "One call reads the board" bullet; the rest of ADR 0065 stands. Builds on ADR 0052.
 
 ## Context
 
@@ -18,8 +18,8 @@ dropped.
 
 ## Decision
 
-- **The branch is the issue's first linked branch, else the slug.** `GitHubIssue`'s `TicketBranch` is the first ref of
-  `linkedBranches(first: 1)` when one is linked; with none, `<number>-<title slug>` as before, and `<number>` when the title
+- **The branch is the issue's first linked branch, else the slug.** The board's reader, `IssueRecord`, hands `GitHubIssue` as
+  its `TicketBranch` the first ref of `linkedBranches(first: 1)` when one is linked; with none, `<number>-<title slug>` as before, and `<number>` when the title
   slugs to nothing. An issue node with no `linkedBranches` field reads as nothing linked, not as unreadable. With two or more,
   the first GitHub lists. `session`, `review` and the shell keep reading `ticket.branch()` and change nothing about how they ask.
 - **One `gh api graphql --paginate --slurp` call replaces `gh issue list`.** It asks for the same fields (number, title, body,
@@ -39,7 +39,10 @@ dropped.
 
 - deferred: only the 1000 newest issues are shown, though `gh` still fetches every page — close it when a project has that
   many.
-- A branch linked after the board was read reaches it with the next read, which the poll triggers, since linking a branch
-  updates the issue.
-- A ticket whose branch has been deleted still names it: GitHub keeps no ref for it, so the ref is read as nothing linked and
-  the slug stands.
+- A branch linked after the board was read reaches it with the next read. `/ticket start` moves the status label in the same
+  step, which updates the issue the poll watches; whether linking alone does is unchecked, and `R` reads it either way.
+- A ticket whose branch has been deleted falls back to the slug: GitHub keeps no ref for it, so the link reads as nothing
+  linked. For a done ticket whose branch a merge deleted, the merge state and the worktree removal then match on the slug,
+  and miss where it differs from the branch the work was on.
+- A null element in a connection GitHub writes is left out; an issue written as anything but an object, or an answer with no
+  page, makes the board unavailable with that reason, never an empty board.

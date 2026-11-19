@@ -34,8 +34,16 @@ final class IssueRecords {
     }
 
     private static Stream<JsonNode> pages(byte[] json) {
+        JsonNode pages = tree(json);
+        if (!pages.isArray() || pages.isEmpty()) {
+            throw new BacklogUnavailableException("%s wrote no page of issues".formatted(SOURCE));
+        }
+        return pages.valueStream();
+    }
+
+    private static JsonNode tree(byte[] json) {
         try {
-            return MAPPER.readTree(json).valueStream();
+            return MAPPER.readTree(json);
         } catch (JacksonException e) {
             throw new BacklogUnavailableException("%s does not parse: %s".formatted(SOURCE, e.getOriginalMessage()), e);
         }
@@ -47,10 +55,17 @@ final class IssueRecords {
             throw new BacklogUnavailableException("%s wrote a page without issues".formatted(SOURCE));
         }
         try {
-            return nodes.valueStream().map(node -> MAPPER.treeToValue(node, IssueRecord.class)).toList();
+            return nodes.valueStream().map(IssueRecords::record).toList();
         } catch (JacksonException e) {
             throw new BacklogUnavailableException("%s does not parse: %s".formatted(SOURCE, e.getOriginalMessage()), e);
         }
+    }
+
+    private static IssueRecord record(JsonNode node) {
+        if (!node.isObject()) {
+            throw new BacklogUnavailableException("%s wrote an issue that is not an object: %s".formatted(SOURCE, node));
+        }
+        return MAPPER.treeToValue(node, IssueRecord.class);
     }
 
     private static IssueRecord complete(IssueRecord record) {

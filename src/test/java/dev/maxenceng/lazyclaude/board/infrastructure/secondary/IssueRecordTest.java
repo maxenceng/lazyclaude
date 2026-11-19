@@ -16,6 +16,7 @@ import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -123,6 +124,12 @@ class IssueRecordTest {
         assertThat(issueLinkedTo(new NodesRecord<>(List.of(new LinkedBranchRecord(null)))).issue().branch())
                 .as("GitHub writes a null ref for a branch that was deleted")
                 .isEqualTo(new TicketBranch("1-a-board-from-the-backlog"));
+    }
+
+    @Test
+    void shouldSkipALinkedBranchWrittenAsNull() {
+        assertThat(issueLinkedTo(new NodesRecord<>(Arrays.asList(null, new LinkedBranchRecord(new RefRecord("1-linked"))))).issue().branch())
+                .isEqualTo(new TicketBranch("1-linked"));
     }
 
     @Test

@@ -132,6 +132,25 @@ class IssuesRepositoryTest {
     }
 
     @Test
+    void shouldRefuseAnAnswerWithNoPageRatherThanReadAnEmptyBoard() throws IOException {
+        Path gh = ghPrinting(root, "");
+
+        assertThatThrownBy(() -> repositoryOver(gh).entries(projectAt(root)))
+                .as("gh writes one page even for a repository with no issue, so none at all is not an empty backlog")
+                .isExactlyInstanceOf(BacklogUnavailableException.class)
+                .hasMessage("gh api graphql wrote no page of issues");
+    }
+
+    @Test
+    void shouldRefuseAnIssueWrittenAsNull() throws IOException {
+        Path gh = ghPrinting(root, pagesOf(pageOf("null")));
+
+        assertThatThrownBy(() -> repositoryOver(gh).entries(projectAt(root)))
+                .isExactlyInstanceOf(BacklogUnavailableException.class)
+                .hasMessage("gh api graphql wrote an issue that is not an object: null");
+    }
+
+    @Test
     void shouldSayWhatGhWroteWhenTheRepositoryIsNotInItsAnswer() throws IOException {
         Path gh = ghPrinting(root, "[{\"data\":{\"repository\":null}}]");
 
