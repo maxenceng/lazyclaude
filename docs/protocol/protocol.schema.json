@@ -2316,6 +2316,13 @@
         "state" : {
           "$ref" : "#/$defs/session.SessionState"
         },
+        "marker" : {
+          "anyOf" : [ {
+            "$ref" : "#/$defs/session.MarkerView"
+          }, {
+            "type" : "null"
+          } ]
+        },
         "links" : {
           "type" : "array",
           "items" : {
@@ -2323,7 +2330,24 @@
           }
         }
       },
-      "required" : [ "id", "pid", "name", "directory", "startedAt", "version", "state", "links" ],
+      "required" : [ "id", "pid", "name", "directory", "startedAt", "version", "state", "marker", "links" ],
+      "additionalProperties" : false
+    },
+    "session.Marker" : {
+      "type" : "string",
+      "enum" : [ "YOUR_TURN", "WAITING_FOR_INPUT", "WAITING_FOR_PERMISSION" ]
+    },
+    "session.MarkerView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "$ref" : "#/$defs/session.Marker"
+        },
+        "strength" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "strength" ],
       "additionalProperties" : false
     },
     "session.MergeState" : {

@@ -5,18 +5,21 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import dev.maxenceng.lazyclaude.error.domain.Assert;
 import dev.maxenceng.lazyclaude.session.domain.AvailableSessions;
 import dev.maxenceng.lazyclaude.session.domain.LiveSession;
 import dev.maxenceng.lazyclaude.session.published.ClaudeVersion;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
-import dev.maxenceng.lazyclaude.session.published.Marker;
 import dev.maxenceng.lazyclaude.session.published.ProcessId;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 import dev.maxenceng.lazyclaude.session.published.SessionState;
 import dev.maxenceng.lazyclaude.session.published.TicketLink;
 
-/** One hosted live session as the shell reads it: what its row and the main view show, and the tickets it is linked to. */
+/**
+ * One hosted live session as the shell reads it: what its row and the main view show, what it asks of you, and the tickets it is
+ * linked to. The marker is always the state's, so the builder takes none and the constructor refuses any other.
+ */
 public record LiveSessionView(
         SessionId id,
         ProcessId pid,
@@ -25,7 +28,16 @@ public record LiveSessionView(
         LocalDateTime startedAt,
         ClaudeVersion version,
         SessionState state,
+        Optional<MarkerView> marker,
         List<TicketLink> links) {
+
+    public LiveSessionView {
+        Assert.notNull("state", state);
+        Assert.notNull("marker", marker);
+        if (!marker.equals(markerOf(state))) {
+            throw new MarkerBesideStateException(state, marker);
+        }
+    }
 
     static LiveSessionView from(AvailableSessions available, LiveSession session) {
         return builder()
@@ -40,9 +52,8 @@ public record LiveSessionView(
                 .build();
     }
 
-    /** What the session asks of you, if anything. */
-    public Optional<Marker> marker() {
-        return state.marker();
+    private static Optional<MarkerView> markerOf(SessionState state) {
+        return state.marker().map(MarkerView::of);
     }
 
     /** How the session is linked to {@code ticket}, if it is. */
@@ -107,7 +118,7 @@ public record LiveSessionView(
         }
 
         public LiveSessionView build() {
-            return new LiveSessionView(id, pid, name, directory, startedAt, version, state, links);
+            return new LiveSessionView(id, pid, name, directory, startedAt, version, state, markerOf(state), links);
         }
     }
 }
