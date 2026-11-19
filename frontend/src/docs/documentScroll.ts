@@ -1,9 +1,11 @@
-/** How far a key scrolls the shown document. */
+/** How far a key scrolls the shown document: by a distance, or to one of its ends. */
 export enum ScrollStep {
   LineDown = 'lineDown',
   LineUp = 'lineUp',
   HalfPageDown = 'halfPageDown',
   HalfPageUp = 'halfPageUp',
+  Top = 'top',
+  Bottom = 'bottom',
 }
 
 /** One scroll the shown document is asked for: `at` tells two equal steps apart, so a repeated key scrolls again. */

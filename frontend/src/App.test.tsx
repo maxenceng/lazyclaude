@@ -281,10 +281,12 @@ describe('a shown document and the Docs panel', () => {
     await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     expect(keyBar()).toHaveTextContent('l read');
+    expect(keyBar(), 'g and G act on the document alone').not.toHaveTextContent('g/G');
     await started.user.click(screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement);
     expect(started.app.layout.get().focus).toBe(Focus.Document);
     expect(keyBar()).toHaveTextContent('j/k scroll');
     expect(keyBar()).toHaveTextContent('ctrl+d/u half page');
+    expect(keyBar()).toHaveTextContent('g/G top/bottom');
     expect(keyBar()).toHaveTextContent('h docs');
     expect(keyBar()).toHaveTextContent('esc close');
   });
@@ -340,6 +342,22 @@ describe('a shown document and the Docs panel', () => {
     await started.user.keyboard('j');
     await started.user.keyboard('k');
     expect(scrolled.mock.calls.map((call) => Math.sign((call[0] as ScrollToOptions).top ?? 0))).toEqual([1, -1]);
+  });
+
+  it('scrolls the focused document to its top on g and its bottom on G, each time either is pressed', async () => {
+    const started = await readyApp();
+    docsRead(started);
+    await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
+    await started.user.click(screen.getByRole('button', { name: 'README.md' }));
+    const body = screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement;
+    const scrolled = vi.fn();
+    body.scrollTo = scrolled;
+    Object.defineProperty(body, 'scrollHeight', { value: 900 });
+    await started.user.click(body);
+    await started.user.keyboard('G');
+    await started.user.keyboard('g');
+    await started.user.keyboard('g');
+    expect(scrolled.mock.calls.map((call) => (call[0] as ScrollToOptions).top)).toEqual([900, 0, 0]);
   });
 
   it('shows esc close on the key bar while a document is shown, and esc closes it and hands focus to the ticket', async () => {

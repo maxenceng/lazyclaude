@@ -115,7 +115,11 @@ const useScrollRequests = (docs: DocsController) => {
       return;
     }
     seen.current = request.at;
-    body.scrollBy({ top: distanceOf(request, body) });
+    if (request.step === ScrollStep.Top || request.step === ScrollStep.Bottom) {
+      body.scrollTo({ top: request.step === ScrollStep.Top ? 0 : body.scrollHeight });
+    } else {
+      body.scrollBy({ top: distanceOf(request, body) });
+    }
   }, [request]);
   return anchor;
 };
