@@ -1,4 +1,4 @@
-package dev.maxenceng.lazyclaude.session.published;
+package dev.maxenceng.lazyclaude.session.domain;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 

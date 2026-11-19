@@ -85,7 +85,7 @@ public final class ProtocolCoverageFixture {
     }
 
     public static List<String> servedUnderAnotherName() {
-        return List.of("session/write", "session/resizePty", "session/onOutput", "session/onExit", "session/endAll");
+        return List.of("session/write", "session/resizePty", "session/onOutput", "session/onExit", "session/endAll", "session/remove", "session/onTicketDoneEnded");
     }
 
     public static List<String> onlyTheTerminalAsks() {
@@ -98,13 +98,10 @@ public final class ProtocolCoverageFixture {
 "session/followsPointer",
 "session/knowTickets",
 "session/onScreenChange",
-"session/onTicketDoneEnded",
 "session/refresh",
-"session/remove",
 "session/resize",
 "session/screenOf",
 "session/send",
-"session/worktreeOf",
 "warning/threadStopped");
     }
 }

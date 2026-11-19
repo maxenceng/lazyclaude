@@ -9,10 +9,10 @@ import java.util.regex.Pattern;
 
 import dev.maxenceng.lazyclaude.review.published.HeadCommit;
 import dev.maxenceng.lazyclaude.session.domain.CommitId;
+import dev.maxenceng.lazyclaude.session.domain.DirtyPath;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeNotRemovedException;
 import dev.maxenceng.lazyclaude.session.domain.WorktreePort;
 import dev.maxenceng.lazyclaude.session.domain.WorktreeUnavailableException;
-import dev.maxenceng.lazyclaude.session.published.DirtyPath;
 import dev.maxenceng.lazyclaude.shared.domain.BranchName;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;

@@ -3,4 +3,10 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import dev.maxenceng.lazyclaude.session.published.Reason;
 
 /** Git could not remove the worktree, or could not say what stands in it; the worktree and its branch are as they were. */
-public record FailedRemovalView(Reason reason) implements WorktreeRemovalView {}
+public record FailedRemovalView(Reason reason) implements WorktreeRemovalView {
+
+    /** Why nothing was removed, in the words every frontend shows. */
+    public Reason refusal() {
+        return WorktreeWording.failure(reason);
+    }
+}

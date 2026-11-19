@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Optional;
 
 import dev.maxenceng.lazyclaude.review.published.HeadCommit;
-import dev.maxenceng.lazyclaude.session.published.DirtyPath;
 import dev.maxenceng.lazyclaude.shared.domain.BranchName;
 import dev.maxenceng.lazyclaude.shared.domain.Project;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;

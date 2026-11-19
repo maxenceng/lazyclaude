@@ -1,10 +1,10 @@
 package dev.maxenceng.lazyclaude.session.domain;
 
+import static dev.maxenceng.lazyclaude.session.domain.DirtyPathFixture.dirtyPath;
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeStateFixture.aheadWorktreeContents;
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeStateFixture.clearWorktreeContents;
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeStateFixture.dirtyWorktreeContents;
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeStateFixture.occupiedWorktreeContents;
-import static dev.maxenceng.lazyclaude.session.published.DirtyPathFixture.dirtyPath;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;

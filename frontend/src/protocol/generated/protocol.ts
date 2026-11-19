@@ -79,6 +79,10 @@ export type ReviewCheckOutcome = 'FAILED' | 'PENDING' | 'PASSED';
 export type ReviewIssueClosing = ReviewClosesIssue | ReviewClosesNoIssue;
 export type ReviewPullRequestOnView = ReviewHeadedPullRequestView | ReviewNoHeadedPullRequestView;
 export type ReviewPendingReviewWriteView = ReviewWrittenReviewView | ReviewRefusedWriteView;
+export type SessionWorktreeShownView =
+  SessionNoWorktreeView | SessionClearWorktreeView | SessionHeldBackWorktreeView | SessionUnreadWorktreeView;
+export type SessionWorktreeStateView = SessionWorktreeContentsView | SessionNoMergedPullRequestView;
+export type SessionWorktreeRemovalOutcomeView = SessionRemovedWorktreeView | SessionNotRemovedWorktreeView;
 export type SessionWatchedPayload = SessionWatchedSessionPayload | SessionNoWatchedSessionPayload;
 
 /**
@@ -206,6 +210,14 @@ export interface LazyclaudeProtocol {
       params: ReviewPendingSubmitPayload;
       result: ReviewPendingReviewWriteView;
     };
+    'session/worktreeOf': {
+      params: SessionWorktreeBranchPayload;
+      result: SessionWorktreeShownView;
+    };
+    'session/removeWorktree': {
+      params: SessionWorktreeBranchPayload;
+      result: SessionWorktreeRemovalOutcomeView;
+    };
   };
   inputs: {
     'pty/input': {
@@ -253,6 +265,9 @@ export interface LazyclaudeProtocol {
     };
     'review/mergedChanged': {
       params: ReviewMergedHeadView[];
+    };
+    'session/ticketDoneEnded': {
+      params: string;
     };
   };
 }
@@ -815,6 +830,43 @@ export interface ReviewPendingSubmitPayload {
   root: string;
   number: number;
   summary: string;
+}
+export interface SessionWorktreeBranchPayload {
+  branch: string;
+}
+export interface SessionNoWorktreeView {
+  kind: 'noWorktree';
+}
+export interface SessionClearWorktreeView {
+  kind: 'clearWorktree';
+  shown: string;
+}
+export interface SessionHeldBackWorktreeView {
+  kind: 'heldBackWorktree';
+  shown: string;
+  state: SessionWorktreeStateView;
+  refusal: string;
+}
+export interface SessionWorktreeContentsView {
+  kind: 'worktreeContents';
+  dirtyPaths: string[];
+  commitsBeyondMerge: number;
+  sessions: string[];
+}
+export interface SessionNoMergedPullRequestView {
+  kind: 'noMergedPullRequest';
+}
+export interface SessionUnreadWorktreeView {
+  kind: 'unreadWorktree';
+  reason: string;
+  refusal: string;
+}
+export interface SessionRemovedWorktreeView {
+  kind: 'removedWorktree';
+}
+export interface SessionNotRemovedWorktreeView {
+  kind: 'notRemovedWorktree';
+  refusal: string;
 }
 export interface SessionPtyInputPayload {
   session: string;
