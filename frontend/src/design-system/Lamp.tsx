@@ -36,10 +36,12 @@ interface Props {
   number?: string;
   /** The words a pill says in place of its lamp's own, for a state the lamp does not tell apart: busy, ended. */
   words?: string;
+  /** Given, a tile is a button: the status line's tile of a session this window hosts. */
+  onClick?: () => void;
 }
 
 /** A session's state as a lamp: a marker beside a session, a pill saying it in words on a ticket's row, or a tile on the andon board. Its colour means session state and nothing else. */
-export const Lamp = ({ colour, size, number, words }: Props) => {
+export const Lamp = ({ colour, size, number, words, onClick }: Props) => {
   const { t } = useTranslation('designSystem');
   if (size === LampSize.Pill) {
     return (
@@ -55,10 +57,23 @@ export const Lamp = ({ colour, size, number, words }: Props) => {
       </span>
     );
   }
-  return (
-    <span className={`${styles.tile} ${styles[colour]}`} role="img" aria-label={t('lamp.tile', { number: number ?? t('lamp.noTicket'), meaning: t(MEANING[colour]) })}>
+  const label = t('lamp.tile', { number: number ?? t('lamp.noTicket'), meaning: t(MEANING[colour]) });
+  const inside = (
+    <>
       <b className={styles.number}>{number ?? t('lamp.noNumber')}</b>
       <i className={styles.meaning}>{t(SHORT_MEANING[colour])}</i>
+    </>
+  );
+  if (onClick !== undefined) {
+    return (
+      <button type="button" className={`${styles.tile} ${styles.button} ${styles[colour]}`} aria-label={label} onMouseDown={(event) => event.preventDefault()} onClick={onClick}>
+        {inside}
+      </button>
+    );
+  }
+  return (
+    <span className={`${styles.tile} ${styles[colour]}`} role="img" aria-label={label}>
+      {inside}
     </span>
   );
 };

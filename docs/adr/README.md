@@ -109,3 +109,12 @@
 - 0105 [The desktop window does not show unreadable tickets, and the Board tab previews beside its columns](0105-the-desktop-window-does-not-show-unreadable-tickets-and-the-board-tab-previews-beside-its-columns.md) — Accepted.
 - 0106 [The desktop review shows each thread once under its line and drops its Comments pane](0106-the-desktop-review-shows-each-thread-once-under-its-line-and-drops-its-comments-pane.md) — Accepted.
 - 0107 [A View may hold a value of its own context's domain](0107-a-view-may-hold-a-value-of-its-own-contexts-domain.md) — Accepted.
+- 0108 [The issues poll checks every ten seconds](0108-the-issues-poll-checks-every-ten-seconds.md) — Accepted.
+- 0109 [Every desktop popup is one pane over a dimmed window, answered by key-chip buttons](0109-every-desktop-popup-is-one-pane-over-a-dimmed-window-answered-by-key-chip-buttons.md) — Accepted.
+- 0110 [A new ticket is created by a `/ticket new` session, not by lazyclaude](0110-a-new-ticket-is-created-by-a-ticket-new-session-not-by-lazyclaude.md) — Accepted.
+- 0111 [Closing a session from the window ends it, and the close chord is reserved by the desktop only](0111-closing-a-session-from-the-window-ends-it-and-the-close-chord-is-reserved-by-the-desktop-only.md) — Accepted.
+- 0112 [A click on a status line lamp or count goes to its session in the desktop window](0112-a-click-on-a-status-line-lamp-or-count-goes-to-its-session-in-the-desktop-window.md) — Accepted.
+- 0113 [A hosted session may start at `0 0` and is sized by the WINCH that follows](0113-a-hosted-session-starts-at-0-0-and-is-sized-by-the-winch-that-follows.md) — Accepted.
+- 0114 [pty4j extracts its natives into the cache, under a first-load lock](0114-pty4j-extracts-its-natives-into-the-cache-under-a-first-load-lock.md) — Accepted.
+- 0115 [A session pane follows its own links with ctrl held, and names the hovered one in the key bar](0115-a-session-pane-follows-its-own-links-with-ctrl-held-and-names-the-hovered-one-in-the-key-bar.md) — Accepted.
+- 0116 [The desktop frontend draws a mermaid block with mermaid.js, loaded on demand](0116-the-desktop-frontend-draws-a-mermaid-block-with-mermaid-js-loaded-on-demand.md) — Accepted.

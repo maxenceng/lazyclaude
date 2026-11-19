@@ -10,7 +10,7 @@ import { statusColourOf } from './board/statusColours';
 import { ConnectionScreen } from './connection/ConnectionScreen';
 import { DocsKeyBar, DocumentKeyBar } from './docs/DocsKeyBar';
 import { DocsPane, DocumentPane } from './docs/DocsScreen';
-import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Dialog, Lamp, LampSize, Pane, StatusLine, Text, Tone, WindowMenu, WindowTabBar } from './design-system';
+import { Alert, AppFrame, Arrangement, Button, CiGlyph, Count, Lamp, LampSize, Pane, Popup, StatusLine, Text, Tone, WindowMenu, WindowTabBar } from './design-system';
 import { ConfigurationKind } from './keys/configurationState';
 import { Action } from './keys/bindings';
 import { ModalClicks } from './keys/modalClicks';
@@ -20,8 +20,9 @@ import { PullRequestRead, type TicketPullRequest } from './board/ticketPullReque
 import { StatusKind } from './protocol';
 import { cellsOf, ciOf, worstResult } from './review/pullRequestList';
 import { PullRequestsPane } from './review/PullRequestsScreen';
-import { DiffPane, FilesPane, ReviewDialogs } from './review/ReviewScreen';
+import { DiffPane, FilesPane, ReviewPopups } from './review/ReviewScreen';
 import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKeyBar';
+import { ClosePopup } from './session/ClosePopup';
 import { DockScreen, DockStrip } from './session/DockScreen';
 import { LampColour, markerOfTicket, markersOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
@@ -76,11 +77,13 @@ export const App = ({ app, packaged }: Props) => {
   const warning = useStore(app.warnings.warning);
   const notice = useStore(app.notices.notice);
   const mouseReported = useStore(app.hosting.mouseReported);
+  const hoveredLink = useStore(app.hosting.hoveredLink);
   const review = useStore(app.review.current);
   const tab = useStore(app.tabs.selected);
   const pullRequests = useStore(app.review.pullRequests.state);
   const capturing = useStore(app.board.capture.state).isOpen();
   const quitAsked = useStore(app.quitting.asking);
+  const closeAsked = useStore(app.closing.asking);
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
@@ -120,7 +123,7 @@ export const App = ({ app, packaged }: Props) => {
     [Focus.Sessions]: <SessionsKeyBar picking={false} extra={panelKeys} />,
     [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
     [Focus.Diff]: <ReviewKeyBar panel={ReviewFocus.Diff} />,
-    [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} />,
+    [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} hoveredLink={hoveredLink} />,
   }[layout.focus];
 
   const unready =
@@ -288,6 +291,9 @@ export const App = ({ app, packaged }: Props) => {
         onFocus={() => app.focusOn(Focus.Dock)}
         zoomed={layout.zoomed}
         zoomKey={app.zoomKey()}
+        closeKey={app.closeKey()}
+        asking={closeAsked !== undefined}
+        onClose={() => app.closeSession()}
         onMinimise={() => app.toggleDockMinimised()}
         onZoom={() => app.toggleZoom()}
       />
@@ -331,10 +337,22 @@ export const App = ({ app, packaged }: Props) => {
               />
             }
             tiles={markers.map((marker) => (
-              <Lamp key={marker.session} colour={marker.colour} size={LampSize.Tile} number={marker.ticket} />
+              <Lamp
+                key={marker.session}
+                colour={marker.colour}
+                size={LampSize.Tile}
+                number={marker.ticket}
+                onClick={app.canGoToLive(marker.session) ? () => app.goToLive(marker.session) : undefined}
+              />
             ))}
             counts={COLOURS.map((colour) => (
-              <Count key={colour} colour={colour} count={markers.filter((marker) => marker.colour === colour).length} />
+              <Count
+                key={colour}
+                colour={colour}
+                count={markers.filter((marker) => marker.colour === colour).length}
+                disabled={!app.canGoToNext(colour)}
+                onClick={() => app.goToNext(colour)}
+              />
             ))}
             project={project}
             warning={warning}
@@ -348,21 +366,25 @@ export const App = ({ app, packaged }: Props) => {
         dock={dock.tabs.length === 0 ? null : dockScreen}
         arrangement={shown.arrangement}
       />
-      {review === undefined ? null : <ReviewDialogs review={review} />}
+      {review === undefined ? null : <ReviewPopups review={review} />}
       <CapturePopup capture={app.board.capture} />
-      {quitAsked === undefined ? null : <QuitDialog hosted={quitAsked} onAnswer={(yes) => app.quitting.answer(yes)} />}
+      {closeAsked === undefined ? null : <ClosePopup onAnswer={(close) => app.closing.answer(close)} />}
+      {quitAsked === undefined ? null : <QuitPopup hosted={quitAsked} onAnswer={(yes) => app.quitting.answer(yes)} />}
     </>
   );
 };
 
 /** The question `q` asks while sessions are hosted, as the TUI's quit prompt does: y quits, anything else stays. */
-const QuitDialog = ({ hosted, onAnswer }: { hosted: number; onAnswer: (yes: boolean) => void }) => {
+const QuitPopup = ({ hosted, onAnswer }: { hosted: number; onAnswer: (yes: boolean) => void }) => {
   const { t } = useTranslation();
   return (
-    <Dialog title={t('quit.title')} hint={t('quit.hint')} onDismiss={() => onAnswer(false)}>
-      <Text>{t('quit.hosted', { count: hosted })}</Text>
-      <Button onClick={() => onAnswer(true)}>{t('quit.yes')}</Button>
-      <Button onClick={() => onAnswer(false)}>{t('quit.no')}</Button>
-    </Dialog>
+    <Popup
+      title={t('quit.title')}
+      main={{ label: t('quit.yes'), chip: t('quit.yesKey'), onClick: () => onAnswer(true) }}
+      out={{ label: t('quit.no'), chip: t('quit.noKey'), onClick: () => onAnswer(false) }}
+      onDismiss={() => onAnswer(false)}
+    >
+      <Text tight>{t('quit.hosted', { count: hosted })}</Text>
+    </Popup>
   );
 };

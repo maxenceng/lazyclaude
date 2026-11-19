@@ -9,14 +9,12 @@ export type BoardTicketContext = BoardContextName | BoardNoContext;
 export type BoardTicketType = BoardTypeName | BoardNoType;
 export type BoardTicketBody = BoardBody | BoardNoBody;
 export type BoardVerb = 'REFINE' | 'START' | 'REVIEW' | 'DESIGN' | 'RESPOND' | 'DONE';
-export type BoardBoardCaptureView = BoardCapturedOnBoardView | BoardRefusedTicketCaptureView;
-export type BoardBoardAfterCaptureView = BoardBoardReadingView | BoardNoBoardAfterCaptureView;
 export type SessionHostStart = SessionStartedHost | SessionNotStartedHost;
 export type SessionListingPayload = SessionTicketListingPayload | SessionNoTicketListingPayload;
 export type SessionMergeState = 'MERGED' | 'NOT_MERGED' | 'UNKNOWN';
 export type SessionNewSessionView = SessionVerbChoiceView | SessionUnlinkedStartView;
 export type SessionReservedAction =
-  'FOCUS_LEFT' | 'FOCUS_DOWN' | 'FOCUS_UP' | 'FOCUS_RIGHT' | 'HIDE_MAIN_VIEW' | 'ZOOM' | 'NEXT_WAITING';
+  'FOCUS_LEFT' | 'FOCUS_DOWN' | 'FOCUS_UP' | 'FOCUS_RIGHT' | 'HIDE_MAIN_VIEW' | 'ZOOM' | 'NEXT_WAITING' | 'CLOSE';
 export type SessionModifier = 'CTRL' | 'ALT' | 'SHIFT';
 export type SessionKeyInput = SessionTypedCharacter | SessionPressedKey;
 export type SessionNamedKey =
@@ -96,12 +94,12 @@ export interface LazyclaudeProtocol {
       params: BoardBoardPayload;
       result: BoardBoardLookupView;
     };
-    'board/capture': {
-      params: BoardTicketCapturePayload;
-      result: BoardBoardCaptureView;
-    };
     'session/startUnlinked': {
       params: SessionNewHostedPayload;
+      result: SessionHostStart;
+    };
+    'session/startNewTicket': {
+      params: SessionNewTicketHostedPayload;
       result: SessionHostStart;
     };
     'session/startTicket': {
@@ -219,6 +217,9 @@ export interface LazyclaudeProtocol {
     'session/repaint': {
       params: SessionRepaintPayload;
     };
+    'session/close': {
+      params: SessionClosePayload;
+    };
     'session/watching': {
       params: SessionWatchedPayload;
     };
@@ -313,22 +314,6 @@ export interface BoardNoProjectView {
   kind: 'noProject';
   reason: string;
 }
-export interface BoardTicketCapturePayload {
-  root: string;
-  title: string;
-}
-export interface BoardCapturedOnBoardView {
-  kind: 'capturedOnBoard';
-  id: string;
-  board: BoardBoardAfterCaptureView;
-}
-export interface BoardNoBoardAfterCaptureView {
-  kind: 'noBoardAfterCapture';
-}
-export interface BoardRefusedTicketCaptureView {
-  kind: 'refusedTicketCapture';
-  reason: string;
-}
 export interface SessionNewHostedPayload {
   root: string;
   size: SessionPaneSize;
@@ -343,6 +328,12 @@ export interface SessionStartedHost {
 }
 export interface SessionNotStartedHost {
   kind: 'notStartedHost';
+  reason: string;
+}
+export interface SessionNewTicketHostedPayload {
+  root: string;
+  description: string;
+  size: SessionPaneSize;
 }
 export interface SessionTicketHostedPayload {
   root: string;
@@ -835,6 +826,9 @@ export interface SessionPtyResizePayload {
   rows: number;
 }
 export interface SessionRepaintPayload {
+  session: string;
+}
+export interface SessionClosePayload {
   session: string;
 }
 export interface SessionWatchedSessionPayload {

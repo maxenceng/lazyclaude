@@ -9,6 +9,7 @@ import { Exited, Ready } from './protocol';
 import { bytesOfText, toBase64 } from './protocol';
 import { folderFixture, readFixture, treeFixture } from './docs/fixtures';
 import { pullRequestFixture } from './review/fixtures';
+import type { SessionLiveSessionView } from './protocol';
 import { hostedFixture, pastFixture, sessionFixture, sessionsFixture, ticketSessionsFixture } from './session/fixtures';
 import { Dock } from './session/dock';
 import { CLAUDE_START, CLAUDE_STOPS_REPORTING_THE_MOUSE } from './session/recordings';
@@ -25,6 +26,7 @@ const configuration = {
     { action: 'FOCUS_LEFT', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 104 } } },
     { action: 'FOCUS_RIGHT', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 108 } } },
     { action: 'ZOOM', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 122 } } },
+    { action: 'CLOSE', chord: { modifiers: ['ALT'], key: { kind: 'typedCharacter', codePoint: 120 } } },
   ],
   desktopNotifications: true,
   ticketPlugin: 'ddd-workflow',
@@ -103,6 +105,32 @@ describe('the window', () => {
       ),
     );
     expect(screen.getAllByRole('img', { name: 'PROJ-2: waiting for input' }).length).toBeGreaterThan(0);
+  });
+
+  it('goes to a hosted session\'s tab from its lamp tile, and ignores the tile of one it does not host', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    const hosted = sessionFixture({ id: 'cleared', state: { kind: 'yourTurn' }, ticket: 'PROJ-1' });
+    const other = sessionFixture({ id: 'x', state: { kind: 'yourTurn' }, ticket: 'PROJ-2' });
+    act(() => ready.client.push('session/changed', sessionsFixture([hosted, other], { hosted: [hostedFixture('h1', { live: hosted })] })));
+    act(() => ready.app.focusOn(Focus.Board));
+    await ready.user.click(screen.getByRole('button', { name: 'PROJ-1: your turn' }));
+    expect(ready.app.layout.get().focus).toBe(Focus.Dock);
+    act(() => ready.app.focusOn(Focus.Board));
+    expect(screen.getByRole('img', { name: 'PROJ-2: your turn' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'PROJ-2: your turn' })).toBeNull();
+  });
+
+  it('enables a count only while a hosted session has its colour, and goes to it on a click', async () => {
+    const ready = await readyApp();
+    await startedSession(ready);
+    const hosted = sessionFixture({ id: 'h1', state: { kind: 'yourTurn' } });
+    act(() => ready.client.push('session/changed', sessionsFixture([hosted], { hosted: [hostedFixture('h1', { live: hosted })] })));
+    act(() => ready.app.focusOn(Focus.Board));
+    const counts = within(screen.getByLabelText('sessions by state'));
+    expect(counts.getByRole('button', { name: /needs input/ })).toBeDisabled();
+    await ready.user.click(counts.getByRole('button', { name: /your turn/ }));
+    expect(ready.app.layout.get().focus).toBe(Focus.Dock);
   });
 
   it('shows the connection screen instead of the board while the backend is down', () => {
@@ -890,6 +918,91 @@ describe('the dock\'s layout', () => {
 });
 
 
+type HostedState = 'busy' | 'yourTurn' | 'waitingForInput' | 'unknown' | 'starting';
+
+const hostedIn = (state: HostedState) =>
+  sessionsFixture([], { hosted: [hostedFixture('h1', state === 'starting' ? {} : { live: sessionFixture({ id: 'h1', state: { kind: state } as SessionLiveSessionView['state'] }) })] });
+
+const closes = (client: Started['client']) => client.sent.filter((sent) => sent.input === 'session/close');
+
+const hostedSession = async (state: HostedState) => {
+  const ready = await readyApp();
+  await startedSession(ready);
+  act(() => ready.client.push('session/changed', hostedIn(state)));
+  return ready;
+};
+
+describe('closing a hosted session', () => {
+  it('names the bound chord on the dock\'s close button', async () => {
+    await hostedSession('busy');
+    expect(screen.getByRole('button', { name: 'Close session (alt+x)' })).toBeInTheDocument();
+  });
+
+  it('closes a session at its turn at once from the button', async () => {
+    const ready = await hostedSession('yourTurn');
+    await ready.user.click(screen.getByRole('button', { name: 'Close session (alt+x)' }));
+    expect(closes(ready.client)).toEqual([{ input: 'session/close', params: { session: 'h1' } }]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('closes a session still starting at once', async () => {
+    const ready = await hostedSession('starting');
+    await ready.user.click(screen.getByRole('button', { name: 'Close session (alt+x)' }));
+    expect(closes(ready.client)).toHaveLength(1);
+  });
+
+  it('closes from the reserved chord pressed in the pane', async () => {
+    const ready = await hostedSession('yourTurn');
+    act(() => void pressInPane('x', { altKey: true }));
+    expect(closes(ready.client)).toHaveLength(1);
+  });
+
+  it.each(['busy', 'waitingForInput', 'unknown'] as const)('asks first about a %s session, closing on Close', async (state) => {
+    const ready = await hostedSession(state);
+    await ready.user.click(screen.getByRole('button', { name: 'Close session (alt+x)' }));
+    const dialog = screen.getByRole('dialog', { name: 'Close this session?' });
+    expect(closes(ready.client)).toEqual([]);
+    expect(within(dialog).getByRole('button', { name: 'Keep' })).toHaveAttribute('aria-keyshortcuts', 'esc');
+    await ready.user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(closes(ready.client)).toHaveLength(1);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('asks on the chord too, and keeps the session on esc, Keep or a press outside', async () => {
+    const ready = await hostedSession('busy');
+    act(() => void pressInPane('x', { altKey: true }));
+    await ready.user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    act(() => void pressInPane('x', { altKey: true }));
+    await ready.user.click(screen.getByRole('button', { name: 'Keep' }));
+    act(() => void pressInPane('x', { altKey: true }));
+    await ready.user.pointer({ keys: '[MouseLeft]', target: screen.getByRole('dialog').parentElement! });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(closes(ready.client)).toEqual([]);
+  });
+
+  it('closes on y answering the question', async () => {
+    const ready = await hostedSession('busy');
+    act(() => void pressInPane('x', { altKey: true }));
+    await ready.user.keyboard('y');
+    expect(closes(ready.client)).toHaveLength(1);
+  });
+
+  it('drops the question when the session exits meanwhile, sending nothing', async () => {
+    const ready = await hostedSession('busy');
+    await ready.user.click(screen.getByRole('button', { name: 'Close session (alt+x)' }));
+    act(() => ready.client.push('session/exited', { session: 'h1', code: 0 }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(closes(ready.client)).toEqual([]);
+  });
+
+  it('leaves the minimised dock strip without a close button', async () => {
+    const ready = await hostedSession('busy');
+    act(() => ready.app.toggleDockMinimised());
+    expect(screen.queryByRole('button', { name: /^Close session/ })).toBeNull();
+  });
+});
+
 describe('a packaged build', () => {
   it('swallows F5 and Ctrl+R in a pane, where xterm.js sends them to claude', async () => {
     const ready = await readyApp(true);
@@ -1111,21 +1224,21 @@ describe('the Review screen', () => {
   });
 });
 
-const captureBox = () => screen.getByRole('textbox', { name: 'Ticket title' });
+const captureBox = () => screen.getByRole('textbox', { name: 'Ticket description' });
 
 const answerCapture = (started: Started, result: unknown) =>
   act(async () => {
-    started.client.answer('board/capture', result);
+    started.client.answer('session/startNewTicket', result);
     await settle();
   });
 
-describe('capturing a draft ticket', () => {
+describe('starting a new ticket', () => {
   it('opens a titled popup on c with the focus on its input and only its own keys on the key bar', async () => {
     const { user } = await readyApp();
     await user.keyboard('c');
     expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
     expect(captureBox()).toHaveFocus();
-    expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['enter create', 'esc cancel']);
+    expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['enter start', 'esc cancel']);
   });
 
   it("opens on the Board pane's New ticket button, with the focus on its input", async () => {
@@ -1199,15 +1312,15 @@ describe('capturing a draft ticket', () => {
     await user.keyboard('c');
     await user.keyboard('A title{Escape}');
     expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
-    expect(client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(0);
+    expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(0);
   });
 
-  it('sends the title once on enter, says it is creating, and ignores a second enter and esc', async () => {
+  it('sends the description once on enter, says it is starting, and ignores a second enter and esc', async () => {
     const { user, client } = await readyApp();
     await user.keyboard('c');
     await user.keyboard('A title{Enter}{Enter}{Escape}');
-    expect(client.calls.filter((call) => call.method === 'board/capture')).toEqual([{ method: 'board/capture', params: { root: '/p', title: 'A title' } }]);
-    expect(within(screen.getByRole('dialog', { name: 'New ticket' })).getByRole('status')).toHaveTextContent('creating…');
+    expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toEqual([{ method: 'session/startNewTicket', params: { root: '/p', description: 'A title', size: { width: 80, height: 24 } } }]);
+    expect(within(screen.getByRole('dialog', { name: 'New ticket' })).getByRole('status')).toHaveTextContent('starting…');
     expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
   });
 
@@ -1215,12 +1328,12 @@ describe('capturing a draft ticket', () => {
     const started = await readyApp();
     await started.user.keyboard('c');
     await started.user.keyboard('A title{Enter}');
-    await answerCapture(started, { kind: 'refusedTicketCapture', reason: 'gh is not signed in' });
-    expect(screen.getByRole('alert')).toHaveTextContent('⚠ gh is not signed in');
+    await answerCapture(started, { kind: 'notStartedHost', reason: 'claude is not installed' });
+    expect(screen.getByRole('alert')).toHaveTextContent('⚠ claude is not installed');
     expect(captureBox()).toHaveValue('A title');
-    expect(started.client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(1);
+    expect(started.client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(1);
     await started.user.keyboard('{Enter}');
-    expect(started.client.calls.filter((call) => call.method === 'board/capture')).toHaveLength(2);
+    expect(started.client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(2);
   });
 
   it('keeps the popup and says why when the call itself fails', async () => {
@@ -1228,21 +1341,67 @@ describe('capturing a draft ticket', () => {
     await started.user.keyboard('c');
     await started.user.keyboard('A title{Enter}');
     await act(async () => {
-      started.client.fail('board/capture', new Error('the sidecar is not running'));
+      started.client.fail('session/startNewTicket', new Error('the sidecar is not running'));
       await settle();
     });
     expect(screen.getByRole('alert')).toHaveTextContent('⚠ the sidecar is not running');
     expect(captureBox()).toHaveValue('A title');
   });
 
-  it('closes on a captured answer and selects the new ticket on the board the answer carries', async () => {
+  it('closes on a started session and puts the focus in the dock, selecting nothing on the board', async () => {
     const started = await readyApp();
     await started.user.keyboard('c');
     await started.user.keyboard('A title{Enter}');
-    const read = boardFixture([...board.groups.flatMap((group) => group.tickets), ticketFixture({ id: 'PROJ-3', title: 'A title' })]);
-    await answerCapture(started, { kind: 'capturedOnBoard', id: 'PROJ-3', board: read });
+    await answerCapture(started, { kind: 'startedHost', id: 'h9' });
     expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
-    expect(screen.getByRole('button', { name: /PROJ-3/ })).toHaveAttribute('aria-current', 'true');
+    expect(started.app.layout.get().focus).toBe(Focus.Dock);
+    expect(started.app.board.selection.selected.get()).toBeUndefined();
+  });
+
+  it('calls nothing for a blank description and says why in the popup', async () => {
+    const { user, client } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('   {Enter}');
+    expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(0);
+    const dialog = screen.getByRole('dialog', { name: 'New ticket' });
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('describe the ticket first');
+  });
+
+  it('answers with Cancel and Start buttons that carry esc and enter', async () => {
+    const { user } = await readyApp();
+    await user.keyboard('c');
+    const dialog = screen.getByRole('dialog', { name: 'New ticket' });
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveAttribute('aria-keyshortcuts', 'esc');
+    expect(within(dialog).getByRole('button', { name: 'Start' })).toHaveAttribute('aria-keyshortcuts', 'enter');
+  });
+
+  it('sends the title from Start as enter does, keeping the input focused', async () => {
+    const { user, client } = await readyApp();
+    await user.keyboard('c');
+    await user.keyboard('A title');
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toEqual([{ method: 'session/startNewTicket', params: { root: '/p', description: 'A title', size: { width: 80, height: 24 } } }]);
+    expect(within(screen.getByRole('dialog', { name: 'New ticket' })).getByRole('status')).toHaveTextContent('starting…');
+    expect(captureBox()).toHaveFocus();
+  });
+
+  it('closes on Cancel and on the close action as esc does, sending nothing', async () => {
+    const { user, client } = await readyApp();
+    await user.keyboard('c');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
+    await user.keyboard('c');
+    await user.click(screen.getByRole('button', { name: 'Close (esc)' }));
+    expect(screen.queryByRole('dialog', { name: 'New ticket' })).toBeNull();
+    expect(client.calls.filter((call) => call.method === 'session/startNewTicket')).toHaveLength(0);
+  });
+
+  it('stays open for a press on its scrim, which reaches nothing behind it', async () => {
+    const { user, app } = await readyApp();
+    await user.keyboard('c');
+    await user.pointer({ keys: '[MouseLeft]', target: screen.getByRole('dialog', { name: 'New ticket' }).parentElement! });
+    expect(screen.getByRole('dialog', { name: 'New ticket' })).toBeInTheDocument();
+    expect(app.board.selection.selected.get()).toBeUndefined();    expect(captureBox()).toHaveFocus();
   });
 
   it('answers enter and esc from the window when focus has left the input, and nothing else', async () => {
@@ -1272,6 +1431,25 @@ describe('quitting the window', () => {
     expect(within(screen.getByRole('dialog', { name: 'Quit lazyclaude?' })).getByText('1 hosted session is open, and quitting ends it.')).toBeInTheDocument();
     expect(platform.closes).toBe(0);
     await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(platform.closes).toBe(0);
+  });
+
+  it('words its answers with their keys: Stay esc, Quit y', async () => {
+    const { client, user } = await readyApp();
+    act(() => client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1')] }));
+    await user.keyboard('q');
+    const dialog = screen.getByRole('dialog', { name: 'Quit lazyclaude?' });
+    expect(within(dialog).getByRole('button', { name: 'Stay' })).toHaveAttribute('aria-keyshortcuts', 'esc');
+    expect(within(dialog).getByRole('button', { name: 'Quit' })).toHaveAttribute('aria-keyshortcuts', 'y');
+    expect(within(dialog).queryByText('y quit · esc stay')).toBeNull();
+  });
+
+  it('stays on a press outside the question, as on esc, and reaches nothing behind it', async () => {
+    const { client, platform, user } = await readyApp();
+    act(() => client.push('session/changed', { ...sessionsFixture([]), hosted: [hostedFixture('h1')] }));
+    await user.keyboard('q');
+    await user.pointer({ keys: '[MouseLeft]', target: screen.getByRole('dialog', { name: 'Quit lazyclaude?' }).parentElement! });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(platform.closes).toBe(0);
   });
@@ -1415,7 +1593,7 @@ describe('the left column\'s panel tabs', () => {
     expect(screen.getByRole('button', { name: /PROJ-2/ })).toHaveAttribute('aria-current', 'true');
   });
 
-  it('carries the new draft button on the Board tab only', async () => {
+  it('carries the new ticket button on the Board tab only', async () => {
     const started = await readyApp();
     expect(screen.getByRole('button', { name: 'New ticket (c)' })).toBeInTheDocument();
     await started.user.click(screen.getByRole('tab', { name: /^Docs/ }));
@@ -1544,9 +1722,9 @@ describe('an empty board', () => {
     expect(ready.app.board.selectedTicket()).toBeUndefined();
   });
 
-  it('keeps on the key bar only the keys that act: the new draft, the panel and the window tabs', async () => {
+  it('keeps on the key bar only the keys that act: the new ticket capture, the panel and the window tabs', async () => {
     await readyApp(false, boardFixture([]));
-    expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['c new draft', 'o docs', '1/2/3 tabs']);
+    expect(Array.from(keyBar().children).map((key) => key.textContent)).toEqual(['c capture', 'o docs', '1/2/3 tabs']);
   });
 
   it('starts no session on N, which its key bar does not offer', async () => {

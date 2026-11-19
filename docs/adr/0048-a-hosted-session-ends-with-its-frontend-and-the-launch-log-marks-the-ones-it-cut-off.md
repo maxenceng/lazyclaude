@@ -5,7 +5,7 @@ Date: 2026-10-27
 ## Status
 
 Accepted. Keeps ADR 0007's and ADR 0026's rule that a hosted session dies with lazyclaude. Amends ADR 0047: a launch-log
-entry records how its session ended.
+entry records how its session ended. Amended by ADR 0111: a session closed from the window also records an end.
 
 ## Context
 

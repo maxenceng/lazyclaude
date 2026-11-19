@@ -1,5 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
+import static dev.maxenceng.lazyclaude.session.domain.HostFallbackFixture.unheeded;
 import static dev.maxenceng.lazyclaude.session.domain.PtyBytesFixture.ptyBytesOf;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.awaited;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.exitOf;
@@ -7,6 +8,7 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostF
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.hostRunning;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.newLaunch;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.newLaunchIn;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.newTicketLaunch;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.resumeLaunch;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.ticketLaunch;
 import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyHostFixture.ticketLaunchUnder;
@@ -17,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -26,6 +29,7 @@ import org.junit.jupiter.api.io.TempDir;
 import dev.maxenceng.lazyclaude.session.domain.ExitCode;
 import dev.maxenceng.lazyclaude.session.domain.HostUnavailableException;
 import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
+import dev.maxenceng.lazyclaude.session.domain.TicketDescription;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
 
@@ -38,14 +42,14 @@ class PtyHostRepositoryTest {
     void shouldReturnThePidOfTheChild() {
         PtyHostRepository host = hostRunning("read line");
 
-        assertThat(host.spawn(newLaunch(id), output, code -> {}).value()).isPositive();
+        assertThat(host.spawn(newLaunch(id), output, code -> {}, unheeded()).value()).isPositive();
         host.end(id);
     }
 
     @Test
     void shouldHandOverWhatTheChildPrintsAsBytes() throws Exception {
         PtyHostRepository host = hostRunning("printf 'hello pane'; read line");
-        host.spawn(newLaunch(id), output, code -> {});
+        host.spawn(newLaunch(id), output, code -> {}, unheeded());
 
         assertThat(output.textContaining("hello pane")).startsWith("hello pane");
         host.end(id);
@@ -54,7 +58,7 @@ class PtyHostRepositoryTest {
     @Test
     void shouldHandOverTheBytesOfAnEscapeSequenceUnread() throws Exception {
         PtyHostRepository host = hostRunning("printf '\\033[1;31mred\\033[0m'; read line");
-        host.spawn(newLaunch(id), output, code -> {});
+        host.spawn(newLaunch(id), output, code -> {}, unheeded());
 
         assertThat(output.textContaining("red")).as("an emulator is the frontend's, so the host must not interpret escapes").contains("\u001b[1;31mred\u001b[0m");
         host.end(id);
@@ -63,7 +67,7 @@ class PtyHostRepositoryTest {
     @Test
     void shouldHandOverTheOutputOnTheHostsReaderThread() throws Exception {
         PtyHostRepository host = hostRunning("printf 'drawn'; read line");
-        host.spawn(newLaunch(id), output, code -> {});
+        host.spawn(newLaunch(id), output, code -> {}, unheeded());
         output.textContaining("drawn");
 
         assertThat(output.readerThreads()).allMatch(thread -> thread.startsWith("pty-"));
@@ -74,7 +78,7 @@ class PtyHostRepositoryTest {
     void shouldReportACleanExitAsZero() throws Exception {
         CompletableFuture<ExitCode> exit = exitOf();
 
-        hostRunning("exit 0").spawn(newLaunch(id), output, exit::complete);
+        hostRunning("exit 0").spawn(newLaunch(id), output, exit::complete, unheeded());
 
         assertThat(awaited(exit)).isEqualTo(new ExitCode(0));
     }
@@ -83,7 +87,7 @@ class PtyHostRepositoryTest {
     void shouldReportANonZeroExitCode() throws Exception {
         CompletableFuture<ExitCode> exit = exitOf();
 
-        hostRunning("exit 3").spawn(newLaunch(id), output, exit::complete);
+        hostRunning("exit 3").spawn(newLaunch(id), output, exit::complete, unheeded());
 
         assertThat(awaited(exit)).isEqualTo(new ExitCode(3));
     }
@@ -92,7 +96,7 @@ class PtyHostRepositoryTest {
     void shouldHandOverEverythingTheChildPrintedBeforeReportingItsExit() throws Exception {
         CompletableFuture<ExitCode> exit = exitOf();
 
-        hostRunning("printf 'bye'").spawn(newLaunch(id), output, exit::complete);
+        hostRunning("printf 'bye'").spawn(newLaunch(id), output, exit::complete, unheeded());
         awaited(exit);
 
         assertThat(output.text()).as("the exit is the last news of a session, after all its output").contains("bye");
@@ -102,7 +106,7 @@ class PtyHostRepositoryTest {
     void shouldForgetASessionOnceItsChildExited() throws Exception {
         CompletableFuture<ExitCode> exit = exitOf();
         PtyHostRepository host = hostRunning("printf 'bye'");
-        host.spawn(newLaunch(id), output, exit::complete);
+        host.spawn(newLaunch(id), output, exit::complete, unheeded());
         awaited(exit);
 
         host.write(id, ptyBytesOf("late"));
@@ -116,7 +120,7 @@ class PtyHostRepositoryTest {
     void shouldEndAndReportAChildThatClosedItsOutputButKeptRunning() throws Exception {
         CompletableFuture<ExitCode> exit = exitOf();
 
-        hostRunning("exec </dev/null >/dev/null 2>&1; sleep 60").spawn(newLaunch(id), output, exit::complete);
+        hostRunning("exec </dev/null >/dev/null 2>&1; sleep 60").spawn(newLaunch(id), output, exit::complete, unheeded());
 
         assertThat(awaited(exit).isFailure())
                 .as("a claude nothing reads any more would leave a frozen tab that never closes")
@@ -130,7 +134,7 @@ class PtyHostRepositoryTest {
 
         host.spawn(newLaunch(id), drawn -> {
             throw new IllegalStateException("output listener failed");
-        }, exit::complete);
+        }, exit::complete, unheeded());
 
         assertThat(awaited(exit).isFailure())
                 .as("a reader that stopped on a failure still closes the tab and ends the claude behind it")
@@ -141,7 +145,7 @@ class PtyHostRepositoryTest {
     void shouldEndTheChildOnRequest() throws Exception {
         CompletableFuture<ExitCode> exit = exitOf();
         PtyHostRepository host = hostRunning("exec sleep 60");
-        host.spawn(newLaunch(id), output, exit::complete);
+        host.spawn(newLaunch(id), output, exit::complete, unheeded());
 
         host.end(id);
 
@@ -149,10 +153,50 @@ class PtyHostRepositoryTest {
     }
 
     @Test
+    void shouldKillAChildThatIgnoresTheRequestToEndOnceTheGraceRunsOut() throws Exception {
+        CompletableFuture<ExitCode> exit = exitOf();
+        PtyHostRepository host = hostRunning("trap '' TERM HUP INT; printf 'armed'; while :; do sleep 1; done");
+        host.spawn(newLaunch(id), output, exit::complete, unheeded());
+        output.textContaining("armed");
+
+        host.end(id);
+
+        assertThat(awaited(exit))
+                .as("a claude deaf to the termination signal is still killed, so a closed tab never leaves it running")
+                .isEqualTo(new ExitCode(137));
+    }
+
+    @Test
+    void shouldEndTheChildOnAClose() throws Exception {
+        CompletableFuture<ExitCode> exit = exitOf();
+        PtyHostRepository host = hostRunning("exec sleep 60");
+        host.spawn(newLaunch(id), output, exit::complete, unheeded());
+
+        host.close(id);
+
+        assertThat(awaited(exit).isFailure()).as("a closed child ends on the termination signal").isTrue();
+    }
+
+    @Test
+    void shouldReturnFromACloseBeforeTheGraceRunsOutAndStillKillAChildThatIgnoresIt() throws Exception {
+        CompletableFuture<ExitCode> exit = exitOf();
+        PtyHostRepository host = hostRunning("trap '' TERM HUP INT; printf 'armed'; while :; do sleep 1; done");
+        host.spawn(newLaunch(id), output, exit::complete, unheeded());
+        output.textContaining("armed");
+
+        host.close(id);
+
+        assertThat(exit)
+                .as("a close runs on the sidecar's one input thread, so waiting out the grace there would hold up typing to every other session")
+                .isNotDone();
+        assertThat(awaited(exit)).as("a claude deaf to the termination signal is still killed after a close").isEqualTo(new ExitCode(137));
+    }
+
+    @Test
     void shouldRunTheChildInTheLaunchDirectory(@TempDir Path directory) throws Exception {
         PtyHostRepository host = hostRunning("pwd; read line");
 
-        host.spawn(newLaunchIn(id, directory, 120, 30), output, code -> {});
+        host.spawn(newLaunchIn(id, directory, 120, 30), output, code -> {}, unheeded());
 
         assertThat(output.textContaining(directory.getFileName().toString())).contains(directory.toString());
         host.end(id);
@@ -162,7 +206,7 @@ class PtyHostRepositoryTest {
     void shouldAddResumeAndTheSessionIdToTheCommand() throws Exception {
         PtyHostRepository host = hostRunning("echo \"args: $*\"; read line");
 
-        host.spawn(resumeLaunch(id), output, code -> {});
+        host.spawn(resumeLaunch(id), output, code -> {}, unheeded());
 
         assertThat(output.textContaining("args:")).contains("args: --resume " + id.value());
         host.end(id);
@@ -172,7 +216,7 @@ class PtyHostRepositoryTest {
     void shouldNameTheSessionAfterItsTicketAndVerbAndPassTheTicketCommandAsOneArgument() throws Exception {
         PtyHostRepository host = hostRunning("printf 'args:'; printf '[%s]' \"$@\"; read line");
 
-        host.spawn(ticketLaunch(id), output, code -> {});
+        host.spawn(ticketLaunch(id), output, code -> {}, unheeded());
 
         assertThat(output.textContaining("[/ddd-workflow:ticket review 1]"))
                 .contains("args:[--session-id][" + id.value() + "][-n][1 review][/ddd-workflow:ticket review 1]");
@@ -183,9 +227,31 @@ class PtyHostRepositoryTest {
     void shouldRunTheTicketSkillOfThePluginTheLaunchNames() throws Exception {
         PtyHostRepository host = hostRunning("printf 'args:'; printf '[%s]' \"$@\"; read line");
 
-        host.spawn(ticketLaunchUnder(id, otherTicketPlugin()), output, code -> {});
+        host.spawn(ticketLaunchUnder(id, otherTicketPlugin()), output, code -> {}, unheeded());
 
         assertThat(output.textContaining("[/my-tools:ticket review 1]")).endsWith("[/my-tools:ticket review 1]");
+        host.end(id);
+    }
+
+    @Test
+    void shouldNameTheSessionNewTicketAndPassTheNewVerbWithTheDescriptionAsOneArgument() throws Exception {
+        PtyHostRepository host = hostRunning("printf 'args:'; printf '[%s]' \"$@\"; read line");
+
+        host.spawn(newTicketLaunch(id, new TicketDescription("add a toggle")), output, code -> {}, unheeded());
+
+        assertThat(output.textContaining("[/ddd-workflow:ticket new add a toggle]"))
+                .contains("args:[--session-id][" + id.value() + "][-n][new ticket][/ddd-workflow:ticket new add a toggle]");
+        host.end(id);
+    }
+
+    @Test
+    void shouldPassADescriptionWithQuotesAndSpacesVerbatimWithNoShellInBetween() throws Exception {
+        String typed = "say \"hi\"  and 'bye' $HOME; echo gone `date`";
+        PtyHostRepository host = hostRunning("printf 'args:'; printf '[%s]' \"$@\"; read line");
+
+        host.spawn(newTicketLaunch(id, new TicketDescription(typed)), output, code -> {}, unheeded());
+
+        assertThat(output.textContaining("gone `date`]")).endsWith("[/ddd-workflow:ticket new " + typed + "]");
         host.end(id);
     }
 
@@ -193,7 +259,7 @@ class PtyHostRepositoryTest {
     void shouldNameTheSessionOfACommandThatBeginsANewOne() throws Exception {
         PtyHostRepository host = hostRunning("echo \"args:[$*]\"; read line");
 
-        host.spawn(newLaunch(id), output, code -> {});
+        host.spawn(newLaunch(id), output, code -> {}, unheeded());
 
         assertThat(output.textContaining("args:")).contains("args:[--session-id " + id.value() + "]");
         host.end(id);
@@ -210,7 +276,7 @@ class PtyHostRepositoryTest {
                         "TMUX", "/tmp/tmux-1000/default,1,0",
                         "KEEP_ME", "kept"));
 
-        host.spawn(newLaunchIn(id, Path.of("/tmp"), 100, 60), output, code -> {});
+        host.spawn(newLaunchIn(id, Path.of("/tmp"), 100, 60), output, code -> {}, unheeded());
         String shown = output.textContaining("KEEP_ME=kept");
 
         assertThat(shown).doesNotContain("CLAUDE").doesNotContain("KITTY").doesNotContain("TMUX").contains("TERM=xterm-256color");
@@ -220,7 +286,7 @@ class PtyHostRepositoryTest {
     @Test
     void shouldWriteTheBytesToTheChild() throws Exception {
         PtyHostRepository host = hostRunning("exec /bin/cat");
-        host.spawn(newLaunch(id), output, code -> {});
+        host.spawn(newLaunch(id), output, code -> {}, unheeded());
 
         host.write(id, ptyBytesOf("hi\r"));
 
@@ -232,7 +298,7 @@ class PtyHostRepositoryTest {
     void shouldWriteTheBytesUnchangedSoCtrlCReachesTheChildAsAnInterrupt() throws Exception {
         CompletableFuture<ExitCode> exit = exitOf();
         PtyHostRepository host = hostRunning("trap 'exit 7' INT; echo ready; while true; do sleep 0.05; done");
-        host.spawn(newLaunch(id), output, exit::complete);
+        host.spawn(newLaunch(id), output, exit::complete, unheeded());
         output.textContaining("ready");
 
         host.write(id, new PtyBytes(new byte[] {3}));
@@ -243,7 +309,7 @@ class PtyHostRepositoryTest {
     @Test
     void shouldWriteEscapeSequencesUnchanged() throws Exception {
         PtyHostRepository host = hostRunning("exec /bin/cat -vT");
-        host.spawn(newLaunch(id), output, code -> {});
+        host.spawn(newLaunch(id), output, code -> {}, unheeded());
 
         host.write(id, ptyBytesOf("\t\u001b[Z\r"));
 
@@ -254,7 +320,7 @@ class PtyHostRepositoryTest {
     @Test
     void shouldResizeThePtyOfTheChild() throws Exception {
         PtyHostRepository host = hostRunning("trap 'stty size' WINCH; stty size; while true; do sleep 0.05; done");
-        host.spawn(newLaunchIn(id, Path.of("/tmp"), 100, 30), output, code -> {});
+        host.spawn(newLaunchIn(id, Path.of("/tmp"), 100, 30), output, code -> {}, unheeded());
         output.textContaining("30 100");
 
         host.resize(id, paneSizeOf(120, 40));
@@ -264,10 +330,25 @@ class PtyHostRepositoryTest {
     }
 
     @Test
+    void shouldReadOnlyZeroOrItsSpawnSizeAndEndAtItsSpawnSize() throws Exception {
+        PtyHostRepository host = hostRunning("trap 'stty size' WINCH; stty size; while true; do sleep 0.05; done");
+        host.spawn(newLaunchIn(id, Path.of("/tmp"), 100, 30), output, code -> {}, unheeded());
+
+        List<String> reads = output.textContaining("30 100").lines().map(String::strip).toList();
+
+        assertThat(reads)
+                .as("pty4j sizes the pty only after exec returns, so the child may first read 0 0 and must then reach its spawn size through the WINCH; a warm JVM usually wins the race and reads the spawn size at once (ADR 0113)")
+                .isNotEmpty()
+                .allMatch(read -> read.equals("0 0") || read.equals("30 100"))
+                .endsWith("30 100");
+        host.end(id);
+    }
+
+    @Test
     void shouldFailToStartWhenTheCommandDoesNotExist() {
         PtyHostRepository host = hostOfCommand("/nonexistent/claude");
 
-        assertThatThrownBy(() -> host.spawn(newLaunch(id), output, code -> {}))
+        assertThatThrownBy(() -> host.spawn(newLaunch(id), output, code -> {}, unheeded()))
                 .isInstanceOf(HostUnavailableException.class)
                 .hasMessageStartingWith("claude could not be started:");
     }

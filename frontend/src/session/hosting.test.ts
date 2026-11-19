@@ -30,6 +30,7 @@ const hosting = (overrides: Partial<HostingDeps> = {}) => {
     reserved: () => undefined,
     clipboard: { readText: () => Promise.resolve(''), writeText: () => Promise.resolve() },
     notices: new NoticeStore(),
+    opener: { openUrl: () => Promise.resolve() },
     ...overrides,
   };
   return { client, sessions, memory, hosted: new Hosting(deps) };
@@ -51,9 +52,44 @@ describe('the hosted sessions', () => {
   it('opens no tab for a session the sidecar did not start, the refusal being its warning', async () => {
     const { client, hosted } = hosting();
     const starting = hosted.startUnlinked('/p');
-    client.answerNext({ kind: 'notStartedHost' });
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
     await starting;
     expect(hosted.dock.get().tabs).toEqual([]);
+  });
+
+  it('starts a new ticket\'s session with the description as typed, and opens its tab', async () => {
+    const { client, hosted } = hosting();
+    const starting = hosted.startNewTicket('/p', '  a "quoted" idea ');
+    expect(client.calls).toEqual([{ method: 'session/startNewTicket', params: { root: '/p', description: '  a "quoted" idea ', size: { width: 80, height: 24 } } }]);
+    client.answerNext({ kind: 'startedHost', id: 's9' });
+    expect(await starting).toBeUndefined();
+    expect(hosted.dock.get().tabs).toEqual(['s9']);
+  });
+
+  it('answers the reason a new ticket\'s session did not start, opening no tab', async () => {
+    const { client, hosted } = hosting();
+    const starting = hosted.startNewTicket('/p', 'idea');
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
+    expect(await starting).toBe('no claude');
+    expect(hosted.dock.get().tabs).toEqual([]);
+  });
+
+  it('answers the message of a failed call for a new ticket\'s session', async () => {
+    const { client, hosted } = hosting();
+    const starting = hosted.startNewTicket('/p', 'idea');
+    client.failNext(new RpcError(-32000, 'the sidecar is not running'));
+    expect(await starting).toBe('the sidecar is not running');
+  });
+
+  it('withdraws an earlier start\'s failure once a new ticket\'s session answers', async () => {
+    const { client, hosted } = hosting();
+    const failing = hosted.startUnlinked('/p');
+    client.failNext(new RpcError(-32000, 'no java'));
+    await failing;
+    const starting = hosted.startNewTicket('/p', 'idea');
+    client.answerNext({ kind: 'startedHost', id: 's9' });
+    await starting;
+    expect(hosted.failure.get()).toBeUndefined();
   });
 
   it('starts a ticket\'s session with its verb', () => {
@@ -193,6 +229,21 @@ describe('the hosted sessions', () => {
     expect(hosted.mouseReported.get()).toBe(false);
   });
 
+  it('tells the link the pointer is on in the selected tab, for the key bar', () => {
+    const { sessions, hosted } = hosting();
+    sessions.set(hostedIn('s1', 's2'));
+    const handler = hosted.emulatorOf('s1')!.terminal.options.linkHandler!;
+    const range = { start: { x: 1, y: 1 }, end: { x: 2, y: 1 } };
+    handler.hover?.(new MouseEvent('mousemove'), 'https://example.com/a', range);
+    expect(hosted.hoveredLink.get()).toBe('https://example.com/a');
+    hosted.select('s2');
+    expect(hosted.hoveredLink.get()).toBeUndefined();
+    hosted.select('s1');
+    expect(hosted.hoveredLink.get()).toBe('https://example.com/a');
+    handler.leave?.(new MouseEvent('mousemove'), 'https://example.com/a', range);
+    expect(hosted.hoveredLink.get()).toBeUndefined();
+  });
+
   it('tells no mouse is reported once the tab closes', async () => {
     const { client, sessions, hosted } = hosting();
     sessions.set(hostedIn('s1'));
@@ -205,7 +256,7 @@ describe('the hosted sessions', () => {
   it('says whether a start opened a tab', async () => {
     const { client, hosted } = hosting();
     const refused = hosted.startUnlinked('/p');
-    client.answerNext({ kind: 'notStartedHost' });
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
     expect(await refused).toBe(false);
     const started = hosted.startUnlinked('/p');
     client.answerNext({ kind: 'startedHost', id: 's1' });

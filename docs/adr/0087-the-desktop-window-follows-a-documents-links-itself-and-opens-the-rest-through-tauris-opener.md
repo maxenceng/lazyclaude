@@ -5,7 +5,8 @@ Date: 2026-11-05
 ## Status
 
 Accepted. Builds on ADR 0051 (the mouse; a second click is `enter`), ADR 0057 (the dumb relay) and ADR 0086 (a Tauri plugin
-for a platform capability the webview lacks).
+for a platform capability the webview lacks). Amended by ADR 0116: `Markdown` draws a `mermaid` fenced block as a diagram
+through mermaid.js, loaded on demand.
 
 ## Context
 

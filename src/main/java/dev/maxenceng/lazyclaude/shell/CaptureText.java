@@ -4,30 +4,31 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import dev.maxenceng.lazyclaude.board.published.Reason;
+import dev.maxenceng.lazyclaude.session.published.Reason;
 
-/** How the Board words the popup a new ticket's title is typed in: the title in the room it has, and the creating or not-created line under it. */
+/** How the Board words the popup a new ticket's description is typed in: the description in the room it has, and the starting or not-started line under it. */
 final class CaptureText {
 
     static final String TITLE = "New ticket";
-    static final String HINT = "enter create · esc cancel";
+    static final String HINT = "enter start · esc cancel";
+    static final String BLANK = "describe the ticket first";
 
-    private static final String LABEL = "Title: ";
-    private static final String CREATING = "creating…";
-    private static final String NOT_CREATED = "⚠ %s";
-    private static final int ROOM = 40;
+    private static final String LABEL = "Describe: ";
+    private static final String STARTING = "starting…";
+    private static final String NOT_STARTED = "⚠ %s";
+    private static final int ROOM = 37;
     private static final int CURSOR_CELL = 1;
-    private static final int TITLE_ROW = 0;
+    private static final int DESCRIPTION_ROW = 0;
 
     private CaptureText() {}
 
-    /** The title row, then what stands under it. */
+    /** The description row, then what stands under it. */
     static List<String> rows(CaptureBox box) {
         return Stream.concat(Stream.of(LABEL + window(box)), status(box).stream()).toList();
     }
 
     static Optional<BoxCaret> caret(CaptureBox box) {
-        return box.creating() ? Optional.empty() : Optional.of(new BoxCaret(TITLE_ROW, LABEL.length() + box.cursor() - start(box)));
+        return box.starting() ? Optional.empty() : Optional.of(new BoxCaret(DESCRIPTION_ROW, LABEL.length() + box.cursor() - start(box)));
     }
 
     /** The key bar while the popup is open. */
@@ -35,7 +36,7 @@ final class CaptureText {
         return List.of(HINT);
     }
 
-    /** The part of the title that fits, keeping the cursor in it. */
+    /** The part of the description that fits, keeping the cursor in it. */
     private static String window(CaptureBox box) {
         String text = box.content();
         int start = start(box);
@@ -47,12 +48,12 @@ final class CaptureText {
     }
 
     private static List<String> status(CaptureBox box) {
-        return box.creating()
-                ? List.of(CREATING)
-                : box.notCreated().map(CaptureText::notCreated).orElse(List.of());
+        return box.starting()
+                ? List.of(STARTING)
+                : box.notStarted().map(CaptureText::notStarted).orElse(List.of());
     }
 
-    private static List<String> notCreated(Reason reason) {
-        return Wrapping.lines(NOT_CREATED.formatted(reason.value()), LABEL.length() + ROOM);
+    private static List<String> notStarted(Reason reason) {
+        return Wrapping.lines(NOT_STARTED.formatted(reason.value()), LABEL.length() + ROOM);
     }
 }

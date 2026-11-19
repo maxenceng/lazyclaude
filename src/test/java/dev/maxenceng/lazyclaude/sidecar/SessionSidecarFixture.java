@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.sidecar;
 
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ptyInputPayload;
+import static dev.maxenceng.lazyclaude.session.published.ReasonFixture.reason;
 import static dev.maxenceng.lazyclaude.session.published.SessionIdFixture.sessionId;
 import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
@@ -29,6 +30,10 @@ public final class SessionSidecarFixture {
 
     public static String newHostedParams() {
         return "{\"root\":\"%s\",\"size\":%s}".formatted(project().root(), SIZE);
+    }
+
+    public static String newTicketHostedParams() {
+        return "{\"root\":\"%s\",\"description\":\"add a \\\"dark mode\\\" toggle\",\"size\":%s}".formatted(project().root(), SIZE);
     }
 
     public static String ticketHostedParams() {
@@ -61,7 +66,7 @@ public final class SessionSidecarFixture {
     }
 
     public static String notStartedHost() {
-        return "{\"kind\":\"notStartedHost\"}";
+        return "{\"kind\":\"notStartedHost\",\"reason\":\"%s\"}".formatted(reason().value());
     }
 
     public static String noSessions() {

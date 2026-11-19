@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.session.domain.HostedSessionFixture.ticketClaudeUnder;
+import static dev.maxenceng.lazyclaude.session.infrastructure.secondary.PtyNativeFolderFixture.testRunNatives;
 import static dev.maxenceng.lazyclaude.session.published.PaneSizeFixture.paneSizeOf;
 import static dev.maxenceng.lazyclaude.session.published.TicketPluginFixture.ticketPlugin;
 
@@ -15,7 +16,9 @@ import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.session.domain.ExitCode;
 import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.NewClaude;
+import dev.maxenceng.lazyclaude.session.domain.NewTicketClaude;
 import dev.maxenceng.lazyclaude.session.domain.ResumeClaude;
+import dev.maxenceng.lazyclaude.session.domain.TicketDescription;
 import dev.maxenceng.lazyclaude.session.published.SessionId;
 import dev.maxenceng.lazyclaude.session.published.TicketPlugin;
 import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
@@ -32,11 +35,11 @@ public final class PtyHostFixture {
     }
 
     public static PtyHostRepository hostRunning(String script, Map<String, String> environment) {
-        return new PtyHostRepository(List.of("/bin/sh", "-c", script, "sh"), environment);
+        return new PtyHostRepository(List.of("/bin/sh", "-c", script, "sh"), environment, testRunNatives());
     }
 
     public static PtyHostRepository hostOfCommand(String... command) {
-        return new PtyHostRepository(List.of(command), Map.of());
+        return new PtyHostRepository(List.of(command), Map.of(), testRunNatives());
     }
 
     public static HostLaunch newLaunchIn(SessionId id, Path directory, int columns, int rows) {
@@ -66,6 +69,18 @@ public final class PtyHostFixture {
     public static HostLaunch ticketLaunchUnder(SessionId id, TicketPlugin plugin) {
         return HostLaunch.builder()
                 .command(ticketClaudeUnder(id, Verb.REVIEW, plugin))
+                .directory(new WorkingDirectory(Path.of("/tmp")))
+                .size(paneSizeOf(100, 30))
+                .build();
+    }
+
+    public static HostLaunch newTicketLaunch(SessionId id, TicketDescription description) {
+        return HostLaunch.builder()
+                .command(NewTicketClaude.builder()
+                        .session(id)
+                        .description(description)
+                        .plugin(ticketPlugin())
+                        .build())
                 .directory(new WorkingDirectory(Path.of("/tmp")))
                 .size(paneSizeOf(100, 30))
                 .build();

@@ -9,10 +9,12 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.session.domain.ExitCode;
+import dev.maxenceng.lazyclaude.session.domain.HostFallback;
 import dev.maxenceng.lazyclaude.session.domain.HostLaunch;
 import dev.maxenceng.lazyclaude.session.domain.HostPort;
 import dev.maxenceng.lazyclaude.session.domain.LaunchCommand;
 import dev.maxenceng.lazyclaude.session.domain.NewClaude;
+import dev.maxenceng.lazyclaude.session.domain.NewTicketClaude;
 import dev.maxenceng.lazyclaude.session.domain.PtyBytes;
 import dev.maxenceng.lazyclaude.session.domain.ResumeClaude;
 import dev.maxenceng.lazyclaude.session.domain.TicketClaude;
@@ -35,18 +37,26 @@ public final class PtyHostRepository implements HostPort {
 
     private final List<String> claude;
     private final Map<String, String> environment;
+    private final PtyNativeFolder nativeFolder;
     private final Map<SessionId, HostedPty> running = new ConcurrentHashMap<>();
 
-    /** {@code claude} is the command and arguments that start Claude Code; {@code environment} is what the child inherits, less what it must not. */
-    public PtyHostRepository(List<String> claude, Map<String, String> environment) {
+    /**
+     * {@code claude} is the command and arguments that start Claude Code; {@code environment} is what the child inherits, less
+     * what it must not; {@code nativeFolder} is where pty4j extracts on the first spawn.
+     */
+    public PtyHostRepository(List<String> claude, Map<String, String> environment, PtyNativeFolder nativeFolder) {
         this.claude = claude;
         this.environment = environment;
+        this.nativeFolder = nativeFolder;
     }
 
     @Override
-    public ProcessId spawn(HostLaunch launch, Consumer<PtyBytes> onOutput, Consumer<ExitCode> onExit) {
-        HostedPty pty = HostedPty.spawn(
-                argv(launch.command()), ScrubbedEnvironment.of(environment), launch.directory().path(), launch.size());
+    public ProcessId spawn(
+            HostLaunch launch, Consumer<PtyBytes> onOutput, Consumer<ExitCode> onExit, HostFallback fallback) {
+        HostedPty pty = nativeFolder.loading(
+                () -> HostedPty.spawn(
+                        argv(launch.command()), ScrubbedEnvironment.of(environment), launch.directory().path(), launch.size()),
+                fallback);
         SessionId id = launch.command().session();
         running.put(id, pty);
         pty.listen(
@@ -78,6 +88,11 @@ public final class PtyHostRepository implements HostPort {
         pty(id).ifPresent(HostedPty::end);
     }
 
+    @Override
+    public void close(SessionId id) {
+        pty(id).ifPresent(HostedPty::close);
+    }
+
     private Optional<HostedPty> pty(SessionId id) {
         return Optional.ofNullable(running.get(id));
     }
@@ -97,6 +112,16 @@ public final class PtyHostRepository implements HostPort {
                                     run.sessionName().value(),
                                     SLASH_COMMAND.formatted(
                                             run.plugin().value(), run.verb().label(), run.ticket().value())))
+                    .toList();
+            case NewTicketClaude creating -> Stream.concat(
+                            claude.stream(),
+                            Stream.of(
+                                    SESSION_ID_FLAG,
+                                    creating.session().value(),
+                                    NAME_FLAG,
+                                    creating.sessionName().value(),
+                                    SLASH_COMMAND.formatted(
+                                            creating.plugin().value(), NewTicketClaude.creatingVerb().value(), creating.description().value())))
                     .toList();
         };
     }

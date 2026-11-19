@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { Lamp, LampColour, LampSize } from './Lamp';
 import { ruleOf, stylesheet } from './stylesheet';
 
@@ -11,6 +11,31 @@ describe('a lamp tile', () => {
     const tile = screen.getByRole('img');
     expect(tile.querySelectorAll('b, i')).toHaveLength(2);
     expect(ruleOf(lamp, '.tile')).toContain('grid-template-rows: var(--lamp-number-row) var(--lamp-words-row)');
+  });
+});
+
+describe('a clickable lamp tile', () => {
+  it('is a button named like the tile, that calls its click', () => {
+    const onClick = vi.fn();
+    render(<Lamp colour={LampColour.Turn} size={LampSize.Tile} number="PROJ-1" onClick={onClick} />);
+    fireEvent.click(screen.getByRole('button', { name: 'PROJ-1: your turn' }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the window focus on a press', () => {
+    render(<Lamp colour={LampColour.Turn} size={LampSize.Tile} number="PROJ-1" onClick={vi.fn()} />);
+    expect(fireEvent.mouseDown(screen.getByRole('button'))).toBe(false);
+  });
+
+  it('is not a button without a click', () => {
+    render(<Lamp colour={LampColour.Turn} size={LampSize.Tile} number="PROJ-1" />);
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('shows the blue focus edge and no hover change', () => {
+    expect(ruleOf(lamp, '.button:focus-visible')).toContain('outline: var(--focus-edge) solid var(--focus)');
+    expect(ruleOf(lamp, '.button')).toContain('cursor: default');
+    expect(lamp).not.toContain(':hover');
   });
 });
 

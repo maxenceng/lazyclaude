@@ -44,7 +44,16 @@
     "minimiseKey": "M",
     "restore": "Restore dock",
     "zoom": "Zoom dock",
-    "unzoom": "Leave zoom"
+    "unzoom": "Leave zoom",
+    "close": "Close session"
+  },
+  "close": {
+    "title": "Close this session?",
+    "body": "It may still be working or waiting on you, and closing ends it.",
+    "yes": "Close",
+    "yesKey": "y",
+    "no": "Keep",
+    "noKey": "esc"
   },
   "keyBar": {
     "move": "j/k move",
@@ -56,6 +65,11 @@
     "copy": "ctrl+shift+c copy",
     "paste": "ctrl+shift+v paste",
     "select": "shift+drag select"
+  },
+  "links": {
+    "open": "ctrl+click open {{url}}",
+    "openFailed": "Could not open {{url}}: {{reason}}",
+    "refused": "Did not open {{url}}: only http and https links are opened."
   },
   "clipboard": {
     "copyFailed": "Could not copy: {{reason}}",

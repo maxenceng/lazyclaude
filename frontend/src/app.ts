@@ -10,7 +10,10 @@ import { WindowTabs } from './windowTabs';
 import type { Platform } from './platform';
 import type { Client } from './protocol';
 import { ReviewController } from './review/reviewController';
+import { Closing } from './session/closing';
 import { Hosting } from './session/hosting';
+import type { LampColour } from './session/markers';
+import { tabOfLive, tabOfNextColour } from './session/statusLineTargets';
 import { SessionsController } from './session/sessionsController';
 import { SessionStore } from './session/sessionStore';
 import { WatchingReporter } from './session/watched';
@@ -35,6 +38,7 @@ export class AppModel {
   readonly windowFocus: WindowFocus;
   readonly tabs: WindowTabs;
   readonly quitting: Quitting;
+  readonly closing: Closing;
   private readonly keys: KeyRouter;
   private readonly watching: WatchingReporter;
   private watched = false;
@@ -43,7 +47,7 @@ export class AppModel {
     readonly client: Client,
     platform: Platform,
   ) {
-    this.board = new BoardController(client);
+    this.board = new BoardController(client, (root, description) => this.startNewTicket(root, description));
     this.sessionStore = new SessionStore(client);
     this.configuration = new ConfigurationStore(client);
     this.warnings = new WarningStore(client);
@@ -64,6 +68,7 @@ export class AppModel {
       newTerminal: () => platform.newTerminal(),
       clipboard: platform.clipboard,
       notices: this.notices,
+      opener: platform.opener,
       reserved: (press) => this.reservedInPane(press),
     });
     this.sessions = new SessionsController({
@@ -81,7 +86,8 @@ export class AppModel {
       closeWindow: () => platform.closeWindow(),
       refused: (reason) => this.notices.raise(i18n.t('common:quit.refused', { reason })),
     });
-    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review, this.tabs, this.quitting);
+    this.closing = new Closing({ client, hosting: this.hosting, sessions: this.sessionStore.sessions });
+    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review, this.tabs, this.quitting, this.closing);
     this.hosting.dock.subscribe(() => this.dockChanged());
     this.layout.subscribe(() => this.tellWatching());
     this.hosting.dock.subscribe(() => this.tellWatching());
@@ -99,8 +105,22 @@ export class AppModel {
 
   /** The chord that zooms the dock from inside it, as `config.yml` binds it, for the dock's zoom button; none while no configuration is read. */
   zoomKey(): string | undefined {
+    return this.chordOf(Action.Zoom);
+  }
+
+  /** The chord that closes the focused session, as `config.yml` binds it, for the dock's close button; none while no configuration is read. */
+  closeKey(): string | undefined {
+    return this.chordOf(Action.Close);
+  }
+
+  /** The dock's close button: what the reserved close chord does in the dock. */
+  closeSession(): void {
+    this.closing.request();
+  }
+
+  private chordOf(action: Action): string | undefined {
     return this.reserved()
-      .find((binding) => binding.action === Action.Zoom)
+      .find((binding) => binding.action === action)
       ?.label();
   }
 
@@ -112,6 +132,15 @@ export class AppModel {
   /** The status line's Quit button: what `q` does. */
   quit(): void {
     this.quitting.request();
+  }
+
+  /** The new ticket's session starts in the dock, and focus moves into it; why it did not start goes back to the popup. */
+  private async startNewTicket(root: string, description: string): Promise<string | undefined> {
+    const reason = await this.hosting.startNewTicket(root, description);
+    if (reason === undefined) {
+      this.focusOn(Focus.Dock);
+    }
+    return reason;
   }
 
   /** The capture popup's button, in the Board pane's title: the Board takes focus and `c` is done there. */
@@ -137,6 +166,43 @@ export class AppModel {
     this.hosting.select(id);
     this.tabs.choose(WindowTab.Base);
     this.focusOn(Focus.Dock);
+  }
+
+  /** A click on a status line tile: the tab hosting that live session opens and takes focus, as a click on the tab does; nothing where this window does not host it. */
+  goToLive(liveId: string): void {
+    const tab = this.tabOf(liveId);
+    if (tab !== undefined) {
+      this.openDockTab(tab);
+    }
+  }
+
+  /** Whether a click on the tile of live session `liveId` has a dock tab to go to: the tile is a button only then. */
+  canGoToLive(liveId: string): boolean {
+    return this.tabOf(liveId) !== undefined;
+  }
+
+  private tabOf(liveId: string): string | undefined {
+    const view = this.sessionStore.sessions.get();
+    return view === undefined ? undefined : tabOfLive(view, liveId);
+  }
+
+  /** A click on a status line count: the next hosted session of that colour after the selected tab opens and takes focus; nothing where none is hosted. */
+  goToNext(colour: LampColour): void {
+    const tab = this.nextOf(colour);
+    if (tab !== undefined) {
+      this.openDockTab(tab);
+    }
+  }
+
+  /** Whether a click on the count of `colour` has a hosted session to go to. */
+  canGoToNext(colour: LampColour): boolean {
+    return this.nextOf(colour) !== undefined;
+  }
+
+  private nextOf(colour: LampColour): string | undefined {
+    const view = this.sessionStore.sessions.get();
+    const dock = this.hosting.dock.get();
+    return view === undefined ? undefined : tabOfNextColour(view, dock.tabs, dock.selectedTab(), colour);
   }
 
   /** A click on a session's tab in the minimised dock strip: the dock unfolds with that session's pane focused, on whatever the window shows. */

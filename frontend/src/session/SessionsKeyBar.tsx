@@ -10,8 +10,9 @@ export const SessionsKeyBar = ({ picking, extra = [] }: { picking: boolean; extr
   return <KeyBar keys={keys} />;
 };
 
-/** The keys that work while a hosted session's pane has focus; selecting needs shift while `claude` takes the mouse. */
-export const DockKeyBar = ({ mouseReported }: { mouseReported: boolean }) => {
+/** The keys that work while a hosted session's pane has focus, led by opening the link the pointer is on; selecting needs shift while `claude` takes the mouse. */
+export const DockKeyBar = ({ mouseReported, hoveredLink }: { mouseReported: boolean; hoveredLink: string | undefined }) => {
   const { t } = useTranslation('session');
-  return <KeyBar keys={[t('keyBar.copy'), t('keyBar.paste'), ...(mouseReported ? [t('keyBar.select')] : [])]} />;
+  const open = hoveredLink === undefined ? undefined : t('links.open', { url: hoveredLink });
+  return <KeyBar lead={open} keys={[t('keyBar.copy'), t('keyBar.paste'), ...(mouseReported ? [t('keyBar.select')] : [])]} />;
 };

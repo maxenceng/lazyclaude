@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 import dev.maxenceng.lazyclaude.error.domain.Assert;
 
 /**
- * The chord of each of the seven reserved actions, an action left out keeping its default. A chord is taken before {@code claude} sees it inside a hosted session, so
+ * The chord of each of the eight reserved actions, an action left out keeping its default. A chord is taken before {@code claude} sees it inside a hosted session, so
  * two actions cannot share one: the second could never be pressed. Nor can one take a {@link FixedChord}, which would stop working.
  */
 public record ReservedChords(Map<ReservedAction, Chord> bound) {
@@ -38,9 +38,13 @@ public record ReservedChords(Map<ReservedAction, Chord> bound) {
         return bound.get(action);
     }
 
-    /** The action {@code pressed}, held with {@code held}, is the chord of, none when it is free to reach {@code claude}. */
+    /**
+     * The action {@code pressed}, held with {@code held}, is the chord of, none when it is free to reach {@code claude}: the terminal
+     * frontend asks, so an action only the desktop reserves is never named.
+     */
     public Optional<ReservedAction> actionOf(KeyInput pressed, Modifiers held) {
         return Arrays.stream(ReservedAction.values())
+                .filter(action -> !action.desktopOnly())
                 .filter(action -> of(action).isPressedBy(pressed, held))
                 .findFirst();
     }

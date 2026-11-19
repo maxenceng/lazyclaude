@@ -6,6 +6,7 @@ import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altK;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altL;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altM;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altW;
+import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altX;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.altZ;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlAltH;
 import static dev.maxenceng.lazyclaude.session.published.ChordFixture.ctrlC;
@@ -94,5 +95,35 @@ class ReservedChordsTest {
     @Test
     void shouldFindNoClashWhenNothingIsBoundOnAReservedChord() {
         assertThat(ReservedChords.defaults().clashingWith(List.of(ctrlAltH()))).isEmpty();
+    }
+
+    @Test
+    void shouldReserveAltXToCloseByDefault() {
+        assertThat(ReservedChords.defaults().of(ReservedAction.CLOSE)).isEqualTo(altX());
+    }
+
+    @Test
+    void shouldLetAltXReachClaudeSinceOnlyTheDesktopReservesClose() {
+        assertThat(ReservedChords.defaults().actionOf(typedKey('x'), held(Modifier.ALT))).isEmpty();
+    }
+
+    @Test
+    void shouldStillNameCloseWhenAClaudeBindingShadowsIt() {
+        assertThat(ReservedChords.defaults().clashingWith(List.of(altX()))).containsExactly(ReservedAction.CLOSE);
+    }
+
+    @Test
+    void shouldRefuseCloseOnTheChordOfAnotherReservedAction() {
+        assertThatThrownBy(() -> ReservedChords.defaults().rebinding(Map.of(ReservedAction.CLOSE, altJ())))
+                .isInstanceOfSatisfying(DuplicateChordException.class, refused ->
+                        assertThat(List.of(refused.first(), refused.second()))
+                                .containsExactlyInAnyOrder(ReservedAction.FOCUS_DOWN, ReservedAction.CLOSE));
+    }
+
+    @Test
+    void shouldRefuseCloseOnAFixedChord() {
+        assertThatThrownBy(() -> ReservedChords.defaults().rebinding(Map.of(ReservedAction.CLOSE, ctrlC())))
+                .isInstanceOfSatisfying(TakenChordException.class, refused ->
+                        assertThat(refused.action()).isEqualTo(ReservedAction.CLOSE));
     }
 }

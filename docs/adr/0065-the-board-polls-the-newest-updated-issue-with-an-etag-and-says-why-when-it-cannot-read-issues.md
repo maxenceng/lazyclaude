@@ -4,7 +4,7 @@ Date: 2026-10-30
 
 ## Status
 
-Accepted. Implements ADR 0052 in `board`, and ends ADR 0031 and ADR 0028 for it.
+Accepted. Implements ADR 0052 in `board`, and ends ADR 0031 and ADR 0028 for it. Amended by ADR 0108: the poll checks every 10 s.
 
 ## Context
 
@@ -22,7 +22,7 @@ answers 304 costs no rate limit, and `gh` is the only client lazyclaude uses (CL
   `GitHubIssue`: `IssueRecord`, the adapter, only reads the fields and hands over the state and labels, since a label rule
   is a value only the domain can judge (ADR 0043). Rejected: the rules in `IssueRecord`, beside the rest of the
   reading of what `gh` wrote, which left the domain with no say over which issue is a ticket.
-- **The poll watches the most recently updated issue.** Every 30 s, `gh api --include --silent
+- **The poll watches the most recently updated issue.** Every 10 s (ADR 0108), `gh api --include --silent
   'repos/{owner}/{repo}/issues?state=all&per_page=1&sort=updated&direction=desc'` with `If-None-Match` set to the last
   answer's `ETag`. Any change to any issue moves it to the top and changes the answer; a 304 changes nothing and costs no
   rate limit. `gh` exits non-zero on a 304, so the adapter reads the status line, not the exit code. Rejected: polling

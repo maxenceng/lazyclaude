@@ -49,11 +49,11 @@ public final class HostedEmulatorFixture {
     }
 
     public static RunningSession startedOn(HostPort hosts, SessionApplicationService service) {
-        when(hosts.spawn(any(), any(), any())).thenReturn(processId());
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
         SessionId id = ((StartedHost) new HostedSessionCommand(service).startUnlinked(newHostedPayload())).id();
         ArgumentCaptor<Consumer<PtyBytes>> output = ArgumentCaptor.captor();
         ArgumentCaptor<Consumer<ExitCode>> exit = ArgumentCaptor.captor();
-        verify(hosts, atLeastOnce()).spawn(any(), output.capture(), exit.capture());
+        verify(hosts, atLeastOnce()).spawn(any(), output.capture(), exit.capture(), any());
         return new RunningSession(id, output.getAllValues().getLast(), exit.getAllValues().getLast());
     }
 

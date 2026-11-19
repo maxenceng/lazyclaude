@@ -16,7 +16,7 @@ describe('the markdown column', () => {
   });
 
   it('lets code and tables start at the column and run right to the pane edge, no wider than their content', () => {
-    const breakout = ruleOf(markdown, '.markdown > :is(pre, .tableScroll)');
+    const breakout = ruleOf(markdown, '.markdown > :is(pre, .tableScroll, .diagram, .diagramFallback)');
     expect(breakout).toContain('grid-column: column-start / full-end');
     expect(breakout).toContain('justify-self: start');
     expect(breakout).toContain('max-width: 100%');
@@ -54,3 +54,26 @@ describe('the frame of a main view', () => {
     expect(ruleOf(detail, '.detail > .across')).toContain('grid-column: full-start / full-end');
   });
 });
+
+describe('a drawn diagram', () => {
+  it('sits on the code block panel, from the column to the pane edge, no wider than its content', () => {
+    expect(ruleOf(markdown, '.markdown > :is(pre, .tableScroll, .diagram, .diagramFallback)')).toContain('grid-column: column-start / full-end');
+    const panel = ruleOf(markdown, '.diagram');
+    expect(panel).toContain('background: var(--pane-sunk)');
+    expect(panel).toContain('overflow-x: auto');
+    expect(ruleOf(markdown, '.markdown > .diagram')).toContain('width: calc(var(--natural) + 2 * var(--space-4))');
+  });
+
+  it('shrinks to the area but never below 85% of its natural width, and is never enlarged past it', () => {
+    const svg = ruleOf(markdown, '.diagramSvg svg');
+    expect(svg).toContain('width: clamp(calc(var(--natural) * 0.85), 100%, var(--natural))');
+    expect(svg).toContain('max-width: none');
+  });
+
+  it('names a failure in the failed ink, semibold, then the message dimmed', () => {
+    expect(ruleOf(markdown, '.diagramFailureHead')).toContain('color: var(--ci-failed)');
+    expect(ruleOf(markdown, '.diagramFailureHead')).toContain('font-weight: 600');
+    expect(ruleOf(markdown, '.diagramFailure')).toContain('color: var(--dim)');
+  });
+});
+

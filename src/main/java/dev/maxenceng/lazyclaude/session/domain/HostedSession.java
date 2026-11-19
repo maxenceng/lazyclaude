@@ -49,9 +49,13 @@ public record HostedSession(ProcessId pid, WorkingDirectory directory, LaunchCom
         return worktree.contains(directory);
     }
 
-    /** What it is called: the name {@code claude} was given for its ticket and verb, else plain {@code claude}. */
+    /** What it is called: the name {@code claude} was given for its ticket and verb, or for a ticket it creates, else plain {@code claude}. */
     public SessionName name() {
-        return command instanceof TicketClaude run ? run.sessionName() : new SessionName(PLAIN_NAME);
+        return switch (command) {
+            case TicketClaude run -> run.sessionName();
+            case NewTicketClaude creating -> creating.sessionName();
+            case NewClaude _, ResumeClaude _ -> new SessionName(PLAIN_NAME);
+        };
     }
 
     /** The ticket this session was started to close out with {@code /ticket done}, none for a session that ran any other verb. */

@@ -31,8 +31,8 @@ import dev.maxenceng.lazyclaude.shared.domain.WorkingDirectory;
  * Holds the hosted sessions that are open, in start order, and decides where each runs: a new unlinked session in the
  * project root, a resumed one in the directory it was launched in, and none with a warning when that directory is
  * gone, since {@code claude --resume} anywhere else would not find the transcript. Each session that starts is appended to the
- * project's launch log, and one whose {@code claude} exits by itself has its end recorded there; a quit that ends it records
- * none. A launch log that cannot be changed is said once and never stops a session. A session whose {@code claude} exits is
+ * project's launch log, and one whose {@code claude} exits by itself, or that is closed from the window, has its end recorded there; a quit that ends
+ * it records none. A launch log that cannot be changed is said once and never stops a session. A session whose {@code claude} exits is
  * dropped, with a warning when the exit was not clean; one that could not be started is never held, and says why.
  */
 public final class HostedSessionManager {
@@ -43,6 +43,9 @@ public final class HostedSessionManager {
     private static final String GONE_WARNING = "resume: %s is gone; nothing resumed.";
     private static final String WORKTREE_WARNING = "ticket worktree: %s; nothing started.";
     private static final String NOT_A_WORKTREE = "%s exists but is not a worktree of %s";
+    private static final String ALREADY_STARTING = "this session is already starting; give it a moment.";
+    private static final String ENDED_AT_ONCE = "hosted session: claude ended as soon as it started.";
+    private static final String LEAKING_WARNING = "hosted session: %s; each run leaves a copy in the temp folder.";
     private static final String NO_PLACE = "%s has no folder beside it to keep worktrees in";
 
     private final HostPort hosts;
@@ -55,6 +58,7 @@ public final class HostedSessionManager {
     private final List<HostedSession> open = new ArrayList<>();
     private final List<SessionId> spawning = new ArrayList<>();
     private final List<SessionId> endingWithLazyclaude = new CopyOnWriteArrayList<>();
+    private final List<SessionId> closing = new CopyOnWriteArrayList<>();
     private final Map<SessionId, ExitCode> earlyExits = new HashMap<>();
     private final Map<SessionId, PaneSize> sizes = new ConcurrentHashMap<>();
     private final List<OpenSessionsListener> changeListeners = new CopyOnWriteArrayList<>();
@@ -82,6 +86,20 @@ public final class HostedSessionManager {
     /** A plain {@code claude} in the project root. */
     public HostStart startUnlinked(Project project, PaneSize size) {
         return start(project, new NewClaude(SessionId.random()), new WorkingDirectory(project.root()), size);
+    }
+
+    /** {@code /<plugin>:ticket new <description>} in the project root: a session that creates a ticket, linked to none yet. */
+    public HostStart startNewTicket(
+            Project project, TicketDescription description, TicketPlugin ticketPlugin, PaneSize size) {
+        return start(
+                project,
+                NewTicketClaude.builder()
+                        .session(SessionId.random())
+                        .description(description)
+                        .plugin(ticketPlugin)
+                        .build(),
+                new WorkingDirectory(project.root()),
+                size);
     }
 
     /**
@@ -164,8 +182,7 @@ public final class HostedSessionManager {
 
     private HostStart resumeAt(Project project, SessionId session, WorkingDirectory recorded, PaneSize size) {
         if (!hosts.exists(recorded)) {
-            warnings.raise(new Warning(GONE_WARNING.formatted(recorded.path())));
-            return new NotStartedHost();
+            return refused(new Warning(GONE_WARNING.formatted(recorded.path())));
         }
         return start(project, new ResumeClaude(session), recorded, size);
     }
@@ -221,6 +238,24 @@ public final class HostedSessionManager {
         ending.forEach(hosts::end);
     }
 
+    /**
+     * Closes one open session from the window: its {@code claude} is asked to end through the host, which returns without waiting for it, and, unlike {@link #endAll}, its exit is
+     * that of a session that ended by itself, so the launch log records its end and the exit listeners are told, and the signal's exit code is no failure to warn of. Nothing for a session
+     * that is not open, as one whose {@code claude} exited between the click and the answer.
+     */
+    public void close(SessionId id) {
+        boolean isOpen;
+        synchronized (open) {
+            isOpen = open.stream().anyMatch(session -> session.id().equals(id));
+            if (isOpen && !closing.contains(id)) {
+                closing.add(id);
+            }
+        }
+        if (isOpen) {
+            hosts.close(id);
+        }
+    }
+
     /** Tells {@code listener} whenever a session opens or closes. */
     public void onChange(OpenSessionsListener listener) {
         changeListeners.add(listener);
@@ -231,7 +266,7 @@ public final class HostedSessionManager {
         doneEndedListeners.add(listener);
     }
 
-    /** Tells {@code listener} the code of each session whose {@code claude} exits by itself; a session ended with lazyclaude tells nothing. */
+    /** Tells {@code listener} the code of each session whose {@code claude} exits by itself or is closed from the window; a session ended with lazyclaude tells nothing. */
     public void onExit(SessionExitListener listener) {
         exitListeners.add(listener);
     }
@@ -264,8 +299,7 @@ public final class HostedSessionManager {
     }
 
     private HostStart notStartedFor(String reason) {
-        warnings.raise(new Warning(WORKTREE_WARNING.formatted(reason)));
-        return new NotStartedHost();
+        return refused(new Warning(WORKTREE_WARNING.formatted(reason)));
     }
 
     /**
@@ -283,7 +317,7 @@ public final class HostedSessionManager {
                 .build();
         synchronized (open) {
             if (spawning.contains(id)) {
-                return new NotStartedHost();
+                return new NotStartedHost(new Reason(ALREADY_STARTING));
             }
             if (open.stream().anyMatch(session -> session.id().equals(id))) {
                 return new StartedHost(id);
@@ -295,7 +329,10 @@ public final class HostedSessionManager {
         try {
             ptyListeners.forEach(listener -> listener.launching(id, size));
             ProcessId pid = hosts.spawn(
-                    launch, bytes -> ptyListeners.forEach(listener -> listener.output(id, bytes)), code -> exited(project, id, code));
+                    launch,
+                    bytes -> ptyListeners.forEach(listener -> listener.output(id, bytes)),
+                    code -> exited(project, id, code),
+                    this::warnOfLeak);
             return registered(project, HostedSession.builder()
                     .pid(pid)
                     .directory(directory)
@@ -307,8 +344,7 @@ public final class HostedSessionManager {
             synchronized (open) {
                 spawning.remove(id);
             }
-            warnings.raise(new Warning(START_WARNING.formatted(unavailable.getMessage())));
-            return new NotStartedHost();
+            return refused(new Warning(START_WARNING.formatted(unavailable.getMessage())));
         }
     }
 
@@ -333,7 +369,14 @@ public final class HostedSessionManager {
 
     private HostStart notStartedAfter(ExitCode exit) {
         warnOfFailure(exit);
-        return new NotStartedHost();
+        return new NotStartedHost(
+                new Reason(exit.isFailure() ? EXIT_WARNING.formatted(exit.value()) : ENDED_AT_ONCE));
+    }
+
+    /** Raises {@code warning} so the status line says it, and answers with its text for a caller that shows it where it asked. */
+    private HostStart refused(Warning warning) {
+        warnings.raise(warning);
+        return new NotStartedHost(new Reason(warning.text()));
     }
 
     private HostStart startedAs(HostedSession session) {
@@ -354,14 +397,16 @@ public final class HostedSessionManager {
         if (dropped.isEmpty()) {
             return;
         }
-        boolean byItself = !endingWithLazyclaude.remove(id);
-        if (byItself) {
+        boolean recordsEnd = !endingWithLazyclaude.remove(id);
+        if (recordsEnd) {
             EndedAt ended = new EndedAt(clock.clock().instant());
             logged(project, entries -> entries.ended(id, ended));
         }
-        warnOfFailure(code);
+        if (!closing.remove(id)) {
+            warnOfFailure(code);
+        }
         changed();
-        if (byItself) {
+        if (recordsEnd) {
             exitListeners.forEach(listener -> listener.exited(id, code));
         }
         dropped.flatMap(HostedSession::doneTicket).ifPresent(this::doneEnded);
@@ -386,6 +431,10 @@ public final class HostedSessionManager {
 
     private void warnOfLog(Reason cause) {
         warnings.raise(LaunchLogWarning.of(cause));
+    }
+
+    private void warnOfLeak(Reason cause) {
+        warnings.raise(new Warning(LEAKING_WARNING.formatted(cause.value())));
     }
 
     private void doneEnded(LinkedTicketId ticket) {

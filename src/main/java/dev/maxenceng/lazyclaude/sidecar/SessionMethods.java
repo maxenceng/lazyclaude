@@ -8,11 +8,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.ClosePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.ConfigurationView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionCommand;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewSessionView;
+import dev.maxenceng.lazyclaude.session.infrastructure.primary.NewTicketHostedPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyInputPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyOutputView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.PtyResizePayload;
@@ -33,13 +35,14 @@ import tools.jackson.databind.JsonNode;
  * The {@code session/} and {@code pty/} methods: one per operation of {@link SessionQuery}, {@link HostedSessionCommand} and
  * {@link WatchedSessionCommand}, named
  * after it, and {@code session/configuration}, which answers the configuration read at start-up, not a second read of the file
- * that would raise its warnings again. The pty's bytes travel as {@code pty/input}, {@code pty/resize} and {@code pty/output} (ADR 0050). There is
- * no method to end a session: closing stdin ends every one.
+ * that would raise its warnings again. The pty's bytes travel as {@code pty/input}, {@code pty/resize} and {@code pty/output} (ADR 0050). Closing
+ * stdin ends every session without an end; {@code session/close} ends one from the window, and {@code session/exited} tells it left.
  */
 final class SessionMethods {
 
     private static final List<ServedMethod<HostedSessionCommand, ?, ?>> STARTS = List.of(
             ServedMethod.of("session/startUnlinked", NewHostedPayload.class, HostStart.class, HostedSessionCommand::startUnlinked),
+            ServedMethod.of("session/startNewTicket", NewTicketHostedPayload.class, HostStart.class, HostedSessionCommand::startNewTicket),
             ServedMethod.of("session/startTicket", TicketHostedPayload.class, HostStart.class, HostedSessionCommand::startTicket),
             ServedMethod.of("session/resumePast", ResumePastPayload.class, HostStart.class, HostedSessionCommand::resumePast));
     private static final ServedMethod<SessionQuery, NewSessionPayload, NewSessionView> NEW_SESSION =
@@ -51,7 +54,8 @@ final class SessionMethods {
     private static final List<ServedInput<HostedSessionCommand, ?>> INPUTS = List.of(
             ServedInput.of("pty/input", PtyInputPayload.class, HostedSessionCommand::write),
             ServedInput.of("pty/resize", PtyResizePayload.class, HostedSessionCommand::resizePty),
-            ServedInput.of("session/repaint", RepaintPayload.class, HostedSessionCommand::repaint));
+            ServedInput.of("session/repaint", RepaintPayload.class, HostedSessionCommand::repaint),
+            ServedInput.of("session/close", ClosePayload.class, HostedSessionCommand::close));
     private static final ServedInput<WatchedSessionCommand, WatchedPayload> WATCHING =
             ServedInput.of("session/watching", WatchedPayload.class, WatchedSessionCommand::watching);
     private static final ProtocolNotification<SessionsView> CHANGED = new ProtocolNotification<>("session/changed", SessionsView.class);

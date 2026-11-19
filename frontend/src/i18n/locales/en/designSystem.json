@@ -49,6 +49,9 @@
     "title": "Window menu",
     "item": "{{action}} ({{key}})"
   },
+  "popup": {
+    "close": "Close"
+  },
   "paneAction": {
     "label": "{{action}} ({{key}})"
   },
@@ -61,5 +64,8 @@
       "thread": "a thread hangs from this line",
       "pending": "your pending comment hangs from this line"
     }
+  },
+  "diagram": {
+    "notDrawn": "Diagram not drawn"
   }
 }

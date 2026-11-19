@@ -17,6 +17,11 @@ public final class HostedSessionCommand {
         return sessions.startUnlinked(payload.toDomain(), payload.size());
     }
 
+    /** {@code /<plugin>:ticket new <description>} in the project root, the description as one argument; a failure to start it is already a warning, and the result says why. */
+    public HostStart startNewTicket(NewTicketHostedPayload payload) {
+        return sessions.startNewTicket(payload.project(), payload.toDomain(), payload.size());
+    }
+
     /** {@code /<plugin>:ticket <verb> <ID>} in the ticket's worktree, added first when it is missing; a failure to start it is already a warning. */
     public HostStart startTicket(TicketHostedPayload payload) {
         return sessions.startTicket(payload.toDomain(), payload.size());
@@ -50,6 +55,11 @@ public final class HostedSessionCommand {
     /** Has the session's {@code claude} draw its whole screen again, for a frontend whose emulator starts empty (ADR 0049). */
     public void repaint(RepaintPayload payload) {
         sessions.repaint(payload.session());
+    }
+
+    /** Ends the session's {@code claude} from the window; it is then a past session, ended and not interrupted. Nothing for a session that is gone. */
+    public void close(ClosePayload payload) {
+        sessions.close(payload.session());
     }
 
     /** Ends every hosted {@code claude}, as lazyclaude quits. */

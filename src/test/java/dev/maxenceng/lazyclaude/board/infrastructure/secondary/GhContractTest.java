@@ -25,7 +25,7 @@ class GhContractTest {
 
     @Test
     void shouldAnswerNotModifiedToAConditionalRequestOnTheEtagItJustGave() {
-        IssuesWatchRepository watcher = new IssuesWatchRepository(new GhCommand("gh", Duration.ofSeconds(30)), Duration.ofSeconds(30));
+        IssuesWatchRepository watcher = new IssuesWatchRepository(new GhCommand("gh", Duration.ofSeconds(30)), IssuesWatchRepository.INTERVAL);
 
         assertThat(watcher.changedSinceLastCheck(thisRepository())).as("the first check only takes the etag").isFalse();
         assertThat(watcher.changedSinceLastCheck(thisRepository()))

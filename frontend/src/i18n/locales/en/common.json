@@ -42,9 +42,10 @@
     "title": "Quit lazyclaude?",
     "hosted_one": "{{count}} hosted session is open, and quitting ends it.",
     "hosted_other": "{{count}} hosted sessions are open, and quitting ends them.",
-    "hint": "y quit · esc stay",
     "yes": "Quit",
+    "yesKey": "y",
     "no": "Stay",
+    "noKey": "esc",
     "button": "Quit lazyclaude",
     "key": "q",
     "refused": "the window did not close ({{reason}})"

@@ -47,13 +47,17 @@
     "label": "Comment text",
     "saving": "saving…",
     "notSaved": "not saved ({{reason}})",
-    "hint": "ctrl+s save · esc cancel"
+    "save": "Save",
+    "saveKey": "ctrl+s",
+    "cancel": "Cancel",
+    "cancelKey": "esc"
   },
   "submit": {
     "title": "Submit review as Comment?",
-    "hint": "y submit · esc keeps it pending",
     "yes": "Submit",
-    "no": "Keep pending"
+    "yesKey": "y",
+    "no": "Keep pending",
+    "noKey": "esc"
   },
   "refused": {
     "notDeleted": "not deleted ({{reason}})",
