@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sessionFixture, sessionsFixture } from './fixtures';
-import { LampColour, markerOfTicket, markersOf } from './markers';
+import { colourOf, LampColour, markerOfTicket, markersOf } from './markers';
 
 const sessions = sessionsFixture([
   sessionFixture({ id: 's1', state: { kind: 'yourTurn' }, ticket: 'PROJ-1' }),
@@ -38,5 +38,35 @@ describe('the markers of the live sessions', () => {
       sessionFixture({ id: 's2', state: { kind: 'yourTurn' }, ticket: 'PROJ-2' }),
     ]);
     expect(markerOfTicket(linkedTwice, 'PROJ-2')).toBe(LampColour.Input);
+  });
+
+  it('orders by the strength the wire carries, not by what the state would imply', () => {
+    const inverted = sessionsFixture([
+      sessionFixture({ id: 'a', state: { kind: 'waitingForPermission', reason: { kind: 'waitingReason', value: 'Bash' } }, marker: { kind: 'WAITING_FOR_PERMISSION', strength: 1 } }),
+      sessionFixture({ id: 'b', state: { kind: 'yourTurn' }, marker: { kind: 'YOUR_TURN', strength: 9 } }),
+    ]);
+    expect(markersOf(inverted).map((marker) => marker.session)).toEqual(['b', 'a']);
+  });
+
+  it('sorts a session with no marker after every one carrying one', () => {
+    const view = sessionsFixture([sessionFixture({ id: 'none' }), sessionFixture({ id: 'turn', state: { kind: 'yourTurn' } })]);
+    expect(markersOf(view).map((marker) => marker.session)).toEqual(['turn', 'none']);
+  });
+
+  it('keeps the order equal markers came in', () => {
+    const view = sessionsFixture(['x', 'y', 'z'].map((id) => sessionFixture({ id, state: { kind: 'yourTurn' } })));
+    expect(markersOf(view).map((marker) => marker.session)).toEqual(['x', 'y', 'z']);
+  });
+
+  it('draws the unlit lamp for a session with no marker', () => {
+    expect(colourOf(sessionFixture({ state: { kind: 'busy' } }))).toBe(LampColour.Off);
+  });
+
+  it('marks a ticket by the greatest strength among its sessions', () => {
+    const view = sessionsFixture([
+      sessionFixture({ id: 'a', state: { kind: 'waitingForPermission', reason: { kind: 'waitingReason', value: 'Bash' } }, marker: { kind: 'WAITING_FOR_PERMISSION', strength: 1 }, ticket: 'PROJ-1' }),
+      sessionFixture({ id: 'b', state: { kind: 'yourTurn' }, marker: { kind: 'YOUR_TURN', strength: 9 }, ticket: 'PROJ-1' }),
+    ]);
+    expect(markerOfTicket(view, 'PROJ-1')).toBe(LampColour.Turn);
   });
 });

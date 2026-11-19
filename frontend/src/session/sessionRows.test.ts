@@ -19,8 +19,8 @@ describe('the sessions listed under a ticket', () => {
     });
     const rows = rowsFor(view, 'PROJ-1');
     expect(rows.map((row) => row.kind)).toEqual([SessionRowKind.Hosted, SessionRowKind.Live, SessionRowKind.Past, SessionRowKind.New]);
-    expect(rows[0]).toEqual(new HostedRow('h1', 'session', 'waitingForInput'));
-    expect(rows[1]).toEqual(new LiveRow('session', 'busy'));
+    expect(rows[0]).toEqual(new HostedRow('h1', 'session', 'waitingForInput', { kind: 'WAITING_FOR_INPUT', strength: 2 }));
+    expect(rows[1]).toEqual(new LiveRow('session', 'busy', null));
     expect((rows[2] as PastRow).session.id).toBe('p1');
   });
 
@@ -61,6 +61,19 @@ describe('the sessions listed under a ticket', () => {
   it('lists a hosted session whose live record is not read yet as starting', () => {
     const hosted = hostedFixture('h1', { ticket: 'PROJ-1' });
     const view = sessionsFixture([], { hosted: [hosted], tickets: [ticketSessionsFixture('PROJ-1', { hosted: [hosted] })] });
-    expect(rowsFor(view, 'PROJ-1')[0]).toEqual(new HostedRow('h1', undefined, STARTING));
+    expect(rowsFor(view, 'PROJ-1')[0]).toEqual(new HostedRow('h1', undefined, STARTING, null));
+  });
+
+  it('lists a starting hosted session after every one carrying a marker, and orders by the strength the wire carries', () => {
+    const turn = sessionFixture({ id: 'turn', state: { kind: 'yourTurn' }, marker: { kind: 'YOUR_TURN', strength: 9 }, ticket: 'PROJ-1' });
+    const input = sessionFixture({ id: 'input', state: { kind: 'waitingForInput', reason: { kind: 'noWaitingReason' } }, marker: { kind: 'WAITING_FOR_INPUT', strength: 1 }, ticket: 'PROJ-1' });
+    const starting = hostedFixture('hs', { ticket: 'PROJ-1' });
+    const hostedTurn = hostedFixture('ht', { ticket: 'PROJ-1', live: turn });
+    const hostedInput = hostedFixture('hi', { ticket: 'PROJ-1', live: input });
+    const view = sessionsFixture([turn, input], {
+      hosted: [starting, hostedInput, hostedTurn],
+      tickets: [ticketSessionsFixture('PROJ-1', { live: [turn, input], hosted: [starting, hostedInput, hostedTurn] })],
+    });
+    expect(rowsFor(view, 'PROJ-1').flatMap((row) => (row.kind === SessionRowKind.Hosted ? [row.session] : []))).toEqual(['ht', 'hi', 'hs']);
   });
 });
