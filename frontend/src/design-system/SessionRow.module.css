@@ -118,11 +118,11 @@
   box-shadow: none;
 }
 
-.tall:hover {
+button.tall:hover {
   cursor: pointer;
 }
 
-.tall:hover .action {
+button.tall:hover .action {
   color: var(--text);
 }
 

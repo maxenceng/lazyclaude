@@ -18,7 +18,8 @@ interface Props {
   action?: { label: string; shortcut: string } | undefined;
   selected: boolean;
   lamp: LampColour | undefined;
-  onSelect: () => void;
+  /** What a press does; a row given none is plain text, not a button. */
+  onSelect?: (() => void) | undefined;
 }
 
 const StatePill = ({ state, pill, lamp }: { state: string; pill: PillInk; lamp: LampColour | undefined }) =>
@@ -41,18 +42,30 @@ export const SessionRow = ({ label, state, pill = PillInk.Lamp, action, selected
       row.current?.scrollIntoView({ block: 'nearest' });
     }
   }, [selected]);
+  const className = [styles.row, selected ? styles.selected : '', state === undefined ? '' : styles.tall].join(' ');
+  const content = (
+    <>
+      {state !== undefined ? <StatePill state={state} pill={pill} lamp={lamp} /> : lamp === undefined ? <span className={styles.noLamp} /> : <Lamp colour={lamp} size={LampSize.Marker} />}
+      <span className={styles.label}>{label}</span>
+      {action === undefined ? null : (
+        <span className={styles.action}>
+          {action.label}
+          <kbd className={styles.key}>{action.shortcut}</kbd>
+        </span>
+      )}
+    </>
+  );
   return (
     <li data-row="">
-      <button ref={row} type="button" className={[styles.row, selected ? styles.selected : '', state === undefined ? '' : styles.tall].join(' ')} aria-current={selected ? 'true' : undefined} data-lamp={lamp} onClick={onSelect}>
-        {state !== undefined ? <StatePill state={state} pill={pill} lamp={lamp} /> : lamp === undefined ? <span className={styles.noLamp} /> : <Lamp colour={lamp} size={LampSize.Marker} />}
-        <span className={styles.label}>{label}</span>
-        {action === undefined ? null : (
-          <span className={styles.action}>
-            {action.label}
-            <kbd className={styles.key}>{action.shortcut}</kbd>
-          </span>
-        )}
-      </button>
+      {onSelect === undefined ? (
+        <div className={className} data-lamp={lamp}>
+          {content}
+        </div>
+      ) : (
+        <button ref={row} type="button" className={className} aria-current={selected ? 'true' : undefined} data-lamp={lamp} onClick={onSelect}>
+          {content}
+        </button>
+      )}
     </li>
   );
 };

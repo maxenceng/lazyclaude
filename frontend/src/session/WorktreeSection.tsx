@@ -51,7 +51,7 @@ export const WorktreeSection = ({ shown, branch, refusal, onPress }: Props) => {
           action={clean ? { label: t('worktree.remove'), shortcut: t('worktree.removeKey') } : undefined}
           selected={false}
           lamp={LampColour.Off}
-          onSelect={clean ? onPress : () => undefined}
+          onSelect={clean ? onPress : undefined}
         />
       </Rows>
       {clean ? null : (
