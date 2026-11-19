@@ -13,7 +13,8 @@
     "tauri": "tauri",
     "prototype": "vite --port 1421 --open /prototype-ux.html",
     "prototype:popups": "vite --port 1421 --open /prototype-popups.html",
-    "prototype:mermaid": "vite --port 1421 --open /prototype-mermaid.html"
+    "prototype:mermaid": "vite --port 1421 --open /prototype-mermaid.html",
+    "prototype:worktree": "vite --port 1421 --open /prototype-worktree.html"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",
