@@ -17,7 +17,8 @@ ticket's worktree in the TUI (ADR 0038), a write, and the sidecar protocol has n
 ## Decision
 
 - **A key is bound in the window only once something there acts on it.** The architecture test's allow-list of bound
-  but unhandled actions is empty, and a key added to the table without a handler fails it.
+  but unhandled actions is empty, and an action added to the table with nothing outside it naming the action fails it.
+  It reads names, not behaviour: a new key on an existing action, or an action named but acting on no pane, passes.
 - **`g` and `G` scroll the focused document to its top and its bottom,** as they scroll the TUI's main view. On every
   other pane they do nothing: the TUI does not move a list cursor on them either. The document key bar names them; its
   scrollbar is the visible control, so no button is added.

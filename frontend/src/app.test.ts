@@ -729,6 +729,22 @@ describe('the app and its window tabs', () => {
     expect(app.layout.get().focus).toBe(Focus.Board);
   });
 
+  it('moves neither the Board tab\'s selection nor the Pull requests tab\'s row on g and G', async () => {
+    const { app } = await reviewing();
+    app.press(Action.ShowBoard);
+    app.press(Action.MoveDown);
+    app.press(Action.Top);
+    app.press(Action.Bottom);
+    expect(app.board.selection.selected.get()).toBe('PROJ-2');
+    app.press(Action.ShowPullRequests);
+    const row = app.review.cursor.selected.get();
+    app.press(Action.Bottom);
+    app.press(Action.Top);
+    expect(app.review.cursor.selected.get()).toBe(row);
+    expect(app.tabs.selected.get()).toBe(WindowTab.PullRequests);
+    expect(app.review.isOpen()).toBe(false);
+  });
+
   it('returns to the Pull requests tab and its row when the review opened from it ends', async () => {
     const { client, app } = await reviewing();
     app.press(Action.ShowPullRequests);

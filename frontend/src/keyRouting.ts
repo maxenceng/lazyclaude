@@ -341,10 +341,10 @@ export class KeyRouter {
     return current.focusOn(current.focus === Focus.Docs && current.showsDocumentInView() ? Focus.Document : Focus.Sessions);
   }
 
-  /** `j`/`k`, `ctrl+d`/`ctrl+u` and `g`/`G` on the focused document scroll it; on any other pane `ctrl+d`, `ctrl+u`, `g` and `G` do nothing outside a review. */
+  /** `j`/`k`, `ctrl+d`/`ctrl+u` and `g`/`G` on the focused document scroll it; on any other pane `g` and `G` do nothing, and `ctrl+d`/`ctrl+u` act only in a review. */
   private scrollDocument(step: ScrollStep): void {
     if (this.focus() === Focus.Document) {
-      this.docs.scrollBy(step);
+      this.docs.requestScroll(step);
     }
   }
 

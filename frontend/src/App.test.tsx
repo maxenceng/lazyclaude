@@ -351,13 +351,14 @@ describe('a shown document and the Docs panel', () => {
     await started.user.click(screen.getByRole('button', { name: 'README.md' }));
     const body = screen.getByRole('region', { name: 'Document' }).querySelector('[data-pane-body]') as HTMLElement;
     const scrolled = vi.fn();
-    body.scrollTo = scrolled;
+    body.scrollBy = scrolled;
     Object.defineProperty(body, 'scrollHeight', { value: 900 });
+    Object.defineProperty(body, 'scrollTop', { value: 300 });
     await started.user.click(body);
     await started.user.keyboard('G');
     await started.user.keyboard('g');
     await started.user.keyboard('g');
-    expect(scrolled.mock.calls.map((call) => (call[0] as ScrollToOptions).top)).toEqual([900, 0, 0]);
+    expect(scrolled.mock.calls.map((call) => (call[0] as ScrollToOptions).top), 'each end is measured from where the body is now, scrolled there by mouse or not').toEqual([600, -300, -300]);
   });
 
   it('shows esc close on the key bar while a document is shown, and esc closes it and hands focus to the ticket', async () => {

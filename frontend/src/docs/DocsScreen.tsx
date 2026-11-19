@@ -86,7 +86,7 @@ const HALVES = 2;
 /** A pixel: the least a line step moves when the body's type has no measurable size, as in a layout-free render. */
 const LEAST_STEP = 1;
 
-/** How far one request moves the pane's body: a line of its text, or half of what it shows, either way down or up. */
+/** How far one request moves the pane's body: a line of its text, half of what it shows, or as far as either end of it. */
 const distanceOf = (request: ScrollRequest, body: HTMLElement): number => {
   const line = Number.parseFloat(getComputedStyle(body).lineHeight);
   const lineStep = Number.isFinite(line) ? line : Number.parseFloat(getComputedStyle(body).fontSize) || LEAST_STEP;
@@ -99,12 +99,16 @@ const distanceOf = (request: ScrollRequest, body: HTMLElement): number => {
       return body.clientHeight / HALVES;
     case ScrollStep.HalfPageUp:
       return -body.clientHeight / HALVES;
-    default:
+    case ScrollStep.Top:
+      return -body.scrollTop;
+    case ScrollStep.Bottom:
+      return body.scrollHeight - body.scrollTop;
+    case undefined:
       return 0;
   }
 };
 
-/** Scrolls the pane body around `anchor` by each request made after it mounted. */
+/** Scrolls the pane body around `anchor` as each request made after it mounted asks. */
 const useScrollRequests = (docs: DocsController) => {
   const anchor = useRef<HTMLSpanElement>(null);
   const request = useStore(docs.scroll);
@@ -115,11 +119,7 @@ const useScrollRequests = (docs: DocsController) => {
       return;
     }
     seen.current = request.at;
-    if (request.step === ScrollStep.Top || request.step === ScrollStep.Bottom) {
-      body.scrollTo({ top: request.step === ScrollStep.Top ? 0 : body.scrollHeight });
-    } else {
-      body.scrollBy({ top: distanceOf(request, body) });
-    }
+    body.scrollBy({ top: distanceOf(request, body) });
   }, [request]);
   return anchor;
 };
