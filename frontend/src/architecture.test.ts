@@ -5,7 +5,7 @@ import { Action } from './keys/bindings';
 
 const SRC = resolve(__dirname);
 const CONTEXTS = ['board', 'docs', 'review', 'session'];
-const UNHANDLED_ACTIONS: readonly string[] = ['Top', 'Bottom', 'RemoveWorktree'];
+const UNHANDLED_ACTIONS: readonly string[] = ['Top', 'Bottom'];
 const SHARED = ['protocol', 'design-system', 'i18n', 'shared', 'test'];
 const COMPOSITION = ['keys', 'connection', 'window'];
 const TEST_FILE = /\.test\.tsx?$/;

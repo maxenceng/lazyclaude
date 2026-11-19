@@ -8,7 +8,7 @@ import { KeyRouter } from './keyRouting';
 import { Focus, Layout, type Panel, WindowTab } from './layout';
 import { WindowTabs } from './windowTabs';
 import type { Platform } from './platform';
-import type { Client } from './protocol';
+import type { BoardTicketView, Client } from './protocol';
 import { ReviewController } from './review/reviewController';
 import { Closing } from './session/closing';
 import { Hosting } from './session/hosting';
@@ -17,11 +17,15 @@ import { tabOfLive, tabOfNextColour } from './session/statusLineTargets';
 import { SessionsController } from './session/sessionsController';
 import { SessionStore } from './session/sessionStore';
 import { WatchingReporter } from './session/watched';
+import { Worktree, type WorktreeTicket } from './session/worktree';
 import { Store } from './shared/store';
 import { NoticeStore } from './shared/noticeStore';
 import { WarningStore } from './shared/warningStore';
 import { WindowFocus } from './window/windowFocus';
 import { Quitting, hostedOf } from './quitting';
+
+const worktreeTicketOf = (ticket: BoardTicketView | undefined): WorktreeTicket | undefined =>
+  ticket === undefined ? undefined : { id: ticket.id, branch: ticket.branch, done: ticket.status === 'DONE' };
 
 /** One window: the contexts it composes, the layout over them, and the rule that loads them whenever the sidecar becomes ready. */
 export class AppModel {
@@ -39,6 +43,7 @@ export class AppModel {
   readonly tabs: WindowTabs;
   readonly quitting: Quitting;
   readonly closing: Closing;
+  readonly worktree: Worktree;
   private readonly keys: KeyRouter;
   private readonly watching: WatchingReporter;
   private watched = false;
@@ -87,7 +92,12 @@ export class AppModel {
       refused: (reason) => this.notices.raise(i18n.t('common:quit.refused', { reason })),
     });
     this.closing = new Closing({ client, hosting: this.hosting, sessions: this.sessionStore.sessions });
-    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review, this.tabs, this.quitting, this.closing);
+    this.worktree = new Worktree({
+      client,
+      ticket: () => worktreeTicketOf(this.board.selectedTicket()),
+      reread: (id) => this.rereadTicket(id),
+    });
+    this.keys = new KeyRouter(this.board, this.docs, this.sessions, this.layout, this.review, this.tabs, this.quitting, this.closing, this.worktree);
     this.hosting.dock.subscribe(() => this.dockChanged());
     this.layout.subscribe(() => this.tellWatching());
     this.hosting.dock.subscribe(() => this.tellWatching());
@@ -96,6 +106,9 @@ export class AppModel {
     this.board.store.state.subscribe(() => this.tabs.pullRequestsChanged());
     this.review.pullRequests.state.subscribe(() => this.tabs.pullRequestsChanged());
     this.board.selection.selected.subscribe(() => this.notices.clear());
+    this.board.selection.selected.subscribe(() => this.worktree.refresh());
+    this.board.store.state.subscribe(() => this.worktree.refresh());
+    this.sessionStore.sessions.subscribe(() => this.worktree.refresh());
     this.board.selection.selected.subscribe(() => this.sessions.followSelection());
   }
 
@@ -281,6 +294,11 @@ export class AppModel {
   private ready(): void {
     void this.load();
     void this.warnings.watch();
+  }
+
+  private async rereadTicket(id: string): Promise<WorktreeTicket | undefined> {
+    await this.board.refresh();
+    return worktreeTicketOf(this.board.ticket(id));
   }
 
   private project(): { root: string; ticketIds: string[] } | undefined {
