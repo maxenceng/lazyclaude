@@ -23,7 +23,7 @@ it never reads and could send a stale one.
   join stays in the composer, so `session` never reads `review` or `board`. A branch with no merged pull request, or read before
   `review` has answered, has no merged head, so its state is `noMergedPullRequest` and nothing is offered for removal.
 - **A result of its own, with the words in it.** `session/worktreeOf` answers `WorktreeShownView`: `noWorktree`, `clearWorktree`
-  (`shown`), `heldBackWorktree` (`shown`, `state`, `refusal`) or `unreadWorktree` (`reason`, `refusal`). `shown` is the path from
+  (`shown`), `heldBackWorktree` (`shown`, `state`, `held`) or `unreadWorktree` (`reason`, `held`). `shown` is the path from
   the project's parent, as the shell shows it. The window draws a `clean` pill for `clearWorktree`, `held` for a `heldBackWorktree`
   whose state is `worktreeContents`, and `unknown` for one whose state is `noMergedPullRequest` and for `unreadWorktree`.
   `session/removeWorktree` answers `WorktreeRemovalOutcomeView`: `removedWorktree` or `notRemovedWorktree` (`refusal`). A refusal

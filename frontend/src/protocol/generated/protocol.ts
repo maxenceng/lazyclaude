@@ -845,7 +845,7 @@ export interface SessionHeldBackWorktreeView {
   kind: 'heldBackWorktree';
   shown: string;
   state: SessionWorktreeStateView;
-  refusal: string;
+  held: string;
 }
 export interface SessionWorktreeContentsView {
   kind: 'worktreeContents';
@@ -859,7 +859,7 @@ export interface SessionNoMergedPullRequestView {
 export interface SessionUnreadWorktreeView {
   kind: 'unreadWorktree';
   reason: string;
-  refusal: string;
+  held: string;
 }
 export interface SessionRemovedWorktreeView {
   kind: 'removedWorktree';
