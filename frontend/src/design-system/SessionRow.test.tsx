@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { LampColour } from './Lamp';
-import { SessionRow } from './SessionRow';
+import { PillInk, SessionRow } from './SessionRow';
 import { ruleOf, stylesheet } from './stylesheet';
 
 const sheet = stylesheet('SessionRow.module.css');
@@ -96,5 +96,13 @@ describe('a session row', () => {
     expect(ruleOf(sheet, '.tall')).toContain('padding');
     render(<SessionRow label="start" state="busy" selected={false} lamp={LampColour.Off} onSelect={() => {}} />);
     expect(screen.getByRole('button').className).toContain('tall');
+  });
+
+  it('draws a clean pill on its own neutral tokens, not the lamp\'s, and says its words', () => {
+    render(<SessionRow label="../app.worktrees/x" state="clean" pill={PillInk.Clean} selected={false} lamp={LampColour.Off} onSelect={() => {}} />);
+    expect(screen.getByRole('img')).toHaveTextContent('clean');
+    expect(screen.getByRole('img').className).toContain('cleanPill');
+    expect(ruleOf(sheet, '.cleanPill')).toContain('background: var(--worktree-clean)');
+    expect(ruleOf(sheet, '.cleanPill')).toContain('color: var(--worktree-clean-ink)');
   });
 });

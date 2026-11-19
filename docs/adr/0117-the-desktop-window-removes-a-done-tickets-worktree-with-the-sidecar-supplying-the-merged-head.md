@@ -42,6 +42,13 @@ it never reads and could send a stale one.
   preview. `d` with the Board or the ticket pane focused, or a click on the section's row, opens ADR 0109's popup `Remove this
   worktree?` with `Keep (esc)` and `Remove (y)`, and the key has a visible button. The `clean` pill has its own neutral token.
   A session ending opens the popup unasked only after a `/ticket done` session, never from a stale read.
+- **How the window reads it.** The window asks for the selected ticket's worktree when the ticket is `done`, again whenever the
+  selection, the sessions, the board or the merged pull requests change, one read at a time: a change during a read queues one
+  more after it. A read that lands after another ticket was selected shows nowhere, and nothing is drawn before the first read. A
+  failed removal, whether `notRemovedWorktree` or a failed call, shows its line under the row in the ticket pane and is not
+  retried: `d` again is the retry. `d` and the key bar's `d remove worktree` read one predicate, that the selected ticket's
+  worktree is shown and `clearWorktree`. The row's `clean` pill sits on `--worktree-clean`, a neutral token apart from the lamp
+  colours, which mean session state; where the worktree could not be read there is no path, so the row names the ticket's branch.
 
 ## Consequences
 

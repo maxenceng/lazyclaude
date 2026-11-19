@@ -125,3 +125,14 @@
 .tall:hover .action {
   color: var(--text);
 }
+
+.cleanPill {
+  padding: 1px var(--space-2);
+  border-radius: var(--pill-radius);
+  background: var(--worktree-clean);
+  color: var(--worktree-clean-ink);
+  font-size: var(--size-micro);
+  font-weight: 600;
+  line-height: var(--lamp-marker);
+  white-space: nowrap;
+}
