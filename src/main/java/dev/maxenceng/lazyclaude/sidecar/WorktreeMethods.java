@@ -79,7 +79,7 @@ final class WorktreeMethods {
         return watched.map(project -> WorktreeShownView.from(sessions.worktreeOf(payload(project, branch)), project))
                 .orElseGet(() -> UnreadWorktreeView.builder()
                         .reason(NOT_WATCHED)
-                        .refusal(new UnreadableWorktreeView(NOT_WATCHED).refusal())
+                        .held(new UnreadableWorktreeView(NOT_WATCHED).heldBack())
                         .build());
     }
 

@@ -27,7 +27,7 @@ class WorktreeShownViewTest {
                 .isEqualTo(HeldBackWorktreeView.builder()
                         .shown(Path.of("../app.worktrees/PROJ-1-ticket"))
                         .state(dirtyWorktreeContentsView())
-                        .refusal(new Reason("cannot remove: 1 dirty path — src/Foo.java"))
+                        .held(new Reason("cannot remove: 1 dirty path"))
                         .build());
     }
 
@@ -47,7 +47,7 @@ class WorktreeShownViewTest {
         assertThat(WorktreeShownView.from(new UnreadableWorktreeView(reason()), sessionPayload()))
                 .isEqualTo(UnreadWorktreeView.builder()
                         .reason(reason())
-                        .refusal(new Reason("cannot remove: no registry and no claude"))
+                        .held(new Reason("cannot remove: unreadable (no registry and no claude)"))
                         .build());
     }
 }

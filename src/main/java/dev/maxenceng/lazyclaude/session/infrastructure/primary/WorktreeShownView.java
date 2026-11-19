@@ -15,10 +15,10 @@ public sealed interface WorktreeShownView
                 HeldBackWorktreeView.builder()
                         .shown(sessions.root().relativize(held.path()))
                         .state(held.state())
-                        .refusal(held.state().refusal())
+                        .held(held.state().heldBack())
                         .build();
             case UnreadableWorktreeView unreadable ->
-                UnreadWorktreeView.builder().reason(unreadable.reason()).refusal(unreadable.refusal()).build();
+                UnreadWorktreeView.builder().reason(unreadable.reason()).held(unreadable.heldBack()).build();
             case NoWorktreeView none -> none;
         };
     }

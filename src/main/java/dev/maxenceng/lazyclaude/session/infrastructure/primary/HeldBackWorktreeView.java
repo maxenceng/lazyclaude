@@ -4,8 +4,8 @@ import java.nio.file.Path;
 
 import dev.maxenceng.lazyclaude.session.published.Reason;
 
-/** A ticket worktree that is not removed: what stands in it, or that no merged pull request says what the merge covered, and the line saying so. */
-public record HeldBackWorktreeView(Path shown, WorktreeStateView state, Reason refusal) implements WorktreeShownView {
+/** A ticket worktree that is not removed: what stands in it, or that no merged pull request says what the merge covered, and the line saying it is held back. */
+public record HeldBackWorktreeView(Path shown, WorktreeStateView state, Reason held) implements WorktreeShownView {
 
     public static HeldBackWorktreeViewBuilder builder() {
         return new HeldBackWorktreeViewBuilder();
@@ -14,7 +14,7 @@ public record HeldBackWorktreeView(Path shown, WorktreeStateView state, Reason r
     public static final class HeldBackWorktreeViewBuilder {
         private Path shown;
         private WorktreeStateView state;
-        private Reason refusal;
+        private Reason held;
 
         private HeldBackWorktreeViewBuilder() {}
 
@@ -28,13 +28,13 @@ public record HeldBackWorktreeView(Path shown, WorktreeStateView state, Reason r
             return this;
         }
 
-        public HeldBackWorktreeViewBuilder refusal(Reason refusal) {
-            this.refusal = refusal;
+        public HeldBackWorktreeViewBuilder held(Reason held) {
+            this.held = held;
             return this;
         }
 
         public HeldBackWorktreeView build() {
-            return new HeldBackWorktreeView(shown, state, refusal);
+            return new HeldBackWorktreeView(shown, state, held);
         }
     }
 }

@@ -2296,11 +2296,11 @@
         "state" : {
           "$ref" : "#/$defs/session.WorktreeStateView"
         },
-        "refusal" : {
+        "held" : {
           "type" : "string"
         }
       },
-      "required" : [ "kind", "shown", "state", "refusal" ],
+      "required" : [ "kind", "shown", "state", "held" ],
       "additionalProperties" : false
     },
     "session.HostStart" : {
@@ -3010,11 +3010,11 @@
         "reason" : {
           "type" : "string"
         },
-        "refusal" : {
+        "held" : {
           "type" : "string"
         }
       },
-      "required" : [ "kind", "reason", "refusal" ],
+      "required" : [ "kind", "reason", "held" ],
       "additionalProperties" : false
     },
     "session.UnreadableTranscript" : {

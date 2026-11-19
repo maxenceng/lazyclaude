@@ -61,7 +61,7 @@ class WorktreeSidecarTest {
 
         assertThat(answerTo(methods, "session/worktreeOf"))
                 .isEqualTo(
-                        "{\"kind\":\"unreadWorktree\",\"reason\":\"the project's sessions are not watched yet\",\"refusal\":\"cannot remove: the project's sessions are not watched yet\"}");
+                        "{\"kind\":\"unreadWorktree\",\"reason\":\"the project's sessions are not watched yet\",\"held\":\"cannot remove: unreadable (the project's sessions are not watched yet)\"}");
         verify(sessions, never()).worktreeOf(any());
     }
 
@@ -103,7 +103,7 @@ class WorktreeSidecarTest {
 
         assertThat(answerTo(methods, "session/worktreeOf"))
                 .isEqualTo(
-                        "{\"kind\":\"heldBackWorktree\",\"shown\":\"../app.worktrees/PROJ-1-ticket\",\"state\":{\"kind\":\"worktreeContents\",\"dirtyPaths\":[\"src/Foo.java\"],\"commitsBeyondMerge\":0,\"sessions\":[]},\"refusal\":\"cannot remove: 1 dirty path — src/Foo.java\"}");
+                        "{\"kind\":\"heldBackWorktree\",\"shown\":\"../app.worktrees/PROJ-1-ticket\",\"state\":{\"kind\":\"worktreeContents\",\"dirtyPaths\":[\"src/Foo.java\"],\"commitsBeyondMerge\":0,\"sessions\":[]},\"held\":\"cannot remove: 1 dirty path\"}");
     }
 
     @Test
@@ -114,7 +114,7 @@ class WorktreeSidecarTest {
 
         assertThat(answerTo(methods, "session/worktreeOf"))
                 .isEqualTo(
-                        "{\"kind\":\"unreadWorktree\",\"reason\":\"no registry and no claude\",\"refusal\":\"cannot remove: no registry and no claude\"}");
+                        "{\"kind\":\"unreadWorktree\",\"reason\":\"no registry and no claude\",\"held\":\"cannot remove: unreadable (no registry and no claude)\"}");
     }
 
     @Test

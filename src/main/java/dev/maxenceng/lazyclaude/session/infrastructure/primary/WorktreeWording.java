@@ -21,9 +21,14 @@ final class WorktreeWording {
     private static final String CANNOT_TELL = "cannot tell what the merge covered (no merged pull request found for the branch)";
     private static final String ONE_SESSION = "live session %s is in the worktree";
     private static final String MANY_SESSIONS = "live sessions %s are in the worktree";
+    private static final String LIVE_SESSION = "live session";
     private static final String QUOTED = "\"%s\"";
     private static final String COUNTED = "%d %s";
     private static final String PLURAL = "%ss";
+    private static final String CLEAN = "clean";
+    private static final String NO_MERGED_PULL_REQUEST = "no merged pull request";
+    private static final String UNREADABLE = "unreadable (%s)";
+    private static final String SUMMARY_BEYOND_THE_MERGE = "%s beyond the merge";
     private static final int ONE = 1;
     private static final int NONE = 0;
 
@@ -39,6 +44,35 @@ final class WorktreeWording {
                                 .collect(Collectors.joining(REASON_SEPARATOR));
                     case NoMergedPullRequestView _ -> CANNOT_TELL;
                 }));
+    }
+
+    /** What stands in a worktree in {@code state}, as the ticket detail counts it. */
+    static Reason summary(WorktreeStateView state) {
+        return new Reason(
+                switch (state) {
+                    case WorktreeContentsView contents -> {
+                        String parts = Stream.of(dirtyCount(contents), commitCount(contents), liveSessionCount(contents))
+                                .flatMap(Function.identity())
+                                .collect(Collectors.joining(PART_SEPARATOR));
+                        yield parts.isEmpty() ? CLEAN : parts;
+                    }
+                    case NoMergedPullRequestView _ -> NO_MERGED_PULL_REQUEST;
+                });
+    }
+
+    /** What stands in a worktree git could not read: why, as the ticket detail says it. */
+    static Reason unreadable(Reason reason) {
+        return new Reason(UNREADABLE.formatted(reason.value()));
+    }
+
+    /** The line saying a worktree in {@code state} is held back, with what stands in it. */
+    static Reason heldBack(WorktreeStateView state) {
+        return new Reason(CANNOT_REMOVE.formatted(summary(state).value()));
+    }
+
+    /** The line saying a worktree git could not read is held back, with why. */
+    static Reason heldBackUnreadable(Reason reason) {
+        return new Reason(CANNOT_REMOVE.formatted(unreadable(reason).value()));
     }
 
     /** Why a removal, or the read before it, failed in git. */
@@ -71,6 +105,21 @@ final class WorktreeWording {
                 .map(QUOTED::formatted)
                 .collect(Collectors.joining(PART_SEPARATOR));
         return Stream.of((contents.sessions().size() == ONE ? ONE_SESSION : MANY_SESSIONS).formatted(named));
+    }
+
+    private static Stream<String> dirtyCount(WorktreeContentsView contents) {
+        return contents.dirtyPaths().isEmpty() ? Stream.empty() : Stream.of(counted(contents.dirtyPaths().size(), DIRTY));
+    }
+
+    private static Stream<String> commitCount(WorktreeContentsView contents) {
+        if (contents.commitsBeyondMerge() == NONE) {
+            return Stream.empty();
+        }
+        return Stream.of(SUMMARY_BEYOND_THE_MERGE.formatted(counted(contents.commitsBeyondMerge(), COMMIT)));
+    }
+
+    private static Stream<String> liveSessionCount(WorktreeContentsView contents) {
+        return contents.sessions().isEmpty() ? Stream.empty() : Stream.of(counted(contents.sessions().size(), LIVE_SESSION));
     }
 
     private static String counted(int count, String noun) {
