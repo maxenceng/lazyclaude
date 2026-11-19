@@ -767,3 +767,31 @@ describe('the app and its window tabs', () => {
     expect(client.calls.map((call) => call.method)).toEqual(['review/pullRequestOn', 'review/pullRequestOn']);
   });
 });
+
+const refused = async () => {
+  const client = fakeClient(new Ready());
+  const app = new AppModel(client, testPlatform());
+  app.start();
+  client.answer('board/watch', boardFixture([ticketFixture({ id: 'PROJ-1' }), ticketFixture({ id: 'PROJ-2' })]));
+  await settled();
+  app.board.selection.select('PROJ-1');
+  const starting = app.hosting.startUnlinked('/p');
+  client.answerAll('session/startUnlinked', { kind: 'notStartedHost', reason: 'no claude' });
+  await starting;
+  return app;
+};
+
+describe('the app and a session that could not be started', () => {
+  it('withdraws the failure when another ticket is selected', async () => {
+    const app = await refused();
+    expect(app.hosting.failure.get()?.message).toBe('no claude');
+    app.board.selection.select('PROJ-2');
+    expect(app.hosting.failure.get()).toBeUndefined();
+  });
+
+  it('keeps the failure when the selection lands on the same ticket again', async () => {
+    const app = await refused();
+    app.board.selection.select('PROJ-1');
+    expect(app.hosting.failure.get()?.message, 'the reason still belongs to the ticket under the cursor').toBe('no claude');
+  });
+});

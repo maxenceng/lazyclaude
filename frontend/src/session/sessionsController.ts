@@ -30,6 +30,9 @@ export class SessionsController {
   /** The ticket and the row the cursor was last on, so a read that reorders the rows keeps it on the same session. */
   private under: { ticket: string | undefined; row: string | undefined } = { ticket: undefined, row: undefined };
 
+  /** The ticket the last selection landed on, so landing on it again keeps what was shown for it. */
+  private followed: string | undefined;
+
   constructor(private readonly deps: SessionsDeps) {
     deps.store.sessions.subscribe(() => this.followRow());
     this.cursor.subscribe(() => this.remember());
@@ -115,12 +118,17 @@ export class SessionsController {
     this.picker.set(undefined);
   }
 
-  /** The picker offers the verbs of the ticket it opened on, so selecting another ticket closes it. */
+  /** The picker offers the verbs of the ticket it opened on, and a failed start was shown for the ticket it started from, so selecting another ticket closes the one and withdraws the other. */
   followSelection(): void {
+    const ticket = this.deps.ticket()?.id;
     const open = this.picker.get();
-    if (open !== undefined && open.ticket !== this.deps.ticket()?.id) {
+    if (open !== undefined && open.ticket !== ticket) {
       this.cancelPick();
     }
+    if (ticket !== this.followed) {
+      this.hosting.withdrawFailure();
+    }
+    this.followed = ticket;
   }
 
   /** Starts the verb under the picker's cursor, or at `index`, and closes the picker. */

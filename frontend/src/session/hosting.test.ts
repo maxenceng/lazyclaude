@@ -49,12 +49,48 @@ describe('the hosted sessions', () => {
     expect(hosted.emulatorOf('s1')).toBeDefined();
   });
 
-  it('opens no tab for a session the sidecar did not start, the refusal being its warning', async () => {
+  it.each([
+    ['an unlinked start', (hosted: Hosting) => hosted.startUnlinked('/p')],
+    ['a ticket verb start', (hosted: Hosting) => hosted.startTicket('/p', 'PROJ-1', 'proj-1', 'START')],
+    ['a past session resume', (hosted: Hosting) => hosted.resumePast({ root: '/p', ticketIds: ['PROJ-1'] }, 'old', '/p/wt', { kind: 'ticketListingPayload', branch: 'proj-1' })],
+  ])('keeps the reason the sidecar refused %s for the screen, with no retry and no tab', async (_, start) => {
     const { client, hosted } = hosting();
-    const starting = hosted.startUnlinked('/p');
-    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
-    await starting;
+    const starting = start(hosted);
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude on the PATH' });
+    expect(await starting).toBe(false);
+    expect(hosted.failure.get()?.message).toBe('no claude on the PATH');
+    expect(hosted.failure.get()?.retry, 'the same start would be refused again').toBeUndefined();
     expect(hosted.dock.get().tabs).toEqual([]);
+  });
+
+  it('replaces a first refusal\'s reason with a second\'s, a double start\'s included, opening no tab', async () => {
+    const { client, hosted } = hosting();
+    const first = hosted.startUnlinked('/p');
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
+    await first;
+    const second = hosted.startUnlinked('/p');
+    client.answerNext({ kind: 'notStartedHost', reason: 'already starting' });
+    await second;
+    expect(hosted.failure.get()?.message).toBe('already starting');
+    expect(hosted.dock.get().tabs).toEqual([]);
+  });
+
+  it('withdraws an earlier start\'s failure as soon as the next start is asked, before it is answered', async () => {
+    const { client, hosted } = hosting();
+    const refused = hosted.startUnlinked('/p');
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
+    await refused;
+    void hosted.startTicket('/p', 'PROJ-1', 'proj-1', 'START');
+    expect(hosted.failure.get()).toBeUndefined();
+  });
+
+  it('withdraws a failure when asked to, as when another ticket is selected', async () => {
+    const { client, hosted } = hosting();
+    const refused = hosted.startUnlinked('/p');
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
+    await refused;
+    hosted.withdrawFailure();
+    expect(hosted.failure.get()).toBeUndefined();
   });
 
   it('starts a new ticket\'s session with the description as typed, and opens its tab', async () => {
@@ -72,6 +108,7 @@ describe('the hosted sessions', () => {
     client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
     expect(await starting).toBe('no claude');
     expect(hosted.dock.get().tabs).toEqual([]);
+    expect(hosted.failure.get(), 'the popup that asked shows the reason, not the pane').toBeUndefined();
   });
 
   it('answers the message of a failed call for a new ticket\'s session', async () => {
@@ -118,7 +155,7 @@ describe('the hosted sessions', () => {
     client.failNext(new RpcError(-32000, 'no java'));
     await starting;
     expect(hosted.failure.get()?.message).toBe('no java');
-    const retried = hosted.failure.get()?.retry();
+    const retried = hosted.failure.get()?.retry?.();
     client.answerNext({ kind: 'startedHost', id: 's1' });
     await retried;
     expect(hosted.failure.get()).toBeUndefined();
