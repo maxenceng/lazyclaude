@@ -38,8 +38,8 @@ describe('a session row', () => {
 
   it('draws no hover ground on a row that follows the pointer, so the cursor ground is its one highlight', () => {
     render(<SessionRow label="refine" selected={false} lamp={undefined} onSelect={() => {}} onPoint={() => {}} />);
-    expect(screen.getByRole('button').className, 'the pointed class is what the hover-ground rule leaves out').toContain('pointed');
-    expect(ruleOf(sheet, '.row:not(.tall):not(.pointed):hover:not(.selected)')).toContain('--hover-ground');
+    expect(screen.getByRole('button').className, 'the followsPointer class is what the hover-ground rule leaves out').toContain('followsPointer');
+    expect(ruleOf(sheet, '.row:not(.tall):not(.followsPointer):hover:not(.selected)')).toContain('--hover-ground');
   });
 
   it('carries no tint for a session that waits on nothing', () => {

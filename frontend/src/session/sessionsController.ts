@@ -116,7 +116,7 @@ export class SessionsController {
   }
 
   /** The pointer moved onto the verb at `index`: the cursor follows it, so enter and j/k carry on from there. */
-  pointAt(index: number): void {
+  pickTo(index: number): void {
     this.picker.set(this.picker.get()?.at(index));
   }
 

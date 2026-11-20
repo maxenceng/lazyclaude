@@ -44,7 +44,7 @@ export const SessionRow = ({ label, state, pill = PillInk.Lamp, action, selected
       row.current?.scrollIntoView({ block: 'nearest' });
     }
   }, [selected]);
-  const className = [styles.row, selected ? styles.selected : '', state === undefined ? '' : styles.tall, onPoint === undefined ? '' : styles.pointed].join(' ');
+  const className = [styles.row, selected ? styles.selected : '', state === undefined ? '' : styles.tall, onPoint === undefined ? '' : styles.followsPointer].join(' ');
   const content = (
     <>
       {state !== undefined ? <StatePill state={state} pill={pill} lamp={lamp} /> : lamp === undefined ? <span className={styles.noLamp} /> : <Lamp colour={lamp} size={LampSize.Marker} />}
