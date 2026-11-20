@@ -7,9 +7,14 @@ describe('the hover on what a click picks', () => {
     ['a Docs row', 'DocsTreeRow.module.css', '.row:hover:not(.selected)'],
     ['a panel tab', 'PanelTabs.module.css', '.tab:hover:not(.selected)'],
     ['a window tab', 'WindowTabBar.module.css', '.tab:hover:not(.selected)'],
-    ['a verb or a short session row', 'SessionRow.module.css', '.row:not(.tall):hover:not(.selected)'],
   ])('lifts %s under the pointer with the hover ground, and leaves the selected one as it is', (_name, sheet, selector) => {
     expect(ruleOf(stylesheet(sheet), selector)).toContain('background: var(--hover-ground)');
+  });
+
+  it('lifts a verb or a short session row under the pointer with the hover ground laid over its own ground, and leaves the selected one as it is', () => {
+    expect(ruleOf(stylesheet('SessionRow.module.css'), '.row:not(.tall):hover:not(.selected)'), 'a short row may carry a lamp tile; the hover ground tints it rather than replacing it').toContain(
+      'background: linear-gradient(var(--hover-ground), var(--hover-ground)), var(--row-ground, transparent);',
+    );
   });
 
   it('gives a tall session row no hover ground, since its hover lights the action instead', () => {

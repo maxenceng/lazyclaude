@@ -35,7 +35,7 @@
 }
 
 .row:not(.tall):hover:not(.selected) {
-  background: var(--hover-ground);
+  background: linear-gradient(var(--hover-ground), var(--hover-ground)), var(--row-ground, transparent);
 }
 
 .selected {
