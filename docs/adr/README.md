@@ -124,3 +124,4 @@
 - 0120 [A ticket worktree takes a branch only on origin from origin, and refuses when origin cannot say](0120-a-ticket-worktree-takes-a-branch-only-on-origin-from-origin-and-refuses-when-origin-cannot-say.md) — Accepted.
 - 0121 [A closed issue's branch is the head branch of the pull request that merged it, and a worktree at its path is its worktree](0121-a-closed-issue-s-branch-is-the-head-branch-of-the-pull-request-that-merged-it.md) — Accepted.
 - 0122 [The desktop window removes a done ticket's worktree, with the sidecar supplying the merged head](0122-the-desktop-window-removes-a-done-tickets-worktree-with-the-sidecar-supplying-the-merged-head.md) — Accepted.
+- 0123 [In the desktop verb picker the pointer moves the cursor, and the cursor ground is its one highlight](0123-in-the-desktop-verb-picker-the-pointer-moves-the-cursor.md) — Accepted.

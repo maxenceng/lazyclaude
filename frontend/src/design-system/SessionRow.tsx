@@ -20,6 +20,8 @@ interface Props {
   lamp: LampColour | undefined;
   /** What a press does; a row given none is plain text, not a button. */
   onSelect?: (() => void) | undefined;
+  /** The pointer moving onto the row. A row given it follows the pointer with the cursor, as in a native menu, so it draws no hover ground of its own. */
+  onPoint?: (() => void) | undefined;
 }
 
 const StatePill = ({ state, pill, lamp }: { state: string; pill: PillInk; lamp: LampColour | undefined }) =>
@@ -35,14 +37,14 @@ const StatePill = ({ state, pill, lamp }: { state: string; pill: PillInk; lamp: 
  * One line of a ticket's sessions, or one verb to start it with: its lamp, its words, and what a press on it does. A selected row
  * scrolls into its pane's view, since a long ticket puts the sessions and the verb picker below the fold.
  */
-export const SessionRow = ({ label, state, pill = PillInk.Lamp, action, selected, lamp, onSelect }: Props) => {
+export const SessionRow = ({ label, state, pill = PillInk.Lamp, action, selected, lamp, onSelect, onPoint }: Props) => {
   const row = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (selected) {
       row.current?.scrollIntoView({ block: 'nearest' });
     }
   }, [selected]);
-  const className = [styles.row, selected ? styles.selected : '', state === undefined ? '' : styles.tall].join(' ');
+  const className = [styles.row, selected ? styles.selected : '', state === undefined ? '' : styles.tall, onPoint === undefined ? '' : styles.followsPointer].join(' ');
   const content = (
     <>
       {state !== undefined ? <StatePill state={state} pill={pill} lamp={lamp} /> : lamp === undefined ? <span className={styles.noLamp} /> : <Lamp colour={lamp} size={LampSize.Marker} />}
@@ -62,7 +64,7 @@ export const SessionRow = ({ label, state, pill = PillInk.Lamp, action, selected
           {content}
         </div>
       ) : (
-        <button ref={row} type="button" className={className} aria-current={selected ? 'true' : undefined} data-lamp={lamp} onClick={onSelect}>
+        <button ref={row} type="button" className={className} aria-current={selected ? 'true' : undefined} data-lamp={lamp} onClick={onSelect} onPointerEnter={onPoint}>
           {content}
         </button>
       )}
