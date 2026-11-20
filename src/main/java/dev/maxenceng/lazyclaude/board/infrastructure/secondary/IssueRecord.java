@@ -25,7 +25,8 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.MissingFields;
 
 /**
  * One issue as {@code gh api graphql} writes it, null where the JSON lacks it. The domain's {@link GitHubIssue} decides what ticket it
- * is (ADR 0043); this reads the fields, and names the branch GitHub links to it, else as {@code gh issue develop} would (ADR 0118).
+ * is (ADR 0043); this reads the fields, and names the branch GitHub links to it, else the head of the merged pull request that closed
+ * it, else as {@code gh issue develop} would (ADR 0118, ADR 0120).
  */
 record IssueRecord(
         Integer number,
@@ -35,7 +36,8 @@ record IssueRecord(
         String state,
         String stateReason,
         String closedAt,
-        NodesRecord<LinkedBranchRecord> linkedBranches) {
+        NodesRecord<LinkedBranchRecord> linkedBranches,
+        NodesRecord<ClosedEventRecord> timelineItems) {
 
     private static final String NUMBER = "number";
     private static final String TITLE = "title";
@@ -91,7 +93,7 @@ record IssueRecord(
     }
 
     private TicketBranch branch() {
-        return linkedBranch().orElseGet(this::slugBranch);
+        return linkedBranch().or(this::mergedBranch).orElseGet(this::slugBranch);
     }
 
     private Optional<TicketBranch> linkedBranch() {
@@ -101,6 +103,19 @@ record IssueRecord(
                         .findFirst()
                         .map(LinkedBranchRecord::ref)
                         .map(RefRecord::name)
+                        .map(TicketBranch::new);
+    }
+
+    /** Only a closed issue's: a reopened one is worked again on a branch of its own, not on the one already merged. */
+    private Optional<TicketBranch> mergedBranch() {
+        return !CLOSED.equals(state) || timelineItems == null
+                ? Optional.empty()
+                : timelineItems.listed().stream()
+                        .reduce((earlier, later) -> later)
+                        .map(ClosedEventRecord::closer)
+                        .filter(closer -> Boolean.TRUE.equals(closer.merged()))
+                        .map(CloserRecord::headRefName)
+                        .filter(head -> !head.isBlank())
                         .map(TicketBranch::new);
     }
 

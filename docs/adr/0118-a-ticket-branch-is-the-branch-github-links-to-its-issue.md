@@ -6,6 +6,8 @@ Date: 2026-11-19
 
 Accepted. Supersedes the ticket branch bullet of ADR 0065 ("derived, not read back"), its deferred consequence about it, and the
 `gh issue list` call of its "One call reads the board" bullet; the rest of ADR 0065 stands. Builds on ADR 0052.
+Amended by ADR 0120: a closed issue with nothing linked takes the head of the merged pull request that closed it, which closes
+the deferred consequence about a deleted branch.
 
 ## Context
 

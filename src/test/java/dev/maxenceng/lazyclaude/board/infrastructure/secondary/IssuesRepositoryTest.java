@@ -7,6 +7,7 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixt
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.ghPrintingItsDirectory;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.impatientRepositoryOver;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.issueJson;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.issueJsonClosedByMerging;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.issueJsonLinkedTo;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.listOfIssues;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.missingCommand;
@@ -80,6 +81,8 @@ class IssuesRepositoryTest {
                         .contains("states: [OPEN, CLOSED]", "orderBy: {field: CREATED_AT, direction: DESC}", "first: 100")
                         .contains("number title body state stateReason closedAt")
                         .contains("labels(first: 100) { nodes { name } }", "linkedBranches(first: 1) { nodes { ref { name } } }")
+                        .contains("timelineItems(itemTypes: [CLOSED_EVENT], last: 1) "
+                                + "{ nodes { ... on ClosedEvent { closer { ... on PullRequest { headRefName merged } } } } }")
                         .contains("pageInfo { hasNextPage endCursor }"));
     }
 
@@ -120,6 +123,15 @@ class IssuesRepositoryTest {
         assertThat(repositoryOver(gh).entries(projectAt(root)))
                 .singleElement()
                 .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.branch()).isEqualTo(new TicketBranch("7-the-ticket-s-branch")));
+    }
+
+    @Test
+    void shouldBranchADoneTicketWithNothingLinkedOnTheHeadOfThePullRequestThatMergedIt() throws IOException {
+        Path gh = ghPrinting(root, listOfIssues(issueJsonClosedByMerging(7, "The ticket's branch", "7-the-tickets-branch")));
+
+        assertThat(repositoryOver(gh).entries(projectAt(root)))
+                .singleElement()
+                .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.branch()).isEqualTo(new TicketBranch("7-the-tickets-branch")));
     }
 
     @Test

@@ -91,6 +91,13 @@ public final class FakeGhFixture {
                         linked);
     }
 
+    static String issueJsonClosedByMerging(int number, String title, String headRefName) {
+        return ("{\"number\":%d,\"title\":\"%s\",\"state\":\"CLOSED\",\"stateReason\":\"COMPLETED\",\"closedAt\":\"2026-10-01T09:00:00Z\","
+                        + "\"linkedBranches\":{\"nodes\":[]},"
+                        + "\"timelineItems\":{\"nodes\":[{\"closer\":{\"headRefName\":\"%s\",\"merged\":true}}]}}")
+                .formatted(number, title, headRefName);
+    }
+
     private static Path script(Path directory, String body) throws IOException {
         Path script = Files.createTempFile(directory, "gh", ".sh");
         Files.writeString(script, "#!/bin/sh\n" + body, StandardCharsets.UTF_8);

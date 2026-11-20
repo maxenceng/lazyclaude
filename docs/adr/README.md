@@ -121,3 +121,4 @@
 - 0117 [The desktop window binds only the keys it acts on](0117-the-desktop-window-binds-only-the-keys-it-acts-on.md) — Accepted.
 - 0118 [A ticket's branch is the branch GitHub links to its issue](0118-a-ticket-branch-is-the-branch-github-links-to-its-issue.md) — Accepted.
 - 0119 [A session pane keeps a ctrl+click it acts on from the program, and leaves a link it would refuse to the program](0119-a-session-pane-keeps-a-ctrl-click-it-acts-on-from-the-program.md) — Accepted.
+- 0120 [A done ticket's branch is its merged pull request's head, and a worktree at its path is its worktree](0120-a-done-ticket-s-branch-is-its-merged-pull-request-s-head.md) — Accepted.

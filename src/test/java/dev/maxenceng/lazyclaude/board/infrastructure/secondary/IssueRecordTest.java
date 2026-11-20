@@ -1,7 +1,10 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
 import static dev.maxenceng.lazyclaude.board.domain.ClosedAtFixture.closedAt;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.closedByACommit;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.closedByPullRequest;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.closedIssue;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.closedIssueClosedBy;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.issue;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.issueLinkedTo;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.issueNumbered;
@@ -12,6 +15,7 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecor
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.labelsOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.linkedBranchesAbsent;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.openIssue;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.IssueRecordFixture.openIssueClosedBefore;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -130,6 +134,54 @@ class IssueRecordTest {
     void shouldSkipALinkedBranchWrittenAsNull() {
         assertThat(issueLinkedTo(new NodesRecord<>(Arrays.asList(null, new LinkedBranchRecord(new RefRecord("1-linked"))))).issue().branch())
                 .isEqualTo(new TicketBranch("1-linked"));
+    }
+
+    @Test
+    void shouldTakeTheHeadBranchOfTheMergedPullRequestThatClosedAnIssueWithNoBranchLinked() {
+        assertThat(closedIssueClosedBy("The ticket's branch", closedByPullRequest("1-the-tickets-branch", true)).issue().branch())
+                .as("a merge that deletes the branch leaves the issue with nothing linked, while its pull request keeps the head's name")
+                .isEqualTo(new TicketBranch("1-the-tickets-branch"));
+    }
+
+    @Test
+    void shouldTakeTheLinkedBranchOverTheHeadOfThePullRequestThatClosedTheIssue() {
+        assertThat(closedIssueClosedBy("Linked", closedByPullRequest("1-merged-head", true), "1-linked").issue().branch())
+                .isEqualTo(new TicketBranch("1-linked"));
+    }
+
+    @Test
+    void shouldKeepTheSlugWhenThePullRequestThatClosedTheIssueDidNotMerge() {
+        assertThat(closedIssueClosedBy("Not merged", closedByPullRequest("1-unmerged-head", false)).issue().branch())
+                .isEqualTo(new TicketBranch("1-not-merged"));
+    }
+
+    @Test
+    void shouldKeepTheSlugWhenWhatClosedTheIssueIsNotAPullRequest() {
+        assertThat(closedIssueClosedBy("By a commit", closedByACommit()).issue().branch()).isEqualTo(new TicketBranch("1-by-a-commit"));
+    }
+
+    @Test
+    void shouldKeepTheSlugWhenNoPullRequestClosedTheIssue() {
+        assertThat(closedIssueClosedBy("Closed by hand", new NodesRecord<>(List.of())).issue().branch())
+                .isEqualTo(new TicketBranch("1-closed-by-hand"));
+    }
+
+    @Test
+    void shouldReadAnIssueWithNoTimelineItemsFieldAsClosedByNoPullRequest() {
+        assertThat(closedIssueClosedBy("No timeline", null).issue().branch()).isEqualTo(new TicketBranch("1-no-timeline"));
+    }
+
+    @Test
+    void shouldReadAClosedEventWithNoCloserAsClosedByNoPullRequest() {
+        assertThat(closedIssueClosedBy("No closer", new NodesRecord<>(List.of(new ClosedEventRecord(null)))).issue().branch())
+                .isEqualTo(new TicketBranch("1-no-closer"));
+    }
+
+    @Test
+    void shouldKeepTheSlugOfAReopenedIssueThatAMergedPullRequestClosedBefore() {
+        assertThat(openIssueClosedBefore("Reopened", closedByPullRequest("1-earlier-head", true)).issue().branch())
+                .as("the merged branch holds the earlier work, and the reopened ticket's next start must not check it out again")
+                .isEqualTo(new TicketBranch("1-reopened"));
     }
 
     @Test
