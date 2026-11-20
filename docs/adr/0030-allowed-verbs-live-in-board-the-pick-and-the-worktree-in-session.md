@@ -8,7 +8,8 @@ Accepted. Settles the verb and worktree questions of LAZY-9, LAZY-7 and LAZY-15,
 Amended by ADR 0084: `session` also decides that a ticket with no verb starts an unlinked session and where a past session
 resumes, and whether the branch is merged is a `MergeState` whose `UNKNOWN` never preselects `done`.
 Amended by ADR 0120: a branch that is not local but on `origin` is fetched and tracked rather than made fresh from `main`, and
-nothing starts when `origin` cannot be asked.
+nothing starts when `origin` cannot be asked. Amended by ADR 0121: a worktree git lists at the planned path runs the session
+whatever branch it has checked out; only a directory that is not a worktree is refused.
 
 ## Context
 
