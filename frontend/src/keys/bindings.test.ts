@@ -23,6 +23,7 @@ describe('the keys the TUI binds', () => {
     ['q', Action.Quit],
     ['R', Action.Refresh],
     ['c', Action.Capture],
+    ['d', Action.RemoveWorktree],
     ['p', Action.Review],
     ['n', Action.NewTicketSession],
     ['N', Action.NewSession],
@@ -64,10 +65,6 @@ describe('the keys the TUI binds', () => {
     ['"', 'Digit3', Action.ShowPullRequests],
   ])('takes %s typed on the digit row key %s, as on AZERTY, as %s', (key, code, action) => {
     expect(actionOf(press(key, { code }))).toBe(action);
-  });
-
-  it('leaves d to the webview, as removing a worktree is the TUI\'s alone', () => {
-    expect(actionOf(press('d'))).toBeUndefined();
   });
 
   it('leaves a key the TUI does not bind to the webview', () => {

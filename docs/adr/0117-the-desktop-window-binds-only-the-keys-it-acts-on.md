@@ -6,6 +6,7 @@ Date: 2026-11-19
 
 Accepted. Amends ADR 0058: the window no longer takes every key in the TUI's key table, only the ones something in the
 window acts on; the rest of ADR 0058 stands. Builds on ADR 0038 (removing a ticket's worktree).
+Amended by ADR 0122: `d` is bound again, to the worktree removal the protocol now carries.
 
 ## Context
 

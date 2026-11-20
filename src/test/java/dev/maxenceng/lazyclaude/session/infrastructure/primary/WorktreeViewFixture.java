@@ -1,6 +1,6 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
-import static dev.maxenceng.lazyclaude.session.published.DirtyPathFixture.dirtyPath;
+import static dev.maxenceng.lazyclaude.session.domain.DirtyPathFixture.dirtyPath;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.sessionName;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 

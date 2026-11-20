@@ -74,5 +74,21 @@
   "clipboard": {
     "copyFailed": "Could not copy: {{reason}}",
     "pasteFailed": "Could not paste: {{reason}}"
+  },
+  "worktree": {
+    "title": "worktree",
+    "clean": "clean",
+    "held": "held",
+    "unknown": "unknown",
+    "remove": "remove",
+    "removeKey": "d"
+  },
+  "removeWorktree": {
+    "title": "Remove this worktree?",
+    "body": "Nothing in it is lost: no uncommitted work, no commit beyond the merge, no live session. The branch stays.",
+    "yes": "Remove",
+    "yesKey": "y",
+    "no": "Keep",
+    "noKey": "esc"
   }
 }

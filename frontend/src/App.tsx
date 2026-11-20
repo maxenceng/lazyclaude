@@ -23,6 +23,8 @@ import { PullRequestsPane } from './review/PullRequestsScreen';
 import { DiffPane, FilesPane, ReviewPopups } from './review/ReviewScreen';
 import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKeyBar';
 import { ClosePopup } from './session/ClosePopup';
+import { WorktreePopup } from './session/WorktreePopup';
+import { WorktreeSection } from './session/WorktreeSection';
 import { DockScreen, DockStrip } from './session/DockScreen';
 import { LampColour, markerOfTicket, lampTilesOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
@@ -84,6 +86,10 @@ export const App = ({ app, packaged }: Props) => {
   const capturing = useStore(app.board.capture.state).isOpen();
   const quitAsked = useStore(app.quitting.asking);
   const closeAsked = useStore(app.closing.asking);
+  const worktreeAsked = useStore(app.worktree.asking);
+  const worktreeRefusal = useStore(app.worktree.refusal);
+  useStore(app.worktree.read);
+  useStore(app.worktree.removing);
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
@@ -116,11 +122,12 @@ export const App = ({ app, packaged }: Props) => {
     selected: layout.panel,
     onSelect: (id: string) => app.showPanel(PANEL_OF.get(id) ?? Focus.Board),
   };
+  const removeWorktreeKey = app.worktree.removable() ? t('keyBar.removeWorktree') : undefined;
   const keyBar = {
-    [Focus.Board]: <BoardKeyBar ticket={selectedTicket !== undefined} capture={app.board.root() !== undefined} extra={panelKeys} />,
+    [Focus.Board]: <BoardKeyBar ticket={selectedTicket !== undefined} capture={app.board.root() !== undefined} worktree={removeWorktreeKey} extra={panelKeys} />,
     [Focus.Docs]: <DocsKeyBar documentShown={layout.showsDocumentInView()} extra={panelKeys} />,
     [Focus.Document]: <DocumentKeyBar extra={tabKeys} />,
-    [Focus.Sessions]: <SessionsKeyBar picking={false} extra={panelKeys} />,
+    [Focus.Sessions]: <SessionsKeyBar picking={false} worktree={removeWorktreeKey} extra={panelKeys} />,
     [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
     [Focus.Diff]: <ReviewKeyBar panel={ReviewFocus.Diff} />,
     [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} hoveredLink={hoveredLink} />,
@@ -272,6 +279,7 @@ export const App = ({ app, packaged }: Props) => {
                 picker={picker}
                 onPress={(index) => app.pressRow(index)}
               />
+              <WorktreeSection shown={app.worktree.shown()} branch={selectedTicket?.branch ?? ''} refusal={worktreeRefusal} removable={app.worktree.removable()} onPress={() => app.worktree.request()} />
             </TicketPane>
           ),
           arrangement: layout.arrangement(hasDock),
@@ -292,7 +300,7 @@ export const App = ({ app, packaged }: Props) => {
         zoomed={layout.zoomed}
         zoomKey={app.zoomKey()}
         closeKey={app.closeKey()}
-        asking={closeAsked !== undefined}
+        asking={closeAsked !== undefined || worktreeAsked !== undefined}
         onClose={() => app.closeSession()}
         onMinimise={() => app.toggleDockMinimised()}
         onZoom={() => app.toggleZoom()}
@@ -369,6 +377,7 @@ export const App = ({ app, packaged }: Props) => {
       {review === undefined ? null : <ReviewPopups review={review} />}
       <CapturePopup capture={app.board.capture} />
       {closeAsked === undefined ? null : <ClosePopup onAnswer={(close) => app.closing.answer(close)} />}
+      {worktreeAsked === undefined ? null : <WorktreePopup shown={worktreeAsked.shown} onAnswer={(remove) => app.worktree.answer(remove)} />}
       {quitAsked === undefined ? null : <QuitPopup hosted={quitAsked} onAnswer={(yes) => app.quitting.answer(yes)} />}
     </>
   );

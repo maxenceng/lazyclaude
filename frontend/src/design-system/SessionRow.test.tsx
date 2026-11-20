@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { LampColour } from './Lamp';
-import { SessionRow } from './SessionRow';
+import { PillInk, SessionRow } from './SessionRow';
 import { ruleOf, stylesheet } from './stylesheet';
 
 const sheet = stylesheet('SessionRow.module.css');
@@ -82,8 +82,8 @@ describe('a session row', () => {
   });
 
   it('answers the pointer: a hand over it, and its action lit', () => {
-    expect(ruleOf(sheet, '.tall:hover')).toContain('cursor: pointer');
-    expect(ruleOf(sheet, '.tall:hover .action')).toContain('color: var(--text)');
+    expect(ruleOf(sheet, 'button.tall:hover')).toContain('cursor: pointer');
+    expect(ruleOf(sheet, 'button.tall:hover .action')).toContain('color: var(--text)');
   });
 
   it('keeps the prototype\'s card heights: its name on a set leading, a waiting card a little roomier', () => {
@@ -105,5 +105,20 @@ describe('a session row', () => {
     expect(ruleOf(sheet, '.tall')).toContain('padding');
     render(<SessionRow label="start" state="busy" selected={false} lamp={LampColour.Off} onSelect={() => {}} />);
     expect(screen.getByRole('button').className).toContain('tall');
+  });
+
+  it('draws a clean pill on its own neutral tokens, not the lamp\'s, and says its words', () => {
+    render(<SessionRow label="../app.worktrees/x" state="clean" pill={PillInk.Clean} selected={false} lamp={LampColour.Off} onSelect={() => {}} />);
+    expect(screen.getByRole('img')).toHaveTextContent('clean');
+    expect(screen.getByRole('img').className).toContain('cleanPill');
+    expect(ruleOf(sheet, '.cleanPill')).toContain('background: var(--worktree-clean)');
+    expect(ruleOf(sheet, '.cleanPill')).toContain('color: var(--worktree-clean-ink)');
+  });
+
+  it('is no button, and has no hover affordance, where it is given no handler', () => {
+    render(<SessionRow label="../app.worktrees/x" state="held" selected={false} lamp={LampColour.Off} />);
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.getByText('../app.worktrees/x').closest('li')).toHaveTextContent('held');
+    expect(sheet.split('\n'), 'the hover is on the button alone').not.toContain('.tall:hover {');
   });
 });

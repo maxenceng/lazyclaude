@@ -123,3 +123,4 @@
 - 0119 [A session pane keeps a ctrl+click it acts on from the program, and leaves a link it would refuse to the program](0119-a-session-pane-keeps-a-ctrl-click-it-acts-on-from-the-program.md) — Accepted.
 - 0120 [A ticket worktree takes a branch only on origin from origin, and refuses when origin cannot say](0120-a-ticket-worktree-takes-a-branch-only-on-origin-from-origin-and-refuses-when-origin-cannot-say.md) — Accepted.
 - 0121 [A closed issue's branch is the head branch of the pull request that merged it, and a worktree at its path is its worktree](0121-a-closed-issue-s-branch-is-the-head-branch-of-the-pull-request-that-merged-it.md) — Accepted.
+- 0122 [The desktop window removes a done ticket's worktree, with the sidecar supplying the merged head](0122-the-desktop-window-removes-a-done-tickets-worktree-with-the-sidecar-supplying-the-merged-head.md) — Accepted.

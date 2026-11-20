@@ -44,4 +44,11 @@ describe('the Board tab\'s key bar', () => {
     render(<BoardTabKeyBar ticket={false} capture={false} extra={['1/2/3 tabs']} />);
     expect(screen.getByRole('contentinfo')).not.toHaveTextContent('capture');
   });
+
+  it('puts the key that removes the worktree after the ticket\'s keys, only when it is offered', () => {
+    const { rerender } = render(<BoardKeyBar ticket capture worktree="d remove worktree" />);
+    expect(screen.getByRole('contentinfo')).toHaveTextContent('d remove worktree');
+    rerender(<BoardKeyBar ticket capture />);
+    expect(screen.getByRole('contentinfo')).not.toHaveTextContent('remove worktree');
+  });
 });

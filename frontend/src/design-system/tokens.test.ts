@@ -62,6 +62,8 @@ describe('the dim marks', () => {
     ['a session detail on a permission row', 'lamp-turn-tile-dim', 'lamp-permission-tile'],
     ['the text of a needs-input row', 'text', 'lamp-input-tile'],
     ['the text of a permission row', 'text', 'lamp-permission-tile'],
+    ['the clean worktree pill ink', 'worktree-clean-ink', 'worktree-clean'],
+    ['the clean worktree pill', 'worktree-clean', 'card'],
   ])('%s reaches 4.5:1 against its ground', (_name, ink, ground) => {
     expect(contrast(ink, ground)).toBeGreaterThanOrEqual(MARK_CONTRAST);
   });

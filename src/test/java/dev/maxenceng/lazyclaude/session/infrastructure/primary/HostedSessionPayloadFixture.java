@@ -84,8 +84,11 @@ public final class HostedSessionPayloadFixture {
                 new SessionPayload(project().root(), List.of(linkedTicketId())), linkedTicketId(), verbs, merged);
     }
 
+    public static SessionPayload sessionPayload() {
+        return new SessionPayload(project().root(), List.of(linkedTicketId()));
+    }
+
     public static WorktreePayload worktreePayload(MergedHead mergedHead) {
-        return new WorktreePayload(
-                new SessionPayload(project().root(), List.of(linkedTicketId())), branchName().value(), mergedHead);
+        return new WorktreePayload(sessionPayload(), branchName().value(), mergedHead);
     }
 }

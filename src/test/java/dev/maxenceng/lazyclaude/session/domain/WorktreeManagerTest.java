@@ -2,13 +2,13 @@ package dev.maxenceng.lazyclaude.session.domain;
 
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
 import static dev.maxenceng.lazyclaude.session.domain.CommitIdFixture.commitId;
+import static dev.maxenceng.lazyclaude.session.domain.DirtyPathFixture.dirtyPath;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.nowhereTicketWorktree;
 import static dev.maxenceng.lazyclaude.session.domain.TicketWorktreeFixture.ticketWorktree;
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeManagerFixture.noSessionsInTheWorktree;
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeManagerFixture.oneSessionInTheWorktree;
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeStateFixture.clearWorktreeContents;
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeStateFixture.heldWorktree;
-import static dev.maxenceng.lazyclaude.session.published.DirtyPathFixture.dirtyPath;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.claudeSessionName;
 import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;

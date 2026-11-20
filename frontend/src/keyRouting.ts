@@ -10,6 +10,7 @@ import type { SessionsController } from './session/sessionsController';
 import type { Store } from './shared/store';
 import type { Quitting } from './quitting';
 import type { Closing } from './session/closing';
+import type { Worktree } from './session/worktree';
 
 /** The keys a pane takes while it has focus and claude has the keyboard: only these move out of it. */
 const FOCUS_KEYS: readonly Action[] = [
@@ -40,12 +41,13 @@ export class KeyRouter {
     private readonly tabs: WindowTabs,
     private readonly quitting: Quitting,
     private readonly closing: Closing,
+    private readonly worktree: Worktree,
   ) {
   }
 
   /** Whether a popup holds the keys and the mouse alone (ADR 0051): the one answer both the keys here and the window's clicks read. */
   isModal(): boolean {
-    return this.quitting.isAsking() || this.closing.isAsking() || this.board.capture.state.get().isOpen();
+    return this.quitting.isAsking() || this.closing.isAsking() || this.worktree.isAsking() || this.board.capture.state.get().isOpen();
   }
 
   /** A key the window-level handler took: whatever the focused pane does with it. */
@@ -55,6 +57,8 @@ export class KeyRouter {
       this.quitting.answer(action === Action.Yes);
     } else if (this.closing.isAsking()) {
       this.closing.answer(action === Action.Yes);
+    } else if (this.worktree.isAsking()) {
+      this.worktree.answer(action === Action.Yes);
     } else if (this.isModal()) {
       this.pressInCapture(action);
     } else if (this.sessions.isPicking()) {
@@ -272,6 +276,8 @@ export class KeyRouter {
         return this.open();
       case Action.Review:
         return this.openReview();
+      case Action.RemoveWorktree:
+        return this.focus() === Focus.Board || this.focus() === Focus.Sessions ? this.worktree.request() : undefined;
       case Action.Capture:
         return this.focus() === Focus.Board ? this.board.capture.open() : undefined;
       case Action.NewTicketSession:
