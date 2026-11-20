@@ -13,6 +13,8 @@ export interface WebAddress {
 const WEB_ADDRESS = /https?:\/\/[^\s<>"'`]+/g;
 const SENTENCE_PUNCTUATION = /[.,;:!?}]$/;
 const WEB_SCHEMES = ['http:', 'https:'];
+/** `MouseEvent.button` for the main button, the one a link is followed with. */
+const MAIN_BUTTON = 0;
 
 /** Whether a link is one this pane opens: an http or https address the URL parser reads. */
 const isWeb = (target: string): boolean => {
@@ -66,9 +68,12 @@ export class SessionLinks {
     this.hovered.set(undefined);
   }
 
-  /** Whether a press is one the pane acts on, so the program must not see it: ctrl held on a web address it opens. */
+  /**
+   * Whether a press is one the pane acts on and the program would act on too, so the program must not see it: the main button
+   * with ctrl held, on a web address the pane opens, while the program reports the mouse.
+   */
   keepsFromProgram(event: MouseEvent): boolean {
-    return event.ctrlKey && this.hovered.get() !== undefined;
+    return event.button === MAIN_BUTTON && event.ctrlKey && this.deps.reportsMouse() && this.hovered.get() !== undefined;
   }
 
   activate(event: MouseEvent, url: string): void {

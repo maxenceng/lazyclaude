@@ -317,7 +317,16 @@ class MeasuredPane {
   constructor(
     private readonly shown: ReturnType<typeof emulate>,
     private readonly screen: Element,
+    readonly container: HTMLElement,
   ) {}
+
+  attachAgain(): void {
+    this.shown.emulator.attach(this.container);
+  }
+
+  hasKeyboard(): boolean {
+    return document.activeElement === this.shown.term.textarea;
+  }
 
   get opener() {
     return this.shown.opener;
@@ -334,7 +343,7 @@ class MeasuredPane {
   }
 
   buttonReports(): string[] {
-    return this.shown.client.sent.map((each) => textOf(each.params)).filter(isButtonReport);
+    return this.shown.client.sent.filter((each) => each.input === 'pty/input').map((each) => textOf(each.params)).filter(isButtonReport);
   }
 
   private mouse(type: string, column: number, row: number, init: MouseEventInit): void {
@@ -346,11 +355,12 @@ const measuredPane = async (output: string): Promise<MeasuredPane> => {
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(CELL.width * MEASURED_CHARACTERS);
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(CELL.height);
   const shown = emulate();
-  shown.emulator.attach(document.body.appendChild(document.createElement('div')));
+  const container = document.body.appendChild(document.createElement('div'));
+  shown.emulator.attach(container);
   shown.emulator.write(encoded(output));
   await written(shown.term);
   shown.client.sent.length = 0;
-  return new MeasuredPane(shown, shown.term.element?.querySelector('.xterm-screen') ?? document.body);
+  return new MeasuredPane(shown, shown.term.element?.querySelector('.xterm-screen') ?? document.body, container);
 };
 
 describe('a ctrl+click on a link in a hosted session\'s pane', () => {
@@ -411,5 +421,30 @@ describe('a ctrl+click on a link in a hosted session\'s pane', () => {
     pane.click(2, 1, { ctrlKey: true });
     expect(pane.opener.openUrl).not.toHaveBeenCalled();
     expect(pane.notices.notice.get()).toContain('file:///etc/passwd');
+  });
+
+  it('opens a web address once and reports nothing after the pane is attached again', async () => {
+    const pane = await measuredPane(`${CLAUDE_START}\r\nsee https://example.com/a`);
+    pane.attachAgain();
+    pane.click(6, 2, { ctrlKey: true });
+    expect(pane.opener.openUrl).toHaveBeenCalledTimes(1);
+    expect(pane.buttonReports()).toEqual([]);
+  });
+
+  it('gives the terminal the keyboard on a ctrl+click it keeps from claude', async () => {
+    const elsewhere = document.body.appendChild(document.createElement('button'));
+    const pane = await measuredPane(`${CLAUDE_START}\r\nsee https://example.com/a`);
+    elsewhere.focus();
+    pane.click(6, 2, { ctrlKey: true });
+    expect(pane.hasKeyboard(), 'the dock takes focus from the terminal, for the press never reaches the pane around it').toBe(true);
+  });
+
+  it('lets a ctrl+press on a web address reach the pane around it while the mouse is not reported', async () => {
+    const pane = await measuredPane('see https://example.com/a');
+    const pressed = vi.fn();
+    pane.container.addEventListener('mousedown', pressed);
+    pane.click(6, 1, { ctrlKey: true });
+    expect(pressed, 'nothing is kept on the normal screen, so selection and the pane\'s press focus work as before').toHaveBeenCalledTimes(1);
+    expect(pane.opener.openUrl).toHaveBeenCalledTimes(1);
   });
 });

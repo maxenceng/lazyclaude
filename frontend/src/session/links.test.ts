@@ -107,31 +107,45 @@ describe('a link of another scheme while the program reports the mouse', () => {
 
 const press = (init: MouseEventInit = {}) => new MouseEvent('mousedown', init);
 
+const reporting = () => linked(() => Promise.resolve(), true).links;
+
 describe('the press a pane keeps from the program', () => {
-  it('is a ctrl+press on a web address, which the pane opens itself', () => {
-    const { links } = linked();
+  it('is a ctrl+press on a web address while the program reports the mouse, for the pane opens it itself', () => {
+    const links = reporting();
     links.hover('https://example.com/a');
     expect(links.keepsFromProgram(press({ ctrlKey: true }))).toBe(true);
   });
 
-  it('is not a plain press on a web address', () => {
+  it('is not a ctrl+press on a web address while the program does not report the mouse, which reaches no program', () => {
     const { links } = linked();
+    links.hover('https://example.com/a');
+    expect(links.keepsFromProgram(press({ ctrlKey: true })), 'xterm keeps its own selection and focus on the normal screen').toBe(false);
+  });
+
+  it.each([1, 2])('is not a ctrl+press of button %i on a web address', (button) => {
+    const links = reporting();
+    links.hover('https://example.com/a');
+    expect(links.keepsFromProgram(press({ ctrlKey: true, button }))).toBe(false);
+  });
+
+  it('is not a plain press on a web address', () => {
+    const links = reporting();
     links.hover('https://example.com/a');
     expect(links.keepsFromProgram(press())).toBe(false);
   });
 
   it('is not a ctrl+press off any link', () => {
-    expect(linked().links.keepsFromProgram(press({ ctrlKey: true }))).toBe(false);
+    expect(reporting().keepsFromProgram(press({ ctrlKey: true }))).toBe(false);
   });
 
   it('is not a ctrl+press on a link of another scheme, which the pane does not open', () => {
-    const { links } = linked();
+    const links = reporting();
     links.hover('file:///etc/passwd');
     expect(links.keepsFromProgram(press({ ctrlKey: true }))).toBe(false);
   });
 
   it('is not a ctrl+press once the pointer left the link', () => {
-    const { links } = linked();
+    const links = reporting();
     links.hover('https://example.com/a');
     links.leave();
     expect(links.keepsFromProgram(press({ ctrlKey: true }))).toBe(false);

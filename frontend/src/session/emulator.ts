@@ -91,7 +91,7 @@ export class Emulator {
     if (this.terminal.element !== undefined) {
       container.replaceChildren(this.terminal.element);
     }
-    this.keepLinkPressesFromClaude();
+    this.keepLinkPressesFromProgram();
     this.resize();
     this.fitted = true;
     this.repaintWhenFitted();
@@ -123,10 +123,11 @@ export class Emulator {
 
   /**
    * A press the pane acts on stops at xterm's screen: its link detector, which listens there, still sees it and opens the link
-   * on release, but the terminal element above, which reports the press to `claude` and then its release, never does.
-   * Claude Code opens a link clicked with ctrl held itself, so a reported press would open it twice.
+   * on release, but the terminal element above, which reports the press to the program and then its release, never does.
+   * Claude Code opens a link clicked with ctrl held itself, so a reported press would open it twice. The press stops bubbling
+   * too, so the pane's focus comes from the terminal taking it.
    */
-  private keepLinkPressesFromClaude(): void {
+  private keepLinkPressesFromProgram(): void {
     const screen = this.terminal.element?.querySelector('.xterm-screen');
     if (this.keepingLinkPresses || !(screen instanceof HTMLElement)) {
       return;
