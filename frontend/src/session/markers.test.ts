@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sessionFixture, sessionsFixture } from './fixtures';
-import { colourOf, LampColour, markerOfTicket, markersOf } from './markers';
+import { colourOf, LampColour, markerOfTicket, lampTilesOf } from './markers';
 
 const sessions = sessionsFixture([
   sessionFixture({ id: 's1', state: { kind: 'yourTurn' }, ticket: 'PROJ-1' }),
@@ -12,11 +12,11 @@ const sessions = sessionsFixture([
 
 describe('the markers of the live sessions', () => {
   it('gives one marker per live session, permission first, then input, then your turn, then unlit', () => {
-    expect(markersOf(sessions).map((marker) => marker.colour)).toEqual([LampColour.Permission, LampColour.Input, LampColour.Turn, LampColour.Turn, LampColour.Off]);
+    expect(lampTilesOf(sessions).map((tile) => tile.colour)).toEqual([LampColour.Permission, LampColour.Input, LampColour.Turn, LampColour.Turn, LampColour.Off]);
   });
 
   it('numbers a marker by the ticket its session is linked to', () => {
-    expect(markersOf(sessions).map((marker) => marker.ticket)).toEqual(['PROJ-2', 'PROJ-4', 'PROJ-1', undefined, 'PROJ-3']);
+    expect(lampTilesOf(sessions).map((tile) => tile.ticket)).toEqual(['PROJ-2', 'PROJ-4', 'PROJ-1', undefined, 'PROJ-3']);
   });
 
   it('marks a ticket with the strongest marker of its sessions', () => {
@@ -45,17 +45,17 @@ describe('the markers of the live sessions', () => {
       sessionFixture({ id: 'a', state: { kind: 'waitingForPermission', reason: { kind: 'waitingReason', value: 'Bash' } }, marker: { kind: 'WAITING_FOR_PERMISSION', strength: 1 } }),
       sessionFixture({ id: 'b', state: { kind: 'yourTurn' }, marker: { kind: 'YOUR_TURN', strength: 9 } }),
     ]);
-    expect(markersOf(inverted).map((marker) => marker.session)).toEqual(['b', 'a']);
+    expect(lampTilesOf(inverted).map((tile) => tile.session)).toEqual(['b', 'a']);
   });
 
   it('sorts a session with no marker after every one carrying one', () => {
     const view = sessionsFixture([sessionFixture({ id: 'none' }), sessionFixture({ id: 'turn', state: { kind: 'yourTurn' } })]);
-    expect(markersOf(view).map((marker) => marker.session)).toEqual(['turn', 'none']);
+    expect(lampTilesOf(view).map((tile) => tile.session)).toEqual(['turn', 'none']);
   });
 
   it('keeps the order equal markers came in', () => {
     const view = sessionsFixture(['x', 'y', 'z'].map((id) => sessionFixture({ id, state: { kind: 'yourTurn' } })));
-    expect(markersOf(view).map((marker) => marker.session)).toEqual(['x', 'y', 'z']);
+    expect(lampTilesOf(view).map((tile) => tile.session)).toEqual(['x', 'y', 'z']);
   });
 
   it('draws the unlit lamp for a session with no marker', () => {

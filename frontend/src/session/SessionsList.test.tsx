@@ -4,7 +4,7 @@ import { pastFixture } from './fixtures';
 import { HostedRow, LiveRow, PastRow, type SessionRow, STARTING } from './sessionRows';
 import { SessionsList } from './SessionsList';
 
-const TURN = { kind: 'YOUR_TURN', strength: 1 } as const;
+const TURN = { kind: 'YOUR_TURN', strength: 0 } as const;
 
 const list = (rows: SessionRow[]) =>
   render(<SessionsList rows={rows} cursor={0} picker={undefined} onPress={() => {}} />);
@@ -24,7 +24,7 @@ describe('a ticket\'s sessions', () => {
   });
 
   it('carries no action on a live session another window hosts, which cannot be entered', () => {
-    list([new LiveRow('elsewhere', 'waitingForInput', { kind: 'WAITING_FOR_INPUT', strength: 2 })]);
+    list([new LiveRow('elsewhere', 'waitingForInput', { kind: 'WAITING_FOR_INPUT', strength: 1 })]);
     expect(screen.getByRole('button', { name: /elsewhere/ })).not.toHaveTextContent('enter');
   });
 

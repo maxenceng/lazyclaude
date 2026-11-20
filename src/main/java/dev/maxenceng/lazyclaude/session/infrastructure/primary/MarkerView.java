@@ -6,12 +6,16 @@ import dev.maxenceng.lazyclaude.session.published.Marker;
 /**
  * A live session's marker and how strongly it asks of you, the greater the stronger. The strength is the marker's place in
  * {@link Marker}'s declaration, so the ranking stays written once: the desktop frontend orders by it rather than by a table of its own,
- * and the builder takes the kind alone.
+ * the builder takes the kind alone, and the constructor refuses any other strength. Strength is relative: compare two, never one with a
+ * constant.
  */
 public record MarkerView(Marker kind, int strength) {
 
     public MarkerView {
         Assert.notNull("kind", kind);
+        if (strength != kind.ordinal()) {
+            throw new MarkerStrengthNotItsRankException(kind, strength);
+        }
     }
 
     static MarkerView of(Marker marker) {

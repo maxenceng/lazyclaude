@@ -3,8 +3,8 @@ import type { SessionLiveSessionView, SessionMarkerView, SessionSessionsView } f
 
 export { LampColour };
 
-/** A live session's marker, as the lamp that shows it; `off` where the session carries none. */
-export interface Marker {
+/** A live session's lamp tile: the lamp its marker lights, `off` where it carries none, and that marker's strength. */
+export interface LampTile {
   colour: LampColour;
   strength: number;
   ticket: string | undefined;
@@ -31,8 +31,8 @@ export const byStrength = (a: { strength: number }, b: { strength: number }) => 
 
 export const colourOf = (session: SessionLiveSessionView): LampColour => colourOfMarker(session.marker);
 
-/** One marker per live session, the strongest first, numbered by the first ticket it is linked to. */
-export const markersOf = (view: SessionSessionsView): Marker[] => {
+/** One lamp tile per live session, the strongest marker first, numbered by the first ticket it is linked to. */
+export const lampTilesOf = (view: SessionSessionsView): LampTile[] => {
   return view.live
     .map((session) => ({ colour: colourOf(session), strength: strengthOfMarker(session.marker), ticket: session.links[0]?.ticket, session: session.id }))
     .sort(byStrength);

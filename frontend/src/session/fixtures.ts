@@ -4,11 +4,11 @@ import type { SessionHostedSessionView, SessionMarkerView, SessionLiveSessionVie
 export const markerFixtureOf = (state: SessionLiveSessionView['state']): SessionMarkerView | null => {
   switch (state.kind) {
     case 'waitingForPermission':
-      return { kind: 'WAITING_FOR_PERMISSION', strength: 3 };
+      return { kind: 'WAITING_FOR_PERMISSION', strength: 2 };
     case 'waitingForInput':
-      return { kind: 'WAITING_FOR_INPUT', strength: 2 };
+      return { kind: 'WAITING_FOR_INPUT', strength: 1 };
     case 'yourTurn':
-      return { kind: 'YOUR_TURN', strength: 1 };
+      return { kind: 'YOUR_TURN', strength: 0 };
     case 'busy':
     case 'unknown':
       return null;

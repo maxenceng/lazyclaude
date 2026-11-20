@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Arrays;
 import java.util.List;
@@ -36,5 +37,14 @@ class MarkerViewTest {
     @Test
     void shouldCarryTheMarkerItRanks() {
         assertThat(MarkerView.of(Marker.WAITING_FOR_INPUT).kind()).isEqualTo(Marker.WAITING_FOR_INPUT);
+    }
+
+    @Test
+    void shouldRefuseAStrengthOtherThanItsMarkersRank() {
+        int rankOfWaitingForPermission = Marker.WAITING_FOR_PERMISSION.ordinal();
+
+        assertThatThrownBy(() -> new MarkerView(Marker.YOUR_TURN, rankOfWaitingForPermission))
+                .as("a strength set beside the kind would let the frontends order your turn above a permission prompt")
+                .isInstanceOf(MarkerStrengthNotItsRankException.class);
     }
 }
