@@ -42,10 +42,10 @@ describe('the web addresses in a line of output', () => {
   });
 });
 
-const linked = (opening: () => Promise<void> = () => Promise.resolve()) => {
+const linked = (opening: () => Promise<void> = () => Promise.resolve(), reportsMouse = false) => {
   const opener = { openUrl: vi.fn(opening) };
   const notices = new NoticeStore();
-  return { opener, notices, links: new SessionLinks({ opener, notices }) };
+  return { opener, notices, links: new SessionLinks({ opener, notices, reportsMouse: () => reportsMouse }) };
 };
 
 const click = (init: MouseEventInit = {}) => new MouseEvent('click', init);
@@ -80,6 +80,75 @@ describe('a link followed in a session pane', () => {
     const { links, notices } = linked(() => Promise.reject(new Error('no browser')));
     links.activate(click({ ctrlKey: true }), 'https://example.com/a');
     await vi.waitFor(() => expect(notices.notice.get()).toBe('Could not open https://example.com/a: no browser'));
+  });
+});
+
+describe('a link of another scheme while the program reports the mouse', () => {
+  it.each(['file:///etc/passwd', 'custom://thing'])('is left to the program on ctrl+click: %s opens nothing here and raises no notice', (target) => {
+    const { links, opener, notices } = linked(() => Promise.resolve(), true);
+    links.activate(click({ ctrlKey: true }), target);
+    expect(opener.openUrl).not.toHaveBeenCalled();
+    expect(notices.notice.get()).toBeUndefined();
+  });
+
+  it('keeps an earlier notice, for the pane did nothing with the click', () => {
+    const { links, notices } = linked(() => Promise.resolve(), true);
+    notices.raise('Could not open https://example.com/a: no browser');
+    links.activate(click({ ctrlKey: true }), 'file:///etc/passwd');
+    expect(notices.notice.get()).toBe('Could not open https://example.com/a: no browser');
+  });
+
+  it('still opens a web address on ctrl+click', () => {
+    const { links, opener } = linked(() => Promise.resolve(), true);
+    links.activate(click({ ctrlKey: true }), 'https://example.com/a');
+    expect(opener.openUrl).toHaveBeenCalledWith('https://example.com/a');
+  });
+});
+
+const press = (init: MouseEventInit = {}) => new MouseEvent('mousedown', init);
+
+const reporting = () => linked(() => Promise.resolve(), true).links;
+
+describe('the press a pane keeps from the program', () => {
+  it('is a ctrl+press on a web address while the program reports the mouse, for the pane opens it itself', () => {
+    const links = reporting();
+    links.hover('https://example.com/a');
+    expect(links.keepsFromProgram(press({ ctrlKey: true }))).toBe(true);
+  });
+
+  it('is not a ctrl+press on a web address while the program does not report the mouse, which reaches no program', () => {
+    const { links } = linked();
+    links.hover('https://example.com/a');
+    expect(links.keepsFromProgram(press({ ctrlKey: true })), 'xterm keeps its own selection and focus on the normal screen').toBe(false);
+  });
+
+  it.each([1, 2])('is not a ctrl+press of button %i on a web address', (button) => {
+    const links = reporting();
+    links.hover('https://example.com/a');
+    expect(links.keepsFromProgram(press({ ctrlKey: true, button }))).toBe(false);
+  });
+
+  it('is not a plain press on a web address', () => {
+    const links = reporting();
+    links.hover('https://example.com/a');
+    expect(links.keepsFromProgram(press())).toBe(false);
+  });
+
+  it('is not a ctrl+press off any link', () => {
+    expect(reporting().keepsFromProgram(press({ ctrlKey: true }))).toBe(false);
+  });
+
+  it('is not a ctrl+press on a link of another scheme, which the pane does not open', () => {
+    const links = reporting();
+    links.hover('file:///etc/passwd');
+    expect(links.keepsFromProgram(press({ ctrlKey: true }))).toBe(false);
+  });
+
+  it('is not a ctrl+press once the pointer left the link', () => {
+    const links = reporting();
+    links.hover('https://example.com/a');
+    links.leave();
+    expect(links.keepsFromProgram(press({ ctrlKey: true }))).toBe(false);
   });
 });
 

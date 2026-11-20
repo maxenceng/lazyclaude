@@ -1,5 +1,5 @@
 import { Terminal } from '@xterm/xterm';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fromBase64, toBase64, bytesOfText } from '../protocol';
 import { NoticeStore } from '../shared/noticeStore';
 import { fakeClient } from '../test/fakeClient';
@@ -298,5 +298,153 @@ describe('the links of a hosted session\'s pane', () => {
     emulate();
     expect(register).toHaveBeenCalledTimes(1);
     register.mockRestore();
+  });
+});
+
+const CELL = { width: 8, height: 16 };
+const MEASURED_CHARACTERS = 32;
+const MOTION = 32;
+const OSC_8 = (target: string, text: string) => `\x1b]8;;${target}\x07${text}\x1b]8;;\x07`;
+
+const BUTTON_REPORT = /^\x1b\[<(\d+);\d+;\d+[Mm]$/;
+
+const isButtonReport = (text: string): boolean => {
+  const code = BUTTON_REPORT.exec(text)?.[1];
+  return code !== undefined && (Number(code) & MOTION) === 0;
+};
+
+class MeasuredPane {
+  constructor(
+    private readonly shown: ReturnType<typeof emulate>,
+    private readonly screen: Element,
+    readonly container: HTMLElement,
+  ) {}
+
+  attachAgain(): void {
+    this.shown.emulator.attach(this.container);
+  }
+
+  hasKeyboard(): boolean {
+    return document.activeElement === this.shown.term.textarea;
+  }
+
+  get opener() {
+    return this.shown.opener;
+  }
+
+  get notices() {
+    return this.shown.notices;
+  }
+
+  click(column: number, row: number, init: MouseEventInit = {}, release: { column: number; row: number } = { column, row }): void {
+    this.mouse('mousemove', column, row, init);
+    this.mouse('mousedown', column, row, init);
+    this.mouse('mouseup', release.column, release.row, init);
+  }
+
+  buttonReports(): string[] {
+    return this.shown.client.sent.filter((each) => each.input === 'pty/input').map((each) => textOf(each.params)).filter(isButtonReport);
+  }
+
+  private mouse(type: string, column: number, row: number, init: MouseEventInit): void {
+    this.screen.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: (column - 0.5) * CELL.width, clientY: (row - 0.5) * CELL.height, ...init }));
+  }
+}
+
+const measuredPane = async (output: string): Promise<MeasuredPane> => {
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(CELL.width * MEASURED_CHARACTERS);
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(CELL.height);
+  const shown = emulate();
+  const container = document.body.appendChild(document.createElement('div'));
+  shown.emulator.attach(container);
+  shown.emulator.write(encoded(output));
+  await written(shown.term);
+  shown.client.sent.length = 0;
+  return new MeasuredPane(shown, shown.term.element?.querySelector('.xterm-screen') ?? document.body, container);
+};
+
+describe('a ctrl+click on a link in a hosted session\'s pane', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('opens a web address once, through the pane, and claude sees neither its press nor its release while it reports the mouse', async () => {
+    const pane = await measuredPane(`${CLAUDE_START}\r\nsee https://example.com/a`);
+    pane.click(6, 2, { ctrlKey: true });
+    expect(pane.opener.openUrl).toHaveBeenCalledTimes(1);
+    expect(pane.opener.openUrl).toHaveBeenCalledWith('https://example.com/a');
+    expect(pane.buttonReports(), 'claude opens a link clicked with ctrl held itself, so a reported press is a second open').toEqual([]);
+  });
+
+  it('opens an OSC 8 hyperlink to the web once, through the pane, and claude sees neither its press nor its release', async () => {
+    const pane = await measuredPane(`${CLAUDE_START}\r\n${OSC_8('https://example.com/target', 'the docs')}`);
+    pane.click(2, 2, { ctrlKey: true });
+    expect(pane.opener.openUrl).toHaveBeenCalledTimes(1);
+    expect(pane.opener.openUrl).toHaveBeenCalledWith('https://example.com/target');
+    expect(pane.buttonReports()).toEqual([]);
+  });
+
+  it('sends claude no release when the button comes up off the link', async () => {
+    const pane = await measuredPane(`${CLAUDE_START}\r\nsee https://example.com/a`);
+    pane.click(6, 2, { ctrlKey: true }, { column: 3, row: 5 });
+    expect(pane.opener.openUrl).not.toHaveBeenCalled();
+    expect(pane.buttonReports()).toEqual([]);
+  });
+
+  it('reports a ctrl+click on an OSC 8 hyperlink of another scheme to claude, and raises no notice', async () => {
+    const pane = await measuredPane(`${CLAUDE_START}\r\n${OSC_8('file:///etc/passwd', 'passwd')}`);
+    pane.click(2, 2, { ctrlKey: true });
+    expect(pane.opener.openUrl).not.toHaveBeenCalled();
+    expect(pane.notices.notice.get()).toBeUndefined();
+    expect(pane.buttonReports()).toEqual(['\x1b[<16;2;2M', '\x1b[<16;2;2m']);
+  });
+
+  it('reports a plain click on a web address to claude and opens nothing', async () => {
+    const pane = await measuredPane(`${CLAUDE_START}\r\nsee https://example.com/a`);
+    pane.click(6, 2);
+    expect(pane.opener.openUrl).not.toHaveBeenCalled();
+    expect(pane.buttonReports()).toEqual(['\x1b[<0;6;2M', '\x1b[<0;6;2m']);
+  });
+
+  it('reports a ctrl+click off any link to claude', async () => {
+    const pane = await measuredPane(`${CLAUDE_START}\r\nsee https://example.com/a`);
+    pane.click(2, 2, { ctrlKey: true });
+    expect(pane.buttonReports()).toEqual(['\x1b[<16;2;2M', '\x1b[<16;2;2m']);
+  });
+
+  it('opens a web address once while the mouse is not reported', async () => {
+    const pane = await measuredPane('see https://example.com/a');
+    pane.click(6, 1, { ctrlKey: true });
+    expect(pane.opener.openUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses an OSC 8 hyperlink of another scheme with a notice while the mouse is not reported', async () => {
+    const pane = await measuredPane(OSC_8('file:///etc/passwd', 'passwd'));
+    pane.click(2, 1, { ctrlKey: true });
+    expect(pane.opener.openUrl).not.toHaveBeenCalled();
+    expect(pane.notices.notice.get()).toContain('file:///etc/passwd');
+  });
+
+  it('opens a web address once and reports nothing after the pane is attached again', async () => {
+    const pane = await measuredPane(`${CLAUDE_START}\r\nsee https://example.com/a`);
+    pane.attachAgain();
+    pane.click(6, 2, { ctrlKey: true });
+    expect(pane.opener.openUrl).toHaveBeenCalledTimes(1);
+    expect(pane.buttonReports()).toEqual([]);
+  });
+
+  it('gives the terminal the keyboard on a ctrl+click it keeps from claude', async () => {
+    const elsewhere = document.body.appendChild(document.createElement('button'));
+    const pane = await measuredPane(`${CLAUDE_START}\r\nsee https://example.com/a`);
+    elsewhere.focus();
+    pane.click(6, 2, { ctrlKey: true });
+    expect(pane.hasKeyboard(), 'the dock takes focus from the terminal, for the press never reaches the pane around it').toBe(true);
+  });
+
+  it('lets a ctrl+press on a web address reach the pane around it while the mouse is not reported', async () => {
+    const pane = await measuredPane('see https://example.com/a');
+    const pressed = vi.fn();
+    pane.container.addEventListener('mousedown', pressed);
+    pane.click(6, 1, { ctrlKey: true });
+    expect(pressed, 'nothing is kept on the normal screen, so selection and the pane\'s press focus work as before').toHaveBeenCalledTimes(1);
+    expect(pane.opener.openUrl).toHaveBeenCalledTimes(1);
   });
 });
