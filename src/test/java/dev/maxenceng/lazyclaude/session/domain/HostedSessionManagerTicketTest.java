@@ -148,21 +148,81 @@ class HostedSessionManagerTicketTest {
 
         verify(worktrees).addOnBranch(project(), branchName(), worktreeDirectory());
         verify(worktrees, never()).addOnNewBranch(any(), any(), any());
+        verify(worktrees, never()).branchOnRemote(any(), any());
         verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue()).isEqualTo(ticketLaunch(idOf(start), worktreeDirectory(), Verb.START));
     }
 
     @Test
-    void shouldAddTheWorktreeOnANewBranchWhenTheBranchDoesNotExist() {
+    void shouldAddTheWorktreeOnTheRemoteBranchWhenTheBranchIsOnlyOnTheRemote() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.empty());
         when(hosts.exists(worktreeDirectory())).thenReturn(false);
         when(worktrees.branchExists(project(), branchName())).thenReturn(false);
+        when(worktrees.branchOnRemote(project(), branchName())).thenReturn(true);
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
+
+        HostStart start = manager.startTicket(ticketStart(Verb.START), ticketPlugin(), paneSize());
+
+        verify(worktrees).addOnRemoteBranch(project(), branchName(), worktreeDirectory());
+        verify(worktrees, never()).addOnNewBranch(any(), any(), any());
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
+        assertThat(launched.getValue()).isEqualTo(ticketLaunch(idOf(start), worktreeDirectory(), Verb.START));
+    }
+
+    @Test
+    void shouldOpenNoSessionAndWarnWhenTheRemoteCannotBeAsked() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.empty());
+        when(hosts.exists(worktreeDirectory())).thenReturn(false);
+        when(worktrees.branchExists(project(), branchName())).thenReturn(false);
+        when(worktrees.branchOnRemote(project(), branchName()))
+                .thenThrow(new WorktreeUnavailableException("git ls-remote: fatal: Could not read from remote repository."));
+
+        HostStart start = manager.startTicket(ticketStart(Verb.START), ticketPlugin(), paneSize());
+
+        assertThat(start)
+                .isEqualTo(notStartedBecause(
+                        "ticket worktree: git ls-remote: fatal: Could not read from remote repository.; nothing started."));
+        verify(worktrees, never()).addOnNewBranch(any(), any(), any());
+        verify(hosts, never()).spawn(any(), any(), any(), any());
+        assertThat(raisedTexts(warnings))
+                .as("a branch the remote may hold is never replaced by a fresh one from main")
+                .containsExactly("ticket worktree: git ls-remote: fatal: Could not read from remote repository.; nothing started.");
+    }
+
+    @Test
+    void shouldOpenNoSessionAndWarnWhenFetchingTheRemoteBranchFails() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.empty());
+        when(hosts.exists(worktreeDirectory())).thenReturn(false);
+        when(worktrees.branchExists(project(), branchName())).thenReturn(false);
+        when(worktrees.branchOnRemote(project(), branchName())).thenReturn(true);
+        doThrow(new WorktreeUnavailableException("git fetch: fatal: the remote end hung up unexpectedly"))
+                .when(worktrees)
+                .addOnRemoteBranch(project(), branchName(), worktreeDirectory());
+
+        HostStart start = manager.startTicket(ticketStart(Verb.START), ticketPlugin(), paneSize());
+
+        assertThat(start)
+                .isEqualTo(notStartedBecause(
+                        "ticket worktree: git fetch: fatal: the remote end hung up unexpectedly; nothing started."));
+        verify(worktrees, never()).addOnNewBranch(any(), any(), any());
+        verify(hosts, never()).spawn(any(), any(), any(), any());
+        assertThat(raisedTexts(warnings))
+                .containsExactly("ticket worktree: git fetch: fatal: the remote end hung up unexpectedly; nothing started.");
+    }
+
+    @Test
+    void shouldAddTheWorktreeOnANewBranchWhenTheBranchIsNeitherLocalNorOnTheRemote() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.empty());
+        when(hosts.exists(worktreeDirectory())).thenReturn(false);
+        when(worktrees.branchExists(project(), branchName())).thenReturn(false);
+        when(worktrees.branchOnRemote(project(), branchName())).thenReturn(false);
         when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
 
         manager.startTicket(ticketStart(Verb.START), ticketPlugin(), paneSize());
 
         verify(worktrees).addOnNewBranch(project(), branchName(), worktreeDirectory());
         verify(worktrees, never()).addOnBranch(any(), any(), any());
+        verify(worktrees, never()).addOnRemoteBranch(any(), any(), any());
     }
 
     @Test
@@ -245,6 +305,35 @@ class HostedSessionManagerTicketTest {
         verify(worktrees).addOnBranch(project(), branchName(), worktreeDirectory());
         verify(hosts).spawn(launched.capture(), any(), any(), any());
         assertThat(launched.getValue()).isEqualTo(resumeLaunch(idOf(start), worktreeDirectory()));
+    }
+
+    @Test
+    void shouldRecreateAGoneTicketWorktreeOnTheRemoteBranchWhenTheBranchIsOnlyOnTheRemote() {
+        when(hosts.exists(worktreeDirectory())).thenReturn(false, true);
+        when(worktrees.branchExists(project(), branchName())).thenReturn(false);
+        when(worktrees.branchOnRemote(project(), branchName())).thenReturn(true);
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
+
+        manager.resumeInTicketWorktree(sessionId(), worktreeDirectory(), ticketWorktree(), paneSize());
+
+        verify(worktrees).addOnRemoteBranch(project(), branchName(), worktreeDirectory());
+        verify(worktrees, never()).addOnNewBranch(any(), any(), any());
+    }
+
+    @Test
+    void shouldNotResumeAndWarnWhenTheRemoteCannotBeAskedForAGoneTicketWorktree() {
+        when(hosts.exists(worktreeDirectory())).thenReturn(false);
+        when(worktrees.branchExists(project(), branchName())).thenReturn(false);
+        when(worktrees.branchOnRemote(project(), branchName()))
+                .thenThrow(new WorktreeUnavailableException("git ls-remote: fatal: 'origin' does not appear to be a git repository"));
+
+        HostStart start = manager.resumeInTicketWorktree(sessionId(), worktreeDirectory(), ticketWorktree(), paneSize());
+
+        assertThat(start)
+                .isEqualTo(notStartedBecause(
+                        "ticket worktree: git ls-remote: fatal: 'origin' does not appear to be a git repository; nothing started."));
+        verify(worktrees, never()).addOnNewBranch(any(), any(), any());
+        verify(hosts, never()).spawn(any(), any(), any(), any());
     }
 
     @Test

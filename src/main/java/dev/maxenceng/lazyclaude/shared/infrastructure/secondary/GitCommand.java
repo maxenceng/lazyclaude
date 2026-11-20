@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.shared.infrastructure.secondary;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -16,16 +17,25 @@ public final class GitCommand {
     private static final String IN_DIRECTORY = "-C";
 
     private final String executable;
+    private final Map<String, String> environment;
 
     public GitCommand(String executable) {
+        this(executable, Map.of());
+    }
+
+    /** Runs {@code executable} with {@code environment} added to what lazyclaude was started with. */
+    public GitCommand(String executable, Map<String, String> environment) {
         this.executable = executable;
+        this.environment = environment;
     }
 
     /** @throws GitNotRunException when git cannot be run, or the run is interrupted */
     public GitResult run(Path in, List<String> arguments) {
         try {
-            Process process = new ProcessBuilder(Stream.concat(Stream.of(executable, IN_DIRECTORY, in.toString()), arguments.stream()).toList())
-                    .start();
+            ProcessBuilder builder =
+                    new ProcessBuilder(Stream.concat(Stream.of(executable, IN_DIRECTORY, in.toString()), arguments.stream()).toList());
+            builder.environment().putAll(environment);
+            Process process = builder.start();
             CompletableFuture<byte[]> said = CompletableFuture.supplyAsync(() -> readAll(process), READERS);
             byte[] output = process.getInputStream().readAllBytes();
             int exitValue = process.waitFor();
