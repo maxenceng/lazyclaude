@@ -7,11 +7,6 @@ import dev.maxenceng.lazyclaude.session.domain.HeldWorktree;
 /** A ticket worktree that exists: where it is, what stands in it, and whether that leaves it clear to remove. */
 public record HeldWorktreeView(Path path, WorktreeStateView state, boolean clear) implements WorktreeView {
 
-    /** Where the worktree is, as every frontend shows it: from the project's root. */
-    public Path shown(Path root) {
-        return root.relativize(path);
-    }
-
     static HeldWorktreeView from(HeldWorktree held) {
         return builder()
                 .path(held.path().path())

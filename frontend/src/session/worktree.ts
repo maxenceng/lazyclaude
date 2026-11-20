@@ -137,8 +137,7 @@ export class Worktree {
 
   /** Every read of the sidecar goes through here, so no two are ever in flight together, whoever asked. */
   private ask(branch: string): Promise<SessionWorktreeShownView> {
-    const call = () => this.deps.client.call('session/worktreeOf', { branch });
-    const asked = this.inFlight === undefined ? call() : this.inFlight.then(call, call);
+    const asked = this.inFlight === undefined ? this.call(branch) : this.inFlight.then(() => this.call(branch), () => this.call(branch));
     const settled = asked.then(
       () => undefined,
       () => undefined,
@@ -150,6 +149,10 @@ export class Worktree {
       }
     });
     return asked;
+  }
+
+  private call(branch: string): Promise<SessionWorktreeShownView> {
+    return this.deps.client.call('session/worktreeOf', { branch });
   }
 
   private async remove(branch: string): Promise<void> {

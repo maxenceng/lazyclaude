@@ -24,7 +24,7 @@ it never reads and could send a stale one.
   `review` has answered, has no merged head, so its state is `noMergedPullRequest` and nothing is offered for removal.
 - **A result of its own, with the words in it.** `session/worktreeOf` answers `WorktreeShownView`: `noWorktree`, `clearWorktree`
   (`shown`), `notClearWorktree` (`shown`, `state`, `held`) or `unreadWorktree` (`reason`, `held`). `shown` is the path from
-  the project's root, as the shell shows it, from the one `HeldWorktreeView.shown`. The window draws a `clean` pill for `clearWorktree`, `held` for a `notClearWorktree`
+  the project's root, as the shell shows it. The window draws a `clean` pill for `clearWorktree`, `held` for a `notClearWorktree`
   whose state is `worktreeContents`, and `unknown` for one whose state is `noMergedPullRequest` and for `unreadWorktree`.
   `session/removeWorktree` answers `WorktreeRemovalOutcomeView`: `removedWorktree` or `notRemovedWorktree` (`refusal`). A refusal
   and a failure in git are both `notRemovedWorktree`: the window says the line and shows nothing else.

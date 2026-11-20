@@ -16,10 +16,10 @@ public sealed interface WorktreeShownView
     static WorktreeShownView from(WorktreeView view, SessionPayload sessions) {
         return switch (view) {
             case HeldWorktreeView held when held.clear() ->
-                new ClearWorktreeView(held.shown(sessions.root()));
+                new ClearWorktreeView(sessions.root().relativize(held.path()));
             case HeldWorktreeView held ->
                 NotClearWorktreeView.builder()
-                        .shown(held.shown(sessions.root()))
+                        .shown(sessions.root().relativize(held.path()))
                         .state(held.state())
                         .held(held.state().heldBack())
                         .build();
