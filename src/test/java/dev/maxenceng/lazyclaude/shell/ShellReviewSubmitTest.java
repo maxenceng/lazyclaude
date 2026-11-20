@@ -1,12 +1,14 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.inReviewSlugTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.linkedBranchTicketViewIn;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.slugTicketView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.noPendingReviewView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.refusedWriteView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewViewFixture.writtenView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.readThreadsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffViewFixture.twoFileDiffView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.linkedPullRequestView;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.ctrl;
@@ -26,6 +28,7 @@ import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.maxenceng.lazyclaude.board.published.Verb;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewCommand;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingSubmitPayload;
@@ -138,6 +141,22 @@ class ShellReviewSubmitTest {
         assertThat(payload.getValue().verb()).isEqualTo(Verb.RESPOND);
         assertThat(payload.getValue().branch()).isEqualTo(inReviewSlugTicketView().branch().value());
         assertThat(Screen.of(shell).text()).contains("╭Board").doesNotContain("╭Files", "start /ticket respond");
+    }
+
+    @Test
+    void shouldStartRespondOnTheBranchGitHubLinksToTheTicketNotOnItsTitleSlug() {
+        HostedSessionCommand hosting = mock(HostedSessionCommand.class, ShellFixture::noHostStarted);
+        Shell shell = shellSubmitting(
+                linkedBranchTicketViewIn(Status.IN_REVIEW), linkedPullRequestView(), writingThatWrites(writtenView(noPendingReviewView())), hosting, Runnable::run);
+        shell.press(key('S'));
+        shell.press(ctrl('s'));
+        shell.press(key('y'));
+
+        shell.press(key('y'));
+
+        ArgumentCaptor<TicketHostedPayload> payload = ArgumentCaptor.forClass(TicketHostedPayload.class);
+        verify(hosting).startTicket(payload.capture());
+        assertThat(payload.getValue().branch()).isEqualTo("PROJ-1-the-tickets-branch");
     }
 
     @Test

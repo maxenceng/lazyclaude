@@ -48,6 +48,7 @@ import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewComma
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PendingReviewWriteView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestDiffView;
+import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReadThreadsView;
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.ReviewQuery;
@@ -127,9 +128,14 @@ final class ShellReviewFixture {
     }
 
     static Shell shellSubmitting(TicketView ticket, PendingReviewCommand writing, HostedSessionCommand hosting, Executor background) {
+        return shellSubmitting(ticket, pullRequestView(), writing, hosting, background);
+    }
+
+    static Shell shellSubmitting(
+            TicketView ticket, PullRequestView pullRequest, PendingReviewCommand writing, HostedSessionCommand hosting, Executor background) {
         Shell shell = shellOnTheTicket(
                 ticket,
-                openPullRequestsViewOf(pullRequestView()),
+                openPullRequestsViewOf(pullRequest),
                 reviewsAnswering(twoFileDiffView(), readThreadsViewOf(), openPendingViewOf(commentOnView(diffPath(), rightOn(3)))),
                 writing,
                 hosting,

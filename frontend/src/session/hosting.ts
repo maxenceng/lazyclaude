@@ -21,10 +21,10 @@ export interface HostingDeps {
   opener: LinkOpener;
 }
 
-/** A start the sidecar could not answer: what it said, and the same start again. */
+/** A start that opened no tab: what the sidecar said, and the same start again — none for a refusal, which the same start would meet again. */
 export interface StartFailure {
   message: string;
-  retry: () => Promise<boolean>;
+  retry: (() => Promise<boolean>) | undefined;
 }
 
 /** The hosted sessions: their tabs, one emulator each, the starts that open them and the pushes that feed and close them. */
@@ -36,6 +36,8 @@ export class Hosting {
   readonly hoveredLink: Store<string | undefined> = new Store<string | undefined>(undefined);
   private readonly emulators = new Map<string, Emulator>();
   private readonly ended = new Set<string>();
+  /** Counts the starts asked and the failures withdrawn, so an answer that comes back after either shows nothing. */
+  private attempts = 0;
 
   constructor(private readonly deps: HostingDeps) {
     deps.client.subscribe('pty/output', (view) => {
@@ -85,11 +87,16 @@ export class Hosting {
 
   /** Starts the session that creates a ticket from `description`, as typed; why it did not start, or nothing once it has, for the popup that asked. */
   async startNewTicket(root: string, description: string): Promise<string | undefined> {
+    this.withdrawFailure();
     try {
       const started = await this.deps.client.call('session/startNewTicket', { root, description, size: this.paneSize() });
-      this.opened(started);
-      this.failure.set(undefined);
-      return started.kind === 'startedHost' ? undefined : started.reason;
+      switch (started.kind) {
+        case 'startedHost':
+          this.opened(started.id);
+          return undefined;
+        case 'notStartedHost':
+          return started.reason;
+      }
     } catch (error) {
       return error instanceof Error ? error.message : String(error);
     }
@@ -107,6 +114,12 @@ export class Hosting {
   /** A call that should have led to a start failed: the screen shows `message`, and `retry` makes the call again. */
   failed(message: string, retry: () => Promise<boolean>): void {
     this.failure.set({ message, retry });
+  }
+
+  /** The failure shown belongs to what was being started; once another ticket is selected it no longer does. */
+  withdrawFailure(): void {
+    this.attempts += 1;
+    this.failure.set(undefined);
   }
 
   private emulatorFor(session: string): Emulator {
@@ -155,22 +168,33 @@ export class Hosting {
     return fitted === undefined ? DEFAULT_PANE : { width: fitted.terminal.cols, height: fitted.terminal.rows };
   }
 
-  private opened(start: SessionHostStart): boolean {
-    if (start.kind !== 'startedHost') {
-      return false;
+  private opened(session: string): void {
+    this.ended.delete(session);
+    this.settle(this.dock.get().opened(session));
+  }
+
+  /** Shows `failure` only while no later start was asked and no failure withdrawn since `attempt` was. */
+  private fail(attempt: number, failure: StartFailure): void {
+    if (attempt === this.attempts) {
+      this.failure.set(failure);
     }
-    this.ended.delete(start.id);
-    this.settle(this.dock.get().opened(start.id));
-    return true;
   }
 
   private async start(ask: () => Promise<SessionHostStart>): Promise<boolean> {
+    this.withdrawFailure();
+    const attempt = this.attempts;
     try {
-      const started = this.opened(await ask());
-      this.failure.set(undefined);
-      return started;
+      const answer = await ask();
+      switch (answer.kind) {
+        case 'startedHost':
+          this.opened(answer.id);
+          return true;
+        case 'notStartedHost':
+          this.fail(attempt, { message: answer.reason, retry: undefined });
+          return false;
+      }
     } catch (error) {
-      this.failed(error instanceof Error ? error.message : String(error), () => this.start(ask));
+      this.fail(attempt, { message: error instanceof Error ? error.message : String(error), retry: () => this.start(ask) });
       return false;
     }
   }

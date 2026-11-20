@@ -7,8 +7,11 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixt
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.ghPrintingItsDirectory;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.impatientRepositoryOver;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.issueJson;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.issueJsonLinkedTo;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.listOfIssues;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.missingCommand;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.pageOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.pagesOf;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.projectAt;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.repositoryOver;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.FakeGhFixture.repositoryOverMissingGh;
@@ -18,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -26,8 +30,13 @@ import dev.maxenceng.lazyclaude.board.domain.BacklogEntry;
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
 import dev.maxenceng.lazyclaude.board.domain.Ticket;
 import dev.maxenceng.lazyclaude.board.domain.UnreadableTicket;
+import dev.maxenceng.lazyclaude.board.published.TicketBranch;
 
 class IssuesRepositoryTest {
+
+    private static final int PAGE = 600;
+    private static final int CAP = 1000;
+    private static final int OVER_CAP = 1001;
 
     @TempDir
     Path root;
@@ -57,7 +66,7 @@ class IssuesRepositoryTest {
 
     @Test
     void shouldListNothingWhenThereIsNoIssue() throws IOException {
-        assertThat(repositoryOver(ghPrinting(root, "[]")).entries(projectAt(root))).isEmpty();
+        assertThat(repositoryOver(ghPrinting(root, pagesOf(pageOf()))).entries(projectAt(root))).isEmpty();
     }
 
     @Test
@@ -67,7 +76,87 @@ class IssuesRepositoryTest {
         assertThat(repositoryOver(gh).entries(projectAt(root)))
                 .singleElement()
                 .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.title().value())
-                        .isEqualTo("issue list --state all --limit 1000 --json number,title,body,labels,state,stateReason,closedAt"));
+                        .startsWith("api graphql --paginate --slurp -F owner={owner} -F name={repo} -f query=")
+                        .contains("states: [OPEN, CLOSED]", "orderBy: {field: CREATED_AT, direction: DESC}", "first: 100")
+                        .contains("number title body state stateReason closedAt")
+                        .contains("labels(first: 100) { nodes { name } }", "linkedBranches(first: 1) { nodes { ref { name } } }")
+                        .contains("pageInfo { hasNextPage endCursor }"));
+    }
+
+    @Test
+    void shouldReadEveryPageOfIssuesTheSlurpedAnswerHolds() throws IOException {
+        Path gh = ghPrinting(root, pagesOf(pageOf(issueJson(2, "Second", "OPEN", "")), pageOf(issueJson(1, "First", "OPEN", ""))));
+
+        assertThat(repositoryOver(gh).entries(projectAt(root))).extracting(entry -> entry.id().value()).containsExactly("2", "1");
+    }
+
+    @Test
+    void shouldReadNothingMoreThanTheThousandNewestIssues() throws IOException {
+        Path gh = ghPrinting(
+                root,
+                pagesOf(
+                        pageOf(IntStream.rangeClosed(1, PAGE).mapToObj(number -> issueJson(number, "t", "OPEN", "")).toArray(String[]::new)),
+                        pageOf(IntStream.rangeClosed(PAGE + 1, OVER_CAP).mapToObj(number -> issueJson(number, "t", "OPEN", "")).toArray(String[]::new))));
+
+        assertThat(repositoryOver(gh).entries(projectAt(root)))
+                .hasSize(CAP)
+                .extracting(entry -> entry.id().value())
+                .doesNotContain(String.valueOf(OVER_CAP));
+    }
+
+    @Test
+    void shouldBranchTheTicketOnTheBranchGitHubLinksNotOnTheTitleSlug() throws IOException {
+        Path gh = ghPrinting(root, listOfIssues(issueJsonLinkedTo(7, "The ticket's branch", "OPEN", "", "7-the-tickets-branch")));
+
+        assertThat(repositoryOver(gh).entries(projectAt(root)))
+                .singleElement()
+                .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.branch()).isEqualTo(new TicketBranch("7-the-tickets-branch")));
+    }
+
+    @Test
+    void shouldBranchTheTicketOnTheSlugWhenGitHubLinksNoBranch() throws IOException {
+        Path gh = ghPrinting(root, listOfIssues(issueJson(7, "The ticket's branch", "OPEN", "")));
+
+        assertThat(repositoryOver(gh).entries(projectAt(root)))
+                .singleElement()
+                .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.branch()).isEqualTo(new TicketBranch("7-the-ticket-s-branch")));
+    }
+
+    @Test
+    void shouldReadAnIssueWhoseNodeHasNoLinkedBranchesFieldAsNothingLinked() throws IOException {
+        Path gh = ghPrinting(root, pagesOf(pageOf("{\"number\":7,\"title\":\"Plain\",\"state\":\"OPEN\"}")));
+
+        assertThat(repositoryOver(gh).entries(projectAt(root)))
+                .singleElement()
+                .isInstanceOfSatisfying(Ticket.class, ticket -> assertThat(ticket.branch()).isEqualTo(new TicketBranch("7-plain")));
+    }
+
+    @Test
+    void shouldRefuseAnAnswerWithNoPageRatherThanReadAnEmptyBoard() throws IOException {
+        Path gh = ghPrinting(root, "");
+
+        assertThatThrownBy(() -> repositoryOver(gh).entries(projectAt(root)))
+                .as("gh writes one page even for a repository with no issue, so none at all is not an empty backlog")
+                .isExactlyInstanceOf(BacklogUnavailableException.class)
+                .hasMessage("gh api graphql wrote no page of issues");
+    }
+
+    @Test
+    void shouldRefuseAnIssueWrittenAsNull() throws IOException {
+        Path gh = ghPrinting(root, pagesOf(pageOf("null")));
+
+        assertThatThrownBy(() -> repositoryOver(gh).entries(projectAt(root)))
+                .isExactlyInstanceOf(BacklogUnavailableException.class)
+                .hasMessage("gh api graphql wrote an issue that is not an object: null");
+    }
+
+    @Test
+    void shouldSayWhatGhWroteWhenTheRepositoryIsNotInItsAnswer() throws IOException {
+        Path gh = ghPrinting(root, "[{\"data\":{\"repository\":null}}]");
+
+        assertThatThrownBy(() -> repositoryOver(gh).entries(projectAt(root)))
+                .isExactlyInstanceOf(BacklogUnavailableException.class)
+                .hasMessage("gh api graphql wrote a page without issues");
     }
 
     @Test
@@ -139,16 +228,16 @@ class IssuesRepositoryTest {
 
         assertThatThrownBy(() -> repositoryOver(gh).entries(projectAt(root)))
                 .isExactlyInstanceOf(BacklogUnavailableException.class)
-                .hasMessageStartingWith("gh issue list does not parse: ");
+                .hasMessageStartingWith("gh api graphql does not parse: ");
     }
 
     @Test
     void shouldNameTheFieldAnIssueIsWithout() throws IOException {
-        Path gh = ghPrinting(root, "[{\"title\":\"t\",\"state\":\"OPEN\"}]");
+        Path gh = ghPrinting(root, pagesOf(pageOf("{\"title\":\"t\",\"state\":\"OPEN\"}")));
 
         assertThatThrownBy(() -> repositoryOver(gh).entries(projectAt(root)))
                 .isExactlyInstanceOf(BacklogUnavailableException.class)
-                .hasMessage("gh issue list wrote an issue without number");
+                .hasMessage("gh api graphql wrote an issue without number");
     }
 
     @Test

@@ -93,11 +93,15 @@ const RowList = ({ entries, cursor, onPress }: RowListProps) => {
   );
 };
 
-/** Why a session could not be started, with Retry; none while nothing failed. It stands whether or not a ticket is under the cursor. */
+/** Why a session could not be started, with Retry unless the sidecar refused it; none while nothing failed. It stands until the next start is asked or another ticket is selected. */
 export const SessionFailure = ({ failure }: { failure: StartFailure | undefined }) => {
   const { t } = useTranslation('session');
-  return failure === undefined ? null : (
-    <Alert title={t('failure.title')} action={<Button onClick={() => void failure.retry()}>{t('failure.retry')}</Button>}>
+  if (failure === undefined) {
+    return null;
+  }
+  const { retry } = failure;
+  return (
+    <Alert title={t('failure.title')} action={retry === undefined ? undefined : <Button onClick={() => void retry()}>{t('failure.retry')}</Button>}>
       {failure.message}
     </Alert>
   );

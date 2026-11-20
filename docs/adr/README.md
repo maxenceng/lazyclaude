@@ -119,4 +119,5 @@
 - 0115 [A session pane follows its own links with ctrl held, and names the hovered one in the key bar](0115-a-session-pane-follows-its-own-links-with-ctrl-held-and-names-the-hovered-one-in-the-key-bar.md) — Accepted.
 - 0116 [The desktop frontend draws a mermaid block with mermaid.js, loaded on demand](0116-the-desktop-frontend-draws-a-mermaid-block-with-mermaid-js-loaded-on-demand.md) — Accepted.
 - 0117 [The desktop window binds only the keys it acts on](0117-the-desktop-window-binds-only-the-keys-it-acts-on.md) — Accepted.
-- 0118 [A session pane keeps a ctrl+click it acts on from the program, and leaves a link it would refuse to the program](0118-a-session-pane-keeps-a-ctrl-click-it-acts-on-from-the-program.md) — Accepted.
+- 0118 [A ticket's branch is the branch GitHub links to its issue](0118-a-ticket-branch-is-the-branch-github-links-to-its-issue.md) — Accepted.
+- 0119 [A session pane keeps a ctrl+click it acts on from the program, and leaves a link it would refuse to the program](0119-a-session-pane-keeps-a-ctrl-click-it-acts-on-from-the-program.md) — Accepted.

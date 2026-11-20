@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { pastFixture } from './fixtures';
 import { HostedRow, LiveRow, PastRow, type SessionRow, STARTING } from './sessionRows';
-import { SessionsList } from './SessionsList';
+import { SessionFailure, SessionsList } from './SessionsList';
 
 const list = (rows: SessionRow[]) =>
   render(<SessionsList rows={rows} cursor={0} picker={undefined} onPress={() => {}} />);
@@ -46,5 +46,19 @@ describe('a ticket\'s sessions', () => {
   it('marks a waiting session\'s row with its state, and a busy one\'s with none a tint answers to', () => {
     list([new HostedRow('h1', 'a', 'yourTurn'), new HostedRow('h2', 'b', 'busy')]);
     expect(screen.getAllByRole('button').map((row) => row.getAttribute('data-lamp'))).toEqual(['turn', 'off']);
+  });
+});
+
+describe('why a session could not be started', () => {
+  it('names the sidecar\'s refusal under its title, offering no Retry the same refusal would meet', () => {
+    render(<SessionFailure failure={{ message: 'already starting', retry: undefined }} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('The session could not be started');
+    expect(screen.getByRole('alert')).toHaveTextContent('already starting');
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+
+  it('offers Retry for a start the sidecar could not answer', () => {
+    render(<SessionFailure failure={{ message: 'no java', retry: () => Promise.resolve(true) }} />);
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 });

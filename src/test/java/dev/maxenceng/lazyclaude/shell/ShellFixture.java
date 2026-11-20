@@ -4,6 +4,7 @@ import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFix
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.projectRoot;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.BoardViewFixture.unavailableBoardView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.linkedBranchTicketViewIn;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.secondTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewIn;
@@ -290,8 +291,12 @@ final class ShellFixture {
     }
 
     static Shell shellOnDoneTicket(SessionQuery screens, TicketWorktreeCommand removing, BoardQuery boards, Executor background) {
+        return shellOnDoneTicket(doneTicketView(), screens, removing, boards, background);
+    }
+
+    static Shell shellOnDoneTicket(TicketView done, SessionQuery screens, TicketWorktreeCommand removing, BoardQuery boards, Executor background) {
         Shell shell = new Shell(
-                boardViewOf(doneTicketView()),
+                boardViewOf(done),
                 emptyDocsView(),
                 emptySessionsView(),
                 checkingPullRequestsView(),
@@ -329,6 +334,10 @@ final class ShellFixture {
 
     static Shell shellOnDoneTicketWithWorktree(WorktreeView worktree, TicketWorktreeCommand removing) {
         return shellOnDoneTicket(screensShowing(worktree), removing, Runnable::run);
+    }
+
+    static Shell shellOnLinkedBranchDoneTicketWithWorktree(WorktreeView worktree, TicketWorktreeCommand removing) {
+        return shellOnDoneTicket(linkedBranchTicketViewIn(Status.DONE), screensShowing(worktree), removing, mock(BoardQuery.class), Runnable::run);
     }
 
     static SessionQuery screensChoosing(VerbChoiceView choice) {

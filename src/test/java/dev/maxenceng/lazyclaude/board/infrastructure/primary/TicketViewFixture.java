@@ -3,12 +3,14 @@ package dev.maxenceng.lazyclaude.board.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.board.published.BodyFixture.body;
 import static dev.maxenceng.lazyclaude.board.published.ContextNameFixture.contextName;
 import static dev.maxenceng.lazyclaude.board.published.LabelNameFixture.labelNames;
+import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.linkedTicketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.secondTicketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.slugTicketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.secondTicketId;
 import static dev.maxenceng.lazyclaude.board.published.TicketIdFixture.ticketId;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.longTitle;
+import static dev.maxenceng.lazyclaude.board.published.TitleFixture.possessiveTitle;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.secondTitle;
 import static dev.maxenceng.lazyclaude.board.published.TitleFixture.title;
 import static dev.maxenceng.lazyclaude.board.published.TypeNameFixture.typeName;
@@ -91,6 +93,10 @@ public final class TicketViewFixture {
 
     public static TicketView ticketViewIn(Status status) {
         return ticketViewBuilder().status(status).verbs(status.verbs()).build();
+    }
+
+    public static TicketView linkedBranchTicketViewIn(Status status) {
+        return ticketViewBuilder().branch(linkedTicketBranch()).title(possessiveTitle()).status(status).verbs(status.verbs()).build();
     }
 
     public static TicketView inProgressDesignTicketView() {

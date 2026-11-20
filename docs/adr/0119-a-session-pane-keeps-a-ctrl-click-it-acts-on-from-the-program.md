@@ -1,4 +1,4 @@
-# 118. A session pane keeps a ctrl+click it acts on from the program, and leaves a link it would refuse to the program
+# 119. A session pane keeps a ctrl+click it acts on from the program, and leaves a link it would refuse to the program
 
 Date: 2026-11-20
 
