@@ -121,3 +121,4 @@
 - 0117 [The desktop window binds only the keys it acts on](0117-the-desktop-window-binds-only-the-keys-it-acts-on.md) — Accepted.
 - 0118 [A ticket's branch is the branch GitHub links to its issue](0118-a-ticket-branch-is-the-branch-github-links-to-its-issue.md) — Accepted.
 - 0119 [A session pane keeps a ctrl+click it acts on from the program, and leaves a link it would refuse to the program](0119-a-session-pane-keeps-a-ctrl-click-it-acts-on-from-the-program.md) — Accepted.
+- 0120 [A ticket worktree takes a branch only on origin from origin, and refuses when origin cannot say](0120-a-ticket-worktree-takes-a-branch-only-on-origin-from-origin-and-refuses-when-origin-cannot-say.md) — Accepted.

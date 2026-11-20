@@ -5,7 +5,9 @@ import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchNam
 import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.secondBranchName;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.branchAtHead;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.branchExistsIn;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.branchOnlyOnRemote;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.commitEverything;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.gitSayingItsPromptSetting;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.headOf;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.linkedWorktreeOn;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.missingGit;
@@ -13,6 +15,7 @@ import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixtur
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.remoteBeside;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.removedWorktreeOn;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.repositoryWithACommit;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.upstreamOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -87,6 +90,64 @@ class WorktreeRepositoryTest {
     @Test
     void shouldSayABranchDoesNotExist() {
         assertThat(repository.branchExists(project, secondBranchName())).isFalse();
+    }
+
+    @Test
+    void shouldSayABranchIsOnTheRemote() throws Exception {
+        remoteBeside(root, temp.resolve("remote.git"));
+        branchOnlyOnRemote(root, branchName().value(), "docs/remote.md");
+
+        assertThat(repository.branchOnRemote(project, branchName())).isTrue();
+    }
+
+    @Test
+    void shouldSayABranchIsNotOnTheRemote() throws Exception {
+        remoteBeside(root, temp.resolve("remote.git"));
+        branchOnlyOnRemote(root, "nested/" + branchName().value(), "docs/remote.md");
+
+        assertThat(repository.branchOnRemote(project, branchName()))
+                .as("a remote branch whose name only ends with the branch's is another branch")
+                .isFalse();
+    }
+
+    @Test
+    void shouldFailToAskARemoteTheProjectDoesNotHave() {
+        assertThatThrownBy(() -> repository.branchOnRemote(project, branchName()))
+                .isInstanceOf(WorktreeUnavailableException.class)
+                .hasMessage("git ls-remote: fatal: 'origin' does not appear to be a git repository");
+    }
+
+    @Test
+    void shouldAskTheRemoteWithoutLettingGitPromptForCredentials() throws Exception {
+        WorktreeRepository prompting = new WorktreeRepository(gitSayingItsPromptSetting(temp.resolve("bin")));
+
+        assertThatThrownBy(() -> prompting.branchOnRemote(project, branchName()))
+                .as("a credential prompt would write over the terminal and wait for an answer nobody is asked for")
+                .hasMessageContaining("GIT_TERMINAL_PROMPT=0");
+    }
+
+    @Test
+    void shouldAddAWorktreeOnTheRemoteBranchTrackingIt() throws Exception {
+        remoteBeside(root, temp.resolve("remote.git"));
+        String remoteTip = branchOnlyOnRemote(root, branchName().value(), "docs/remote.md");
+        WorkingDirectory at = new WorkingDirectory(ticketWorktreePath(temp));
+
+        repository.addOnRemoteBranch(project, branchName(), at);
+
+        assertThat(headOf(at.path())).as("the worktree starts at the remote's tip, not at main").isEqualTo(remoteTip);
+        assertThat(upstreamOf(at.path())).isEqualTo("origin/" + branchName().value());
+    }
+
+    @Test
+    void shouldFailToAddOnARemoteBranchTheFetchCannotFind() throws Exception {
+        remoteBeside(root, temp.resolve("remote.git"));
+        WorkingDirectory at = new WorkingDirectory(ticketWorktreePath(temp));
+
+        assertThatThrownBy(() -> repository.addOnRemoteBranch(project, branchName(), at))
+                .isInstanceOf(WorktreeUnavailableException.class)
+                .hasMessage("git fetch: fatal: couldn't find remote ref refs/heads/" + branchName().value());
+        assertThat(branchExistsIn(root, branchName().value())).as("no branch is made when the fetch fails").isFalse();
+        assertThat(at.path()).doesNotExist();
     }
 
     @Test

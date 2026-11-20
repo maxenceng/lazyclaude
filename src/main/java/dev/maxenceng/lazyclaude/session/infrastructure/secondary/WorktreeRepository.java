@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -53,11 +54,25 @@ public final class WorktreeRepository implements WorktreePort {
     private static final String ADD_COMMAND = "git worktree add";
     private static final String GIT = "git";
     private static final String MAIN = "main";
+    // deferred: a project whose GitHub remote is not named origin is asked about a remote it lacks, and nothing starts — close it
+    // when a project names its remote otherwise, by reading the remote gh resolves.
+    private static final String ORIGIN = "origin";
+    private static final String LS_REMOTE = "ls-remote";
+    private static final String EXIT_CODE = "--exit-code";
+    private static final String HEADS = "--heads";
+    private static final String FETCH = "fetch";
+    private static final String TRACK = "--track";
+    private static final String REMOTE_BRANCHES = "refs/remotes/" + ORIGIN + "/";
+    private static final String REFSPEC_SEPARATOR = ":";
+    private static final String LS_REMOTE_COMMAND = "git ls-remote";
+    private static final String FETCH_COMMAND = "git fetch";
+    private static final Map<String, String> NO_PROMPT = Map.of("GIT_TERMINAL_PROMPT", "0");
     private static final String LOCAL_BRANCHES = "refs/heads/";
     private static final String WORKTREE_PREFIX = "worktree ";
     private static final String BRANCH_PREFIX = "branch " + LOCAL_BRANCHES;
     private static final Pattern BLANK_LINE = Pattern.compile("\\R\\R");
     private static final int NO_SUCH_REF = 1;
+    private static final int NO_MATCHING_REMOTE_REF = 2;
     private static final int STATUS_PREFIX_LENGTH = 3;
     private static final String NOT_PREFIX = "^";
 
@@ -68,7 +83,7 @@ public final class WorktreeRepository implements WorktreePort {
     }
 
     WorktreeRepository(String git) {
-        this.git = new GitCommand(git);
+        this.git = new GitCommand(git, NO_PROMPT);
     }
 
     @Override
@@ -98,6 +113,29 @@ public final class WorktreeRepository implements WorktreePort {
             throw new WorktreeUnavailableException(failure(REV_PARSE_COMMAND, found));
         }
         return true;
+    }
+
+    /** The full ref is asked for, since {@code ls-remote} matches a pattern against the end of a ref and would also find {@code x/<branch>}. */
+    @Override
+    public boolean branchOnRemote(Project project, BranchName branch) {
+        GitResult listed = run(project.root(), List.of(LS_REMOTE, EXIT_CODE, HEADS, ORIGIN, LOCAL_BRANCHES + branch.value()));
+        if (listed.exitValue() == NO_MATCHING_REMOTE_REF) {
+            return false;
+        }
+        if (!listed.succeeded()) {
+            throw new WorktreeUnavailableException(remoteFailure(LS_REMOTE_COMMAND, listed));
+        }
+        return true;
+    }
+
+    @Override
+    public void addOnRemoteBranch(Project project, BranchName branch, WorkingDirectory at) {
+        String remoteBranch = REMOTE_BRANCHES + branch.value();
+        GitResult fetched = run(project.root(), List.of(FETCH, ORIGIN, LOCAL_BRANCHES + branch.value() + REFSPEC_SEPARATOR + remoteBranch));
+        if (!fetched.succeeded()) {
+            throw new WorktreeUnavailableException(remoteFailure(FETCH_COMMAND, fetched));
+        }
+        add(project, List.of(WORKTREE, ADD, TRACK, NEW_BRANCH, branch.value(), at.path().toString(), remoteBranch));
     }
 
     @Override
@@ -195,6 +233,11 @@ public final class WorktreeRepository implements WorktreePort {
         if (!added.succeeded()) {
             throw new WorktreeUnavailableException(failure(ADD_COMMAND, added));
         }
+    }
+
+    /** A remote's failure is on git's first line; the lines after it are advice. */
+    private static String remoteFailure(String command, GitResult run) {
+        return run.reason().isEmpty() ? "%s exited with %d".formatted(command, run.exitValue()) : command + run.reason();
     }
 
     private static String failure(String command, GitResult run) {

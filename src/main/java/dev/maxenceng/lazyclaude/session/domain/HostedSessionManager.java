@@ -104,8 +104,9 @@ public final class HostedSessionManager {
 
     /**
      * {@code /<plugin>:ticket <verb> <ID>} in the ticket's worktree: where its branch is already checked out, else a worktree added at the
-     * path the project keeps it at, on the branch when it exists and on a new one from {@code main} when not. None, with a warning,
-     * when that path is taken by something else or git refuses.
+     * path the project keeps it at: on the local branch when there is one, else on a new one tracking the remote's branch when the remote
+     * has it, else on a new one from {@code main}. None, with a warning, when that path is taken by something else, the remote cannot be
+     * asked, or git refuses.
      */
     public HostStart startTicket(TicketStart ticket, TicketPlugin ticketPlugin, PaneSize size) {
         try {
@@ -293,6 +294,8 @@ public final class HostedSessionManager {
     private void addWorktree(TicketWorktree worktree, WorkingDirectory at) {
         if (worktrees.branchExists(worktree.project(), worktree.branch())) {
             worktrees.addOnBranch(worktree.project(), worktree.branch(), at);
+        } else if (worktrees.branchOnRemote(worktree.project(), worktree.branch())) {
+            worktrees.addOnRemoteBranch(worktree.project(), worktree.branch(), at);
         } else {
             worktrees.addOnNewBranch(worktree.project(), worktree.branch(), at);
         }
