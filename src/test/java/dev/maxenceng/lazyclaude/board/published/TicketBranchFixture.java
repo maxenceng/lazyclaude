@@ -16,6 +16,10 @@ public final class TicketBranchFixture {
         return new TicketBranch("PROJ-1-first-slice");
     }
 
+    public static TicketBranch linkedTicketBranch() {
+        return new TicketBranch("PROJ-1-the-tickets-branch");
+    }
+
     public static TicketBranch dottedTicketBranch() {
         return new TicketBranch("PROJ-1-v1.2-notes");
     }

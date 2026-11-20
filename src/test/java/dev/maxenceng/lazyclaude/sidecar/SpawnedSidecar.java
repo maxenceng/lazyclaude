@@ -30,7 +30,7 @@ public final class SpawnedSidecar implements AutoCloseable {
 
     private static final String GH_SCRIPT = """
             #!/bin/sh
-            if [ "$1" = "issue" ]; then
+            if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
               cat <<'JSON'
             %s
             JSON
@@ -53,7 +53,7 @@ public final class SpawnedSidecar implements AutoCloseable {
             -old
             +new""";
     private static final String ISSUES =
-            "[{\"number\":7,\"title\":\"A fixture ticket\",\"body\":\"\",\"labels\":[{\"name\":\"status:todo\"},{\"name\":\"context:board\"},{\"name\":\"type:feature\"}],\"state\":\"OPEN\",\"stateReason\":\"\"}]";
+            "[{\"data\":{\"repository\":{\"issues\":{\"nodes\":[{\"number\":7,\"title\":\"A fixture ticket\",\"body\":\"\",\"labels\":{\"nodes\":[{\"name\":\"status:todo\"},{\"name\":\"context:board\"},{\"name\":\"type:feature\"}]},\"state\":\"OPEN\",\"stateReason\":null,\"linkedBranches\":{\"nodes\":[]}}]}}}}]";
     private static final String CLAUDE_SCRIPT = """
             #!/bin/bash
             echo $$ > %s

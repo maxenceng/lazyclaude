@@ -19,6 +19,7 @@ import static dev.maxenceng.lazyclaude.shell.ShellFixture.screensShowing;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOnDoneTicket;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOnDoneTicketWithWorktree;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOnInReviewTicket;
+import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOnLinkedBranchDoneTicketWithWorktree;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -148,6 +149,35 @@ class ShellWorktreeTest {
         assertThat(payload.getValue().branch()).isEqualTo("PROJ-1");
         assertThat(payload.getValue().mergedHead()).as("review's last read of the merge is what removal is judged by").isEqualTo(headCommit());
         assertThat(Screen.of(shell).statusLine()).doesNotContain("remove worktree");
+    }
+
+    @Test
+    void shouldJudgeTheBranchGitHubLinksToTheTicketAgainstTheMergeOfThatBranch() {
+        when(removing.remove(any())).thenReturn(new RemovedWorktreeView());
+        Shell shell = shellOnLinkedBranchDoneTicketWithWorktree(clearHeldWorktreeView(), removing);
+        shell.mergedPullRequestsChanged(mergedPullRequestsViewOn("PROJ-1-the-tickets-branch"));
+        shell.press(key('d'));
+
+        shell.press(key('y'));
+
+        ArgumentCaptor<WorktreePayload> payload = ArgumentCaptor.forClass(WorktreePayload.class);
+        verify(removing).remove(payload.capture());
+        assertThat(payload.getValue().branch()).isEqualTo("PROJ-1-the-tickets-branch");
+        assertThat(payload.getValue().mergedHead()).as("the merge of the linked branch, not of the title slug").isEqualTo(headCommit());
+    }
+
+    @Test
+    void shouldJudgeAgainstNoMergedHeadWhenOnlyTheTitleSlugOfALinkedBranchTicketMerged() {
+        when(removing.remove(any())).thenReturn(new RemovedWorktreeView());
+        Shell shell = shellOnLinkedBranchDoneTicketWithWorktree(clearHeldWorktreeView(), removing);
+        shell.mergedPullRequestsChanged(mergedPullRequestsViewOn("PROJ-1-the-ticket-s-branch"));
+        shell.press(key('d'));
+
+        shell.press(key('y'));
+
+        ArgumentCaptor<WorktreePayload> payload = ArgumentCaptor.forClass(WorktreePayload.class);
+        verify(removing).remove(payload.capture());
+        assertThat(payload.getValue().mergedHead()).isEqualTo(new NoMergedHead());
     }
 
     @Test

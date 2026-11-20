@@ -1,6 +1,7 @@
 package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.inReviewSlugTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.linkedBranchTicketViewIn;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.longTitledSlugTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.slugTicketView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.bareIdPullRequestView;
@@ -8,6 +9,7 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.draftFailedPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.draftPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.failedPullRequestView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.linkedPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.longerHeadPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.openPullRequestsViewOf;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.passedPullRequestView;
@@ -15,6 +17,7 @@ import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequest
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.pullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.sharingTheIdPrefixPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.siblingPullRequestView;
+import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.slugOfLinkedPullRequestView;
 import static dev.maxenceng.lazyclaude.review.infrastructure.primary.PullRequestsViewFixture.unavailablePullRequestsView;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOnPullRequests;
 import static dev.maxenceng.lazyclaude.shell.ShellFixture.shellOnPullRequestsAndSessions;
@@ -23,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import dev.maxenceng.lazyclaude.board.published.Status;
 import dev.tamboui.style.Color;
 
 class ShellPullRequestsTest {
@@ -114,6 +118,20 @@ class ShellPullRequestsTest {
         Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(siblingPullRequestView()), slugTicketView()));
 
         assertThat(screen.boardPanelText()).doesNotContain("✓");
+    }
+
+    @Test
+    void shouldShowTheGlyphOfThePullRequestHeadedByTheBranchGitHubLinksToTheTicket() {
+        Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(linkedPullRequestView()), linkedBranchTicketViewIn(Status.TODO)));
+
+        assertThat(screen.boardPanelText()).as("the ticket's branch is the linked one, not its title slug").contains("⊙");
+    }
+
+    @Test
+    void shouldShowNoGlyphForAPullRequestHeadedByTheTitleSlugOfATicketWhoseLinkedBranchDiffersFromIt() {
+        Screen screen = Screen.of(shellOnPullRequests(openPullRequestsViewOf(slugOfLinkedPullRequestView()), linkedBranchTicketViewIn(Status.TODO)));
+
+        assertThat(screen.boardPanelText()).doesNotContain("⊙");
     }
 
     @Test

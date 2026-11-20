@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.shell;
 
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.doneTicketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.inProgressDesignTicketView;
+import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.linkedBranchTicketViewIn;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketView;
 import static dev.maxenceng.lazyclaude.board.infrastructure.primary.TicketViewFixture.ticketViewIn;
 import static dev.maxenceng.lazyclaude.board.published.TicketBranchFixture.ticketBranch;
@@ -162,6 +163,26 @@ class ShellVerbPickerTest {
         shell.mergedPullRequestsChanged(mergedPullRequestsViewOn("PROJ-1"));
 
         assertThat(Screen.of(shell).text()).contains("│ › done").doesNotContain("checking PR");
+    }
+
+    @Test
+    void shouldPreselectDoneWhenThePullRequestOfTheBranchGitHubLinksToTheTicketMerged() {
+        Shell shell = shellOnTicket(linkedBranchTicketViewIn(Status.IN_REVIEW), hosting);
+        shell.press(key('n'));
+
+        shell.mergedPullRequestsChanged(mergedPullRequestsViewOn("PROJ-1-the-tickets-branch"));
+
+        assertThat(Screen.of(shell).text()).contains("│ › done");
+    }
+
+    @Test
+    void shouldNotPreselectDoneWhenOnlyTheTitleSlugOfALinkedBranchTicketMerged() {
+        Shell shell = shellOnTicket(linkedBranchTicketViewIn(Status.IN_REVIEW), hosting);
+        shell.press(key('n'));
+
+        shell.mergedPullRequestsChanged(mergedPullRequestsViewOn("PROJ-1-the-ticket-s-branch"));
+
+        assertThat(Screen.of(shell).text()).contains("│ › respond").doesNotContain("│ › done");
     }
 
     @Test

@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import dev.maxenceng.lazyclaude.board.domain.BacklogUnavailableException;
@@ -23,17 +24,25 @@ import dev.maxenceng.lazyclaude.board.published.Title;
 import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.MissingFields;
 
 /**
- * One issue as {@code gh issue list --json} writes it, null where the JSON lacks it. The domain's {@link GitHubIssue} decides what ticket it
- * is (ADR 0043); this reads the fields, and names the branch as {@code gh issue develop} would.
+ * One issue as {@code gh api graphql} writes it, null where the JSON lacks it. The domain's {@link GitHubIssue} decides what ticket it
+ * is (ADR 0043); this reads the fields, and names the branch GitHub links to it, else as {@code gh issue develop} would (ADR 0118).
  */
-record IssueRecord(Integer number, String title, String body, List<LabelRecord> labels, String state, String stateReason, String closedAt) {
+record IssueRecord(
+        Integer number,
+        String title,
+        String body,
+        NodesRecord<LabelRecord> labels,
+        String state,
+        String stateReason,
+        String closedAt,
+        NodesRecord<LinkedBranchRecord> linkedBranches) {
 
     private static final String NUMBER = "number";
     private static final String TITLE = "title";
     private static final String STATE = "state";
     private static final String CLOSED = "CLOSED";
     private static final String CLOSED_AT = "closedAt";
-    private static final String UNREAD_TIME = "gh issue list wrote a closedAt that is not a time: %s";
+    private static final String UNREAD_TIME = "gh api graphql wrote a closedAt that is not a time: %s";
     private static final String NO_REASON = "";
     private static final String NON_SLUG = "[^a-z0-9]+";
     private static final Pattern NON_SLUG_RUN = Pattern.compile(NON_SLUG);
@@ -81,8 +90,21 @@ record IssueRecord(Integer number, String title, String body, List<LabelRecord> 
         return body == null || body.isBlank() ? new NoBody() : new Body(body);
     }
 
-    // deferred: the branch is the number and the title's slug, as `gh issue develop` names one by default, not read back from linkedBranches — close it when a ticket's branch is created under another name.
     private TicketBranch branch() {
+        return linkedBranch().orElseGet(this::slugBranch);
+    }
+
+    private Optional<TicketBranch> linkedBranch() {
+        return linkedBranches == null
+                ? Optional.empty()
+                : linkedBranches.listed().stream()
+                        .findFirst()
+                        .map(LinkedBranchRecord::ref)
+                        .map(RefRecord::name)
+                        .map(TicketBranch::new);
+    }
+
+    private TicketBranch slugBranch() {
         String slug = NON_SLUG_RUN.matcher(title.toLowerCase(Locale.ROOT)).replaceAll(SLUG_JOIN).replaceAll(EDGE_JOINS, NO_JOIN);
         return new TicketBranch(slug.isEmpty() ? String.valueOf(number) : BRANCH.formatted(number, slug));
     }
@@ -90,6 +112,6 @@ record IssueRecord(Integer number, String title, String body, List<LabelRecord> 
     private List<LabelName> names() {
         return labels == null
                 ? List.of()
-                : labels.stream().map(LabelRecord::name).filter(name -> name != null && !name.isBlank()).map(LabelName::new).toList();
+                : labels.listed().stream().map(LabelRecord::name).filter(name -> name != null && !name.isBlank()).map(LabelName::new).toList();
     }
 }
