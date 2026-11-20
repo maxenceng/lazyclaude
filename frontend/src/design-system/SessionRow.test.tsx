@@ -27,6 +27,21 @@ describe('a session row', () => {
     expect(screen.getByRole('button')).not.toHaveAttribute('aria-current');
   });
 
+  it('tells the pointer moving onto it to a row that follows the pointer, once per entry', async () => {
+    const onPoint = vi.fn();
+    render(<SessionRow label="refine" selected={false} lamp={undefined} onSelect={() => {}} onPoint={onPoint} />);
+    const user = userEvent.setup();
+    await user.hover(screen.getByRole('button'));
+    await user.pointer({ target: screen.getByRole('button'), coords: { x: 2, y: 2 } });
+    expect(onPoint, 'a move within the row is not a new entry: a keyboard move away from a still pointer stands').toHaveBeenCalledOnce();
+  });
+
+  it('draws no hover ground on a row that follows the pointer, so the cursor ground is its one highlight', () => {
+    render(<SessionRow label="refine" selected={false} lamp={undefined} onSelect={() => {}} onPoint={() => {}} />);
+    expect(screen.getByRole('button').className, 'the pointed class is what the hover-ground rule leaves out').toContain('pointed');
+    expect(ruleOf(sheet, '.row:not(.tall):not(.pointed):hover:not(.selected)')).toContain('--hover-ground');
+  });
+
   it('carries no tint for a session that waits on nothing', () => {
     render(<SessionRow label="start" selected={false} lamp={LampColour.Off} onSelect={() => {}} />);
     expect(screen.getByRole('button')).toHaveAttribute('data-lamp', 'off');

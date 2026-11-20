@@ -691,6 +691,49 @@ describe('starting a session from the board', () => {
     scrolled.mockRestore();
   });
 
+  it('moves the picker cursor to the verb the pointer moves onto, so one verb is lit and enter starts it', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('j');
+    await ready.user.keyboard('n');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'START' });
+    await ready.user.hover(screen.getByRole('button', { name: /review/ }));
+    expect(screen.getByRole('button', { name: /review/ }), 'the pointer moves the cursor, as in a native menu').toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('button', { name: /start$/ }), 'the cursor ground is the picker\'s one highlight').not.toHaveAttribute('aria-current');
+    await ready.user.keyboard('{Enter}');
+    expect(ready.client.calls.find((call) => call.method === 'session/startTicket')?.params).toMatchObject({ verb: 'REVIEW' });
+  });
+
+  it('moves the picker cursor on from the verb the pointer left it on', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('j');
+    await ready.user.keyboard('n');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW', 'DONE'], preselected: 'START' });
+    await ready.user.hover(screen.getByRole('button', { name: /review/ }));
+    await ready.user.keyboard('j');
+    expect(screen.getByRole('button', { name: /done/ }), 'j carries on from the pointed verb, not from the one the picker opened on').toHaveAttribute('aria-current', 'true');
+  });
+
+  it('lights only the cursor verb when the keyboard moves the cursor away from a still pointer', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('j');
+    await ready.user.keyboard('n');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW', 'DONE'], preselected: 'START' });
+    await ready.user.hover(screen.getByRole('button', { name: /review/ }));
+    await ready.user.keyboard('k');
+    expect(screen.getByRole('button', { name: /start$/ })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('button', { name: /review/ }), 'a pointer resting on a verb does not take the cursor back').not.toHaveAttribute('aria-current');
+  });
+
+  it('keeps the picker cursor on the last verb pointed at when the pointer leaves the picker', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('j');
+    await ready.user.keyboard('n');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW', 'DONE'], preselected: 'START' });
+    await ready.user.hover(screen.getByRole('button', { name: /review/ }));
+    await ready.user.unhover(screen.getByRole('button', { name: /review/ }));
+    expect(screen.getByRole('button', { name: /review/ })).toHaveAttribute('aria-current', 'true');
+  });
+
   it('leaves the verb picker on escape, starting nothing', async () => {
     const ready = await readyApp();
     await ready.user.keyboard('j');

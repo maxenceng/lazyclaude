@@ -130,11 +130,12 @@ interface BarProps {
   picker: VerbPicker | undefined;
   onPress: (index: number) => void;
   onPickVerb: (index: number) => void;
+  onPointVerb: (index: number) => void;
   onDismiss: () => void;
 }
 
 /** The ticket's `new session` bar, pinned under its body; its picker of verbs grows upward from it. None while the ticket cannot start a session. */
-export const NewSessionBar = ({ rows, cursor, picker, onPress, onPickVerb, onDismiss }: BarProps) => {
+export const NewSessionBar = ({ rows, cursor, picker, onPress, onPickVerb, onPointVerb, onDismiss }: BarProps) => {
   const { t } = useTranslation('session');
   const index = rows.findIndex((row) => row.kind === SessionRowKind.New);
   return index === -1 ? null : (
@@ -152,7 +153,7 @@ export const NewSessionBar = ({ rows, cursor, picker, onPress, onPickVerb, onDis
           <StatusHeading status={t('picker.title')} count={picker.verbs.length} />
           <Rows>
             {picker.verbs.map((verb, at) => (
-              <Row key={verb} label={t(`verb.${verb}`)} selected={at === picker.cursorAt()} lamp={undefined} onSelect={() => onPickVerb(at)} />
+              <Row key={verb} label={t(`verb.${verb}`)} selected={at === picker.cursorAt()} lamp={undefined} onSelect={() => onPickVerb(at)} onPoint={() => onPointVerb(at)} />
             ))}
           </Rows>
         </>

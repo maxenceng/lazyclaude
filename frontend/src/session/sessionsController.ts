@@ -115,6 +115,11 @@ export class SessionsController {
     this.picker.set(this.picker.get()?.up());
   }
 
+  /** The pointer moved onto the verb at `index`: the cursor follows it, so enter and j/k carry on from there. */
+  pointAt(index: number): void {
+    this.picker.set(this.picker.get()?.at(index));
+  }
+
   cancelPick(): void {
     this.picker.set(undefined);
   }

@@ -269,6 +269,7 @@ export const App = ({ app, packaged }: Props) => {
                   picker={picker}
                   onPress={(index) => app.pressRow(index)}
                   onPickVerb={(index) => void app.sessions.pick(index)}
+                  onPointVerb={(index) => app.sessions.pointAt(index)}
                   onDismiss={() => app.sessions.cancelPick()}
                 />
               }
