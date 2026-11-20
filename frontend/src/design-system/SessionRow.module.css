@@ -34,6 +34,10 @@
   background: var(--row-ground, transparent);
 }
 
+.row:not(.tall):hover:not(.selected) {
+  background: linear-gradient(var(--hover-ground), var(--hover-ground)), var(--row-ground, transparent);
+}
+
 .selected {
   background: var(--cursor-ground, var(--row-ground, transparent));
   color: var(--cursor-ink);

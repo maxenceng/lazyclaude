@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import { LampColour } from './Lamp';
 import { SessionRow } from './SessionRow';
 import { ruleOf, stylesheet } from './stylesheet';
@@ -16,6 +17,14 @@ describe('a session row', () => {
   it('lightens its action on a your-turn row, where the plain dim ink would not read', () => {
     expect(ruleOf(sheet, ".row[data-lamp='turn']")).toContain('--row-dim: var(--lamp-turn-tile-dim)');
     expect(ruleOf(sheet, '.action')).toContain('color: var(--row-dim, var(--dim))');
+  });
+
+  it('does not pick itself or take the cursor when the pointer only rests on it', async () => {
+    const onSelect = vi.fn();
+    render(<SessionRow label="refine" selected={false} lamp={undefined} onSelect={onSelect} />);
+    await userEvent.hover(screen.getByRole('button'));
+    expect(onSelect, 'hover is not a cursor move: enter still starts the verb the cursor is on').not.toHaveBeenCalled();
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-current');
   });
 
   it('carries no tint for a session that waits on nothing', () => {
