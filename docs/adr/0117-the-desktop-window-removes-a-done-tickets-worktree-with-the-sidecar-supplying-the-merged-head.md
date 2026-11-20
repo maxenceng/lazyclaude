@@ -23,15 +23,16 @@ it never reads and could send a stale one.
   join stays in the composer, so `session` never reads `review` or `board`. A branch with no merged pull request, or read before
   `review` has answered, has no merged head, so its state is `noMergedPullRequest` and nothing is offered for removal.
 - **A result of its own, with the words in it.** `session/worktreeOf` answers `WorktreeShownView`: `noWorktree`, `clearWorktree`
-  (`shown`), `heldBackWorktree` (`shown`, `state`, `held`) or `unreadWorktree` (`reason`, `held`). `shown` is the path from
-  the project's parent, as the shell shows it. The window draws a `clean` pill for `clearWorktree`, `held` for a `heldBackWorktree`
+  (`shown`), `notClearWorktree` (`shown`, `state`, `held`) or `unreadWorktree` (`reason`, `held`). `shown` is the path from
+  the project's root, as the shell shows it, from the one `HeldWorktreeView.shown`. The window draws a `clean` pill for `clearWorktree`, `held` for a `notClearWorktree`
   whose state is `worktreeContents`, and `unknown` for one whose state is `noMergedPullRequest` and for `unreadWorktree`.
   `session/removeWorktree` answers `WorktreeRemovalOutcomeView`: `removedWorktree` or `notRemovedWorktree` (`refusal`). A refusal
   and a failure in git are both `notRemovedWorktree`: the window says the line and shows nothing else.
 - **The words have one source.** `WorktreeWording`, package-private in `session`'s primary side, words `cannot remove: ...`; the
   views hand it out (`WorktreeStateView.refusal`, `UnreadableWorktreeView.refusal`, `FailedRemovalView.refusal`,
-  `NoWorktreeView.refusal`), and the shell's `WorktreeText` reads them instead of owning a copy. `DirtyPath` moved back to
-  `session.domain`: with the wording in `session`, nothing outside reads it (ADR 0029).
+  `NoWorktreeView.refusal`, and `notWatched` for a call before any `session/watch`), and the shell's `WorktreeText` reads them instead of owning a copy. `DirtyPath` moved back to
+  `session.domain`: with the wording in `session`, nothing outside reads it (ADR 0029). A worktree that is not clear is a
+  `NotClearWorktreeView`, not a "held back" one: `HeldWorktreeView` already means the ticket has a worktree at all.
 - **Refusal is a result.** The judgement is made again at the yes by the existing `TicketWorktreeCommand.remove`; a worktree that
   changed since shown, or a failed `git worktree remove`, comes back as `notRemovedWorktree` with its reason, never a JSON-RPC
   error. A call before any `session/watch` is also `unreadWorktree` / `notRemovedWorktree`, not an error. The local branch is kept.
@@ -44,10 +45,11 @@ it never reads and could send a stale one.
   A session ending opens the popup unasked only after a `/ticket done` session, never from a stale read.
 - **How the window reads it.** The window asks for the selected ticket's worktree when the ticket is `done`, again whenever the
   selection, the sessions, the board or the merged pull requests change, one read at a time: a change during a read queues one
-  more after it. A read that lands after another ticket was selected shows nowhere, and nothing is drawn before the first read. A
-  failed removal, whether `notRemovedWorktree` or a failed call, shows its line under the row in the ticket pane and is not
+  more after it, and the read made for an ended `/ticket done` session waits for the one in flight too. The composition, not
+  `session`'s folder, subscribes to `review/mergedChanged`. A read that lands after another ticket was selected shows nowhere, and nothing is drawn before the first read. A
+  failed removal, whether `notRemovedWorktree` or a failed call, shows its line under the row in the ticket pane, even when the read after it fails or finds no worktree, and is not
   retried: `d` again is the retry. `d` and the key bar's `d remove worktree` read one predicate, that the selected ticket's
-  worktree is shown and `clearWorktree`. The row's `clean` pill sits on `--worktree-clean`, a neutral token apart from the lamp
+  worktree is shown and `clearWorktree` and no removal of it is in flight, so a second `y` cannot follow the first. The row's `clean` pill sits on `--worktree-clean`, a neutral token apart from the lamp
   colours, which mean session state; where the worktree could not be read there is no path, so the row names the ticket's branch.
 
 ## Consequences

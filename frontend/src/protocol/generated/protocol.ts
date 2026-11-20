@@ -80,7 +80,7 @@ export type ReviewIssueClosing = ReviewClosesIssue | ReviewClosesNoIssue;
 export type ReviewPullRequestOnView = ReviewHeadedPullRequestView | ReviewNoHeadedPullRequestView;
 export type ReviewPendingReviewWriteView = ReviewWrittenReviewView | ReviewRefusedWriteView;
 export type SessionWorktreeShownView =
-  SessionNoWorktreeView | SessionClearWorktreeView | SessionHeldBackWorktreeView | SessionUnreadWorktreeView;
+  SessionNoWorktreeView | SessionClearWorktreeView | SessionNotClearWorktreeView | SessionUnreadWorktreeView;
 export type SessionWorktreeStateView = SessionWorktreeContentsView | SessionNoMergedPullRequestView;
 export type SessionWorktreeRemovalOutcomeView = SessionRemovedWorktreeView | SessionNotRemovedWorktreeView;
 export type SessionWatchedPayload = SessionWatchedSessionPayload | SessionNoWatchedSessionPayload;
@@ -841,8 +841,8 @@ export interface SessionClearWorktreeView {
   kind: 'clearWorktree';
   shown: string;
 }
-export interface SessionHeldBackWorktreeView {
-  kind: 'heldBackWorktree';
+export interface SessionNotClearWorktreeView {
+  kind: 'notClearWorktree';
   shown: string;
   state: SessionWorktreeStateView;
   held: string;

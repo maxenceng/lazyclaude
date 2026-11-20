@@ -2284,25 +2284,6 @@
       "required" : [ "kind", "value" ],
       "additionalProperties" : false
     },
-    "session.HeldBackWorktreeView" : {
-      "type" : "object",
-      "properties" : {
-        "kind" : {
-          "const" : "heldBackWorktree"
-        },
-        "shown" : {
-          "type" : "string"
-        },
-        "state" : {
-          "$ref" : "#/$defs/session.WorktreeStateView"
-        },
-        "held" : {
-          "type" : "string"
-        }
-      },
-      "required" : [ "kind", "shown", "state", "held" ],
-      "additionalProperties" : false
-    },
     "session.HostStart" : {
       "oneOf" : [ {
         "$ref" : "#/$defs/session.StartedHost"
@@ -2545,6 +2526,25 @@
         }
       },
       "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.NotClearWorktreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "notClearWorktree"
+        },
+        "shown" : {
+          "type" : "string"
+        },
+        "state" : {
+          "$ref" : "#/$defs/session.WorktreeStateView"
+        },
+        "held" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "shown", "state", "held" ],
       "additionalProperties" : false
     },
     "session.NotRemovedWorktreeView" : {
@@ -3185,7 +3185,7 @@
       }, {
         "$ref" : "#/$defs/session.ClearWorktreeView"
       }, {
-        "$ref" : "#/$defs/session.HeldBackWorktreeView"
+        "$ref" : "#/$defs/session.NotClearWorktreeView"
       }, {
         "$ref" : "#/$defs/session.UnreadWorktreeView"
       } ],

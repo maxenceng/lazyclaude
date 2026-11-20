@@ -7,8 +7,8 @@ import { WorktreeSection } from './WorktreeSection';
 const PATH = '../app.worktrees/proj-1-a-ticket';
 type Shown = Exclude<SessionWorktreeShownView, { kind: 'noWorktree' }>;
 
-const draw = (shown: Shown | undefined, refusal?: string, onPress = () => {}) =>
-  render(<WorktreeSection shown={shown} branch="proj-1-a-ticket" refusal={refusal} onPress={onPress} />);
+const draw = (shown: Shown | undefined, refusal?: string, onPress = () => {}, removable = shown?.kind === 'clearWorktree') =>
+  render(<WorktreeSection shown={shown} branch="proj-1-a-ticket" refusal={refusal} removable={removable} onPress={onPress} />);
 
 describe('a done ticket\'s worktree section', () => {
   it('draws nothing where no worktree is shown', () => {
@@ -42,7 +42,7 @@ describe('a done ticket\'s worktree section', () => {
   });
 
   it('says held with the reason under the row and offers no remove, for what is in the worktree', () => {
-    draw({ kind: 'heldBackWorktree', shown: PATH, state: { kind: 'worktreeContents', dirtyPaths: ['a'], commitsBeyondMerge: 0, sessions: [] }, held: 'cannot remove: 1 dirty path' });
+    draw({ kind: 'notClearWorktree', shown: PATH, state: { kind: 'worktreeContents', dirtyPaths: ['a'], commitsBeyondMerge: 0, sessions: [] }, held: 'cannot remove: 1 dirty path' });
     const row = screen.getByText(PATH).closest('li') as HTMLElement;
     expect(row).toHaveTextContent('held');
     expect(row).not.toHaveTextContent('remove');
@@ -50,8 +50,8 @@ describe('a done ticket\'s worktree section', () => {
   });
 
   it.each([
-    ['held', { kind: 'heldBackWorktree', shown: PATH, state: { kind: 'worktreeContents', dirtyPaths: ['a'], commitsBeyondMerge: 0, sessions: [] }, held: 'cannot remove: 1 dirty path' }],
-    ['no merged pull request', { kind: 'heldBackWorktree', shown: PATH, state: { kind: 'noMergedPullRequest' }, held: 'cannot remove: no merged pull request' }],
+    ['held', { kind: 'notClearWorktree', shown: PATH, state: { kind: 'worktreeContents', dirtyPaths: ['a'], commitsBeyondMerge: 0, sessions: [] }, held: 'cannot remove: 1 dirty path' }],
+    ['no merged pull request', { kind: 'notClearWorktree', shown: PATH, state: { kind: 'noMergedPullRequest' }, held: 'cannot remove: no merged pull request' }],
     ['unreadable', { kind: 'unreadWorktree', reason: 'x', held: 'cannot remove: unreadable (x)' }],
   ] as Array<[string, Shown]>)('exposes no button on a %s row, which acts on nothing', (_name, shown) => {
     draw(shown);
@@ -59,7 +59,7 @@ describe('a done ticket\'s worktree section', () => {
   });
 
   it('says unknown for a branch with no merged pull request', () => {
-    draw({ kind: 'heldBackWorktree', shown: PATH, state: { kind: 'noMergedPullRequest' }, held: 'cannot remove: no merged pull request' });
+    draw({ kind: 'notClearWorktree', shown: PATH, state: { kind: 'noMergedPullRequest' }, held: 'cannot remove: no merged pull request' });
     expect(screen.getByText(PATH).closest('li')).toHaveTextContent('unknown');
     expect(screen.getByText('cannot remove: no merged pull request')).toBeInTheDocument();
   });
@@ -74,5 +74,16 @@ describe('a done ticket\'s worktree section', () => {
   it('shows why the last removal removed nothing, beside the row', () => {
     draw({ kind: 'clearWorktree', shown: PATH }, 'cannot remove: 1 dirty path');
     expect(screen.getByRole('alert')).toHaveTextContent('cannot remove: 1 dirty path');
+  });
+
+  it('shows why the last removal removed nothing even where no worktree is drawn any more', () => {
+    draw(undefined, 'cannot remove: git worktree remove exited 128');
+    expect(screen.getByRole('alert').textContent, 'a re-read that fails or finds no worktree must not hide the reason of the removal before it').toBe('cannot remove: git worktree remove exited 128');
+  });
+
+  it('offers no remove on a clean worktree that is not removable, as while its removal is in flight', () => {
+    draw({ kind: 'clearWorktree', shown: PATH }, undefined, () => {}, false);
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.getByText('clean')).toBeInTheDocument();
   });
 });

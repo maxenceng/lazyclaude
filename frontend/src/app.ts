@@ -1,4 +1,5 @@
 import { BoardController } from './board/boardController';
+import { isDone } from './board/rows';
 import { i18n } from './i18n/i18n';
 import { DocsController } from './docs/docsController';
 import { Action, type KeyPress } from './keys/bindings';
@@ -25,7 +26,7 @@ import { WindowFocus } from './window/windowFocus';
 import { Quitting, hostedOf } from './quitting';
 
 const worktreeTicketOf = (ticket: BoardTicketView | undefined): WorktreeTicket | undefined =>
-  ticket === undefined ? undefined : { id: ticket.id, branch: ticket.branch, done: ticket.status === 'DONE' };
+  ticket === undefined ? undefined : { id: ticket.id, branch: ticket.branch, done: isDone(ticket.status) };
 
 /** One window: the contexts it composes, the layout over them, and the rule that loads them whenever the sidecar becomes ready. */
 export class AppModel {
@@ -109,6 +110,7 @@ export class AppModel {
     this.board.selection.selected.subscribe(() => this.worktree.refresh());
     this.board.store.state.subscribe(() => this.worktree.refresh());
     this.sessionStore.sessions.subscribe(() => this.worktree.refresh());
+    client.subscribe('review/mergedChanged', () => this.worktree.refresh());
     this.board.selection.selected.subscribe(() => this.sessions.followSelection());
   }
 

@@ -103,7 +103,7 @@ class WorktreeSidecarTest {
 
         assertThat(answerTo(methods, "session/worktreeOf"))
                 .isEqualTo(
-                        "{\"kind\":\"heldBackWorktree\",\"shown\":\"../app.worktrees/PROJ-1-ticket\",\"state\":{\"kind\":\"worktreeContents\",\"dirtyPaths\":[\"src/Foo.java\"],\"commitsBeyondMerge\":0,\"sessions\":[]},\"held\":\"cannot remove: 1 dirty path\"}");
+                        "{\"kind\":\"notClearWorktree\",\"shown\":\"../app.worktrees/PROJ-1-ticket\",\"state\":{\"kind\":\"worktreeContents\",\"dirtyPaths\":[\"src/Foo.java\"],\"commitsBeyondMerge\":0,\"sessions\":[]},\"held\":\"cannot remove: 1 dirty path\"}");
     }
 
     @Test

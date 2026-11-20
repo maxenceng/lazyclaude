@@ -24,7 +24,7 @@ class WorktreeShownViewTest {
     @Test
     void shouldShowAWorktreeHoldingSomethingWithWhatStandsInItAndWhyItIsNotRemoved() {
         assertThat(WorktreeShownView.from(heldWorktreeView(dirtyWorktreeContentsView(), false), sessionPayload()))
-                .isEqualTo(HeldBackWorktreeView.builder()
+                .isEqualTo(NotClearWorktreeView.builder()
                         .shown(Path.of("../app.worktrees/PROJ-1-ticket"))
                         .state(dirtyWorktreeContentsView())
                         .held(new Reason("cannot remove: 1 dirty path"))
@@ -34,7 +34,7 @@ class WorktreeShownViewTest {
     @Test
     void shouldShowAWorktreeWithNoMergedPullRequestAsHeldBack() {
         assertThat(WorktreeShownView.from(heldWorktreeView(new NoMergedPullRequestView(), false), sessionPayload()))
-                .isInstanceOf(HeldBackWorktreeView.class);
+                .isInstanceOf(NotClearWorktreeView.class);
     }
 
     @Test

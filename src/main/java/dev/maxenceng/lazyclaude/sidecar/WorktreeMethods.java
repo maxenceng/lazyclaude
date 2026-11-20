@@ -8,18 +8,14 @@ import java.util.stream.Stream;
 
 import dev.maxenceng.lazyclaude.review.infrastructure.primary.MergedPullRequestsView;
 import dev.maxenceng.lazyclaude.review.published.HeadBranch;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.FailedRemovalView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.SessionQuery;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.TicketWorktreeCommand;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadWorktreeView;
-import dev.maxenceng.lazyclaude.session.infrastructure.primary.UnreadableWorktreeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeBranchPayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreePayload;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeRemovalOutcomeView;
 import dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeShownView;
 import dev.maxenceng.lazyclaude.session.published.LinkedTicketId;
-import dev.maxenceng.lazyclaude.session.published.Reason;
 
 /**
  * The ticket worktree methods of {@code session/}: {@code session/worktreeOf} and {@code session/removeWorktree}, each asked with the
@@ -35,7 +31,6 @@ final class WorktreeMethods {
             new ProtocolMethod<>("session/removeWorktree", WorktreeBranchPayload.class, WorktreeRemovalOutcomeView.class);
     private static final ProtocolNotification<LinkedTicketId> DONE_ENDED =
             new ProtocolNotification<>("session/ticketDoneEnded", LinkedTicketId.class);
-    private static final Reason NOT_WATCHED = new Reason("the project's sessions are not watched yet");
 
     private final SessionQuery sessions;
     private final TicketWorktreeCommand removing;
@@ -77,15 +72,12 @@ final class WorktreeMethods {
 
     private WorktreeShownView worktreeOf(WorktreeBranchPayload branch) {
         return watched.map(project -> WorktreeShownView.from(sessions.worktreeOf(payload(project, branch)), project))
-                .orElseGet(() -> UnreadWorktreeView.builder()
-                        .reason(NOT_WATCHED)
-                        .held(new UnreadableWorktreeView(NOT_WATCHED).heldBack())
-                        .build());
+                .orElseGet(WorktreeShownView::notWatched);
     }
 
     private WorktreeRemovalOutcomeView remove(WorktreeBranchPayload branch) {
         return watched.<WorktreeRemovalOutcomeView>map(project -> WorktreeRemovalOutcomeView.from(removing.remove(payload(project, branch))))
-                .orElseGet(() -> WorktreeRemovalOutcomeView.from(new FailedRemovalView(NOT_WATCHED)));
+                .orElseGet(WorktreeRemovalOutcomeView::notWatched);
     }
 
     private WorktreePayload payload(SessionPayload project, WorktreeBranchPayload branch) {

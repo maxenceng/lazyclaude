@@ -28,6 +28,7 @@ final class WorktreeWording {
     private static final String CLEAN = "clean";
     private static final String NO_MERGED_PULL_REQUEST = "no merged pull request";
     private static final String UNREADABLE = "unreadable (%s)";
+    private static final String NOT_WATCHED = "the project's sessions are not watched yet";
     private static final String SUMMARY_BEYOND_THE_MERGE = "%s beyond the merge";
     private static final int ONE = 1;
     private static final int NONE = 0;
@@ -73,6 +74,11 @@ final class WorktreeWording {
     /** The line saying a worktree git could not read is held back, with why. */
     static Reason heldBackUnreadable(Reason reason) {
         return new Reason(CANNOT_REMOVE.formatted(unreadable(reason).value()));
+    }
+
+    /** Why nothing can be read or removed before the frontend has said which project's sessions it watches. */
+    static Reason notWatched() {
+        return new Reason(NOT_WATCHED);
     }
 
     /** Why a removal, or the read before it, failed in git. */

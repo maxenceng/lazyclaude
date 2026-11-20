@@ -25,15 +25,15 @@ final class WorktreeText {
     static Optional<WorktreeFacts> detail(Path root, WorktreeView view) {
         return switch (view) {
             case HeldWorktreeView held ->
-                Optional.of(new WorktreeFacts(relative(root, held.path()), held.state().summary().value()));
+                Optional.of(new WorktreeFacts(held.shown(root).toString(), held.state().summary().value()));
             case UnreadableWorktreeView unreadable ->
                 Optional.of(new WorktreeFacts(unreadable.summary().value(), NO_STATE));
             case NoWorktreeView _ -> Optional.empty();
         };
     }
 
-    static String prompt(Path root, Path worktree) {
-        return PROMPT.formatted(relative(root, worktree));
+    static String prompt(Path root, HeldWorktreeView worktree) {
+        return PROMPT.formatted(worktree.shown(root));
     }
 
     /** Why the worktree is not removed, for the key bar. */
@@ -51,9 +51,5 @@ final class WorktreeText {
 
     static String failure(FailedRemovalView failed) {
         return failed.refusal().value();
-    }
-
-    private static String relative(Path root, Path worktree) {
-        return root.relativize(worktree).toString();
     }
 }

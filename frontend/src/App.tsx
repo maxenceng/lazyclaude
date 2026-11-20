@@ -89,6 +89,7 @@ export const App = ({ app, packaged }: Props) => {
   const worktreeAsked = useStore(app.worktree.asking);
   const worktreeRefusal = useStore(app.worktree.refusal);
   useStore(app.worktree.read);
+  useStore(app.worktree.removing);
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
@@ -278,7 +279,7 @@ export const App = ({ app, packaged }: Props) => {
                 picker={picker}
                 onPress={(index) => app.pressRow(index)}
               />
-              <WorktreeSection shown={app.worktree.shown()} branch={selectedTicket?.branch ?? ''} refusal={worktreeRefusal} onPress={() => app.worktree.request()} />
+              <WorktreeSection shown={app.worktree.shown()} branch={selectedTicket?.branch ?? ''} refusal={worktreeRefusal} removable={app.worktree.removable()} onPress={() => app.worktree.request()} />
             </TicketPane>
           ),
           arrangement: layout.arrangement(hasDock),

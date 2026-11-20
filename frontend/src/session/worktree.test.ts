@@ -4,7 +4,7 @@ import { fakeClient } from '../test/fakeClient';
 import { Worktree, type WorktreeTicket } from './worktree';
 
 const CLEAR: SessionWorktreeShownView = { kind: 'clearWorktree', shown: '../app.worktrees/proj-1-a-ticket' };
-const HELD: SessionWorktreeShownView = { kind: 'heldBackWorktree', shown: '../app.worktrees/proj-1-a-ticket', state: { kind: 'noMergedPullRequest' }, held: 'cannot remove: no merged pull request' };
+const HELD: SessionWorktreeShownView = { kind: 'notClearWorktree', shown: '../app.worktrees/proj-1-a-ticket', state: { kind: 'noMergedPullRequest' }, held: 'cannot remove: no merged pull request' };
 const DONE: WorktreeTicket = { id: 'PROJ-1', branch: 'proj-1-a-ticket', done: true };
 const OTHER: WorktreeTicket = { id: 'PROJ-2', branch: 'proj-2-b-ticket', done: true };
 
@@ -209,6 +209,47 @@ describe('removing the worktree', () => {
     expect(worktree.refusal.get()).toBeUndefined();
   });
 
+  it('offers nothing again while a removal is in flight, so d and the row cannot send a second one', async () => {
+    const { client, worktree } = await clearAndShown();
+    worktree.request();
+    worktree.answer(true);
+    expect(worktree.removable()).toBe(false);
+    worktree.request();
+    expect(worktree.isAsking()).toBe(false);
+    client.answer('session/removeWorktree', { kind: 'notRemovedWorktree', refusal: 'cannot remove: 1 dirty path' });
+    await settle();
+    client.answer('session/worktreeOf', CLEAR);
+    await settle();
+    expect(worktree.removable()).toBe(true);
+  });
+
+  it('keeps the reason of a refused removal when the read after it fails', async () => {
+    const { client, worktree } = await clearAndShown();
+    worktree.request();
+    worktree.answer(true);
+    client.answer('session/removeWorktree', { kind: 'notRemovedWorktree', refusal: 'cannot remove: 1 dirty path' });
+    await settle();
+    client.fail('session/worktreeOf', new Error('sidecar gone'));
+    await settle();
+    expect(worktree.shown()).toBeUndefined();
+    expect(worktree.refusal.get()).toBe('cannot remove: 1 dirty path');
+  });
+
+  it('drops the reason of an earlier refusal once the retry is answered', async () => {
+    const { client, worktree } = await clearAndShown();
+    worktree.request();
+    worktree.answer(true);
+    client.answer('session/removeWorktree', { kind: 'notRemovedWorktree', refusal: 'cannot remove: 1 dirty path' });
+    await settle();
+    client.answer('session/worktreeOf', CLEAR);
+    await settle();
+    worktree.request();
+    worktree.answer(true);
+    client.answer('session/removeWorktree', { kind: 'removedWorktree' });
+    await settle();
+    expect(worktree.refusal.get()).toBeUndefined();
+  });
+
   it('answers Remove on nothing when no question is open', async () => {
     const { client, worktree } = await clearAndShown();
     worktree.answer(true);
@@ -259,5 +300,22 @@ describe('a /ticket done session ending', () => {
     await settle();
     worktree.answer(true);
     expect(client.calls.at(-1)).toEqual({ method: 'session/removeWorktree', params: { branch: 'proj-2-b-ticket' } });
+  });
+
+  it('never reads twice at once when the ended ticket is the selected one, whose read the board re-read started', async () => {
+    const { client, worktree } = worktreeOf(DONE, () => {
+      worktree.refresh();
+      return Promise.resolve(DONE);
+    });
+    void worktree.ticketDoneEnded('PROJ-1');
+    await settle();
+    expect(reads(client)).toHaveLength(1);
+    client.answer('session/worktreeOf', HELD);
+    await settle();
+    expect(reads(client)).toHaveLength(2);
+    client.answer('session/worktreeOf', CLEAR);
+    await settle();
+    expect(worktree.asking.get()?.branch).toBe('proj-1-a-ticket');
+    expect(worktree.shown(), 'the section shows the read the question was opened from').toEqual(CLEAR);
   });
 });

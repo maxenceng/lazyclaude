@@ -13,7 +13,7 @@ import { testPlatform } from './testPlatform';
 
 const PATH = '../app.worktrees/proj-1-a-ticket';
 const CLEAR = { kind: 'clearWorktree', shown: PATH };
-const HELD = { kind: 'heldBackWorktree', shown: PATH, state: { kind: 'noMergedPullRequest' }, held: 'cannot remove: no merged pull request' };
+const HELD = { kind: 'notClearWorktree', shown: PATH, state: { kind: 'noMergedPullRequest' }, held: 'cannot remove: no merged pull request' };
 
 const done = boardFixture([ticketFixture({ id: 'PROJ-1', branch: 'proj-1-a-ticket', title: 'Finished', status: 'DONE' })]);
 const open = boardFixture([ticketFixture({ id: 'PROJ-1', branch: 'proj-1-a-ticket', title: 'Working', status: 'IN_PROGRESS' })]);
@@ -201,6 +201,12 @@ describe('a /ticket done session ending', () => {
       await Promise.resolve();
     });
     await settle();
+    await act(async () => {
+      client.answerAll('session/worktreeOf', CLEAR);
+      await Promise.resolve();
+    });
+    await settle();
+    expect(client.calls.filter((call) => call.method === 'session/worktreeOf'), 'the read for the ended ticket waits for the one the board re-read started').toHaveLength(2);
     await act(async () => {
       client.answerAll('session/worktreeOf', CLEAR);
       await Promise.resolve();

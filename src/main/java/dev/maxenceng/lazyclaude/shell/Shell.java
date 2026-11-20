@@ -1157,7 +1157,7 @@ public final class Shell extends ToolkitApp {
                 return;
             }
             if (judged instanceof HeldWorktreeView held && held.clear()) {
-                removalPrompt = Optional.of(new RemovalPrompt(ticket, held.path()));
+                removalPrompt = Optional.of(new RemovalPrompt(ticket, held));
             } else {
                 refusal = Optional.of(WorktreeText.refusal(judged));
             }

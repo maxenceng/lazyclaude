@@ -37,12 +37,14 @@ export class Worktree {
   readonly asking: Store<Asked | undefined> = new Store<Asked | undefined>(undefined);
   /** Why the last removal removed nothing, for the ticket it was asked of. */
   readonly refusal: Store<string | undefined> = new Store<string | undefined>(undefined);
+  /** The branch whose removal is in flight: its worktree is not offered again until the answer lands. */
+  readonly removing: Store<string | undefined> = new Store<string | undefined>(undefined);
   private refusedFor: string | undefined;
   private reading = false;
   private again = false;
+  private inFlight: Promise<unknown> | undefined;
 
   constructor(private readonly deps: WorktreeDeps) {
-    deps.client.subscribe('review/mergedChanged', () => this.refresh());
     deps.client.subscribe('session/ticketDoneEnded', (id) => void this.ticketDoneEnded(id));
   }
 
@@ -56,9 +58,9 @@ export class Worktree {
     return read.view;
   }
 
-  /** The one predicate behind the key, the key bar's `d` and the row's button: the selected ticket's worktree is shown and clean. */
+  /** The one predicate behind the key, the key bar's `d` and the row's button: the selected ticket's worktree is shown and clean, and not being removed already. */
   removable(): boolean {
-    return this.shown()?.kind === 'clearWorktree';
+    return this.shown()?.kind === 'clearWorktree' && this.removing.get() !== this.deps.ticket()?.branch;
   }
 
   isAsking(): boolean {
@@ -81,7 +83,7 @@ export class Worktree {
   request(): void {
     const shown = this.shown();
     const ticket = this.deps.ticket();
-    if (shown?.kind === 'clearWorktree' && ticket !== undefined && !this.isAsking()) {
+    if (this.removable() && shown?.kind === 'clearWorktree' && ticket !== undefined && !this.isAsking()) {
       this.asking.set({ branch: ticket.branch, shown: shown.shown });
     }
   }
@@ -91,6 +93,9 @@ export class Worktree {
     const asked = this.asking.get();
     this.asking.set(undefined);
     if (remove && asked !== undefined) {
+      this.removing.set(asked.branch);
+      this.refusedFor = undefined;
+      this.refusal.set(undefined);
       void this.remove(asked.branch);
     }
   }
@@ -101,7 +106,10 @@ export class Worktree {
     if (ticket === undefined || !ticket.done) {
       return;
     }
-    const view = await this.deps.client.call('session/worktreeOf', { branch: ticket.branch }).catch(() => undefined);
+    const view = await this.ask(ticket.branch).catch(() => undefined);
+    if (view !== undefined && this.deps.ticket()?.branch === ticket.branch) {
+      this.read.set({ branch: ticket.branch, view });
+    }
     if (view?.kind === 'clearWorktree' && !this.isAsking()) {
       this.asking.set({ branch: ticket.branch, shown: view.shown });
     }
@@ -114,7 +122,7 @@ export class Worktree {
     }
     this.reading = true;
     try {
-      const view = await this.deps.client.call('session/worktreeOf', { branch: ticket.branch });
+      const view = await this.ask(ticket.branch);
       this.read.set({ branch: ticket.branch, view });
     } catch {
       this.read.set(undefined);
@@ -127,6 +135,23 @@ export class Worktree {
     }
   }
 
+  /** Every read of the sidecar goes through here, so no two are ever in flight together, whoever asked. */
+  private ask(branch: string): Promise<SessionWorktreeShownView> {
+    const call = () => this.deps.client.call('session/worktreeOf', { branch });
+    const asked = this.inFlight === undefined ? call() : this.inFlight.then(call, call);
+    const settled = asked.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.inFlight = settled;
+    void settled.then(() => {
+      if (this.inFlight === settled) {
+        this.inFlight = undefined;
+      }
+    });
+    return asked;
+  }
+
   private async remove(branch: string): Promise<void> {
     try {
       const outcome = await this.deps.client.call('session/removeWorktree', { branch });
@@ -137,6 +162,8 @@ export class Worktree {
       }
     } catch (error) {
       this.refuse(branch, error instanceof Error ? error.message : String(error));
+    } finally {
+      this.removing.set(undefined);
     }
     this.refresh();
   }
