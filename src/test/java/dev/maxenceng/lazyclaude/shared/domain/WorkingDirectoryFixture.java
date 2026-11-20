@@ -22,6 +22,10 @@ public final class WorkingDirectoryFixture {
         return new WorkingDirectory(Path.of("/work/app.worktrees/PROJ-1-ticket"));
     }
 
+    public static WorkingDirectory otherWorktreeDirectory() {
+        return new WorkingDirectory(Path.of("/work/app.worktrees/PROJ-1-other"));
+    }
+
     public static WorkingDirectory otherProjectDirectory() {
         return new WorkingDirectory(Path.of("/work/other"));
     }

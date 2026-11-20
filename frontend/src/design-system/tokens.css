@@ -64,7 +64,10 @@
   --type-fix: #e48b81;
   --type-chore: #d9a066;
 
-  --ci-failed: #d9695f;
+  --failed: #d9695f;
+  --danger: #dc736a;
+
+  --ci-failed: var(--failed);
   --ci-pending: #c9a94c;
   --ci-passed: #6fb27c;
   --ci-failed-on-light: #9c2a22;

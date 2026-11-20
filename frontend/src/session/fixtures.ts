@@ -1,7 +1,23 @@
-import type { SessionHostedSessionView, SessionLiveSessionView, SessionPastSessionView, SessionSessionsView, SessionTicketSessionsView, SessionUnlinkedSessionsView } from '../protocol';
+import type { SessionHostedSessionView, SessionMarkerView, SessionLiveSessionView, SessionPastSessionView, SessionSessionsView, SessionTicketSessionsView, SessionUnlinkedSessionsView } from '../protocol';
 
-export const sessionFixture = (overrides: { id?: string; name?: string; state?: SessionLiveSessionView['state']; ticket?: string | undefined; tickets?: string[]; directory?: string } = {}): SessionLiveSessionView => {
+/** What the sidecar sends for a state: the test data's own copy of the mapping, which production code never holds. */
+export const markerFixtureOf = (state: SessionLiveSessionView['state']): SessionMarkerView | null => {
+  switch (state.kind) {
+    case 'waitingForPermission':
+      return { kind: 'WAITING_FOR_PERMISSION', strength: 2 };
+    case 'waitingForInput':
+      return { kind: 'WAITING_FOR_INPUT', strength: 1 };
+    case 'yourTurn':
+      return { kind: 'YOUR_TURN', strength: 0 };
+    case 'busy':
+    case 'unknown':
+      return null;
+  }
+};
+
+export const sessionFixture = (overrides: { id?: string; name?: string; state?: SessionLiveSessionView['state']; marker?: SessionMarkerView | null; ticket?: string | undefined; tickets?: string[]; directory?: string } = {}): SessionLiveSessionView => {
   const tickets = overrides.tickets ?? (overrides.ticket === undefined ? [] : [overrides.ticket]);
+  const state = overrides.state ?? { kind: 'busy' };
   return {
     id: overrides.id ?? 's',
     pid: 1,
@@ -9,7 +25,8 @@ export const sessionFixture = (overrides: { id?: string; name?: string; state?: 
     directory: overrides.directory ?? '/p',
     startedAt: '2026-01-01T00:00:00Z',
     version: { kind: 'noVersion' },
-    state: overrides.state ?? { kind: 'busy' },
+    state,
+    marker: overrides.marker === undefined ? markerFixtureOf(state) : overrides.marker,
     links: tickets.map((ticket) => ({ ticket, verb: 'start' })),
   };
 };

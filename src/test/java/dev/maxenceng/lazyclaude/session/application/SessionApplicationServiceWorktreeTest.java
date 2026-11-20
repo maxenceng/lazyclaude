@@ -88,7 +88,6 @@ class SessionApplicationServiceWorktreeTest {
 
     @Test
     void shouldJudgeTheWorktreeAgainstTheHostedSessionsLiveInIt() {
-        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         hostingATicketSessionInTheWorktree(service, hosts, worktrees);
 
@@ -106,7 +105,6 @@ class SessionApplicationServiceWorktreeTest {
 
     @Test
     void shouldJudgeTheWorktreeOccupiedByAHostedSessionWhoseRecordCannotBeRead() {
-        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
         when(sessions.recordOf(processId())).thenThrow(recordUnreadable());
         hostingATicketSessionInTheWorktree(service, hosts, worktrees);
 
@@ -125,7 +123,6 @@ class SessionApplicationServiceWorktreeTest {
 
     @Test
     void shouldNotRemoveTheWorktreeWhileASessionIsHostedInIt() {
-        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
         hostingATicketSessionInTheWorktree(service, hosts, worktrees);
 

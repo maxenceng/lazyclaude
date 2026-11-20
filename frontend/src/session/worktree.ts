@@ -27,7 +27,7 @@ interface Read {
 }
 
 /**
- * A done ticket's worktree in the window (ADR 0117): the selected ticket's state as the sidecar reads it from the branch alone,
+ * A done ticket's worktree in the window (ADR 0122): the selected ticket's state as the sidecar reads it from the branch alone,
  * read again whenever something it depends on changes, one read at a time; and the question that removes it. A refusal is a result
  * shown beside the ticket, never retried by itself.
  */

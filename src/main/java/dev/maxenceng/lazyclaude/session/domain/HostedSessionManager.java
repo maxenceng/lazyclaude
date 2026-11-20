@@ -42,7 +42,7 @@ public final class HostedSessionManager {
     private static final String EXIT_WARNING = "hosted session: claude exited with code %d.";
     private static final String GONE_WARNING = "resume: %s is gone; nothing resumed.";
     private static final String WORKTREE_WARNING = "ticket worktree: %s; nothing started.";
-    private static final String NOT_A_WORKTREE = "%s exists but is not a worktree of %s";
+    private static final String NOT_A_WORKTREE = "%s exists but is not a git worktree";
     private static final String ALREADY_STARTING = "this session is already starting; give it a moment.";
     private static final String ENDED_AT_ONCE = "hosted session: claude ended as soon as it started.";
     private static final String LEAKING_WARNING = "hosted session: %s; each run leaves a copy in the temp folder.";
@@ -103,9 +103,10 @@ public final class HostedSessionManager {
     }
 
     /**
-     * {@code /<plugin>:ticket <verb> <ID>} in the ticket's worktree: where its branch is already checked out, else a worktree added at the
-     * path the project keeps it at, on the branch when it exists and on a new one from {@code main} when not. None, with a warning,
-     * when that path is taken by something else or git refuses.
+     * {@code /<plugin>:ticket <verb> <ID>} in the ticket's worktree: where its branch is already checked out, else the worktree git lists
+     * at the path the project keeps it at, whatever branch it has checked out, else a worktree added there: on the local branch when
+     * there is one, else on a new one tracking the remote's branch when the remote has it, else on a new one from {@code main}. None,
+     * with a warning, when that path is taken by a directory that is not a worktree, the remote cannot be asked, or git refuses.
      */
     public HostStart startTicket(TicketStart ticket, TicketPlugin ticketPlugin, PaneSize size) {
         try {
@@ -148,6 +149,7 @@ public final class HostedSessionManager {
     public HostStart resumeInTicketWorktree(
             SessionId session, WorkingDirectory recorded, TicketWorktree worktree, PaneSize size) {
         boolean gone = !hosts.exists(recorded);
+        // deferred: a gone worktree added under the slug, whose ticket now plans the merged head's path, is not re-added — close it when a resumed done ticket needs it.
         if (gone && worktree.path().filter(recorded::equals).isPresent()) {
             try {
                 addWorktree(worktree, recorded);
@@ -284,7 +286,10 @@ public final class HostedSessionManager {
         WorkingDirectory planned = worktree.path()
                 .orElseThrow(() -> new WorktreeUnavailableException(NO_PLACE.formatted(worktree.project().root())));
         if (hosts.exists(planned)) {
-            throw new WorktreeUnavailableException(NOT_A_WORKTREE.formatted(planned.path(), worktree.branch().value()));
+            if (worktrees.isWorktreeAt(worktree.project(), planned)) {
+                return planned;
+            }
+            throw new WorktreeUnavailableException(NOT_A_WORKTREE.formatted(planned.path()));
         }
         addWorktree(worktree, planned);
         return planned;
@@ -293,6 +298,8 @@ public final class HostedSessionManager {
     private void addWorktree(TicketWorktree worktree, WorkingDirectory at) {
         if (worktrees.branchExists(worktree.project(), worktree.branch())) {
             worktrees.addOnBranch(worktree.project(), worktree.branch(), at);
+        } else if (worktrees.branchOnRemote(worktree.project(), worktree.branch())) {
+            worktrees.addOnRemoteBranch(worktree.project(), worktree.branch(), at);
         } else {
             worktrees.addOnNewBranch(worktree.project(), worktree.branch(), at);
         }

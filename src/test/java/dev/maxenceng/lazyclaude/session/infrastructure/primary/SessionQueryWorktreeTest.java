@@ -107,7 +107,6 @@ class SessionQueryWorktreeTest {
 
     @Test
     void shouldViewTheHostedSessionsInATicketWorktree() {
-        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
 
         assertThat(sessionQueryOverOccupied(sessions, worktrees).worktreeOf(worktreePayload(headCommit())))

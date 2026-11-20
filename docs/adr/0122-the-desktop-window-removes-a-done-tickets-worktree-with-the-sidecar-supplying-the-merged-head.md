@@ -1,4 +1,4 @@
-# 117. The desktop window removes a done ticket's worktree, with the sidecar supplying the merged head
+# 122. The desktop window removes a done ticket's worktree, with the sidecar supplying the merged head
 
 Date: 2026-11-19
 
@@ -6,12 +6,12 @@ Date: 2026-11-19
 
 Accepted. Applies ADR 0038 (the worktree is judged again at the yes, the join stays in the composer) and ADR 0030 (the ticket
 worktree lives in `session`) to the desktop window; the window's popup is ADR 0109's. Amends ADR 0050 by three methods and one
-notification.
+notification, and ADR 0117's `d` bullet: the protocol now carries the worktree read and removal, so `d` is bound again.
 
 ## Context
 
-The terminal removes a done ticket's worktree with `d`, or asks once a `/ticket done` session ends. The window did not: `d` was
-a declared, unhandled action. The shell joins what `session` cannot read for itself, the project's sessions and the commit
+The terminal removes a done ticket's worktree with `d`, or asks once a `/ticket done` session ends. The window did not: ADR 0117
+unbound `d` until the protocol could read and remove a worktree. The shell joins what `session` cannot read for itself, the project's sessions and the commit
 `review` last read the branch's pull request merged at, into a `WorktreePayload`. A window that sent those would carry merge data
 it never reads and could send a stale one.
 
@@ -54,7 +54,8 @@ it never reads and could send a stale one.
 
 ## Consequences
 
-- The window's `RemoveWorktree` action leaves its unhandled list once the frontend handles it.
+- `Action.RemoveWorktree` and `d` return to the window's key table, handled, so ADR 0117's architecture test keeps its unhandled
+  list empty.
 - The sidecar serves one project (`WatchedRoot`), so one remembered `SessionPayload` and one merged read are enough. A second
   project would need them per root.
 - The merged head is the last one pushed: a merge that lands between the push and the yes is judged by the older head, and the

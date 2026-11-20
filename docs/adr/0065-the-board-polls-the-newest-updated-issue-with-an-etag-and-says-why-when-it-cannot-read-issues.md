@@ -4,7 +4,7 @@ Date: 2026-10-30
 
 ## Status
 
-Accepted. Implements ADR 0052 in `board`, and ends ADR 0031 and ADR 0028 for it. Amended by ADR 0108: the poll checks every 10 s.
+Accepted. Implements ADR 0052 in `board`, and ends ADR 0031 and ADR 0028 for it. Amended by ADR 0108: the poll checks every 10 s. Its ticket branch bullet, its deferred consequence about it and the `gh issue list` call of its "One call reads the board" bullet are superseded by ADR 0118.
 
 ## Context
 
@@ -14,7 +14,7 @@ answers 304 costs no rate limit, and `gh` is the only client lazyclaude uses (CL
 
 ## Decision
 
-- **One call reads the board.** `gh issue list --state all --limit 1000 --json number,title,body,labels,state,stateReason`
+- **One call reads the board.** (The call is superseded by ADR 0118.) `gh issue list --state all --limit 1000 --json number,title,body,labels,state,stateReason`
   in the project's directory, so `gh` finds the remote itself. An open issue is the status its one `status:` label names,
   a `draft` with none. A closed one is `done` when it closed as completed, or with no reason; any other reason (not
   planned, duplicate) is an unreadable ticket. A `done` ticket, like a `draft`, may lack its `context:` and `type:` labels,
@@ -43,7 +43,7 @@ answers 304 costs no rate limit, and `gh` is the only client lazyclaude uses (CL
   The three reasons are told from what `gh` said: no GitHub remote, not logged in (naming `gh auth login`), and the rest
   as unreachable in `gh`'s own words. "No GitHub remote" is checked before "log in": `gh` suggests `gh auth login` for a
   remote that is not on GitHub. Nothing is cached, so the next read, `R` or the poll, replaces the reason.
-- **The ticket branch is derived, not read back.** `<number>-<title slug>`, as `gh issue develop` names it by default
+- **The ticket branch is derived, not read back.** (Superseded by ADR 0118.) `<number>-<title slug>`, as `gh issue develop` names it by default
   (ADR 0052). `linkedBranches` would need a GraphQL query per read and a ticket with no branch yet, which the shell and
   `session` would have to model.
 - **The id is the number everywhere.** `TicketId` is an issue number; `session` links by it as `LinkedTicketId`, and a
@@ -54,9 +54,8 @@ answers 304 costs no rate limit, and `gh` is the only client lazyclaude uses (CL
 
 - A deleted or transferred issue that is not the newest updated one does not move the poll's answer, so the board shows it
   until another issue changes or `R` is pressed.
-- deferred: the 1000 most recently created issues are read, so older ones, open or closed, show nowhere — close it when a
-  project has that many.
-- deferred: the ticket branch name is guessed, so a branch made under another name is not matched to its ticket — close it
-  when the board reads `linkedBranches`.
+- The 1000 most recently created issues are read, so older ones, open or closed, show nowhere; ADR 0118 carries this limit
+  on.
+- The ticket branch name was guessed, so a branch made under another name was not matched to its ticket; closed by ADR 0118.
 - `TreeWatcher` and `Utf8Text` in the shared kernel have `docs` as their only user in `board`'s absence; moving them there
   is a follow-up.

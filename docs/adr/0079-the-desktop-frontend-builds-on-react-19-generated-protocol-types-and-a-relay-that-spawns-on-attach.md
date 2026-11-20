@@ -47,8 +47,11 @@ its three behaviours. The first Board made each of these choices; each could be 
 
 ## Consequences
 
-- The marker's mapping and strength are written twice, in `SessionState` and in `session/markers.ts`, because
-  `LiveSessionView` does not put its marker on the wire. A change to the order has to land in both.
+- The marker's mapping and strength are written once, in `SessionState` and `Marker`'s declaration order: `LiveSessionView`
+  sends each session's `marker` as its kind and strength, and `session/markers.ts` orders by that strength alone. The strength
+  is the marker's place in `Marker`, so it is relative and reordering `Marker` reorders every frontend; sending a bare enum
+  and sorting in the sidecar was rejected, as `rowsFor` merges hosted and live rows and would still need a comparator, and so
+  was having the protocol generator emit every enum's declaration order, which would make that order mean something for all.
 - A TypeScript 7 upgrade waits for typescript-eslint.
 - A webview reload gets `ready` back but not the lines sent while no page was attached; the page reads afresh.
 - Packaging must embed the built page (`tauri build`, or `cargo build --features custom-protocol`); a plain debug build

@@ -118,4 +118,9 @@
 - 0114 [pty4j extracts its natives into the cache, under a first-load lock](0114-pty4j-extracts-its-natives-into-the-cache-under-a-first-load-lock.md) — Accepted.
 - 0115 [A session pane follows its own links with ctrl held, and names the hovered one in the key bar](0115-a-session-pane-follows-its-own-links-with-ctrl-held-and-names-the-hovered-one-in-the-key-bar.md) — Accepted.
 - 0116 [The desktop frontend draws a mermaid block with mermaid.js, loaded on demand](0116-the-desktop-frontend-draws-a-mermaid-block-with-mermaid-js-loaded-on-demand.md) — Accepted.
-- 0117 [The desktop window removes a done ticket's worktree, with the sidecar supplying the merged head](0117-the-desktop-window-removes-a-done-tickets-worktree-with-the-sidecar-supplying-the-merged-head.md) — Accepted.
+- 0117 [The desktop window binds only the keys it acts on](0117-the-desktop-window-binds-only-the-keys-it-acts-on.md) — Accepted.
+- 0118 [A ticket's branch is the branch GitHub links to its issue](0118-a-ticket-branch-is-the-branch-github-links-to-its-issue.md) — Accepted.
+- 0119 [A session pane keeps a ctrl+click it acts on from the program, and leaves a link it would refuse to the program](0119-a-session-pane-keeps-a-ctrl-click-it-acts-on-from-the-program.md) — Accepted.
+- 0120 [A ticket worktree takes a branch only on origin from origin, and refuses when origin cannot say](0120-a-ticket-worktree-takes-a-branch-only-on-origin-from-origin-and-refuses-when-origin-cannot-say.md) — Accepted.
+- 0121 [A closed issue's branch is the head branch of the pull request that merged it, and a worktree at its path is its worktree](0121-a-closed-issue-s-branch-is-the-head-branch-of-the-pull-request-that-merged-it.md) — Accepted.
+- 0122 [The desktop window removes a done ticket's worktree, with the sidecar supplying the merged head](0122-the-desktop-window-removes-a-done-tickets-worktree-with-the-sidecar-supplying-the-merged-head.md) — Accepted.

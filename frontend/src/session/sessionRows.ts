@@ -1,5 +1,5 @@
-import type { SessionPastSessionView, SessionSessionsView } from '../protocol';
-import { byStrength, colourOfState, LampColour, type LiveState } from './markers';
+import type { SessionLiveSessionView, SessionMarkerView, SessionPastSessionView, SessionSessionsView } from '../protocol';
+import { byStrength, colourOfMarker, type LampColour, strengthOfMarker } from './markers';
 
 export enum SessionRowKind {
   Hosted = 'hosted',
@@ -11,6 +11,9 @@ export enum SessionRowKind {
 /** A hosted session with no record read yet: just spawned, or still on Claude Code's trust dialog. */
 export const STARTING = 'starting';
 
+/** What a live session is doing, as `session` reads it from its record. */
+export type LiveState = SessionLiveSessionView['state']['kind'];
+
 /** What a running session is doing: what its record says, or starting while it has none. */
 export type RunningState = LiveState | typeof STARTING;
 
@@ -21,10 +24,15 @@ export class HostedRow {
     readonly session: string,
     readonly name: string | undefined,
     readonly state: RunningState,
+    readonly marker: SessionMarkerView | null,
   ) {}
 
   get lamp(): LampColour {
-    return this.state === STARTING ? LampColour.Off : colourOfState(this.state);
+    return colourOfMarker(this.marker);
+  }
+
+  get strength(): number {
+    return strengthOfMarker(this.marker);
   }
 }
 
@@ -34,10 +42,15 @@ export class LiveRow {
   constructor(
     readonly name: string,
     readonly state: LiveState,
+    readonly marker: SessionMarkerView | null,
   ) {}
 
   get lamp(): LampColour {
-    return colourOfState(this.state);
+    return colourOfMarker(this.marker);
+  }
+
+  get strength(): number {
+    return strengthOfMarker(this.marker);
   }
 }
 
@@ -62,11 +75,11 @@ export const rowsFor = (view: SessionSessionsView | undefined, ticket: string | 
   const own = view?.tickets.find((listed) => listed.ticket === ticket);
   const hostedIds = new Set((view?.hosted ?? []).map((session) => session.live?.id ?? session.id));
   const running = [
-    ...(own?.hosted ?? []).map((session) => new HostedRow(session.id, session.live?.name, session.live === null ? STARTING : session.live.state.kind)),
-    ...(own?.live ?? []).filter((session) => !hostedIds.has(session.id)).map((session) => new LiveRow(session.name, session.state.kind)),
+    ...(own?.hosted ?? []).map((session) => new HostedRow(session.id, session.live?.name, session.live === null ? STARTING : session.live.state.kind, session.live?.marker ?? null)),
+    ...(own?.live ?? []).filter((session) => !hostedIds.has(session.id)).map((session) => new LiveRow(session.name, session.state.kind, session.marker)),
   ];
   return [
-    ...running.sort((a, b) => byStrength({ colour: a.lamp }, { colour: b.lamp })),
+    ...running.sort(byStrength),
     ...(own?.past ?? []).map((session) => new PastRow(session)),
     new NewRow(),
   ];
