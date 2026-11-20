@@ -703,6 +703,16 @@ describe('starting a session from the board', () => {
     expect(ready.client.calls.find((call) => call.method === 'session/startTicket')?.params).toMatchObject({ verb: 'REVIEW' });
   });
 
+  it('starts the clicked verb after the pointer pointed at another', async () => {
+    const ready = await readyApp();
+    await ready.user.keyboard('j');
+    await ready.user.keyboard('n');
+    await newSessionAnswered(ready.client, { kind: 'verbChoice', verbs: ['START', 'REVIEW'], preselected: 'START' });
+    await ready.user.hover(screen.getByRole('button', { name: /review/ }));
+    await ready.user.click(screen.getByRole('button', { name: /start$/ }));
+    expect(ready.client.calls.find((call) => call.method === 'session/startTicket')?.params, 'a click starts the verb it lands on, whatever the pointer passed over').toMatchObject({ verb: 'START' });
+  });
+
   it('moves the picker cursor on from the verb the pointer left it on', async () => {
     const ready = await readyApp();
     await ready.user.keyboard('j');

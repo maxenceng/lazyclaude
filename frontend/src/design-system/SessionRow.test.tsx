@@ -42,6 +42,11 @@ describe('a session row', () => {
     expect(ruleOf(sheet, '.row:not(.tall):not(.followsPointer):hover:not(.selected)')).toContain('--hover-ground');
   });
 
+  it('keeps the hover ground on a row not given the pointer, as a session row outside the picker', () => {
+    render(<SessionRow label="refine" selected={false} lamp={undefined} onSelect={() => {}} />);
+    expect(screen.getByRole('button').className, 'only a row that follows the pointer leaves the hover-ground rule').not.toContain('followsPointer');
+  });
+
   it('carries no tint for a session that waits on nothing', () => {
     render(<SessionRow label="start" selected={false} lamp={LampColour.Off} onSelect={() => {}} />);
     expect(screen.getByRole('button')).toHaveAttribute('data-lamp', 'off');
