@@ -130,6 +130,17 @@ public final class GitFixture {
         return tip;
     }
 
+    public static String branchRewrittenOnRemote(Path repository, String branch, String file) throws Exception {
+        git(repository, "config", "remote.origin.fetch", "refs/heads/*:refs/remotes/origin/*");
+        String fetchedTip = branchOnlyOnRemote(repository, branch, file);
+        branchWithFile(repository, branch, file, "Rewritten on the remote.");
+        String tip = gitOutput(repository, "rev-parse", branch).strip();
+        git(repository, "push", "-q", "-f", "origin", "refs/heads/%s:refs/heads/%s".formatted(branch, branch));
+        git(repository, "branch", "-q", "-D", branch);
+        git(repository, "update-ref", "refs/remotes/origin/" + branch, fetchedTip);
+        return tip;
+    }
+
     public static String upstreamOf(Path in) throws Exception {
         return gitOutput(in, "rev-parse", "--abbrev-ref", "@{upstream}").strip();
     }

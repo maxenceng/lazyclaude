@@ -6,6 +6,7 @@ import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.secondBra
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.branchAtHead;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.branchExistsIn;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.branchOnlyOnRemote;
+import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.branchRewrittenOnRemote;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.commitEverything;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.gitSayingItsPromptSetting;
 import static dev.maxenceng.lazyclaude.shared.infrastructure.secondary.GitFixture.headOf;
@@ -136,6 +137,19 @@ class WorktreeRepositoryTest {
 
         assertThat(headOf(at.path())).as("the worktree starts at the remote's tip, not at main").isEqualTo(remoteTip);
         assertThat(upstreamOf(at.path())).isEqualTo("origin/" + branchName().value());
+    }
+
+    @Test
+    void shouldAddAWorktreeAtTheRemoteTipOfABranchRewrittenSinceTheLastFetch() throws Exception {
+        remoteBeside(root, temp.resolve("remote.git"));
+        String rewrittenTip = branchRewrittenOnRemote(root, branchName().value(), "docs/remote.md");
+        WorkingDirectory at = new WorkingDirectory(ticketWorktreePath(temp));
+
+        repository.addOnRemoteBranch(project, branchName(), at);
+
+        assertThat(headOf(at.path()))
+                .as("a force-pushed branch is taken at the remote's tip, even when the fetch configuration does not force it")
+                .isEqualTo(rewrittenTip);
     }
 
     @Test

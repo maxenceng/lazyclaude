@@ -18,15 +18,16 @@ none of the branch's commits, and its first push would have diverged from the wo
 - **Local first, then origin, then `main`.** Adding a ticket worktree, whether starting a ticket session or resuming into a removed
   ticket worktree, uses the local branch when there is one, and asks nothing of the remote. With none, it asks origin with
   `git ls-remote --exit-code --heads origin refs/heads/<branch>`: exit 2 means origin lacks it, and the worktree goes on a new
-  branch from `main` as before. With origin holding it, `git fetch origin refs/heads/<branch>:refs/remotes/origin/<branch>` and
+  branch from `main` as before. With origin holding it, `git fetch origin +refs/heads/<branch>:refs/remotes/origin/<branch>` and
   `git worktree add --track -b <branch> <path> refs/remotes/origin/<branch>` put the worktree at origin's tip, on a local branch
-  that tracks it.
+  that tracks it. The fetch is forced, as git's default refspec is, so a branch rewritten on origin since the last fetch is
+  still taken where a project's fetch configuration would not force it.
 - **The full ref is asked for.** `ls-remote` matches a pattern against the end of a ref, so the bare branch name would also find
   `x/<branch>`.
 - **The remote is fetched at launch.** Launching a session is the only moment the branch is needed, and the start already runs off
   the input thread in both frontends, so the fetch delays that start and nothing else. No background fetch is kept.
 - **It fails closed.** When origin cannot be asked (offline, refused, no remote named `origin`) or the fetch fails, nothing
-  starts and the warning is `ticket worktree: <git's first line>; nothing started.`, like any other refused worktree. A branch
+  starts and the warning is `ticket worktree: <git command>: <git's first line>; nothing started.`, like any other refused worktree. A branch
   origin may hold is never replaced by a fresh one from `main` on a guess. For a remote's failure, git's first line is the reason
   (`fatal: 'origin' does not appear to be a git repository`) and the lines after it are advice, so that line is the one shown, where
   the local commands show their last.
@@ -35,7 +36,8 @@ none of the branch's commits, and its first push would have diverged from the wo
   The local commands never prompt, so one setting covers them all.
 - **The remote is `origin`, hardcoded**, as `main` already is.
 - Rejected: falling back to a branch from `main` when origin cannot be asked, which is the very divergence this fixes, now
-  only offline; fetching on every board read, which pays a network call for a branch no one is starting.
+  only offline; starting from a `refs/remotes/origin/<branch>` an earlier fetch left, which may be stale and would run the
+  session on commits origin has since replaced; fetching on every board read, which pays a network call for a branch no one is starting.
 
 ## Consequences
 
@@ -46,4 +48,7 @@ none of the branch's commits, and its first push would have diverged from the wo
   `BatchMode=yes`.
 - deferred: a remote that never answers holds the start until git gives up, since `GitCommand` has no timeout — close it when a
   start is seen hanging.
+- deferred: a single-branch clone, or any whose fetch configuration does not cover `refs/remotes/origin/<branch>`, fetches the
+  branch and then has `worktree add --track` refuse it as not a branch, so nothing starts — close it when that is seen, by
+  writing `branch.<branch>.remote` and `.merge` directly.
 - Starting a session on a ticket with no local branch now needs the network, even when origin turns out not to have the branch.

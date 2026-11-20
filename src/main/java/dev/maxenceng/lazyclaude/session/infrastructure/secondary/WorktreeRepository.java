@@ -64,6 +64,7 @@ public final class WorktreeRepository implements WorktreePort {
     private static final String TRACK = "--track";
     private static final String REMOTE_BRANCHES = "refs/remotes/" + ORIGIN + "/";
     private static final String REFSPEC_SEPARATOR = ":";
+    private static final String FORCED_UPDATE = "+";
     private static final String LS_REMOTE_COMMAND = "git ls-remote";
     private static final String FETCH_COMMAND = "git fetch";
     private static final Map<String, String> NO_PROMPT = Map.of("GIT_TERMINAL_PROMPT", "0");
@@ -128,10 +129,11 @@ public final class WorktreeRepository implements WorktreePort {
         return true;
     }
 
+    /** The fetch forces the remote-tracking ref, as git's default refspec does, so a branch rewritten since the last fetch is still taken. */
     @Override
     public void addOnRemoteBranch(Project project, BranchName branch, WorkingDirectory at) {
         String remoteBranch = REMOTE_BRANCHES + branch.value();
-        GitResult fetched = run(project.root(), List.of(FETCH, ORIGIN, LOCAL_BRANCHES + branch.value() + REFSPEC_SEPARATOR + remoteBranch));
+        GitResult fetched = run(project.root(), List.of(FETCH, ORIGIN, FORCED_UPDATE + LOCAL_BRANCHES + branch.value() + REFSPEC_SEPARATOR + remoteBranch));
         if (!fetched.succeeded()) {
             throw new WorktreeUnavailableException(remoteFailure(FETCH_COMMAND, fetched));
         }
