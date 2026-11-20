@@ -181,6 +181,7 @@ class HostedSessionManagerTicketTest {
     void shouldOpenNoSessionAndWarnWhenThePathExistsButIsNotAWorktreeOfTheBranch() {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.empty());
         when(hosts.exists(worktreeDirectory())).thenReturn(true);
+        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(false);
 
         HostStart start = manager.startTicket(ticketStart(Verb.REVIEW), ticketPlugin(), paneSize());
 
@@ -191,6 +192,24 @@ class HostedSessionManagerTicketTest {
         assertThat(raisedTexts(warnings))
                 .containsExactly(
                         "ticket worktree: /work/app.worktrees/PROJ-1-ticket exists but is not a worktree of PROJ-1-ticket; nothing started.");
+    }
+
+    @Test
+    void shouldRunInTheWorktreeAtThePlannedPathWhateverBranchItHasCheckedOut() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.empty());
+        when(hosts.exists(worktreeDirectory())).thenReturn(true);
+        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
+        when(hosts.spawn(any(), any(), any(), any())).thenReturn(processId());
+
+        HostStart start = manager.startTicket(ticketStart(Verb.DONE), ticketPlugin(), paneSize());
+
+        verify(hosts).spawn(launched.capture(), any(), any(), any());
+        assertThat(launched.getValue())
+                .as("a done ticket whose branch a merge deleted keeps the worktree its work was on, at the path its branch plans")
+                .isEqualTo(ticketLaunch(idOf(start), worktreeDirectory(), Verb.DONE));
+        verify(worktrees, never()).addOnBranch(any(), any(), any());
+        verify(worktrees, never()).addOnNewBranch(any(), any(), any());
+        assertThat(raisedTexts(warnings)).isEmpty();
     }
 
     @Test

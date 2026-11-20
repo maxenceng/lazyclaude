@@ -103,9 +103,10 @@ public final class HostedSessionManager {
     }
 
     /**
-     * {@code /<plugin>:ticket <verb> <ID>} in the ticket's worktree: where its branch is already checked out, else a worktree added at the
-     * path the project keeps it at, on the branch when it exists and on a new one from {@code main} when not. None, with a warning,
-     * when that path is taken by something else or git refuses.
+     * {@code /<plugin>:ticket <verb> <ID>} in the ticket's worktree: where its branch is already checked out, else the worktree git lists
+     * at the path the project keeps it at, whatever branch it has checked out, else a worktree added there, on the branch when it exists
+     * and on a new one from {@code main} when not. None, with a warning, when that path is taken by a directory that is not a worktree or
+     * git refuses.
      */
     public HostStart startTicket(TicketStart ticket, TicketPlugin ticketPlugin, PaneSize size) {
         try {
@@ -284,6 +285,9 @@ public final class HostedSessionManager {
         WorkingDirectory planned = worktree.path()
                 .orElseThrow(() -> new WorktreeUnavailableException(NO_PLACE.formatted(worktree.project().root())));
         if (hosts.exists(planned)) {
+            if (worktrees.isWorktreeAt(worktree.project(), planned)) {
+                return planned;
+            }
             throw new WorktreeUnavailableException(NOT_A_WORKTREE.formatted(planned.path(), worktree.branch().value()));
         }
         addWorktree(worktree, planned);
