@@ -34,6 +34,10 @@
   background: var(--row-ground, transparent);
 }
 
+.row:not(.tall):hover:not(.selected) {
+  background: var(--hover-ground);
+}
+
 .selected {
   background: var(--cursor-ground, var(--row-ground, transparent));
   color: var(--cursor-ink);
