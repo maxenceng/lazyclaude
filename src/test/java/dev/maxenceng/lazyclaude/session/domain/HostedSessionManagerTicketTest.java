@@ -185,13 +185,13 @@ class HostedSessionManagerTicketTest {
 
         HostStart start = manager.startTicket(ticketStart(Verb.REVIEW), ticketPlugin(), paneSize());
 
-        assertThat(start).isEqualTo(notStartedBecause("ticket worktree: /work/app.worktrees/PROJ-1-ticket exists but is not a worktree of PROJ-1-ticket; nothing started."));
+        assertThat(start).isEqualTo(notStartedBecause("ticket worktree: /work/app.worktrees/PROJ-1-ticket exists but is not a git worktree; nothing started."));
         verify(hosts, never()).spawn(any(), any(), any(), any());
         verify(worktrees, never()).addOnBranch(any(), any(), any());
         verify(worktrees, never()).addOnNewBranch(any(), any(), any());
         assertThat(raisedTexts(warnings))
                 .containsExactly(
-                        "ticket worktree: /work/app.worktrees/PROJ-1-ticket exists but is not a worktree of PROJ-1-ticket; nothing started.");
+                        "ticket worktree: /work/app.worktrees/PROJ-1-ticket exists but is not a git worktree; nothing started.");
     }
 
     @Test

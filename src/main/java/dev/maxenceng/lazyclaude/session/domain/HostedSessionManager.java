@@ -42,7 +42,7 @@ public final class HostedSessionManager {
     private static final String EXIT_WARNING = "hosted session: claude exited with code %d.";
     private static final String GONE_WARNING = "resume: %s is gone; nothing resumed.";
     private static final String WORKTREE_WARNING = "ticket worktree: %s; nothing started.";
-    private static final String NOT_A_WORKTREE = "%s exists but is not a worktree of %s";
+    private static final String NOT_A_WORKTREE = "%s exists but is not a git worktree";
     private static final String ALREADY_STARTING = "this session is already starting; give it a moment.";
     private static final String ENDED_AT_ONCE = "hosted session: claude ended as soon as it started.";
     private static final String LEAKING_WARNING = "hosted session: %s; each run leaves a copy in the temp folder.";
@@ -149,6 +149,7 @@ public final class HostedSessionManager {
     public HostStart resumeInTicketWorktree(
             SessionId session, WorkingDirectory recorded, TicketWorktree worktree, PaneSize size) {
         boolean gone = !hosts.exists(recorded);
+        // deferred: a gone worktree added under the slug, whose ticket now plans the merged head's path, is not re-added — close it when a resumed done ticket needs it.
         if (gone && worktree.path().filter(recorded::equals).isPresent()) {
             try {
                 addWorktree(worktree, recorded);
@@ -288,7 +289,7 @@ public final class HostedSessionManager {
             if (worktrees.isWorktreeAt(worktree.project(), planned)) {
                 return planned;
             }
-            throw new WorktreeUnavailableException(NOT_A_WORKTREE.formatted(planned.path(), worktree.branch().value()));
+            throw new WorktreeUnavailableException(NOT_A_WORKTREE.formatted(planned.path()));
         }
         addWorktree(worktree, planned);
         return planned;

@@ -29,7 +29,8 @@ refused that path as "exists but is not a worktree of", so `/ticket done` could 
   reference the issue, so it does not say which one closed it.
 - **A worktree at the planned path is the ticket's.** `HostedSessionManager` looks for the branch's checkout first, as before.
   When there is none and the planned path exists, it asks `WorktreePort.isWorktreeAt`. A registered worktree there runs the
-  session as it is, with nothing added, and only a directory that is not a worktree is refused. Once the head branch is
+  session as it is, with nothing added, and only a directory that is not a worktree is refused, as "exists but is not a git
+  worktree": the branch is no longer what the check compares, so the refusal no longer names it. Once the head branch is
   the ticket branch, the case above is found by its checkout and needs none of this. What it serves is a ticket still on
   the slug: an issue closed by hand or by a commit, or an open ticket whose worktree has switched branch.
 - **The held worktree is found the same way.** `WorktreeManager.held`, which the done ticket's worktree removal reads, takes the
@@ -47,3 +48,5 @@ refused that path as "exists but is not a worktree of", so `/ticket done` could 
   worktree is refused. The user put that worktree there, and refusing it would bring back the dead end this ADR removes.
 - Each issue adds one timeline item to the query. GitHub counts it against the GraphQL rate limit, but the board still reads in
   one call.
+- deferred: resuming a past session re-adds a gone worktree only when the recorded directory is the planned path, so one added
+  under the slug, whose ticket now plans the merged head's path, is reported gone — close it when a resumed done ticket needs it.
