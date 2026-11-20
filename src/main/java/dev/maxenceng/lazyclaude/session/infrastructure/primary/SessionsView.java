@@ -42,20 +42,20 @@ public record SessionsView(
     /** How many of this project's live sessions, linked or not, carry each marker; a marker none carries is absent. */
     public Map<Marker, Long> markerCounts() {
         return live.stream()
-                .flatMap(session -> session.marker().stream())
+                .flatMap(session -> session.marker().map(MarkerView::kind).stream())
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
     }
 
     /** The strongest marker among the live sessions linked to {@code ticket}. */
     public Optional<Marker> strongestMarkerOf(LinkedTicketId ticket) {
-        return strongestSessionOf(ticket).flatMap(LiveSessionView::marker);
+        return strongestSessionOf(ticket).flatMap(LiveSessionView::marker).map(MarkerView::kind);
     }
 
     /** The live session linked to {@code ticket}, with the strongest marker; the first of any tied. */
     public Optional<LiveSessionView> strongestSessionOf(LinkedTicketId ticket) {
         return live.stream()
                 .filter(session -> session.linkTo(ticket).isPresent() && session.marker().isPresent())
-                .max(Comparator.comparing(session -> session.marker().orElse(Marker.YOUR_TURN)));
+                .max(Comparator.comparing(session -> session.marker().map(MarkerView::kind).orElse(Marker.YOUR_TURN)));
     }
 
     /** The sessions {@code ticket} lists, none when no session is linked to it or hosted for it. */

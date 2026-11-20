@@ -48,6 +48,7 @@ export type SessionClaudeVersion = SessionVersion | SessionNoVersion;
 export type SessionSessionState =
   SessionBusy | SessionYourTurn | SessionWaitingForPermission | SessionWaitingForInput | SessionUnknown;
 export type SessionWaitingFor = SessionWaitingReason | SessionNoWaitingReason;
+export type SessionMarker = 'YOUR_TURN' | 'WAITING_FOR_INPUT' | 'WAITING_FOR_PERMISSION';
 export type SessionSessionTitle = SessionAiTitle | SessionFirstPrompt | SessionNoTitle;
 export type SessionOpeningPrompt = SessionFirstPrompt | SessionNoFirstPrompt;
 export type SessionTranscriptReading = SessionReadableTranscript | SessionUnreadableTranscript;
@@ -417,6 +418,7 @@ export interface SessionLiveSessionView {
   startedAt: string;
   version: SessionClaudeVersion;
   state: SessionSessionState;
+  marker: SessionMarkerView | null;
   links: SessionTicketLink[];
 }
 export interface SessionVersion {
@@ -449,6 +451,10 @@ export interface SessionNoWaitingReason {
 }
 export interface SessionUnknown {
   kind: 'unknown';
+}
+export interface SessionMarkerView {
+  kind: SessionMarker;
+  strength: number;
 }
 export interface SessionTicketLink {
   ticket: string;

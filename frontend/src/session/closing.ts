@@ -1,7 +1,6 @@
-import type { Client, SessionSessionsView } from '../protocol';
+import type { Client, SessionLiveSessionView, SessionSessionsView } from '../protocol';
 import { Store } from '../shared/store';
 import type { Hosting } from './hosting';
-import type { LiveState } from './markers';
 
 export interface ClosingDeps {
   client: Client;
@@ -10,7 +9,7 @@ export interface ClosingDeps {
 }
 
 /** The states a person might lose work in: closing a session Busy, Waiting or Unknown asks first, while one Starting or at Your turn closes at once. */
-const ASKED: readonly LiveState[] = ['busy', 'waitingForPermission', 'waitingForInput', 'unknown'];
+const ASKED: readonly SessionLiveSessionView['state']['kind'][] = ['busy', 'waitingForPermission', 'waitingForInput', 'unknown'];
 
 /**
  * Closing the selected hosted session, as the dock's close button and the reserved close chord do: at once when the session is

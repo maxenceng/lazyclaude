@@ -24,7 +24,7 @@ import { DiffPane, FilesPane, ReviewPopups } from './review/ReviewScreen';
 import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKeyBar';
 import { ClosePopup } from './session/ClosePopup';
 import { DockScreen, DockStrip } from './session/DockScreen';
-import { LampColour, markerOfTicket, markersOf } from './session/markers';
+import { LampColour, markerOfTicket, lampTilesOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
 import { NewSessionBar, SessionFailure, SessionsList } from './session/SessionsList';
 import { ticketPullRequestOf } from './ticketPullRequest';
@@ -98,7 +98,7 @@ export const App = ({ app, packaged }: Props) => {
     };
   }, [app, packaged]);
 
-  const markers = sessions === undefined ? [] : markersOf(sessions);
+  const lampTiles = sessions === undefined ? [] : lampTilesOf(sessions);
   const project = app.board.root() ?? t('app.project');
   const selectedTicket = app.board.selectedTicket();
   const populatedBoard = board.shown();
@@ -336,20 +336,20 @@ export const App = ({ app, packaged }: Props) => {
                 onSelect={(id) => app.chooseTab(TAB_OF.get(id) ?? WindowTab.Base)}
               />
             }
-            tiles={markers.map((marker) => (
+            tiles={lampTiles.map((tile) => (
               <Lamp
-                key={marker.session}
-                colour={marker.colour}
+                key={tile.session}
+                colour={tile.colour}
                 size={LampSize.Tile}
-                number={marker.ticket}
-                onClick={app.canGoToLive(marker.session) ? () => app.goToLive(marker.session) : undefined}
+                number={tile.ticket}
+                onClick={app.canGoToLive(tile.session) ? () => app.goToLive(tile.session) : undefined}
               />
             ))}
             counts={COLOURS.map((colour) => (
               <Count
                 key={colour}
                 colour={colour}
-                count={markers.filter((marker) => marker.colour === colour).length}
+                count={lampTiles.filter((tile) => tile.colour === colour).length}
                 disabled={!app.canGoToNext(colour)}
                 onClick={() => app.goToNext(colour)}
               />
