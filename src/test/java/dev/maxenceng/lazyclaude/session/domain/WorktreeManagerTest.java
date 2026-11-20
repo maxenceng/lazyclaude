@@ -10,7 +10,10 @@ import static dev.maxenceng.lazyclaude.session.domain.WorktreeStateFixture.clear
 import static dev.maxenceng.lazyclaude.session.domain.WorktreeStateFixture.heldWorktree;
 import static dev.maxenceng.lazyclaude.session.published.DirtyPathFixture.dirtyPath;
 import static dev.maxenceng.lazyclaude.session.published.SessionNameFixture.claudeSessionName;
+import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
 import static dev.maxenceng.lazyclaude.shared.domain.ProjectFixture.project;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.otherWorktreeDirectory;
+import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.projectRootDirectory;
 import static dev.maxenceng.lazyclaude.shared.domain.WorkingDirectoryFixture.worktreeDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,6 +24,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +55,7 @@ class WorktreeManagerTest {
 
     @Test
     void shouldHoldNoWorktreeWhereGitListsNone() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.empty());
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(false);
 
         assertThat(manager.held(ticketWorktree(), headCommit(), noSessionsInTheWorktree())).isEmpty();
@@ -59,11 +64,32 @@ class WorktreeManagerTest {
 
     @Test
     void shouldJudgeAWorktreeWithNoMergedPullRequestWithoutReadingIt() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.empty());
         when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
 
         assertThat(manager.held(ticketWorktree(), new NoMergedHead(), noSessionsInTheWorktree()))
                 .contains(heldWorktree(new NoMergedPullRequest()));
         verifyNoMoreInteractions(worktrees);
+    }
+
+    @Test
+    void shouldHoldTheWorktreeTheBranchIsCheckedOutInWhenItIsNotAtTheTicketsPath() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(otherWorktreeDirectory()));
+
+        assertThat(manager.held(ticketWorktree(), new NoMergedHead(), noSessionsInTheWorktree()))
+                .as("a done ticket's branch is its merged head, while its worktree sits at the path the title slug planned (ADR 0120)")
+                .contains(HeldWorktree.builder().path(otherWorktreeDirectory()).state(new NoMergedPullRequest()).build());
+        verifyNoMoreInteractions(worktrees);
+    }
+
+    @Test
+    void shouldNeverHoldTheProjectRootWhenTheBranchIsCheckedOutThere() {
+        when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(projectRootDirectory()));
+        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(false);
+
+        assertThat(manager.held(ticketWorktree(), headCommit(), noSessionsInTheWorktree()))
+                .as("removing the held worktree must never reach the main checkout")
+                .isEmpty();
     }
 
     @Test

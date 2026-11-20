@@ -1,4 +1,4 @@
-# 120. A done ticket's branch is its merged pull request's head, and a worktree at its path is its worktree
+# 120. A closed issue's branch is the head branch of the pull request that merged it, and a worktree at its path is its worktree
 
 Date: 2026-11-20
 
@@ -18,7 +18,7 @@ refused that path as "exists but is not a worktree of", so `/ticket done` could 
 
 ## Decision
 
-- **A closed issue with nothing linked takes its merged closer's head.** The board's query adds
+- **A closed issue with nothing linked takes the head branch of the pull request that merged it.** The board's query adds
   `timelineItems(itemTypes: [CLOSED_EVENT], last: 1)` and, for a `ClosedEvent` whose `closer` is a pull request, its
   `headRefName` and `merged`. `IssueRecord` names the branch as the linked branch, else that head when the issue is `CLOSED` and
   the pull request merged, else the slug. It is still one paginated call. A closer that is a commit, a missing closer, or no
@@ -29,7 +29,13 @@ refused that path as "exists but is not a worktree of", so `/ticket done` could 
   reference the issue, so it does not say which one closed it.
 - **A worktree at the planned path is the ticket's.** `HostedSessionManager` looks for the branch's checkout first, as before.
   When there is none and the planned path exists, it asks `WorktreePort.isWorktreeAt`. A registered worktree there runs the
-  session as it is, with nothing added, and only a directory that is not a worktree is refused.
+  session as it is, with nothing added, and only a directory that is not a worktree is refused. Once the head branch is
+  the ticket branch, the case above is found by its checkout and needs none of this. What it serves is a ticket still on
+  the slug: an issue closed by hand or by a commit, or an open ticket whose worktree has switched branch.
+- **The held worktree is found the same way.** `WorktreeManager.held`, which the done ticket's worktree removal reads, takes the
+  branch's checkout first and the worktree at the planned path second. Once the branch is the merged head, the planned path is
+  the head's and the worktree sits at the slug's, so the path alone would find nothing to remove. The project root is never
+  held, even when the branch is checked out there.
 - Rejected: a second `gh` call per done ticket for its pull request, which is one request per issue (ADR 0118's reason).
   Matching the worktree by the branch it has checked out against the slug, which needs `session` to know how the slug is
   made.

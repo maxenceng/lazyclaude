@@ -93,7 +93,7 @@ record IssueRecord(
     }
 
     private TicketBranch branch() {
-        return linkedBranch().or(this::mergedBranch).orElseGet(this::slugBranch);
+        return linkedBranch().or(this::closingPullRequestHead).orElseGet(this::slugBranch);
     }
 
     private Optional<TicketBranch> linkedBranch() {
@@ -107,7 +107,7 @@ record IssueRecord(
     }
 
     /** Only a closed issue's: a reopened one is worked again on a branch of its own, not on the one already merged. */
-    private Optional<TicketBranch> mergedBranch() {
+    private Optional<TicketBranch> closingPullRequestHead() {
         return !CLOSED.equals(state) || timelineItems == null
                 ? Optional.empty()
                 : timelineItems.listed().stream()
