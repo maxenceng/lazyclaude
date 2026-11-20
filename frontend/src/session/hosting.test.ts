@@ -93,6 +93,27 @@ describe('the hosted sessions', () => {
     expect(hosted.failure.get()).toBeUndefined();
   });
 
+  it('shows nothing for a refusal answered after the failure was withdrawn', async () => {
+    const { client, hosted } = hosting();
+    const refused = hosted.startUnlinked('/p');
+    hosted.withdrawFailure();
+    client.answerNext({ kind: 'notStartedHost', reason: 'no claude' });
+    await refused;
+    expect(hosted.failure.get(), 'the reason belongs to a ticket no longer under the cursor').toBeUndefined();
+  });
+
+  it('shows nothing for an earlier start answered after a later one opened its tab', async () => {
+    const { client, hosted } = hosting();
+    const earlier = hosted.startUnlinked('/p');
+    const later = hosted.startUnlinked('/p');
+    client.answerLast({ kind: 'startedHost', id: 's1' });
+    await later;
+    client.failNext(new RpcError(-32000, 'no java'));
+    await earlier;
+    expect(hosted.failure.get(), 'the later start succeeded, so the earlier failure is stale').toBeUndefined();
+    expect(hosted.dock.get().tabs).toEqual(['s1']);
+  });
+
   it('starts a new ticket\'s session with the description as typed, and opens its tab', async () => {
     const { client, hosted } = hosting();
     const starting = hosted.startNewTicket('/p', '  a "quoted" idea ');

@@ -775,7 +775,7 @@ const refused = async () => {
   client.answer('board/watch', boardFixture([ticketFixture({ id: 'PROJ-1' }), ticketFixture({ id: 'PROJ-2' })]));
   await settled();
   app.board.selection.select('PROJ-1');
-  const starting = app.hosting.startUnlinked('/p');
+  const starting = app.sessions.newUnlinked();
   client.answerAll('session/startUnlinked', { kind: 'notStartedHost', reason: 'no claude' });
   await starting;
   return app;
@@ -787,6 +787,33 @@ describe('the app and a session that could not be started', () => {
     expect(app.hosting.failure.get()?.message).toBe('no claude');
     app.board.selection.select('PROJ-2');
     expect(app.hosting.failure.get()).toBeUndefined();
+  });
+
+  it('keeps the failure of a start from the ticket heading the board when that ticket is selected', async () => {
+    const client = fakeClient(new Ready());
+    const app = new AppModel(client, testPlatform());
+    app.start();
+    client.answer('board/watch', boardFixture([ticketFixture({ id: 'PROJ-1' }), ticketFixture({ id: 'PROJ-2' })]));
+    await settled();
+    const starting = app.sessions.newUnlinked();
+    client.answerAll('session/startUnlinked', { kind: 'notStartedHost', reason: 'no claude' });
+    await starting;
+    app.board.selection.select('PROJ-1');
+    expect(app.hosting.failure.get()?.message, 'the cursor was already on the ticket heading the board').toBe('no claude');
+  });
+
+  it('shows nothing for a refusal answered after another ticket was selected', async () => {
+    const client = fakeClient(new Ready());
+    const app = new AppModel(client, testPlatform());
+    app.start();
+    client.answer('board/watch', boardFixture([ticketFixture({ id: 'PROJ-1' }), ticketFixture({ id: 'PROJ-2' })]));
+    await settled();
+    app.board.selection.select('PROJ-1');
+    const starting = app.sessions.newUnlinked();
+    app.board.selection.select('PROJ-2');
+    client.answerAll('session/startUnlinked', { kind: 'notStartedHost', reason: 'no claude' });
+    await starting;
+    expect(app.hosting.failure.get(), 'the reason belongs to the ticket the start was asked from').toBeUndefined();
   });
 
   it('keeps the failure when the selection lands on the same ticket again', async () => {

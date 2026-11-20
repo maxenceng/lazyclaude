@@ -30,8 +30,8 @@ export class SessionsController {
   /** The ticket and the row the cursor was last on, so a read that reorders the rows keeps it on the same session. */
   private under: { ticket: string | undefined; row: string | undefined } = { ticket: undefined, row: undefined };
 
-  /** The ticket the last selection landed on, so landing on it again keeps what was shown for it. */
-  private followed: string | undefined;
+  /** The ticket the last start was asked from, whose failure stands until another ticket is selected. */
+  private startedFrom: string | undefined;
 
   constructor(private readonly deps: SessionsDeps) {
     deps.store.sessions.subscribe(() => this.followRow());
@@ -85,6 +85,7 @@ export class SessionsController {
     if (ticket === undefined || project === undefined) {
       return;
     }
+    this.startedFrom = ticket.id;
     const answer = await this.ask(() => this.deps.client.call('session/newSessionFor', { sessions: project, ticket: ticket.id, verbs: ticket.verbs, merged: MERGE_UNKNOWN }));
     if (answer?.kind === 'unlinkedStart') {
       await this.opened(this.hosting.startUnlinked(project.root));
@@ -118,17 +119,16 @@ export class SessionsController {
     this.picker.set(undefined);
   }
 
-  /** The picker offers the verbs of the ticket it opened on, and a failed start was shown for the ticket it started from, so selecting another ticket closes the one and withdraws the other. */
+  /** The picker offers the verbs of the ticket it opened on, and a failed start belongs to the ticket it was asked from, so selecting another ticket closes the one and withdraws the other. */
   followSelection(): void {
     const ticket = this.deps.ticket()?.id;
     const open = this.picker.get();
     if (open !== undefined && open.ticket !== ticket) {
       this.cancelPick();
     }
-    if (ticket !== this.followed) {
+    if (ticket !== this.startedFrom) {
       this.hosting.withdrawFailure();
     }
-    this.followed = ticket;
   }
 
   /** Starts the verb under the picker's cursor, or at `index`, and closes the picker. */
@@ -165,6 +165,7 @@ export class SessionsController {
   }
 
   private async opened(starting: Promise<boolean>): Promise<void> {
+    this.startedFrom = this.deps.ticket()?.id;
     if (await starting) {
       this.deps.onOpened();
     }
