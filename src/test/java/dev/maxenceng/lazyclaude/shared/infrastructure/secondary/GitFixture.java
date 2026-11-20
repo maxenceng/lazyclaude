@@ -121,6 +121,37 @@ public final class GitFixture {
         git(in, "push", "-q", "origin", "HEAD:refs/heads/" + branch);
     }
 
+    public static String branchOnlyOnRemote(Path repository, String branch, String file) throws Exception {
+        branchWithFile(repository, branch, file, "Only on the remote.");
+        String tip = gitOutput(repository, "rev-parse", branch).strip();
+        git(repository, "push", "-q", "origin", "refs/heads/%s:refs/heads/%s".formatted(branch, branch));
+        git(repository, "branch", "-q", "-D", branch);
+        git(repository, "update-ref", "-d", "refs/remotes/origin/" + branch);
+        return tip;
+    }
+
+    public static String branchRewrittenOnRemote(Path repository, String branch, String file) throws Exception {
+        git(repository, "config", "remote.origin.fetch", "refs/heads/*:refs/remotes/origin/*");
+        String fetchedTip = branchOnlyOnRemote(repository, branch, file);
+        branchWithFile(repository, branch, file, "Rewritten on the remote.");
+        String tip = gitOutput(repository, "rev-parse", branch).strip();
+        git(repository, "push", "-q", "-f", "origin", "refs/heads/%s:refs/heads/%s".formatted(branch, branch));
+        git(repository, "branch", "-q", "-D", branch);
+        git(repository, "update-ref", "refs/remotes/origin/" + branch, fetchedTip);
+        return tip;
+    }
+
+    public static String upstreamOf(Path in) throws Exception {
+        return gitOutput(in, "rev-parse", "--abbrev-ref", "@{upstream}").strip();
+    }
+
+    public static String gitSayingItsPromptSetting(Path directory) throws IOException {
+        Path script = Files.createDirectories(directory).resolve("git");
+        Files.writeString(script, "#!/bin/sh\necho \"fatal: GIT_TERMINAL_PROMPT=$GIT_TERMINAL_PROMPT\" >&2\nexit 128\n");
+        assertThat(script.toFile().setExecutable(true)).isTrue();
+        return script.toString();
+    }
+
     public static boolean branchExistsIn(Path repository, String branch) throws Exception {
         return !gitOutput(repository, "branch", "--list", branch).isBlank();
     }

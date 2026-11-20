@@ -27,6 +27,21 @@ public interface WorktreePort {
     boolean branchExists(Project project, BranchName branch);
 
     /**
+     * Whether the project's remote has a branch named {@code branch}. The remote is asked, so this goes over the network.
+     *
+     * @throws WorktreeUnavailableException when the remote cannot be asked: offline, refused, or no such remote
+     */
+    boolean branchOnRemote(Project project, BranchName branch);
+
+    /**
+     * Fetches {@code branch} from the project's remote and adds a worktree at {@code at} on a new local {@code branch} that starts at
+     * the remote's tip of it and tracks it.
+     *
+     * @throws WorktreeUnavailableException when the fetch fails or git refuses the worktree
+     */
+    void addOnRemoteBranch(Project project, BranchName branch, WorkingDirectory at);
+
+    /**
      * Adds a worktree at {@code at} with the existing {@code branch} checked out.
      *
      * @throws WorktreeUnavailableException when git refuses

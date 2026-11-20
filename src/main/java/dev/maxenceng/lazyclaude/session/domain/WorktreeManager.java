@@ -17,7 +17,7 @@ public record WorktreeManager(WorktreePort worktrees) {
 
     /**
      * The ticket's worktree, with its state: where its branch is checked out other than the project root, else the worktree git lists
-     * at the ticket's path, whatever branch it has checked out (ADR 0120). None when the project keeps no worktrees or there is neither.
+     * at the ticket's path, whatever branch it has checked out (ADR 0121). None when the project keeps no worktrees or there is neither.
      */
     public Optional<HeldWorktree> held(TicketWorktree worktree, MergedHead merged, AvailableSessions sessions) {
         return worktree.path()

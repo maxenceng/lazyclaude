@@ -77,7 +77,7 @@ class WorktreeManagerTest {
         when(worktrees.checkedOutAt(project(), branchName())).thenReturn(Optional.of(otherWorktreeDirectory()));
 
         assertThat(manager.held(ticketWorktree(), new NoMergedHead(), noSessionsInTheWorktree()))
-                .as("a done ticket's branch is its merged head, while its worktree sits at the path the title slug planned (ADR 0120)")
+                .as("a done ticket's branch is its merged head, while its worktree sits at the path the title slug planned (ADR 0121)")
                 .contains(HeldWorktree.builder().path(otherWorktreeDirectory()).state(new NoMergedPullRequest()).build());
         verifyNoMoreInteractions(worktrees);
     }

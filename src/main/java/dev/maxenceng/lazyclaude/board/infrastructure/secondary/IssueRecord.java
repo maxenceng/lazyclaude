@@ -26,7 +26,7 @@ import dev.maxenceng.lazyclaude.shared.infrastructure.secondary.MissingFields;
 /**
  * One issue as {@code gh api graphql} writes it, null where the JSON lacks it. The domain's {@link GitHubIssue} decides what ticket it
  * is (ADR 0043); this reads the fields, and names the branch GitHub links to it, else the head of the merged pull request that closed
- * it, else as {@code gh issue develop} would (ADR 0118, ADR 0120).
+ * it, else as {@code gh issue develop} would (ADR 0118, ADR 0121).
  */
 record IssueRecord(
         Integer number,

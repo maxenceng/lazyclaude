@@ -6,7 +6,7 @@ Date: 2026-11-19
 
 Accepted. Supersedes the ticket branch bullet of ADR 0065 ("derived, not read back"), its deferred consequence about it, and the
 `gh issue list` call of its "One call reads the board" bullet; the rest of ADR 0065 stands. Builds on ADR 0052.
-Amended by ADR 0120: a closed issue with nothing linked takes the head of the merged pull request that closed it, which closes
+Amended by ADR 0121: a closed issue with nothing linked takes the head of the merged pull request that closed it, which closes
 the deferred consequence about a deleted branch.
 
 ## Context
@@ -45,6 +45,6 @@ dropped.
   step, which updates the issue the poll watches; whether linking alone does is unchecked, and `R` reads it either way.
 - A ticket whose branch has been deleted falls back to the slug: GitHub keeps no ref for it, so the link reads as nothing
   linked. For a done ticket whose branch a merge deleted, the merge state and the worktree removal then matched on the slug,
-  and missed where it differs from the branch the work was on; closed by ADR 0120.
+  and missed where it differs from the branch the work was on; closed by ADR 0121.
 - A null element in a connection GitHub writes is left out; an issue written as anything but an object, or an answer with no
   page, makes the board unavailable with that reason, never an empty board.

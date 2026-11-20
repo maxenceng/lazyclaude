@@ -8,7 +8,7 @@ import dev.maxenceng.lazyclaude.shared.domain.Project;
 
 /**
  * Reads the issues of the GitHub repository the project's directory belongs to with {@code gh api graphql}: the open ones and the closed
- * ones, every page of one query, each with the branch GitHub links to it and the pull request that closed it (ADR 0118, ADR 0120). Nothing is kept between reads. A run that ends non-zero is the reason the board cannot be read, in the words
+ * ones, every page of one query, each with the branch GitHub links to it and the pull request that closed it (ADR 0118, ADR 0121). Nothing is kept between reads. A run that ends non-zero is the reason the board cannot be read, in the words
  * {@code gh} used where it used any.
  */
 public final class IssuesRepository implements BacklogPort {

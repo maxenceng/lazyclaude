@@ -1,4 +1,4 @@
-# 120. A closed issue's branch is the head branch of the pull request that merged it, and a worktree at its path is its worktree
+# 121. A closed issue's branch is the head branch of the pull request that merged it, and a worktree at its path is its worktree
 
 Date: 2026-11-20
 
