@@ -15,6 +15,8 @@ public final class FakeGhFixture {
 
     private static final Duration PATIENCE = Duration.ofSeconds(10);
     private static final Duration IMPATIENCE = Duration.ofMillis(300);
+    private static final String TITLE_AS_ISSUE =
+            "sed 's|.*|[{\"data\":{\"repository\":{\"issues\":{\"nodes\":[{\"number\":1,\"title\":\"&\",\"body\":\"\",\"labels\":{\"nodes\":[]},\"state\":\"OPEN\",\"stateReason\":null}]}}}}]|'\n";
 
     private FakeGhFixture() {}
 
@@ -51,21 +53,49 @@ public final class FakeGhFixture {
     }
 
     static Path ghPrintingItsDirectory(Path directory) throws IOException {
-        return script(directory, "printf '[{\"number\":1,\"title\":\"%s\",\"body\":\"\",\"labels\":[],\"state\":\"OPEN\",\"stateReason\":\"\"}]' \"$(pwd)\"\n");
+        return script(directory, "printf '%s' \"$(pwd)\" | " + TITLE_AS_ISSUE);
     }
 
     static Path ghPrintingItsArguments(Path directory) throws IOException {
-        return script(directory, "printf '[{\"number\":1,\"title\":\"%s\",\"body\":\"\",\"labels\":[],\"state\":\"OPEN\",\"stateReason\":\"\"}]' \"$*\"\n");
+        return script(directory, "printf '%s' \"$*\" | " + TITLE_AS_ISSUE);
     }
 
     static String listOfIssues(String... issues) {
-        return Stream.of(issues).collect(Collectors.joining(",", "[", "]"));
+        return pagesOf(pageOf(issues));
+    }
+
+    static String pagesOf(String... pages) {
+        return Stream.of(pages).collect(Collectors.joining(",", "[", "]"));
+    }
+
+    static String pageOf(String... issues) {
+        return "{\"data\":{\"repository\":{\"issues\":{\"nodes\":[%s]}}}}".formatted(String.join(",", issues));
     }
 
     static String issueJson(int number, String title, String state, String reason, String... labels) {
+        return issueJsonLinkedTo(number, title, state, reason, "", labels);
+    }
+
+    static String issueJsonLinkedTo(int number, String title, String state, String reason, String branch, String... labels) {
         String named = Stream.of(labels).map("{\"name\":\"%s\"}"::formatted).collect(Collectors.joining(","));
-        return "{\"number\":%d,\"title\":\"%s\",\"body\":\"Body.\",\"labels\":[%s],\"state\":\"%s\",\"stateReason\":\"%s\",\"closedAt\":%s}"
-                .formatted(number, title, named, state, reason, "CLOSED".equals(state) ? "\"2026-10-01T09:00:00Z\"" : "null");
+        String linked = branch.isEmpty() ? "" : "{\"ref\":{\"name\":\"%s\"}}".formatted(branch);
+        return ("{\"number\":%d,\"title\":\"%s\",\"body\":\"Body.\",\"labels\":{\"nodes\":[%s]},\"state\":\"%s\","
+                        + "\"stateReason\":%s,\"closedAt\":%s,\"linkedBranches\":{\"nodes\":[%s]}}")
+                .formatted(
+                        number,
+                        title,
+                        named,
+                        state,
+                        reason.isEmpty() ? "null" : "\"%s\"".formatted(reason),
+                        "CLOSED".equals(state) ? "\"2026-10-01T09:00:00Z\"" : "null",
+                        linked);
+    }
+
+    static String issueJsonClosedByMerging(int number, String title, String headRefName) {
+        return ("{\"number\":%d,\"title\":\"%s\",\"state\":\"CLOSED\",\"stateReason\":\"COMPLETED\",\"closedAt\":\"2026-10-01T09:00:00Z\","
+                        + "\"linkedBranches\":{\"nodes\":[]},"
+                        + "\"timelineItems\":{\"nodes\":[{\"closer\":{\"headRefName\":\"%s\",\"merged\":true}}]}}")
+                .formatted(number, title, headRefName);
     }
 
     private static Path script(Path directory, String body) throws IOException {

@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import { LampColour } from './Lamp';
-import { SessionRow } from './SessionRow';
+import { PillInk, SessionRow } from './SessionRow';
 import { ruleOf, stylesheet } from './stylesheet';
 
 const sheet = stylesheet('SessionRow.module.css');
@@ -16,6 +17,34 @@ describe('a session row', () => {
   it('lightens its action on a your-turn row, where the plain dim ink would not read', () => {
     expect(ruleOf(sheet, ".row[data-lamp='turn']")).toContain('--row-dim: var(--lamp-turn-tile-dim)');
     expect(ruleOf(sheet, '.action')).toContain('color: var(--row-dim, var(--dim))');
+  });
+
+  it('does not pick itself or take the cursor when the pointer only rests on it', async () => {
+    const onSelect = vi.fn();
+    render(<SessionRow label="refine" selected={false} lamp={undefined} onSelect={onSelect} />);
+    await userEvent.hover(screen.getByRole('button'));
+    expect(onSelect, 'hover is not a cursor move: enter still starts the verb the cursor is on').not.toHaveBeenCalled();
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-current');
+  });
+
+  it('tells the pointer moving onto it to a row that follows the pointer, once per entry', async () => {
+    const onPoint = vi.fn();
+    render(<SessionRow label="refine" selected={false} lamp={undefined} onSelect={() => {}} onPoint={onPoint} />);
+    const user = userEvent.setup();
+    await user.hover(screen.getByRole('button'));
+    await user.pointer({ target: screen.getByRole('button'), coords: { x: 2, y: 2 } });
+    expect(onPoint, 'a move within the row is not a new entry: a keyboard move away from a still pointer stands').toHaveBeenCalledOnce();
+  });
+
+  it('draws no hover ground on a row that follows the pointer, so the cursor ground is its one highlight', () => {
+    render(<SessionRow label="refine" selected={false} lamp={undefined} onSelect={() => {}} onPoint={() => {}} />);
+    expect(screen.getByRole('button').className, 'the followsPointer class is what the hover-ground rule leaves out').toContain('followsPointer');
+    expect(ruleOf(sheet, '.row:not(.tall):not(.followsPointer):hover:not(.selected)')).toContain('--hover-ground');
+  });
+
+  it('keeps the hover ground on a row not given the pointer, as a session row outside the picker', () => {
+    render(<SessionRow label="refine" selected={false} lamp={undefined} onSelect={() => {}} />);
+    expect(screen.getByRole('button').className, 'only a row that follows the pointer leaves the hover-ground rule').not.toContain('followsPointer');
   });
 
   it('carries no tint for a session that waits on nothing', () => {
@@ -73,8 +102,8 @@ describe('a session row', () => {
   });
 
   it('answers the pointer: a hand over it, and its action lit', () => {
-    expect(ruleOf(sheet, '.tall:hover')).toContain('cursor: pointer');
-    expect(ruleOf(sheet, '.tall:hover .action')).toContain('color: var(--text)');
+    expect(ruleOf(sheet, 'button.tall:hover')).toContain('cursor: pointer');
+    expect(ruleOf(sheet, 'button.tall:hover .action')).toContain('color: var(--text)');
   });
 
   it('keeps the prototype\'s card heights: its name on a set leading, a waiting card a little roomier', () => {
@@ -96,5 +125,20 @@ describe('a session row', () => {
     expect(ruleOf(sheet, '.tall')).toContain('padding');
     render(<SessionRow label="start" state="busy" selected={false} lamp={LampColour.Off} onSelect={() => {}} />);
     expect(screen.getByRole('button').className).toContain('tall');
+  });
+
+  it('draws a clean pill on its own neutral tokens, not the lamp\'s, and says its words', () => {
+    render(<SessionRow label="../app.worktrees/x" state="clean" pill={PillInk.Clean} selected={false} lamp={LampColour.Off} onSelect={() => {}} />);
+    expect(screen.getByRole('img')).toHaveTextContent('clean');
+    expect(screen.getByRole('img').className).toContain('cleanPill');
+    expect(ruleOf(sheet, '.cleanPill')).toContain('background: var(--worktree-clean)');
+    expect(ruleOf(sheet, '.cleanPill')).toContain('color: var(--worktree-clean-ink)');
+  });
+
+  it('is no button, and has no hover affordance, where it is given no handler', () => {
+    render(<SessionRow label="../app.worktrees/x" state="held" selected={false} lamp={LampColour.Off} />);
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.getByText('../app.worktrees/x').closest('li')).toHaveTextContent('held');
+    expect(sheet.split('\n'), 'the hover is on the button alone').not.toContain('.tall:hover {');
   });
 });

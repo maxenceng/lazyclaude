@@ -15,7 +15,14 @@ const GREEN_WEIGHT = 0.7152;
 const BLUE_WEIGHT = 0.0722;
 const HEX_RADIX = 16;
 
-const tokens = new Map<string, string>(Array.from(stylesheet('tokens.css').matchAll(TOKEN), (match) => [match[1] ?? '', match[2] ?? '']));
+const ALIAS = /--([a-z0-9-]+):\s*var\(--([a-z0-9-]+)\)\s*;/g;
+
+const sheet = stylesheet('tokens.css');
+const hexes = new Map<string, string>(Array.from(sheet.matchAll(TOKEN), (match) => [match[1] ?? '', match[2] ?? '']));
+const tokens = new Map<string, string>([
+  ...hexes,
+  ...Array.from(sheet.matchAll(ALIAS), (match): [string, string] => [match[1] ?? '', hexes.get(match[2] ?? '') ?? '']).filter(([, hex]) => hex !== ''),
+]);
 
 const colourOf = (name: string): string => {
   const value = tokens.get(name);
@@ -55,6 +62,8 @@ describe('the dim marks', () => {
     ['a session detail on a permission row', 'lamp-turn-tile-dim', 'lamp-permission-tile'],
     ['the text of a needs-input row', 'text', 'lamp-input-tile'],
     ['the text of a permission row', 'text', 'lamp-permission-tile'],
+    ['the clean worktree pill ink', 'worktree-clean-ink', 'worktree-clean'],
+    ['the clean worktree pill', 'worktree-clean', 'card'],
   ])('%s reaches 4.5:1 against its ground', (_name, ink, ground) => {
     expect(contrast(ink, ground)).toBeGreaterThanOrEqual(MARK_CONTRAST);
   });
@@ -85,6 +94,22 @@ describe('a ticket card in its three tints', () => {
     ['lamp-turn-tile-dim', 'lamp-permission-tile'],
   ])('the footer ink %s reads on %s', (ink, ground) => {
     expect(contrast(ink, ground)).toBeGreaterThanOrEqual(MARK_CONTRAST);
+  });
+});
+
+describe('the inks for a failure and a destructive action', () => {
+  it.each([
+    ['failed', 'pane'],
+    ['failed', 'pane-lift'],
+    ['failed', 'pane-sunk'],
+    ['danger', 'pane-lift'],
+    ['danger', 'seam'],
+  ])('%s reaches 4.5:1 on %s', (ink, ground) => {
+    expect(contrast(ink, ground)).toBeGreaterThanOrEqual(MARK_CONTRAST);
+  });
+
+  it('keeps the CI failure ink an alias of the failure ink, so the red is defined once', () => {
+    expect(sheet).toContain('--ci-failed: var(--failed);');
   });
 });
 

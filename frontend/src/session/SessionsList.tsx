@@ -93,11 +93,15 @@ const RowList = ({ entries, cursor, onPress }: RowListProps) => {
   );
 };
 
-/** Why a session could not be started, with Retry; none while nothing failed. It stands whether or not a ticket is under the cursor. */
+/** Why a session could not be started, with Retry unless the sidecar refused it; none while nothing failed. It stands until the next start is asked or another ticket is selected. */
 export const SessionFailure = ({ failure }: { failure: StartFailure | undefined }) => {
   const { t } = useTranslation('session');
-  return failure === undefined ? null : (
-    <Alert title={t('failure.title')} action={<Button onClick={() => void failure.retry()}>{t('failure.retry')}</Button>}>
+  if (failure === undefined) {
+    return null;
+  }
+  const { retry } = failure;
+  return (
+    <Alert title={t('failure.title')} action={retry === undefined ? undefined : <Button onClick={() => void retry()}>{t('failure.retry')}</Button>}>
       {failure.message}
     </Alert>
   );
@@ -126,11 +130,12 @@ interface BarProps {
   picker: VerbPicker | undefined;
   onPress: (index: number) => void;
   onPickVerb: (index: number) => void;
+  onPointVerb: (index: number) => void;
   onDismiss: () => void;
 }
 
 /** The ticket's `new session` bar, pinned under its body; its picker of verbs grows upward from it. None while the ticket cannot start a session. */
-export const NewSessionBar = ({ rows, cursor, picker, onPress, onPickVerb, onDismiss }: BarProps) => {
+export const NewSessionBar = ({ rows, cursor, picker, onPress, onPickVerb, onPointVerb, onDismiss }: BarProps) => {
   const { t } = useTranslation('session');
   const index = rows.findIndex((row) => row.kind === SessionRowKind.New);
   return index === -1 ? null : (
@@ -148,7 +153,7 @@ export const NewSessionBar = ({ rows, cursor, picker, onPress, onPickVerb, onDis
           <StatusHeading status={t('picker.title')} count={picker.verbs.length} />
           <Rows>
             {picker.verbs.map((verb, at) => (
-              <Row key={verb} label={t(`verb.${verb}`)} selected={at === picker.cursorAt()} lamp={undefined} onSelect={() => onPickVerb(at)} />
+              <Row key={verb} label={t(`verb.${verb}`)} selected={at === picker.cursorAt()} lamp={undefined} onSelect={() => onPickVerb(at)} onPoint={() => onPointVerb(at)} />
             ))}
           </Rows>
         </>

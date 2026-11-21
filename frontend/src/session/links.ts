@@ -13,6 +13,8 @@ export interface WebAddress {
 const WEB_ADDRESS = /https?:\/\/[^\s<>"'`]+/g;
 const SENTENCE_PUNCTUATION = /[.,;:!?}]$/;
 const WEB_SCHEMES = ['http:', 'https:'];
+/** `MouseEvent.button` for the main button, the one a link is followed with. */
+const MAIN_BUTTON = 0;
 
 /** Whether a link is one this pane opens: an http or https address the URL parser reads. */
 const isWeb = (target: string): boolean => {
@@ -44,9 +46,14 @@ export interface LinkOpener {
 export interface SessionLinksDeps {
   opener: LinkOpener;
   notices: NoticeStore;
+  /** Whether the program in the pane asked for mouse reports, and so sees a click on a link the pane does not open. */
+  reportsMouse: () => boolean;
 }
 
-/** The links of one session pane: followed with ctrl held, and the web address the pointer is on. */
+/**
+ * The links of one session pane: followed with ctrl held, and the web address the pointer is on. A web address is the
+ * pane's alone; a link of another scheme is the program's while it reports the mouse, and refused otherwise.
+ */
 export class SessionLinks {
   readonly hovered: Store<string | undefined> = new Store<string | undefined>(undefined);
 
@@ -61,8 +68,16 @@ export class SessionLinks {
     this.hovered.set(undefined);
   }
 
+  /**
+   * Whether a press is one the pane acts on and the program would act on too, so the program must not see it: the main button
+   * with ctrl held, on a web address the pane opens, while the program reports the mouse.
+   */
+  keepsFromProgram(event: MouseEvent): boolean {
+    return event.button === MAIN_BUTTON && event.ctrlKey && this.deps.reportsMouse() && this.hovered.get() !== undefined;
+  }
+
   activate(event: MouseEvent, url: string): void {
-    if (!event.ctrlKey) {
+    if (!event.ctrlKey || (!isWeb(url) && this.deps.reportsMouse())) {
       return;
     }
     this.deps.notices.clear();

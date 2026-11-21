@@ -7,9 +7,11 @@ import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixt
 import static dev.maxenceng.lazyclaude.review.domain.PullRequestDomainFieldsFixture.twoComments;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.bareId;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.headBranch;
+import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.linkedHeadBranch;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.longerThanTheBranch;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.sharingTheIdPrefix;
 import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.siblingHeadBranch;
+import static dev.maxenceng.lazyclaude.review.published.HeadBranchFixture.slugOfLinkedHeadBranch;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestNumber;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.pullRequestTitle;
 import static dev.maxenceng.lazyclaude.review.published.PullRequestFieldsFixture.secondPullRequestNumber;
@@ -47,6 +49,14 @@ public final class PullRequestsViewFixture {
 
     public static PullRequestView pullRequestView() {
         return pullRequestViewBuilder().build();
+    }
+
+    public static PullRequestView linkedPullRequestView() {
+        return pullRequestViewBuilder().head(linkedHeadBranch()).build();
+    }
+
+    public static PullRequestView slugOfLinkedPullRequestView() {
+        return pullRequestViewBuilder().head(slugOfLinkedHeadBranch()).build();
     }
 
     public static PullRequestView discussedPullRequestView() {

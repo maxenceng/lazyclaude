@@ -3,6 +3,7 @@ package dev.maxenceng.lazyclaude.session.infrastructure.primary;
 import static dev.maxenceng.lazyclaude.review.published.HeadCommitFixture.headCommit;
 import static dev.maxenceng.lazyclaude.session.application.SessionApplicationServiceFixture.sessionApplicationService;
 import static dev.maxenceng.lazyclaude.session.domain.CommitIdFixture.commitId;
+import static dev.maxenceng.lazyclaude.session.domain.DirtyPathFixture.dirtyPath;
 import static dev.maxenceng.lazyclaude.session.domain.LaunchLogFixture.emptyLaunchLogPort;
 import static dev.maxenceng.lazyclaude.session.domain.ReportedSessionFixture.reportedSession;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.HostedSessionPayloadFixture.ticketHostedPayload;
@@ -14,7 +15,6 @@ import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeVi
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.dirtyWorktreeContentsView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.heldWorktreeView;
 import static dev.maxenceng.lazyclaude.session.infrastructure.primary.WorktreeViewFixture.occupiedWorktreeContentsView;
-import static dev.maxenceng.lazyclaude.session.published.DirtyPathFixture.dirtyPath;
 import static dev.maxenceng.lazyclaude.session.published.LinkedTicketIdFixture.linkedTicketId;
 import static dev.maxenceng.lazyclaude.session.published.ProcessIdFixture.processId;
 import static dev.maxenceng.lazyclaude.shared.domain.BranchNameFixture.branchName;
@@ -107,7 +107,6 @@ class SessionQueryWorktreeTest {
 
     @Test
     void shouldViewTheHostedSessionsInATicketWorktree() {
-        when(worktrees.isWorktreeAt(project(), worktreeDirectory())).thenReturn(true);
         when(sessions.recordOf(processId())).thenReturn(Optional.of(reportedSession()));
 
         assertThat(sessionQueryOverOccupied(sessions, worktrees).worktreeOf(worktreePayload(headCommit())))

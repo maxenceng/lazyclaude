@@ -71,6 +71,24 @@ public final class ContextsFixture {
         return sidecarContexts(defaultConfigurationView(), board, sessions, hosting, warnings, docs, review, pendingReview);
     }
 
+    public static Contexts sidecarContexts(SessionQuery sessions, TicketWorktreeCommand removing, ReviewQuery review) {
+        return new Contexts(
+                mock(BoardQuery.class),
+                mock(DocsQuery.class),
+                sessions,
+                sessionAgeQuery(),
+                mock(HostedSessionCommand.class),
+                mock(HostedEmulatorCommand.class),
+                mock(HostedEmulatorQuery.class),
+                mock(WatchedSessionCommand.class),
+                removing,
+                review,
+                mock(PendingReviewCommand.class),
+                mock(WarningQuery.class),
+                mock(WarningCommand.class),
+                defaultConfigurationView());
+    }
+
     public static Contexts sidecarContexts(WatchedSessionCommand watching) {
         return sidecarContexts(
                 defaultConfigurationView(),

@@ -1186,7 +1186,7 @@ public final class Shell extends ToolkitApp {
         switch (result) {
             case RemovedWorktreeView _ -> worktree.forget();
             case RefusedRemovalView refused -> refusal = Optional.of(WorktreeText.refusal(refused.state()));
-            case FailedRemovalView failed -> refusal = Optional.of(WorktreeText.failure(failed.reason()));
+            case FailedRemovalView failed -> refusal = Optional.of(WorktreeText.failure(failed));
         }
     }
 

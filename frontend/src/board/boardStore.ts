@@ -27,6 +27,15 @@ export class BoardStore {
     this.state.set(stateOf(view));
   }
 
+  /** Reads the board again where it stands: what is shown stays until the answer replaces it, and a failed read leaves it. */
+  async refresh(): Promise<void> {
+    try {
+      this.state.set(stateOf(await this.client.call('board/watch', { from: PROJECT_DIRECTORY })));
+    } catch {
+      return;
+    }
+  }
+
   async load(): Promise<void> {
     this.state.set(new LoadingBoard());
     try {

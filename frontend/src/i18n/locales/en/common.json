@@ -36,7 +36,8 @@
     "tabs": "1/2/3 tabs",
     "minimiseDock": "M minimise",
     "restoreDock": "M restore",
-    "showTicket": "m ticket"
+    "showTicket": "m ticket",
+    "removeWorktree": "d remove worktree"
   },
   "quit": {
     "title": "Quit lazyclaude?",

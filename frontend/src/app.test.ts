@@ -227,6 +227,32 @@ describe('the app and a shown document', () => {
     expect(app.docs.selectedKey()).toEqual(cursor);
   });
 
+  it('scrolls the focused document to its top on g and its bottom on G, and asks again on a repeated press', async () => {
+    const app = await docsApp();
+    app.focusOn(Focus.Docs);
+    app.focusOn(Focus.Document);
+    const requests = [Action.Top, Action.Bottom, Action.Bottom].map((action) => {
+      app.press(action);
+      return app.docs.scroll.get();
+    });
+    expect(requests.map((request) => request.step)).toEqual([ScrollStep.Top, ScrollStep.Bottom, ScrollStep.Bottom]);
+    expect(new Set(requests.map((request) => request.at)).size, 'a repeated G is a new request, so it scrolls back down after a mouse scroll').toBe(3);
+  });
+
+  it.each([Focus.Board, Focus.Docs, Focus.Sessions])('does nothing on g and G while %s has focus', async (focus) => {
+    const app = await docsApp();
+    app.focusOn(Focus.Docs);
+    app.focusOn(focus);
+    const layout = app.layout.get();
+    const scroll = app.docs.scroll.get();
+    const cursors = [app.board.selectedTicket(), app.docs.selectedKey(), app.sessions.cursor.get()];
+    app.press(Action.Top);
+    app.press(Action.Bottom);
+    expect(app.layout.get()).toBe(layout);
+    expect(app.docs.scroll.get()).toBe(scroll);
+    expect([app.board.selectedTicket(), app.docs.selectedKey(), app.sessions.cursor.get()]).toEqual(cursors);
+  });
+
   it('closes the focused document on escape and hands focus to the ticket', async () => {
     const app = await docsApp();
     app.focusOn(Focus.Docs);
@@ -560,6 +586,30 @@ describe('the app and a review', () => {
     expect(current?.cursor()).toBe(2);
   });
 
+  it('moves neither the diff\'s cursor nor Files\' selection on g and G', async () => {
+    const { client, app } = await reviewing();
+    await opened(client, app);
+    const current = app.review.current.get();
+    client.answer('review/diffOf', {
+      kind: 'readDiff',
+      files: [
+        { path: 'a.ts', status: { kind: 'modifiedFile' }, hunks: [{ header: '@@', lines: [{ kind: 'addedLine', content: 'a', newNumber: 1 }, { kind: 'addedLine', content: 'b', newNumber: 2 }] }] },
+        { path: 'b.ts', status: { kind: 'modifiedFile' }, hunks: [{ header: '@@', lines: [{ kind: 'addedLine', content: 'c', newNumber: 1 }] }] },
+      ],
+    });
+    await settled();
+    await placed(client);
+    app.press(Action.MoveDown);
+    app.press(Action.Top);
+    app.press(Action.Bottom);
+    expect(current?.cursor()).toBe(1);
+    app.press(Action.PanelLeft);
+    app.press(Action.Bottom);
+    app.press(Action.Top);
+    expect(current?.selectedFile()).toBe(0);
+    expect(app.layout.get().focus).toBe(Focus.Files);
+  });
+
   it('asks where a comment would hang on c in the diff, and toggles resolved threads on r', async () => {
     const { client, app } = await reviewing();
     await opened(client, app);
@@ -679,6 +729,22 @@ describe('the app and its window tabs', () => {
     expect(app.layout.get().focus).toBe(Focus.Board);
   });
 
+  it('moves neither the Board tab\'s selection nor the Pull requests tab\'s row on g and G', async () => {
+    const { app } = await reviewing();
+    app.press(Action.ShowBoard);
+    app.press(Action.MoveDown);
+    app.press(Action.Top);
+    app.press(Action.Bottom);
+    expect(app.board.selection.selected.get()).toBe('PROJ-2');
+    app.press(Action.ShowPullRequests);
+    const row = app.review.cursor.selected.get();
+    app.press(Action.Bottom);
+    app.press(Action.Top);
+    expect(app.review.cursor.selected.get()).toBe(row);
+    expect(app.tabs.selected.get()).toBe(WindowTab.PullRequests);
+    expect(app.review.isOpen()).toBe(false);
+  });
+
   it('returns to the Pull requests tab and its row when the review opened from it ends', async () => {
     const { client, app } = await reviewing();
     app.press(Action.ShowPullRequests);
@@ -699,5 +765,60 @@ describe('the app and its window tabs', () => {
     client.calls.length = 0;
     client.push('review/changed', { kind: 'openPullRequests', pullRequests: [] });
     expect(client.calls.map((call) => call.method)).toEqual(['review/pullRequestOn', 'review/pullRequestOn']);
+  });
+});
+
+const refused = async () => {
+  const client = fakeClient(new Ready());
+  const app = new AppModel(client, testPlatform());
+  app.start();
+  client.answer('board/watch', boardFixture([ticketFixture({ id: 'PROJ-1' }), ticketFixture({ id: 'PROJ-2' })]));
+  await settled();
+  app.board.selection.select('PROJ-1');
+  const starting = app.sessions.newUnlinked();
+  client.answerAll('session/startUnlinked', { kind: 'notStartedHost', reason: 'no claude' });
+  await starting;
+  return app;
+};
+
+describe('the app and a session that could not be started', () => {
+  it('withdraws the failure when another ticket is selected', async () => {
+    const app = await refused();
+    expect(app.hosting.failure.get()?.message).toBe('no claude');
+    app.board.selection.select('PROJ-2');
+    expect(app.hosting.failure.get()).toBeUndefined();
+  });
+
+  it('keeps the failure of a start from the ticket heading the board when that ticket is selected', async () => {
+    const client = fakeClient(new Ready());
+    const app = new AppModel(client, testPlatform());
+    app.start();
+    client.answer('board/watch', boardFixture([ticketFixture({ id: 'PROJ-1' }), ticketFixture({ id: 'PROJ-2' })]));
+    await settled();
+    const starting = app.sessions.newUnlinked();
+    client.answerAll('session/startUnlinked', { kind: 'notStartedHost', reason: 'no claude' });
+    await starting;
+    app.board.selection.select('PROJ-1');
+    expect(app.hosting.failure.get()?.message, 'the cursor was already on the ticket heading the board').toBe('no claude');
+  });
+
+  it('shows nothing for a refusal answered after another ticket was selected', async () => {
+    const client = fakeClient(new Ready());
+    const app = new AppModel(client, testPlatform());
+    app.start();
+    client.answer('board/watch', boardFixture([ticketFixture({ id: 'PROJ-1' }), ticketFixture({ id: 'PROJ-2' })]));
+    await settled();
+    app.board.selection.select('PROJ-1');
+    const starting = app.sessions.newUnlinked();
+    app.board.selection.select('PROJ-2');
+    client.answerAll('session/startUnlinked', { kind: 'notStartedHost', reason: 'no claude' });
+    await starting;
+    expect(app.hosting.failure.get(), 'the reason belongs to the ticket the start was asked from').toBeUndefined();
+  });
+
+  it('keeps the failure when the selection lands on the same ticket again', async () => {
+    const app = await refused();
+    app.board.selection.select('PROJ-1');
+    expect(app.hosting.failure.get()?.message, 'the reason still belongs to the ticket under the cursor').toBe('no claude');
   });
 });

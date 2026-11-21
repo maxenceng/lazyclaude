@@ -48,6 +48,7 @@ export type SessionClaudeVersion = SessionVersion | SessionNoVersion;
 export type SessionSessionState =
   SessionBusy | SessionYourTurn | SessionWaitingForPermission | SessionWaitingForInput | SessionUnknown;
 export type SessionWaitingFor = SessionWaitingReason | SessionNoWaitingReason;
+export type SessionMarker = 'YOUR_TURN' | 'WAITING_FOR_INPUT' | 'WAITING_FOR_PERMISSION';
 export type SessionSessionTitle = SessionAiTitle | SessionFirstPrompt | SessionNoTitle;
 export type SessionOpeningPrompt = SessionFirstPrompt | SessionNoFirstPrompt;
 export type SessionTranscriptReading = SessionReadableTranscript | SessionUnreadableTranscript;
@@ -79,6 +80,10 @@ export type ReviewCheckOutcome = 'FAILED' | 'PENDING' | 'PASSED';
 export type ReviewIssueClosing = ReviewClosesIssue | ReviewClosesNoIssue;
 export type ReviewPullRequestOnView = ReviewHeadedPullRequestView | ReviewNoHeadedPullRequestView;
 export type ReviewPendingReviewWriteView = ReviewWrittenReviewView | ReviewRefusedWriteView;
+export type SessionWorktreeShownView =
+  SessionNoWorktreeView | SessionClearWorktreeView | SessionNotClearWorktreeView | SessionUnreadWorktreeView;
+export type SessionWorktreeStateView = SessionWorktreeContentsView | SessionNoMergedPullRequestView;
+export type SessionWorktreeRemovalOutcomeView = SessionRemovedWorktreeView | SessionNotRemovedWorktreeView;
 export type SessionWatchedPayload = SessionWatchedSessionPayload | SessionNoWatchedSessionPayload;
 
 /**
@@ -206,6 +211,14 @@ export interface LazyclaudeProtocol {
       params: ReviewPendingSubmitPayload;
       result: ReviewPendingReviewWriteView;
     };
+    'session/worktreeOf': {
+      params: SessionWorktreeBranchPayload;
+      result: SessionWorktreeShownView;
+    };
+    'session/removeWorktree': {
+      params: SessionWorktreeBranchPayload;
+      result: SessionWorktreeRemovalOutcomeView;
+    };
   };
   inputs: {
     'pty/input': {
@@ -253,6 +266,9 @@ export interface LazyclaudeProtocol {
     };
     'review/mergedChanged': {
       params: ReviewMergedHeadView[];
+    };
+    'session/ticketDoneEnded': {
+      params: string;
     };
   };
 }
@@ -417,6 +433,7 @@ export interface SessionLiveSessionView {
   startedAt: string;
   version: SessionClaudeVersion;
   state: SessionSessionState;
+  marker: SessionMarkerView | null;
   links: SessionTicketLink[];
 }
 export interface SessionVersion {
@@ -449,6 +466,10 @@ export interface SessionNoWaitingReason {
 }
 export interface SessionUnknown {
   kind: 'unknown';
+}
+export interface SessionMarkerView {
+  kind: SessionMarker;
+  strength: number;
 }
 export interface SessionTicketLink {
   ticket: string;
@@ -815,6 +836,43 @@ export interface ReviewPendingSubmitPayload {
   root: string;
   number: number;
   summary: string;
+}
+export interface SessionWorktreeBranchPayload {
+  branch: string;
+}
+export interface SessionNoWorktreeView {
+  kind: 'noWorktree';
+}
+export interface SessionClearWorktreeView {
+  kind: 'clearWorktree';
+  shown: string;
+}
+export interface SessionNotClearWorktreeView {
+  kind: 'notClearWorktree';
+  shown: string;
+  state: SessionWorktreeStateView;
+  held: string;
+}
+export interface SessionWorktreeContentsView {
+  kind: 'worktreeContents';
+  dirtyPaths: string[];
+  commitsBeyondMerge: number;
+  sessions: string[];
+}
+export interface SessionNoMergedPullRequestView {
+  kind: 'noMergedPullRequest';
+}
+export interface SessionUnreadWorktreeView {
+  kind: 'unreadWorktree';
+  reason: string;
+  held: string;
+}
+export interface SessionRemovedWorktreeView {
+  kind: 'removedWorktree';
+}
+export interface SessionNotRemovedWorktreeView {
+  kind: 'notRemovedWorktree';
+  refusal: string;
 }
 export interface SessionPtyInputPayload {
   session: string;

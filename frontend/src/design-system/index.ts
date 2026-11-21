@@ -36,7 +36,7 @@ export { PaneAction } from './PaneAction';
 export { PaneFoot } from './PaneFoot';
 export type { PanelTab, PanelTabsProps } from './PanelTabs';
 export type { PaneActionProps } from './PaneAction';
-export { SessionRow } from './SessionRow';
+export { PillInk, SessionRow } from './SessionRow';
 export { StatusHeading } from './StatusHeading';
 export { StatusColour } from './StatusHeading';
 export { type TicketTypeTag, TypeColour, TypeTag } from './TypeTag';

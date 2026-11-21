@@ -2,6 +2,7 @@ package dev.maxenceng.lazyclaude.sidecar;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -71,12 +72,14 @@ final class ReviewMethods {
     private final ReviewQuery review;
     private final PendingReviewCommand writing;
     private final SidecarOutput output;
+    private final Consumer<MergedPullRequestsView> mergedRead;
     private final WatchedRoot watched = new WatchedRoot(WATCH.name());
 
-    ReviewMethods(ReviewQuery review, PendingReviewCommand writing, SidecarOutput output) {
+    ReviewMethods(ReviewQuery review, PendingReviewCommand writing, SidecarOutput output, Consumer<MergedPullRequestsView> mergedRead) {
         this.review = review;
         this.writing = writing;
         this.output = output;
+        this.mergedRead = mergedRead;
     }
 
     static Protocol protocol() {
@@ -122,6 +125,9 @@ final class ReviewMethods {
         review.subscribe(
                 payload,
                 view -> output.send(CHANGED.message(view)),
-                merged -> output.send(MERGED_CHANGED.message(merged)));
+                merged -> {
+                    mergedRead.accept(merged);
+                    output.send(MERGED_CHANGED.message(merged));
+                });
     }
 }

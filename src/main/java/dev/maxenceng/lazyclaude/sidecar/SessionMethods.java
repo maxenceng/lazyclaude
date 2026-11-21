@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -67,6 +68,7 @@ final class SessionMethods {
     private final WatchedSessionCommand watched;
     private final ConfigurationView configuration;
     private final SidecarOutput output;
+    private final Consumer<SessionPayload> watchedProject;
     private final Set<Path> watching = ConcurrentHashMap.newKeySet();
 
     SessionMethods(
@@ -74,12 +76,14 @@ final class SessionMethods {
             HostedSessionCommand hosting,
             WatchedSessionCommand watched,
             ConfigurationView configuration,
-            SidecarOutput output) {
+            SidecarOutput output,
+            Consumer<SessionPayload> watchedProject) {
         this.sessions = sessions;
         this.hosting = hosting;
         this.watched = watched;
         this.configuration = configuration;
         this.output = output;
+        this.watchedProject = watchedProject;
     }
 
     static Protocol protocol() {
@@ -113,6 +117,7 @@ final class SessionMethods {
     private SidecarAnswer watch(JsonNode params) {
         SessionsView current = WATCH.answer(params, sessions::sessionsFor);
         SessionPayload payload = SidecarJson.params(params, WATCH.params());
+        watchedProject.accept(payload);
         return new SidecarAnswer(SidecarJson.tree(current), () -> watchOnce(payload));
     }
 

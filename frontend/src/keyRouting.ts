@@ -10,6 +10,7 @@ import type { SessionsController } from './session/sessionsController';
 import type { Store } from './shared/store';
 import type { Quitting } from './quitting';
 import type { Closing } from './session/closing';
+import type { Worktree } from './session/worktree';
 
 /** The keys a pane takes while it has focus and claude has the keyboard: only these move out of it. */
 const FOCUS_KEYS: readonly Action[] = [
@@ -40,12 +41,13 @@ export class KeyRouter {
     private readonly tabs: WindowTabs,
     private readonly quitting: Quitting,
     private readonly closing: Closing,
+    private readonly worktree: Worktree,
   ) {
   }
 
   /** Whether a popup holds the keys and the mouse alone (ADR 0051): the one answer both the keys here and the window's clicks read. */
   isModal(): boolean {
-    return this.quitting.isAsking() || this.closing.isAsking() || this.board.capture.state.get().isOpen();
+    return this.quitting.isAsking() || this.closing.isAsking() || this.worktree.isAsking() || this.board.capture.state.get().isOpen();
   }
 
   /** A key the window-level handler took: whatever the focused pane does with it. */
@@ -55,6 +57,8 @@ export class KeyRouter {
       this.quitting.answer(action === Action.Yes);
     } else if (this.closing.isAsking()) {
       this.closing.answer(action === Action.Yes);
+    } else if (this.worktree.isAsking()) {
+      this.worktree.answer(action === Action.Yes);
     } else if (this.isModal()) {
       this.pressInCapture(action);
     } else if (this.sessions.isPicking()) {
@@ -272,6 +276,8 @@ export class KeyRouter {
         return this.open();
       case Action.Review:
         return this.openReview();
+      case Action.RemoveWorktree:
+        return this.focus() === Focus.Board || this.focus() === Focus.Sessions ? this.worktree.request() : undefined;
       case Action.Capture:
         return this.focus() === Focus.Board ? this.board.capture.open() : undefined;
       case Action.NewTicketSession:
@@ -282,6 +288,10 @@ export class KeyRouter {
         return this.scrollDocument(ScrollStep.HalfPageDown);
       case Action.HalfPageUp:
         return this.scrollDocument(ScrollStep.HalfPageUp);
+      case Action.Top:
+        return this.scrollDocument(ScrollStep.Top);
+      case Action.Bottom:
+        return this.scrollDocument(ScrollStep.Bottom);
       case Action.Back:
         return this.change((current) => this.back(current));
       case Action.PanelLeft:
@@ -337,10 +347,10 @@ export class KeyRouter {
     return current.focusOn(current.focus === Focus.Docs && current.showsDocumentInView() ? Focus.Document : Focus.Sessions);
   }
 
-  /** `j`/`k` and `ctrl+d`/`ctrl+u` on the focused document scroll it; on any other pane `ctrl+d` and `ctrl+u` do nothing outside a review. */
+  /** `j`/`k`, `ctrl+d`/`ctrl+u` and `g`/`G` on the focused document scroll it; on any other pane `g` and `G` do nothing, and `ctrl+d`/`ctrl+u` act only in a review. */
   private scrollDocument(step: ScrollStep): void {
     if (this.focus() === Focus.Document) {
-      this.docs.scrollBy(step);
+      this.docs.requestScroll(step);
     }
   }
 

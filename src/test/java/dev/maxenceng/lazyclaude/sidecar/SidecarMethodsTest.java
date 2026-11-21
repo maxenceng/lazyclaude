@@ -57,7 +57,7 @@ class SidecarMethodsTest {
     @Test
     void declares_the_notifications_it_pushes() {
         assertThat(Sidecar.protocol().notifications().stream().map(ProtocolNotification::name))
-                .containsExactlyInAnyOrder("board/changed", "session/changed", "pty/output", "session/exited", "warning/changed", "docs/changed", "review/changed", "review/mergedChanged");
+                .containsExactlyInAnyOrder("board/changed", "session/changed", "pty/output", "session/exited", "warning/changed", "docs/changed", "review/changed", "review/mergedChanged", "session/ticketDoneEnded");
     }
 
     @Test

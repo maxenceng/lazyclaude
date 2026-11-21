@@ -23,8 +23,10 @@ import { PullRequestsPane } from './review/PullRequestsScreen';
 import { DiffPane, FilesPane, ReviewPopups } from './review/ReviewScreen';
 import { PullRequestsKeyBar, ReviewFocus, ReviewKeyBar } from './review/ReviewKeyBar';
 import { ClosePopup } from './session/ClosePopup';
+import { WorktreePopup } from './session/WorktreePopup';
+import { WorktreeSection } from './session/WorktreeSection';
 import { DockScreen, DockStrip } from './session/DockScreen';
-import { LampColour, markerOfTicket, markersOf } from './session/markers';
+import { LampColour, markerOfTicket, lampTilesOf } from './session/markers';
 import { DockKeyBar, SessionsKeyBar } from './session/SessionsKeyBar';
 import { NewSessionBar, SessionFailure, SessionsList } from './session/SessionsList';
 import { ticketPullRequestOf } from './ticketPullRequest';
@@ -84,6 +86,10 @@ export const App = ({ app, packaged }: Props) => {
   const capturing = useStore(app.board.capture.state).isOpen();
   const quitAsked = useStore(app.quitting.asking);
   const closeAsked = useStore(app.closing.asking);
+  const worktreeAsked = useStore(app.worktree.asking);
+  const worktreeRefusal = useStore(app.worktree.refusal);
+  useStore(app.worktree.read);
+  useStore(app.worktree.removing);
   useStore(app.board.selection.selected);
   useStore(app.review.cursor.selected);
   useStore(app.review.ticketPullRequests.joined);
@@ -98,7 +104,7 @@ export const App = ({ app, packaged }: Props) => {
     };
   }, [app, packaged]);
 
-  const markers = sessions === undefined ? [] : markersOf(sessions);
+  const lampTiles = sessions === undefined ? [] : lampTilesOf(sessions);
   const project = app.board.root() ?? t('app.project');
   const selectedTicket = app.board.selectedTicket();
   const populatedBoard = board.shown();
@@ -116,11 +122,12 @@ export const App = ({ app, packaged }: Props) => {
     selected: layout.panel,
     onSelect: (id: string) => app.showPanel(PANEL_OF.get(id) ?? Focus.Board),
   };
+  const removeWorktreeKey = app.worktree.removable() ? t('keyBar.removeWorktree') : undefined;
   const keyBar = {
-    [Focus.Board]: <BoardKeyBar ticket={selectedTicket !== undefined} capture={app.board.root() !== undefined} extra={panelKeys} />,
+    [Focus.Board]: <BoardKeyBar ticket={selectedTicket !== undefined} capture={app.board.root() !== undefined} worktree={removeWorktreeKey} extra={panelKeys} />,
     [Focus.Docs]: <DocsKeyBar documentShown={layout.showsDocumentInView()} extra={panelKeys} />,
     [Focus.Document]: <DocumentKeyBar extra={tabKeys} />,
-    [Focus.Sessions]: <SessionsKeyBar picking={false} extra={panelKeys} />,
+    [Focus.Sessions]: <SessionsKeyBar picking={false} worktree={removeWorktreeKey} extra={panelKeys} />,
     [Focus.Files]: <ReviewKeyBar panel={ReviewFocus.Files} />,
     [Focus.Diff]: <ReviewKeyBar panel={ReviewFocus.Diff} />,
     [Focus.Dock]: <DockKeyBar mouseReported={mouseReported} hoveredLink={hoveredLink} />,
@@ -262,6 +269,7 @@ export const App = ({ app, packaged }: Props) => {
                   picker={picker}
                   onPress={(index) => app.pressRow(index)}
                   onPickVerb={(index) => void app.sessions.pick(index)}
+                  onPointVerb={(index) => app.sessions.pickTo(index)}
                   onDismiss={() => app.sessions.cancelPick()}
                 />
               }
@@ -272,6 +280,7 @@ export const App = ({ app, packaged }: Props) => {
                 picker={picker}
                 onPress={(index) => app.pressRow(index)}
               />
+              <WorktreeSection shown={app.worktree.shown()} branch={selectedTicket?.branch ?? ''} refusal={worktreeRefusal} removable={app.worktree.removable()} onPress={() => app.worktree.request()} />
             </TicketPane>
           ),
           arrangement: layout.arrangement(hasDock),
@@ -292,7 +301,7 @@ export const App = ({ app, packaged }: Props) => {
         zoomed={layout.zoomed}
         zoomKey={app.zoomKey()}
         closeKey={app.closeKey()}
-        asking={closeAsked !== undefined}
+        asking={closeAsked !== undefined || worktreeAsked !== undefined}
         onClose={() => app.closeSession()}
         onMinimise={() => app.toggleDockMinimised()}
         onZoom={() => app.toggleZoom()}
@@ -336,20 +345,20 @@ export const App = ({ app, packaged }: Props) => {
                 onSelect={(id) => app.chooseTab(TAB_OF.get(id) ?? WindowTab.Base)}
               />
             }
-            tiles={markers.map((marker) => (
+            tiles={lampTiles.map((tile) => (
               <Lamp
-                key={marker.session}
-                colour={marker.colour}
+                key={tile.session}
+                colour={tile.colour}
                 size={LampSize.Tile}
-                number={marker.ticket}
-                onClick={app.canGoToLive(marker.session) ? () => app.goToLive(marker.session) : undefined}
+                number={tile.ticket}
+                onClick={app.canGoToLive(tile.session) ? () => app.goToLive(tile.session) : undefined}
               />
             ))}
             counts={COLOURS.map((colour) => (
               <Count
                 key={colour}
                 colour={colour}
-                count={markers.filter((marker) => marker.colour === colour).length}
+                count={lampTiles.filter((tile) => tile.colour === colour).length}
                 disabled={!app.canGoToNext(colour)}
                 onClick={() => app.goToNext(colour)}
               />
@@ -369,6 +378,7 @@ export const App = ({ app, packaged }: Props) => {
       {review === undefined ? null : <ReviewPopups review={review} />}
       <CapturePopup capture={app.board.capture} />
       {closeAsked === undefined ? null : <ClosePopup onAnswer={(close) => app.closing.answer(close)} />}
+      {worktreeAsked === undefined ? null : <WorktreePopup shown={worktreeAsked.shown} onAnswer={(remove) => app.worktree.answer(remove)} />}
       {quitAsked === undefined ? null : <QuitPopup hosted={quitAsked} onAnswer={(yes) => app.quitting.answer(yes)} />}
     </>
   );

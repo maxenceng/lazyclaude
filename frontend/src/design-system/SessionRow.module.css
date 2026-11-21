@@ -34,6 +34,10 @@
   background: var(--row-ground, transparent);
 }
 
+.row:not(.tall):not(.followsPointer):hover:not(.selected) {
+  background: linear-gradient(var(--hover-ground), var(--hover-ground)), var(--row-ground, transparent);
+}
+
 .selected {
   background: var(--cursor-ground, var(--row-ground, transparent));
   color: var(--cursor-ink);
@@ -118,10 +122,21 @@
   box-shadow: none;
 }
 
-.tall:hover {
+button.tall:hover {
   cursor: pointer;
 }
 
-.tall:hover .action {
+button.tall:hover .action {
   color: var(--text);
+}
+
+.cleanPill {
+  padding: 1px var(--space-2);
+  border-radius: var(--pill-radius);
+  background: var(--worktree-clean);
+  color: var(--worktree-clean-ink);
+  font-size: var(--size-micro);
+  font-weight: 600;
+  line-height: var(--lamp-marker);
+  white-space: nowrap;
 }

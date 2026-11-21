@@ -51,6 +51,15 @@ export class BoardController {
     return true;
   }
 
+  refresh(): Promise<void> {
+    return this.store.refresh();
+  }
+
+  /** The ticket `id` as the board shows it now. */
+  ticket(id: string): BoardTicketView | undefined {
+    return this.shown()?.groups.flatMap((group) => group.tickets).find((ticket) => ticket.id === id);
+  }
+
   load(): Promise<void> {
     return this.store.load();
   }

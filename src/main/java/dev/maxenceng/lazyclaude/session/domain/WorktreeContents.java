@@ -3,7 +3,6 @@ package dev.maxenceng.lazyclaude.session.domain;
 import java.util.List;
 
 import dev.maxenceng.lazyclaude.error.domain.Assert;
-import dev.maxenceng.lazyclaude.session.published.DirtyPath;
 import dev.maxenceng.lazyclaude.session.published.SessionName;
 
 /**

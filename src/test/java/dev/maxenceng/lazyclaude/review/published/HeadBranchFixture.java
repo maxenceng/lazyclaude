@@ -8,6 +8,14 @@ public final class HeadBranchFixture {
         return new HeadBranch("PROJ-1-first-slice");
     }
 
+    public static HeadBranch linkedHeadBranch() {
+        return new HeadBranch("PROJ-1-the-tickets-branch");
+    }
+
+    public static HeadBranch slugOfLinkedHeadBranch() {
+        return new HeadBranch("PROJ-1-the-ticket-s-branch");
+    }
+
     public static HeadBranch siblingHeadBranch() {
         return new HeadBranch("PROJ-2");
     }

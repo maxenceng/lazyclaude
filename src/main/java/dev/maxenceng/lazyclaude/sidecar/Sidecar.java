@@ -50,18 +50,26 @@ public final class Sidecar {
 
     /** Everything the sidecar declares: what the schema states, what the contract test counts and what {@link #methods} serves. */
     static Protocol protocol() {
-        return Protocol.of(BoardMethods.protocol(), SessionMethods.protocol(), WarningMethods.protocol(), DocsMethods.protocol(), ReviewMethods.protocol());
+        return Protocol.of(BoardMethods.protocol(), SessionMethods.protocol(), WarningMethods.protocol(), DocsMethods.protocol(), ReviewMethods.protocol(), WorktreeMethods.protocol());
     }
 
     /** What is served on {@code output}, with the pushes of what a hosted {@code claude} writes and how it exits wired to it. */
     Map<String, SidecarMethod> methods(SidecarOutput output) {
+        WorktreeMethods worktrees = new WorktreeMethods(contexts.sessions(), contexts.removing(), output);
         return Stream.of(
                         new BoardMethods(contexts.board(), output).methods(),
-                        new SessionMethods(contexts.sessions(), contexts.hosting(), contexts.watching(), contexts.configuration(), output)
+                        new SessionMethods(
+                                        contexts.sessions(),
+                                        contexts.hosting(),
+                                        contexts.watching(),
+                                        contexts.configuration(),
+                                        output,
+                                        worktrees::sessionsWatched)
                                 .methods(),
+                        worktrees.methods(),
                         new WarningMethods(contexts.warnings(), output).methods(),
                         new DocsMethods(contexts.docs(), output).methods(),
-                        new ReviewMethods(contexts.review(), contexts.pendingReview(), output).methods())
+                        new ReviewMethods(contexts.review(), contexts.pendingReview(), output, worktrees::mergedRead).methods())
                 .flatMap(served -> served.entrySet().stream())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }

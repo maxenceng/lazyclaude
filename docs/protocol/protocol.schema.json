@@ -396,9 +396,35 @@
           },
           "required" : [ "params", "result" ],
           "additionalProperties" : false
+        },
+        "session/worktreeOf" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.WorktreeBranchPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/session.WorktreeShownView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
+        },
+        "session/removeWorktree" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "$ref" : "#/$defs/session.WorktreeBranchPayload"
+            },
+            "result" : {
+              "$ref" : "#/$defs/session.WorktreeRemovalOutcomeView"
+            }
+          },
+          "required" : [ "params", "result" ],
+          "additionalProperties" : false
         }
       },
-      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startNewTicket", "session/startTicket", "session/resumePast", "session/newSessionFor", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/commentsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/summaryToSubmit", "review/pullRequestOn", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit" ],
+      "required" : [ "board/boardFor", "board/watch", "session/startUnlinked", "session/startNewTicket", "session/startTicket", "session/resumePast", "session/newSessionFor", "session/configuration", "session/watch", "warning/watch", "docs/docsFor", "docs/watch", "review/loadingDiff", "review/loadingThreads", "review/diffOf", "review/threadsOf", "review/commentsInDiff", "review/loadingPending", "review/pendingOf", "review/anchorOf", "review/summaryToSubmit", "review/pullRequestOn", "review/checking", "review/refresh", "review/watch", "review/comment", "review/reply", "review/edit", "review/delete", "review/submit", "session/worktreeOf", "session/removeWorktree" ],
       "additionalProperties" : false
     },
     "inputs" : {
@@ -560,9 +586,19 @@
           },
           "required" : [ "params" ],
           "additionalProperties" : false
+        },
+        "session/ticketDoneEnded" : {
+          "type" : "object",
+          "properties" : {
+            "params" : {
+              "type" : "string"
+            }
+          },
+          "required" : [ "params" ],
+          "additionalProperties" : false
         }
       },
-      "required" : [ "ready", "board/changed", "session/changed", "pty/output", "session/exited", "warning/changed", "docs/changed", "review/changed", "review/mergedChanged" ],
+      "required" : [ "ready", "board/changed", "session/changed", "pty/output", "session/exited", "warning/changed", "docs/changed", "review/changed", "review/mergedChanged", "session/ticketDoneEnded" ],
       "additionalProperties" : false
     }
   },
@@ -2184,6 +2220,19 @@
         "propertyName" : "kind"
       }
     },
+    "session.ClearWorktreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "clearWorktree"
+        },
+        "shown" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "shown" ],
+      "additionalProperties" : false
+    },
     "session.ClosePayload" : {
       "type" : "object",
       "properties" : {
@@ -2316,6 +2365,13 @@
         "state" : {
           "$ref" : "#/$defs/session.SessionState"
         },
+        "marker" : {
+          "anyOf" : [ {
+            "$ref" : "#/$defs/session.MarkerView"
+          }, {
+            "type" : "null"
+          } ]
+        },
         "links" : {
           "type" : "array",
           "items" : {
@@ -2323,7 +2379,24 @@
           }
         }
       },
-      "required" : [ "id", "pid", "name", "directory", "startedAt", "version", "state", "links" ],
+      "required" : [ "id", "pid", "name", "directory", "startedAt", "version", "state", "marker", "links" ],
+      "additionalProperties" : false
+    },
+    "session.Marker" : {
+      "type" : "string",
+      "enum" : [ "YOUR_TURN", "WAITING_FOR_INPUT", "WAITING_FOR_PERMISSION" ]
+    },
+    "session.MarkerView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "$ref" : "#/$defs/session.Marker"
+        },
+        "strength" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [ "kind", "strength" ],
       "additionalProperties" : false
     },
     "session.MergeState" : {
@@ -2409,6 +2482,16 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
+    "session.NoMergedPullRequestView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noMergedPullRequest"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
     "session.NoTicketListingPayload" : {
       "type" : "object",
       "properties" : {
@@ -2457,6 +2540,48 @@
         }
       },
       "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.NoWorktreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "noWorktree"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.NotClearWorktreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "notClearWorktree"
+        },
+        "shown" : {
+          "type" : "string"
+        },
+        "state" : {
+          "$ref" : "#/$defs/session.WorktreeStateView"
+        },
+        "held" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "shown", "state", "held" ],
+      "additionalProperties" : false
+    },
+    "session.NotRemovedWorktreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "notRemovedWorktree"
+        },
+        "refusal" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "refusal" ],
       "additionalProperties" : false
     },
     "session.NotStartedHost" : {
@@ -2594,6 +2719,16 @@
       "properties" : {
         "kind" : {
           "const" : "readableTranscript"
+        }
+      },
+      "required" : [ "kind" ],
+      "additionalProperties" : false
+    },
+    "session.RemovedWorktreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "removedWorktree"
         }
       },
       "required" : [ "kind" ],
@@ -2890,6 +3025,22 @@
       "required" : [ "kind" ],
       "additionalProperties" : false
     },
+    "session.UnreadWorktreeView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "unreadWorktree"
+        },
+        "reason" : {
+          "type" : "string"
+        },
+        "held" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "kind", "reason", "held" ],
+      "additionalProperties" : false
+    },
     "session.UnreadableTranscript" : {
       "type" : "object",
       "properties" : {
@@ -3006,6 +3157,75 @@
       },
       "required" : [ "kind", "session" ],
       "additionalProperties" : false
+    },
+    "session.WorktreeBranchPayload" : {
+      "type" : "object",
+      "properties" : {
+        "branch" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "branch" ],
+      "additionalProperties" : false
+    },
+    "session.WorktreeContentsView" : {
+      "type" : "object",
+      "properties" : {
+        "kind" : {
+          "const" : "worktreeContents"
+        },
+        "dirtyPaths" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "commitsBeyondMerge" : {
+          "type" : "integer"
+        },
+        "sessions" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+        }
+      },
+      "required" : [ "kind", "dirtyPaths", "commitsBeyondMerge", "sessions" ],
+      "additionalProperties" : false
+    },
+    "session.WorktreeRemovalOutcomeView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.RemovedWorktreeView"
+      }, {
+        "$ref" : "#/$defs/session.NotRemovedWorktreeView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.WorktreeShownView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.NoWorktreeView"
+      }, {
+        "$ref" : "#/$defs/session.ClearWorktreeView"
+      }, {
+        "$ref" : "#/$defs/session.NotClearWorktreeView"
+      }, {
+        "$ref" : "#/$defs/session.UnreadWorktreeView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
+    },
+    "session.WorktreeStateView" : {
+      "oneOf" : [ {
+        "$ref" : "#/$defs/session.WorktreeContentsView"
+      }, {
+        "$ref" : "#/$defs/session.NoMergedPullRequestView"
+      } ],
+      "discriminator" : {
+        "propertyName" : "kind"
+      }
     },
     "session.YourTurn" : {
       "type" : "object",

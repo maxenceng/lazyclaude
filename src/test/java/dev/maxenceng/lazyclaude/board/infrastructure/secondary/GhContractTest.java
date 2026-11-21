@@ -1,7 +1,6 @@
 package dev.maxenceng.lazyclaude.board.infrastructure.secondary;
 
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GhContractFixture.aRepositoryWithIssues;
-import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GhContractFixture.issuesOf;
+import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GhContractFixture.issuesOfThisRepository;
 import static dev.maxenceng.lazyclaude.board.infrastructure.secondary.GhContractFixture.thisRepository;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,9 +15,9 @@ import dev.maxenceng.lazyclaude.board.domain.Ticket;
 class GhContractTest {
 
     @Test
-    void shouldReadTheIssuesGhIssueListPrintsForARealRepositoryWithSomeAsTickets() {
-        assertThat(issuesOf(aRepositoryWithIssues()))
-                .as("gh issue list --json must still write the fields the board reads")
+    void shouldReadTheIssuesGhApiGraphqlPrintsForARealRepositoryWithSomeAsTickets() {
+        assertThat(issuesOfThisRepository())
+                .as("gh api graphql --paginate --slurp must still write the fields the board reads")
                 .isNotEmpty()
                 .anySatisfy(entry -> assertThat(entry).isInstanceOf(Ticket.class));
     }
